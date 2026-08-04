@@ -971,6 +971,45 @@ public struct SettingsButtonRow: View {
   }
 }
 
+public struct SettingsLinkRow: View {
+  private let symbol: String?
+  private let title: String
+  private let caption: String?
+  private let buttonTitle: String
+  private let destination: URL
+  private let help: String
+
+  public init(
+    symbol: String? = nil,
+    title: String,
+    caption: String? = nil,
+    buttonTitle: String,
+    destination: URL,
+    help: String
+  ) {
+    self.symbol = symbol
+    self.title = title
+    self.caption = caption
+    self.buttonTitle = buttonTitle
+    self.destination = destination
+    self.help = help
+  }
+
+  public var body: some View {
+    SettingsRow(symbol: symbol, title: title, caption: caption) {
+      Link(destination: destination) {
+        HStack(spacing: 5) {
+          Text(buttonTitle)
+          Image(systemName: "arrow.up.right")
+            .font(.system(size: 9, weight: .semibold))
+        }
+      }
+      .buttonStyle(SettingsSoftButtonStyle())
+      .help(help)
+    }
+  }
+}
+
 public struct SettingsExpandableRow: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.settingsAccent) private var accent
