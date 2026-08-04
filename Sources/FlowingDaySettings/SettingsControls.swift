@@ -933,6 +933,79 @@ public struct SettingsTag: View {
   }
 }
 
+public struct SettingsSelectableTag: View {
+  @Environment(\.settingsAccent) private var accent
+  @Environment(\.settingsStrings) private var strings
+  @Environment(\.settingsTypography) private var typography
+  @State private var isHovering = false
+  private let title: String
+  private let isSelected: Bool
+  private let inactiveAccent: SettingsAccent?
+  private let action: () -> Void
+
+  public init(
+    _ title: String,
+    isSelected: Bool,
+    inactiveAccent: SettingsAccent? = nil,
+    action: @escaping () -> Void
+  ) {
+    self.title = title
+    self.isSelected = isSelected
+    self.inactiveAccent = inactiveAccent
+    self.action = action
+  }
+
+  public var body: some View {
+    Button(action: action) {
+      Text(title)
+        .font(typography.tag.font)
+        .foregroundStyle(foreground)
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(background, in: shape)
+        .overlay {
+          shape.strokeBorder(border, lineWidth: 1)
+        }
+    }
+    .buttonStyle(.plain)
+    .onHover { isHovering = $0 }
+    .accessibilityValue(isSelected ? strings.on : strings.off)
+    .animation(.easeOut(duration: 0.16), value: isSelected)
+    .animation(.easeOut(duration: 0.12), value: isHovering)
+  }
+
+  private var inactive: SettingsAccent {
+    inactiveAccent ?? accent
+  }
+
+  private var foreground: Color {
+    if isSelected {
+      return accent.foreground
+    }
+    return inactive.foreground.opacity(isHovering ? 0.8 : 0.62)
+  }
+
+  private var background: Color {
+    if isSelected {
+      return isHovering ? accent.wash : accent.veil
+    }
+    return isHovering ? inactive.wash : inactive.veil
+  }
+
+  private var border: Color {
+    if isSelected {
+      return accent.fill.opacity(isHovering ? 0.35 : 0.24)
+    }
+    return inactive.fill.opacity(isHovering ? 0.24 : 0.12)
+  }
+
+  private var shape: RoundedRectangle {
+    RoundedRectangle(cornerRadius: 8, style: .continuous)
+  }
+}
+
 public struct SettingsFlowGrid<Item: Identifiable, Label: View>: View {
   @Environment(\.settingsMetrics) private var metrics
   private let items: [Item]
