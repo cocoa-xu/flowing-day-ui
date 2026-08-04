@@ -1,8 +1,27 @@
 # FlowingDayUI
 
+[![CI](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/ci.yml)
+
 FlowingDayUI is a personal SwiftUI design toolkit for macOS applications. Its first module, `FlowingDaySettings`, provides an integrated settings window, sidebar navigation, adaptive themes, and a focused set of settings controls.
 
 The package requires macOS 13 or later.
+
+## Installation
+
+Add FlowingDayUI to your package dependencies:
+
+```swift
+.package(
+    url: "https://github.com/cocoa-xu/flowing-day-ui",
+    from: "1.0.0"
+)
+```
+
+Then add `FlowingDaySettings` to the application target and import it:
+
+```swift
+import FlowingDaySettings
+```
 
 ## Local development
 
@@ -10,12 +29,6 @@ Add the package by local path while developing applications alongside it:
 
 ```swift
 .package(path: "../flowing-day-ui")
-```
-
-Then add `FlowingDaySettings` to the application target and import it:
-
-```swift
-import FlowingDaySettings
 ```
 
 ## Settings window
