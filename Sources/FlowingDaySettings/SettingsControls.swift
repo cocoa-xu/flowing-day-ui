@@ -73,6 +73,7 @@ public struct SettingsPaneStack<Content: View>: View {
 }
 
 public struct SettingsSection<Content: View>: View {
+  @Environment(\.settingsMetrics) private var metrics
   @Environment(\.settingsTypography) private var typography
   private let title: String
   private let footer: String?
@@ -97,7 +98,7 @@ public struct SettingsSection<Content: View>: View {
           .font(typography.rowCaption.font)
           .foregroundStyle(SettingsPalette.faint)
           .fixedSize(horizontal: false, vertical: true)
-          .padding(.horizontal, 4)
+          .padding(.horizontal, metrics.rowInset)
           .padding(.top, 7)
       }
     }

@@ -13,7 +13,7 @@ Add FlowingDayUI to your package dependencies:
 ```swift
 .package(
     url: "https://github.com/cocoa-xu/flowing-day-ui",
-    from: "1.1.0"
+    from: "1.1.1"
 )
 ```
 
@@ -92,6 +92,8 @@ settingsWindow.show()
 ```
 
 Applications own their settings, persistence, localization, and business logic. The package owns presentation, navigation, interaction behavior, accessibility, and visual consistency.
+
+Section footers align with the title and caption text inside their rows by default.
 
 ## Theming
 
