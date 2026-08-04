@@ -514,7 +514,6 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
   @Environment(\.settingsAccent) private var accent
   @Environment(\.settingsMetrics) private var metrics
   @Environment(\.settingsStrings) private var strings
-  @Environment(\.settingsSurfaces) private var surfaces
   @Environment(\.settingsTypography) private var typography
   @State private var isExpanded = false
   @State private var query = ""
@@ -614,7 +613,7 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
       HStack(spacing: 8) {
         Image(systemName: "magnifyingglass")
           .font(.system(size: 11, weight: .medium))
-          .foregroundStyle(SettingsPalette.faint)
+          .foregroundStyle(accent.foreground.opacity(0.72))
         TextField(strings.search, text: $query)
           .textFieldStyle(.plain)
           .font(typography.value.font)
@@ -622,10 +621,10 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
       }
       .padding(.horizontal, 10)
       .frame(height: 30)
-      .background(surfaces.field, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+      .background(accent.veil, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
       .overlay {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
-          .strokeBorder(SettingsPalette.hairline)
+          .strokeBorder(accent.fill.opacity(0.16))
       }
 
       if filteredOptions.isEmpty {
