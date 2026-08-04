@@ -58,4 +58,10 @@ final class SettingsControlsTests: XCTestCase {
       "circle"
     )
   }
+
+  func testOptionSearchIgnoresCaseAndSurroundingWhitespace() {
+    XCTAssertTrue(SettingsOptionSearch.matches("Asia/Tokyo", query: "  TOKYO "))
+    XCTAssertTrue(SettingsOptionSearch.matches("Europe/London", query: ""))
+    XCTAssertFalse(SettingsOptionSearch.matches("Europe/London", query: "Tokyo"))
+  }
 }

@@ -33,6 +33,8 @@ public struct SettingsStrings: Equatable, Sendable {
   public var collapsed: String
   public var on: String
   public var off: String
+  public var search: String
+  public var noResults: String
 
   public init(
     closeSettings: String = "Close Settings",
@@ -41,7 +43,9 @@ public struct SettingsStrings: Equatable, Sendable {
     expanded: String = "Expanded",
     collapsed: String = "Collapsed",
     on: String = "On",
-    off: String = "Off"
+    off: String = "Off",
+    search: String = "Search",
+    noResults: String = "No Results"
   ) {
     self.closeSettings = closeSettings
     self.selected = selected
@@ -50,6 +54,8 @@ public struct SettingsStrings: Equatable, Sendable {
     self.collapsed = collapsed
     self.on = on
     self.off = off
+    self.search = search
+    self.noResults = noResults
   }
 }
 

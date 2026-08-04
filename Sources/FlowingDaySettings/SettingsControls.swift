@@ -502,6 +502,222 @@ public struct SettingsPopupRow<Value: Hashable>: View {
   }
 }
 
+enum SettingsOptionSearch {
+  static func matches(_ label: String, query: String) -> Bool {
+    let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    return query.isEmpty || label.localizedCaseInsensitiveContains(query)
+  }
+}
+
+public struct SettingsSearchPickerRow<Value: Hashable>: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.settingsAccent) private var accent
+  @Environment(\.settingsMetrics) private var metrics
+  @Environment(\.settingsStrings) private var strings
+  @Environment(\.settingsSurfaces) private var surfaces
+  @Environment(\.settingsTypography) private var typography
+  @State private var isExpanded = false
+  @State private var query = ""
+  private let symbol: String?
+  private let title: String
+  private let caption: String?
+  private let maximumVisibleOptions: Int
+  @Binding private var selection: Value
+  private let options: [SettingsPopupOption<Value>]
+
+  public init(
+    symbol: String? = nil,
+    title: String,
+    caption: String? = nil,
+    maximumVisibleOptions: Int = 6,
+    selection: Binding<Value>,
+    options: [SettingsPopupOption<Value>]
+  ) {
+    self.symbol = symbol
+    self.title = title
+    self.caption = caption
+    self.maximumVisibleOptions = max(maximumVisibleOptions, 1)
+    _selection = selection
+    self.options = options
+  }
+
+  public var body: some View {
+    VStack(spacing: 0) {
+      header
+      if isExpanded {
+        SettingsRowSeparator()
+        picker
+          .transition(.opacity.combined(with: .move(edge: .top)))
+      }
+    }
+    .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isExpanded)
+  }
+
+  private var selectedLabel: String {
+    options.first { $0.value == selection }?.label ?? "—"
+  }
+
+  private var filteredOptions: [SettingsPopupOption<Value>] {
+    options.filter { SettingsOptionSearch.matches($0.label, query: query) }
+  }
+
+  private var header: some View {
+    Button {
+      isExpanded.toggle()
+      if !isExpanded {
+        query = ""
+      }
+    } label: {
+      HStack(spacing: 14) {
+        if let symbol {
+          Image(systemName: symbol)
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(SettingsPalette.muted)
+            .frame(width: 20)
+        }
+        VStack(alignment: .leading, spacing: 2) {
+          Text(title)
+            .font(typography.rowTitle.font)
+            .foregroundStyle(SettingsPalette.ink)
+          if let caption {
+            Text(caption)
+              .font(typography.rowCaption.font)
+              .foregroundStyle(SettingsPalette.faint)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+        }
+        Spacer(minLength: 10)
+        Text(selectedLabel)
+          .font(typography.value.font)
+          .foregroundStyle(accent.foreground)
+          .lineLimit(1)
+          .truncationMode(.middle)
+        Image(systemName: "chevron.down")
+          .font(.system(size: 9, weight: .semibold))
+          .foregroundStyle(SettingsPalette.faint)
+          .rotationEffect(.degrees(isExpanded ? 180 : 0))
+      }
+      .padding(.horizontal, metrics.rowInset)
+      .padding(.vertical, caption == nil ? 10 : 11)
+      .frame(minHeight: 42)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityValue(selectedLabel)
+  }
+
+  private var picker: some View {
+    VStack(spacing: 8) {
+      HStack(spacing: 8) {
+        Image(systemName: "magnifyingglass")
+          .font(.system(size: 11, weight: .medium))
+          .foregroundStyle(SettingsPalette.faint)
+        TextField(strings.search, text: $query)
+          .textFieldStyle(.plain)
+          .font(typography.value.font)
+          .foregroundStyle(SettingsPalette.ink)
+      }
+      .padding(.horizontal, 10)
+      .frame(height: 30)
+      .background(surfaces.field, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+      .overlay {
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+          .strokeBorder(SettingsPalette.hairline)
+      }
+
+      if filteredOptions.isEmpty {
+        Text(strings.noResults)
+          .font(typography.value.font)
+          .foregroundStyle(SettingsPalette.faint)
+          .frame(maxWidth: .infinity, minHeight: 36)
+      } else {
+        ScrollViewReader { proxy in
+          ScrollView {
+            LazyVStack(spacing: 4) {
+              ForEach(filteredOptions) { option in
+                optionButton(option)
+                  .id(option.id)
+              }
+            }
+          }
+          .scrollIndicators(.automatic)
+          .frame(height: optionListHeight)
+          .onAppear {
+            proxy.scrollTo(selection, anchor: .center)
+          }
+        }
+      }
+    }
+    .padding(.horizontal, metrics.rowInset)
+    .padding(.vertical, 12)
+  }
+
+  private var optionListHeight: CGFloat {
+    CGFloat(min(filteredOptions.count, maximumVisibleOptions)) * 34
+  }
+
+  private func optionButton(_ option: SettingsPopupOption<Value>) -> some View {
+    let isSelected = option.value == selection
+    return Button {
+      selection = option.value
+      query = ""
+      isExpanded = false
+    } label: {
+      HStack(spacing: 9) {
+        Text(option.label)
+          .font(typography.selectionLabel.font)
+          .foregroundStyle(isSelected ? accent.foreground : SettingsPalette.ink)
+          .lineLimit(1)
+        Spacer(minLength: 8)
+        if isSelected {
+          Image(systemName: "checkmark")
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(accent.foreground)
+        }
+      }
+      .padding(.horizontal, 10)
+      .frame(height: 30)
+      .background(
+        isSelected ? accent.wash : Color.clear,
+        in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+      )
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityValue(isSelected ? strings.selected : strings.notSelected)
+  }
+}
+
+public struct SettingsColorPickerRow: View {
+  private let symbol: String?
+  private let title: String
+  private let caption: String?
+  private let supportsOpacity: Bool
+  @Binding private var selection: Color
+
+  public init(
+    symbol: String? = nil,
+    title: String,
+    caption: String? = nil,
+    selection: Binding<Color>,
+    supportsOpacity: Bool = false
+  ) {
+    self.symbol = symbol
+    self.title = title
+    self.caption = caption
+    self.supportsOpacity = supportsOpacity
+    _selection = selection
+  }
+
+  public var body: some View {
+    SettingsRow(symbol: symbol, title: title, caption: caption) {
+      ColorPicker("", selection: $selection, supportsOpacity: supportsOpacity)
+        .labelsHidden()
+        .controlSize(.small)
+    }
+  }
+}
+
 public struct SettingsSegmentedRow<Value: Hashable>: View {
   private let symbol: String?
   private let title: String
