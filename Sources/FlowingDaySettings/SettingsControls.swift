@@ -544,11 +544,14 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
   public var body: some View {
     VStack(spacing: 0) {
       header
-      if isExpanded {
-        SettingsRowSeparator()
-        picker
-          .transition(.opacity.combined(with: .move(edge: .top)))
+      VStack(spacing: 0) {
+        if isExpanded {
+          SettingsRowSeparator()
+          picker
+            .transition(.opacity)
+        }
       }
+      .clipped()
     }
     .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isExpanded)
   }
