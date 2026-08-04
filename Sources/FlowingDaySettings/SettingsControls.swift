@@ -819,6 +819,75 @@ public struct SettingsSymbolSegmentedRow<Value: Hashable>: View {
   }
 }
 
+public struct SettingsMultiSelectOption: Identifiable {
+  public let id: String
+  public let label: String
+  public let isEnabled: Bool
+  let isOn: Binding<Bool>
+
+  public init(
+    _ label: String,
+    id: String? = nil,
+    isOn: Binding<Bool>,
+    isEnabled: Bool = true
+  ) {
+    self.id = id ?? label
+    self.label = label
+    self.isOn = isOn
+    self.isEnabled = isEnabled
+  }
+
+  var isSelected: Bool {
+    isOn.wrappedValue
+  }
+
+  func toggle() {
+    guard isEnabled else { return }
+    isOn.wrappedValue.toggle()
+  }
+}
+
+public struct SettingsMultiSelectRow: View {
+  private let symbol: String?
+  private let title: String
+  private let caption: String?
+  private let controlWidth: CGFloat
+  private let options: [SettingsMultiSelectOption]
+
+  public init(
+    symbol: String? = nil,
+    title: String,
+    caption: String? = nil,
+    controlWidth: CGFloat = 300,
+    options: [SettingsMultiSelectOption]
+  ) {
+    self.symbol = symbol
+    self.title = title
+    self.caption = caption
+    self.controlWidth = controlWidth
+    self.options = options
+  }
+
+  public var body: some View {
+    SettingsRow(symbol: symbol, title: title, caption: caption) {
+      HStack(spacing: 6) {
+        ForEach(options) { option in
+          SettingsSelectionButton(
+            title: option.label,
+            isSelected: option.isSelected,
+            style: .multiple
+          ) {
+            option.toggle()
+          }
+          .disabled(!option.isEnabled)
+        }
+      }
+      .frame(width: controlWidth)
+      .accessibilityElement(children: .contain)
+    }
+  }
+}
+
 public struct SettingsCheckToggle: View {
   private let title: String
   @Binding private var isOn: Bool

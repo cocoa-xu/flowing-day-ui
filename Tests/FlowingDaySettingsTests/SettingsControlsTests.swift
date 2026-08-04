@@ -1,3 +1,4 @@
+import SwiftUI
 import XCTest
 
 @testable import FlowingDaySettings
@@ -59,9 +60,57 @@ final class SettingsControlsTests: XCTestCase {
     )
   }
 
+  @MainActor
+  func testMultiSelectOptionTogglesItsBinding() {
+    let state = BooleanState(false)
+    let option = SettingsMultiSelectOption(
+      "Activity",
+      isOn: Binding(
+        get: { state.value },
+        set: { state.value = $0 }
+      )
+    )
+
+    XCTAssertEqual(option.id, "Activity")
+    XCTAssertFalse(option.isSelected)
+
+    option.toggle()
+
+    XCTAssertTrue(option.isSelected)
+    XCTAssertTrue(state.value)
+  }
+
+  @MainActor
+  func testDisabledMultiSelectOptionDoesNotToggle() {
+    let state = BooleanState(true)
+    let option = SettingsMultiSelectOption(
+      "Chart",
+      id: "network-chart",
+      isOn: Binding(
+        get: { state.value },
+        set: { state.value = $0 }
+      ),
+      isEnabled: false
+    )
+
+    option.toggle()
+
+    XCTAssertEqual(option.id, "network-chart")
+    XCTAssertTrue(option.isSelected)
+    XCTAssertTrue(state.value)
+  }
+
   func testOptionSearchIgnoresCaseAndSurroundingWhitespace() {
     XCTAssertTrue(SettingsOptionSearch.matches("Asia/Tokyo", query: "  TOKYO "))
     XCTAssertTrue(SettingsOptionSearch.matches("Europe/London", query: ""))
     XCTAssertFalse(SettingsOptionSearch.matches("Europe/London", query: "Tokyo"))
+  }
+}
+
+private final class BooleanState {
+  var value: Bool
+
+  init(_ value: Bool) {
+    self.value = value
   }
 }

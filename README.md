@@ -95,6 +95,27 @@ Applications own their settings, persistence, localization, and business logic. 
 
 Section footers align with the title and caption text inside their rows by default.
 
+## Multi-select rows
+
+Group related independent options into one settings row while preserving individual bindings and disabled states:
+
+```swift
+SettingsMultiSelectRow(
+    symbol: "network",
+    title: "Network",
+    caption: "Choose which network content appears.",
+    controlWidth: 260,
+    options: [
+        SettingsMultiSelectOption("Activity", isOn: $showNetwork),
+        SettingsMultiSelectOption(
+            "Chart",
+            isOn: $showNetworkChart,
+            isEnabled: showNetwork
+        )
+    ]
+)
+```
+
 ## Theming
 
 `FlowingDaySettings` ships with the typography, spacing, and surface hierarchy used by Afloat. Applications can replace any semantic font or background without rebuilding the components:
