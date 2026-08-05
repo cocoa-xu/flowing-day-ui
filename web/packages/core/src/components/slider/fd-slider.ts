@@ -63,13 +63,13 @@ export class FdSlider extends FdElement {
 
       /* NSRect(x: knobDiameter / 2, width: bounds.width - knobDiameter) */
       .track {
-        left: ${KNOB / 2}px;
-        right: ${KNOB / 2}px;
+        inset-inline: ${KNOB / 2}px;
         background: var(--_fd-palette-hairline);
       }
 
+      /* Logical, so the fill grows from the trailing edge when the layout is RTL. */
       .progress {
-        left: ${KNOB / 2}px;
+        inset-inline-start: ${KNOB / 2}px;
         width: calc(var(--_fraction) * (100% - ${KNOB}px));
         background: var(--_fd-accent-fill);
       }
@@ -78,7 +78,7 @@ export class FdSlider extends FdElement {
         position: absolute;
         top: 50%;
         translate: 0 -50%;
-        left: calc(var(--_fraction) * (100% - ${KNOB}px));
+        inset-inline-start: calc(var(--_fraction) * (100% - ${KNOB}px));
         width: ${KNOB}px;
         height: ${KNOB}px;
         border-radius: 50%;
@@ -166,11 +166,17 @@ export class FdSlider extends FdElement {
     if (state !== null) this.value = Number(state)
   }
 
-  /** `SettingsSliderControl.updateValue(with:)`. */
+  /** True while the control is laid out right to left, which flips the whole axis. */
+  get #isRtl(): boolean {
+    return getComputedStyle(this).direction === 'rtl'
+  }
+
+  /** `SettingsSliderControl.updateValue(with:)`, measured from the inline start. */
   #commit(clientX: number): void {
     const bounds = this.getBoundingClientRect()
     const usableWidth = Math.max(bounds.width - KNOB, 1)
-    const fraction = (clientX - bounds.left - KNOB / 2) / usableWidth
+    const fromStart = this.#isRtl ? bounds.right - clientX : clientX - bounds.left
+    const fraction = (fromStart - KNOB / 2) / usableWidth
     const proposed = FdSliderMath.value(fraction, this.min, this.max)
 
     const next =
@@ -220,12 +226,19 @@ export class FdSlider extends FdElement {
   #onKeydown = (event: KeyboardEvent): void => {
     if (this.disabled) return
 
+    // Up and down have no inline direction; left and right follow the layout, so the
+    // knob always travels the way the key points.
+    const inline = this.#isRtl ? -1 : 1
     const direction =
-      event.key === 'ArrowRight' || event.key === 'ArrowUp'
+      event.key === 'ArrowUp'
         ? 1
-        : event.key === 'ArrowLeft' || event.key === 'ArrowDown'
+        : event.key === 'ArrowDown'
           ? -1
-          : 0
+          : event.key === 'ArrowRight'
+            ? inline
+            : event.key === 'ArrowLeft'
+              ? -inline
+              : 0
     if (direction === 0) return
 
     event.preventDefault()

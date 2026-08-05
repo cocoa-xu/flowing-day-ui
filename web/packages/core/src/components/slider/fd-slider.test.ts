@@ -30,7 +30,11 @@ function drag(element: FdSlider, offsetX: number, type = 'pointerdown'): void {
 
 afterEach(() => {
   document.body.replaceChildren()
+  document.documentElement.dir = ''
 })
+
+const key = (element: FdSlider, name: string) =>
+  element.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }))
 
 describe('fd-slider', () => {
   it('stands 16px tall, as .frame(height: 16) asks', async () => {
@@ -166,6 +170,60 @@ describe('fd-slider', () => {
 
     element.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
     expect(element.value).toBe(10)
+  })
+
+  /** AppKit flips a horizontal slider with the layout direction; so does every other row. */
+  describe('right to left', () => {
+    it('parks the low end at the trailing edge', async () => {
+      document.documentElement.dir = 'rtl'
+      const element = await mount('<fd-slider value="0" min="0" max="100"></fd-slider>')
+      const bounds = element.getBoundingClientRect()
+      const knob = partOf(element, '.knob').getBoundingClientRect()
+
+      expect(bounds.right - knob.right).toBeCloseTo(0, 1)
+
+      element.value = 100
+      await element.updateComplete
+      expect(partOf(element, '.knob').getBoundingClientRect().left - bounds.left).toBeCloseTo(0, 1)
+    })
+
+    it('measures the pointer from the trailing edge', async () => {
+      document.documentElement.dir = 'rtl'
+      const element = await mount('<fd-slider min="0" max="100"></fd-slider>')
+      const bounds = element.getBoundingClientRect()
+
+      element.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          clientX: bounds.right - 6.5 - 50,
+          clientY: bounds.top + 8,
+          bubbles: true,
+          pointerId: 1,
+        }),
+      )
+      expect(element.value).toBeCloseTo(25, 4)
+    })
+
+    it('sends the knob the way the arrow key points', async () => {
+      document.documentElement.dir = 'rtl'
+      const element = await mount('<fd-slider min="0" max="100" value="50"></fd-slider>')
+
+      key(element, 'ArrowLeft')
+      expect(element.value).toBe(55)
+
+      key(element, 'ArrowRight')
+      expect(element.value).toBe(50)
+    })
+
+    it('leaves the vertical arrows alone, which carry no inline direction', async () => {
+      document.documentElement.dir = 'rtl'
+      const element = await mount('<fd-slider min="0" max="100" value="50"></fd-slider>')
+
+      key(element, 'ArrowUp')
+      expect(element.value).toBe(55)
+
+      key(element, 'ArrowDown')
+      expect(element.value).toBe(50)
+    })
   })
 
   it('exposes itself as a slider to assistive technology', async () => {
