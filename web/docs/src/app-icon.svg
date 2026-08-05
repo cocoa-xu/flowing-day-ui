@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Afloat</title>
+  <defs>
+    <linearGradient id="a" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#93C8CF" />
+      <stop offset="1" stop-color="#4E7B82" />
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#a)" />
+  <path
+    d="M12 40c5-6 9-6 14 0s9 6 14 0 9-6 12-2"
+    fill="none"
+    stroke="#FCFCFB"
+    stroke-width="4"
+    stroke-linecap="round"
+    opacity="0.92"
+  />
+  <circle cx="32" cy="24" r="6" fill="#FCFCFB" opacity="0.92" />
+</svg>

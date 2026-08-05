@@ -15,13 +15,29 @@ CodePen — with no build step required of the consumer.
 </fd-section>
 ```
 
+A whole settings window is declarative too, which is what makes it embeddable in a
+marketing page as a live, clickable mock rather than a screenshot:
+
+```html
+<fd-settings-window app-name="Afloat" page="general">
+  <fd-page-group label="Monitors">
+    <fd-page page-id="network" label="Network" symbol="network">…</fd-page>
+  </fd-page-group>
+</fd-settings-window>
+```
+
 ## Layout
 
 ```
 web/
 ├── packages/core/   @flowing-day/ui — the components and tokens
-└── docs/            playground, run with `pnpm dev`
+└── docs/            run with `pnpm dev`
+    ├── /            component playground with live theme controls
+    └── /window.html a 1:1 settings window mock on a black backdrop
 ```
+
+The playground resolves `@flowing-day/ui` to the core package's *sources*, so editing a
+component hot-reloads the page instead of waiting on a rebuild.
 
 The Swift package at the repository root is untouched; it remains the design's source of
 truth and every ported value is annotated with the Swift symbol it came from.
@@ -90,14 +106,18 @@ Swift source. A `@flowing-day/ui-icons-lucide` mapping package is planned.
 | Swift | Web | Reason |
 | --- | --- | --- |
 | `title:` | `label` attribute | `title` is a global HTML attribute and would raise a native tooltip |
-| `SettingsWindowPresenter` | not ported | `NSPanel` has no web equivalent; a `<dialog>`-based shell is planned |
+| `SettingsPopupControl`'s `NSPanel` | Popover API | The top layer escapes the scroll container as a child window did; light dismiss and Escape come from the platform |
+| `SettingsWindowPresenter` | not ported | `NSPanel` has no web equivalent; `fd-settings-window` is the view, and the page decides how to present it |
 | `RoundedRectangle(style: .continuous)` | `border-radius` | CSS `corner-shape` is not yet broadly available |
 | `Toggle(.switch)` | custom-drawn `fd-switch` | AppKit chrome publishes no metrics; geometry is tokenised for tuning |
+| `SettingsPage<ID: Hashable>` | `page-id` string | Attributes are strings; anything else would need JavaScript to author |
 
 ## Status
 
-Ported: `fd-icon`, `fd-card`, `fd-section`, `fd-separator`, `fd-pane-stack`, `fd-row`,
-`fd-switch`, `fd-switch-row`, and the complete token layer.
+Ported: the token layer, `fd-settings-window` with its sidebar and page header, `fd-page`,
+`fd-page-group`, `fd-card`, `fd-section`, `fd-separator`, `fd-pane-stack`, `fd-row`,
+`fd-switch`, `fd-switch-row`, `fd-popup`, `fd-popup-row`, `fd-option` and `fd-icon`.
 
-Remaining: the slider, popup, search picker, segmented and multi-select rows, tags, grids,
-buttons, links, expandable and value rows, and the sidebar navigation shell.
+Remaining: the slider, search picker, segmented, symbol-segmented and multi-select rows,
+dependent rows, tags, flow and adaptive grids, button, link, expandable, value and empty
+rows.
