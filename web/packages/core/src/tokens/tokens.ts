@@ -185,6 +185,8 @@ export const tokenGroups: readonly TokenGroup[] = [
       ['motion-hover', '120ms'],
       ['motion-selection', '160ms'],
       ['motion-page', '220ms'],
+      /* SwiftUI `.default`, which the selection buttons animate their tint with. */
+      ['motion-default', '350ms'],
       ['motion-easing', 'cubic-bezier(0, 0, 0.58, 1)'],
       ['motion-easing-page', 'cubic-bezier(0.42, 0, 0.58, 1)'],
     ],

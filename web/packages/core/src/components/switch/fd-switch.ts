@@ -158,8 +158,4 @@ declare global {
   interface HTMLElementTagNameMap {
     'fd-switch': FdSwitch
   }
-
-  interface HTMLElementEventMap {
-    'fd-change': CustomEvent<{ checked: boolean }>
-  }
 }
