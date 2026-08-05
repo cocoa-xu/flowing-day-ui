@@ -1,0 +1,120 @@
+# @flowing-day/ui
+
+A framework-agnostic port of the [FlowingDayUI](https://github.com/cocoa-xu/flowing-day-ui)
+SwiftUI toolkit, built as standard Custom Elements. The published output is plain ESM plus
+plain CSS custom properties, so it works in a bare HTML file, React, Vue, Svelte, Solid,
+Angular, Astro, Rails, Django or a CodePen — with no build step required of you.
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/npm/@flowing-day/ui/+esm"></script>
+
+<fd-section label="Startup" footer="Applies the next time the app launches.">
+  <fd-switch-row symbol="power" label="Launch at login" checked></fd-switch-row>
+  <fd-separator indented></fd-separator>
+  <fd-switch-row symbol="eye" label="Show in menu bar"></fd-switch-row>
+</fd-section>
+```
+
+```sh
+npm install @flowing-day/ui
+```
+
+```js
+import '@flowing-day/ui'                       // everything
+import '@flowing-day/ui/components/switch-row' // or one component
+```
+
+## A whole settings window, declaratively
+
+Pages are light DOM, so a static page can build one with no JavaScript at all:
+
+```html
+<fd-settings-window app-name="Flowing Day" page="general">
+  <fd-page-group label="Monitors">
+    <fd-page page-id="general" label="General" symbol="gearshape">
+      <fd-pane-stack>…</fd-pane-stack>
+    </fd-page>
+  </fd-page-group>
+</fd-settings-window>
+```
+
+## Theming
+
+Every value in `SettingsTheme.swift` is a CSS custom property. Because custom properties
+inherit through shadow boundaries, setting one anywhere retints the subtree below it — the
+same semantics as overriding a SwiftUI environment value:
+
+```css
+:root         { --fd-accent: #6D9EA5; }  /* whole document */
+.danger-zone  { --fd-accent: #C4453D; }  /* one subtree     */
+```
+
+`--fd-accent` is the only accent knob you need. Fill, foreground, wash and veil all derive
+from it, in both light and dark. `SettingsAccent` spells those out as four literals per
+appearance, but they are one hue at four lightnesses, and deriving them in oklch
+reproduces every Swift value to within 3/255.
+
+Import the stylesheet when you want the tokens available to your own CSS too:
+
+```js
+import '@flowing-day/ui/theme.css'
+```
+
+Appearance follows the OS. `data-fd-scheme="light" | "dark"` on any element forces one
+appearance for that subtree.
+
+## Icons
+
+SF Symbols cannot be redistributed, so the package ships the icon interface and no icon
+data. Register any set you like, under whatever names you want to call them by:
+
+```js
+import { FdIcons } from '@flowing-day/ui'
+
+FdIcons.register({ gearshape: '<svg …></svg>' })
+```
+
+Icons already on the page pick up a later registration.
+
+## Components
+
+`fd-settings-window`, `fd-page`, `fd-page-group`, `fd-pane-stack`, `fd-section`, `fd-card`,
+`fd-row`, `fd-separator`, `fd-switch`, `fd-switch-row`, `fd-switch-group`,
+`fd-dependent-rows`, `fd-popup`, `fd-popup-row`, `fd-segmented-row`,
+`fd-symbol-segmented-row`, `fd-multi-select-row`, `fd-check-toggle`, `fd-option`, `fd-icon`.
+
+Editors pick up attribute and event completions from the bundled
+[custom elements manifest](https://github.com/webcomponents/custom-elements-manifest).
+
+## Differences from the SwiftUI original
+
+| Swift | Web | Why |
+| --- | --- | --- |
+| `title:` | `label` attribute | `title` is a global HTML attribute and would raise a native tooltip |
+| `SettingsAccent(fill:foreground:)` | one `--fd-accent` | The four literals are one hue at four lightnesses, so they derive |
+| `SettingsPopupControl`'s `NSPanel` | Popover API | The top layer escapes the scroll container as a child window did |
+| `SettingsWindowPresenter` | not ported | `NSPanel` has no web equivalent; the page decides how to present the view |
+| `Toggle(.switch)` | custom-drawn | AppKit chrome publishes no metrics, so the geometry is tokenised |
+
+Everything else — metrics, colours, type scale, motion durations — is taken from the Swift
+sources rather than eyeballed, and the tests pin the literals.
+
+## Versioning
+
+This package versions independently of the Swift package. They measure different things:
+the Swift package has a release history, this one is still filling in components, and a
+breaking change on either side should not force a release on the other.
+
+**0.1.0 mirrors FlowingDaySettings 1.6.0.** Each release records which Swift version it
+was ported from. The two version lines will merge once the web port reaches parity and
+this package reaches 1.0.
+
+## Browser support
+
+Chrome 119, Safari 16.4, Firefox 128 and up — set by CSS relative colour syntax, which
+the accent derivation uses. Also relies on the Popover API, `color-mix()` and
+`ElementInternals`.
+
+## Licence
+
+Apache-2.0.

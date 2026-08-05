@@ -1,30 +1,11 @@
 # FlowingDayUI for the web
 
-A framework-agnostic port of the `FlowingDaySettings` SwiftUI toolkit, built as standard
-Custom Elements. The published output is plain ESM plus plain CSS custom properties, so it
-works in a bare HTML file, React, Vue, Svelte, Solid, Angular, Astro, Rails, Django or a
-CodePen — with no build step required of the consumer.
+Workspace for `@flowing-day/ui`, a framework-agnostic port of the `FlowingDaySettings`
+SwiftUI toolkit built as standard Custom Elements.
 
-```html
-<script type="module" src="https://cdn.jsdelivr.net/npm/@flowing-day/ui/+esm"></script>
-
-<fd-section label="Startup" footer="Applies the next time the app launches.">
-  <fd-switch-row symbol="power" label="Launch at login" checked></fd-switch-row>
-  <fd-separator indented></fd-separator>
-  <fd-switch-row symbol="eye" label="Show in menu bar"></fd-switch-row>
-</fd-section>
-```
-
-A whole settings window is declarative too, which is what makes it embeddable in a
-marketing page as a live, clickable mock rather than a screenshot:
-
-```html
-<fd-settings-window app-name="Afloat" page="general">
-  <fd-page-group label="Monitors">
-    <fd-page page-id="network" label="Network" symbol="network">…</fd-page>
-  </fd-page-group>
-</fd-settings-window>
-```
+**Using the library?** The package README is
+[`packages/core/README.md`](./packages/core/README.md) — install, theming, components.
+This file covers working on it.
 
 ## Layout
 
@@ -37,110 +18,59 @@ web/
 The landing page is a live, draggable settings window rather than a component gallery.
 Its own Appearance page restyles the window it lives in — theme, accent, density, corner
 radius and type scale are all just tokens written onto the window element — so the page
-doubles as the proof that the theming contract works.
+doubles as the proof that the theming contract works, and as its own regression test.
 
-Dragging mirrors `NSPanel.isMovableByWindowBackground`, which `SettingsWindowPresenter`
-sets. It lives with the page, not the component: presentation is the caller's business.
-
-The page resolves `@flowing-day/ui` to the core package's *sources*, so editing a
-component hot-reloads it instead of waiting on a rebuild.
-
-The Swift package at the repository root is untouched; it remains the design's source of
-truth and every ported value is annotated with the Swift symbol it came from.
+It resolves `@flowing-day/ui` to the core package's *sources*, so editing a component
+hot-reloads the page instead of waiting on a rebuild.
 
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
-| `pnpm build` | Build ESM output, type declarations, `theme.css` and the custom elements manifest |
+| `pnpm dev` | Serve the landing page |
+| `pnpm build` | ESM output, type declarations, `theme.css` and the custom elements manifest |
 | `pnpm test` | Run the suite in a real Chromium via Vitest browser mode |
-| `pnpm typecheck` | Type-check without emitting |
+| `pnpm typecheck` | Type-check both packages without emitting |
 | `pnpm lint` / `pnpm format` | Biome check / write |
-| `pnpm dev` | Serve the playground |
 
 `pnpm --filter @flowing-day/ui check:exports` validates the published entry points with
 publint and are-the-types-wrong.
 
-## Theming
+## How the token layer is built
 
-Every token in `SettingsTheme.swift` becomes a CSS custom property. Because custom
-properties inherit through shadow boundaries, setting one anywhere retints the subtree
-below it — the same semantics as overriding a SwiftUI environment value:
+Every token lives in `packages/core/src/tokens/tokens.ts`, annotated with the Swift symbol
+it mirrors. Two artifacts are generated from it, so the two can only ever drift in one
+place:
 
-```css
-:root                { --fd-accent-fill: #6D9EA5; }  /* whole document */
-.danger-zone         { --fd-accent-fill: #C4453D; }  /* one subtree     */
-```
+- `themeStyles` — private `--_fd-*` aliases adopted into every shadow root, each falling
+  back to its public `--fd-*` token, which is what makes an override anywhere up the tree
+  win.
+- `theme.css` — the public declarations, for authoring against the tokens directly.
 
-### An accent is one colour
+Two rules the generator enforces, both learned the hard way:
 
-`--fd-accent` is the only knob you need. Fill, foreground, wash and veil all derive from
-it, in both appearances:
+**No `light-dark()`.** Lightning CSS, Vite's default minifier and therefore part of many
+consumers' builds, downlevels it into a guard-variable pair that is silently wrong inside
+a custom property declaration. Tokens ship as a light base plus a `prefers-color-scheme`
+override instead, and a test asserts neither artifact ever contains it.
 
-```css
-:root { --fd-accent: #B4795E; }   /* that is the whole change */
-```
+**No derived accent tokens on `:root`.** A `var()` is substituted at the element its
+declaration sits on, so publishing `--fd-accent-fill` on `:root` would freeze it there and
+setting `--fd-accent` on a window or page could never move it. The formulas are declared
+only where they are derived: inside each shadow root, and on `[data-fd-accent-scope]`.
 
-`SettingsAccent` spells out `fill` and `foreground` per appearance, but the four literals
-of `.celadon` are a single hue at four lightnesses — the fill lifts by 0.131 for dark
-surfaces, and the foreground steps away from whatever surface it sits on. Deriving them in
-oklch reproduces every Swift literal to within 3/255, and means "make it copper" is one
-line rather than four values to keep in step. Each derived token stays individually
-overridable when one appearance needs art direction by hand.
+## Releasing
 
-Only `--fd-accent-lift` and `--fd-accent-contrast` — the two lightness steps — depend on
-the appearance. The formulas themselves do not, which is what lets `--fd-accent` be set at
-any depth: a `var()` is substituted at the element its declaration sits on, so a derived
-token published on `:root` would be frozen there for everything below it. That is also why
-`theme.css` publishes the formulas under `[data-fd-accent-scope]` rather than on `:root`;
-components derive them inside their own shadow root, and plain HTML opts in with the
-attribute.
+The Swift package and this one version independently — see *Versioning* in the package
+README for why. Git tags have to distinguish them, and SPM requires bare semver tags:
 
-This is the one place the port deliberately improves on the original rather than copying
-it, and it relies on relative colour syntax — Chrome 119, Safari 16.4, Firefox 128.
-
-Internally each component reads a private `--_fd-*` alias whose fallback is the public
-token, so the defaults work with no stylesheet import at all. Import `theme.css` when you
-want the tokens available to your own CSS as well:
-
-```js
-import '@flowing-day/ui/theme.css'
-```
-
-Appearance follows the OS. `data-fd-scheme="light" | "dark"` on any element forces one
-appearance for that subtree.
-
-### Why not `light-dark()`
-
-It reads better, and it was the first implementation — but Lightning CSS, the default
-minifier in Vite, downlevels `light-dark()` into a guard-variable pair that is silently
-wrong inside a custom property declaration. Consumer build configurations are not ours to
-control, so tokens ship as a light base plus a `prefers-color-scheme` override instead.
-A test asserts neither generated artifact ever contains `light-dark(`.
-
-## Icons
-
-SF Symbols cannot be redistributed, so the core ships the icon interface and no icon data:
-
-```js
-import { FdIcons } from '@flowing-day/ui'
-
-FdIcons.register({ gearshape: '<svg …></svg>' })
-```
-
-Names are conventionally the SF Symbol names, which keeps call sites identical to the
-Swift source. A `@flowing-day/ui-icons-lucide` mapping package is planned.
-
-## Deviations from the Swift API
-
-| Swift | Web | Reason |
+| | Version | Tag |
 | --- | --- | --- |
-| `title:` | `label` attribute | `title` is a global HTML attribute and would raise a native tooltip |
-| `SettingsPopupControl`'s `NSPanel` | Popover API | The top layer escapes the scroll container as a child window did; light dismiss and Escape come from the platform |
-| `SettingsWindowPresenter` | not ported | `NSPanel` has no web equivalent; `fd-settings-window` is the view, and the page decides how to present it |
-| `RoundedRectangle(style: .continuous)` | `border-radius` | CSS `corner-shape` is not yet broadly available |
-| `Toggle(.switch)` | custom-drawn `fd-switch` | AppKit chrome publishes no metrics; geometry is tokenised for tuning |
-| `SettingsPage<ID: Hashable>` | `page-id` string | Attributes are strings; anything else would need JavaScript to author |
+| Swift | `1.6.0` | `1.6.0` |
+| Web | `0.1.0` | `web/v0.1.0` |
+
+Publishing is `pnpm --filter @flowing-day/ui publish`; `publishConfig.access` is already
+set, since scoped packages default to restricted.
 
 ## Status
 

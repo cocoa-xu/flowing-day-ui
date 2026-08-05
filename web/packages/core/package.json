@@ -3,6 +3,29 @@
   "version": "0.1.0",
   "description": "Framework-agnostic web components mirroring the FlowingDayUI SwiftUI design toolkit.",
   "license": "Apache-2.0",
+  "author": "Cocoa <i@uwucocoa.moe>",
+  "homepage": "https://github.com/cocoa-xu/flowing-day-ui/tree/main/web#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cocoa-xu/flowing-day-ui.git",
+    "directory": "web/packages/core"
+  },
+  "bugs": "https://github.com/cocoa-xu/flowing-day-ui/issues",
+  "keywords": [
+    "web-components",
+    "custom-elements",
+    "design-system",
+    "design-tokens",
+    "lit",
+    "settings",
+    "preferences",
+    "swiftui",
+    "macos",
+    "framework-agnostic"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "files": [
     "dist",
