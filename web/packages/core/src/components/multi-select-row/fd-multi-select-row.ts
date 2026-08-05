@@ -7,7 +7,7 @@ import '../option/fd-option.js'
 import '../row/fd-row.js'
 
 /**
- * Mirrors `SettingsMultiSelectRow`: one row holding several independent toggles, each
+ * Mirrors `PreferencesMultiSelectRow`: one row holding several independent toggles, each
  * keeping its own on/off state and enablement, drawn as checkmark-circle pills.
  *
  * Each `fd-option` child owns its state through its `selected` attribute, which is the
@@ -77,7 +77,7 @@ export class FdMultiSelectRow extends FdElement {
     this.options = collectOptions(this.#slot)
   }
 
-  /** Mirrors `SettingsMultiSelectOption.toggle()`, which guards on `isEnabled`. */
+  /** Mirrors `PreferencesMultiSelectOption.toggle()`, which guards on `isEnabled`. */
   #toggle(index: number): void {
     const option = this.options[index]
     if (!option || this.disabled || option.disabled) return

@@ -3,10 +3,10 @@ import { customElement } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 
 /**
- * Mirrors `SettingsPaneStack`: leading-aligned vertical stack using the standard
+ * Mirrors `PreferencesPaneStack`: leading-aligned vertical stack using the standard
  * section spacing. `fd-section` stretches itself, matching its `maxWidth: .infinity`.
  *
- * @slot - Sections making up one settings page.
+ * @slot - Sections making up one preferences page.
  */
 @customElement('fd-pane-stack')
 export class FdPaneStack extends FdElement {

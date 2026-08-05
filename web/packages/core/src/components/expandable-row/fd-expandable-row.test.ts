@@ -27,7 +27,7 @@ afterEach(() => {
 })
 
 describe('fd-expandable-row', () => {
-  it('keeps the SettingsRow geometry', async () => {
+  it('keeps the PreferencesRow geometry', async () => {
     const element = await mount('<fd-expandable-row label="Advanced"></fd-expandable-row>')
     const style = getComputedStyle(rowOf(element))
 

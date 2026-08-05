@@ -2,8 +2,8 @@ import { type CSSResult, css } from 'lit'
 import { textRole } from './typography.js'
 
 /**
- * Mirrors `SettingsSoftButtonStyle`, the appearance shared by `SettingsButtonRow`,
- * `SettingsLinkRow` and anything else wanting a trailing button: 12/5 padding on
+ * Mirrors `PreferencesSoftButtonStyle`, the appearance shared by `PreferencesButtonRow`,
+ * `PreferencesLinkRow` and anything else wanting a trailing button: 12/5 padding on
  * `controlRadius`, accent veil behind a hairline, dimmed to 0.6 while pressed.
  *
  * `data-prominent` is the `isProminent` branch — solid accent fill, white label, and a

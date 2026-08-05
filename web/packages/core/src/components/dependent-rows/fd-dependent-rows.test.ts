@@ -65,7 +65,7 @@ describe('fd-dependent-rows', () => {
     expect(none.shadowRoot?.querySelector('fd-separator')).toBeNull()
   })
 
-  /** SettingsDependentRowsMotion: 0.18s easeOut with a -5pt entry offset. */
+  /** PreferencesDependentRowsMotion: 0.18s easeOut with a -5pt entry offset. */
   it('animates on the disclosure motion tokens', async () => {
     const element = await mount<FdDependentRows>(`<fd-dependent-rows>${BODY}</fd-dependent-rows>`)
     const content = element.shadowRoot?.querySelector('.content') as HTMLElement

@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js'
 import { FdElement } from '../../internal/base-element.js'
 
 /**
- * Mirrors `SettingsPage`. Declared as a child of `fd-settings-window`, which reads the
+ * Mirrors `PreferencesPage`. Declared as a child of `fd-preferences-window`, which reads the
  * metadata to build the sidebar and shows only the active page's content.
  *
  * @slot - The page body, typically an `fd-pane-stack`.
@@ -20,7 +20,7 @@ export class FdPage extends FdElement {
     }
   `
 
-  /** Identifier used by `fd-settings-window`'s `page` attribute. */
+  /** Identifier used by `fd-preferences-window`'s `page` attribute. */
   @property({ attribute: 'page-id', reflect: true }) pageId = ''
 
   @property({ reflect: true }) label = ''
@@ -34,7 +34,7 @@ export class FdPage extends FdElement {
   @property({ attribute: 'header-symbol', reflect: true }) headerSymbol: string | null = null
 
   /**
-   * Mirrors `SettingsPage(accent:)`. One colour: the fill, foreground, wash and veil all
+   * Mirrors `PreferencesPage(accent:)`. One colour: the fill, foreground, wash and veil all
    * derive from it, in both appearances.
    */
   @property({ reflect: true }) accent: string | null = null
@@ -46,7 +46,7 @@ export class FdPage extends FdElement {
   /** Mirrors `isAvailable: false`: dimmed and not selectable. */
   @property({ type: Boolean, reflect: true }) unavailable = false
 
-  /** Set by `fd-settings-window`; not intended to be authored. */
+  /** Set by `fd-preferences-window`; not intended to be authored. */
   @property({ type: Boolean, reflect: true }) active = false
 
   override updated(changed: PropertyValues<this>): void {

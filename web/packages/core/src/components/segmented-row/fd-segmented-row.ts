@@ -6,7 +6,7 @@ import '../option/fd-option.js'
 import '../row/fd-row.js'
 
 /**
- * Mirrors `SettingsSegmentedRow`: a fixed-width strip of single-select pills whose
+ * Mirrors `PreferencesSegmentedRow`: a fixed-width strip of single-select pills whose
  * labels are compact, so they take the 6pt horizontal padding rather than 9pt.
  *
  * `minimumScaleFactor(0.72)` has no CSS equivalent; an over-long label truncates here

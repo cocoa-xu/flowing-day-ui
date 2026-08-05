@@ -7,7 +7,7 @@ import '../option/fd-option.js'
 import '../row/fd-row.js'
 
 /**
- * Mirrors `SettingsSymbolSegmentedRow`: a strip whose segments draw an icon where one is
+ * Mirrors `PreferencesSymbolSegmentedRow`: a strip whose segments draw an icon where one is
  * given and the label otherwise, with the label as the tooltip and accessible name.
  *
  * @fires fd-change - `{ value: string }` when the selection changes.

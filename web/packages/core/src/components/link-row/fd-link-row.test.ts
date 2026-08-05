@@ -19,7 +19,7 @@ afterEach(() => {
 })
 
 describe('fd-link-row', () => {
-  it('points the link at the destination and opens it away from Settings', async () => {
+  it('points the link at the destination and opens it away from Preferences', async () => {
     const element = await mount(
       '<fd-link-row label="Docs" button-label="Open" href="https://example.com/docs" help="Open the documentation"></fd-link-row>',
     )

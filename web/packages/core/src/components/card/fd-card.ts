@@ -3,7 +3,7 @@ import { customElement } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 
 /**
- * Mirrors `SettingsCard`: rounded, hairline-bordered container that clips a
+ * Mirrors `PreferencesCard`: rounded, hairline-bordered container that clips a
  * vertical stack of rows.
  *
  * @slot - Rows to stack, typically `fd-row` variants separated by `fd-separator`.

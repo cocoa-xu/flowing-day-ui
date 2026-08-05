@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 
 /**
- * Mirrors `SettingsSwitch` — `Toggle(.switch).controlSize(.small)`.
+ * Mirrors `PreferencesSwitch` — `Toggle(.switch).controlSize(.small)`.
  *
  * The SwiftUI original renders native AppKit chrome, which publishes no metrics, so the
  * track and knob geometry here is an approximation exposed as tokens for tuning.

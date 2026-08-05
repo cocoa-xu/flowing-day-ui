@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 
 /**
- * Mirrors `SettingsRowSeparator`: a 1px hairline inset by `rowInset`, plus a further
+ * Mirrors `PreferencesRowSeparator`: a 1px hairline inset by `rowInset`, plus a further
  * 34px when indented so it aligns past the leading symbol gutter.
  */
 @customElement('fd-separator')

@@ -23,7 +23,7 @@ describe('srgb', () => {
     expect(srgb(0x000000)).toBe('#000000')
   })
 
-  it('decomposes channels the same way SettingsPalette.srgb does', () => {
+  it('decomposes channels the same way PreferencesPalette.srgb does', () => {
     expect(srgb(0x1d1d1b, 0.5)).toBe('rgb(29 29 27 / 0.5)')
   })
 })
@@ -42,7 +42,7 @@ describe('dynamic and translucent', () => {
 })
 
 describe('fontWeights', () => {
-  it('maps every SettingsFontWeight case onto a CSS numeric weight', () => {
+  it('maps every PreferencesFontWeight case onto a CSS numeric weight', () => {
     expect(Object.keys(fontWeights)).toEqual([
       'ultraLight',
       'thin',
@@ -150,12 +150,12 @@ describe('tokenGroups', () => {
   const light = (name: string) => lightValue(flat.get(name) ?? '')
   const dark = (name: string) => darkValue(flat.get(name) ?? '')
 
-  it('takes the celadon fill of SettingsAccent.celadon as the single accent knob', () => {
+  it('takes the celadon fill of PreferencesAccent.celadon as the single accent knob', () => {
     expect(flat.get('accent')).toBe('#6D9EA5')
   })
 
   /**
-   * The four literals of SettingsAccent.celadon are one hue at four lightnesses, so
+   * The four literals of PreferencesAccent.celadon are one hue at four lightnesses, so
    * every other accent token chains off `accent` rather than being spelled out.
    */
   it('derives the whole accent set from that one colour', () => {
@@ -185,12 +185,12 @@ describe('tokenGroups', () => {
     expect(dark('surface-card')).toBe(light('surface-card'))
   })
 
-  it('cross-maps surfaces onto the palette exactly as SettingsSurfaces.standard does', () => {
+  it('cross-maps surfaces onto the palette exactly as PreferencesSurfaces.standard does', () => {
     expect(light('surface-sidebar')).toBe('var(--fd-palette-card)')
     expect(light('surface-card')).toBe('var(--fd-palette-control)')
   })
 
-  it('carries SettingsMetrics.standard', () => {
+  it('carries PreferencesMetrics.standard', () => {
     expect(light('metric-card-radius')).toBe('14px')
     expect(light('metric-control-radius')).toBe('9px')
     expect(light('metric-row-inset')).toBe('18px')
@@ -198,7 +198,7 @@ describe('tokenGroups', () => {
     expect(light('metric-section-spacing')).toBe('20px')
   })
 
-  it('carries the full SettingsPalette, both appearances', () => {
+  it('carries the full PreferencesPalette, both appearances', () => {
     expect(flat.get('palette-canvas')).toEqual({ light: '#FCFCFB', dark: '#161617' })
     expect(flat.get('palette-card')).toEqual({ light: '#F2F2EF', dark: '#232326' })
     expect(flat.get('palette-control')).toEqual({ light: '#FFFFFF', dark: '#2E2E31' })
@@ -222,7 +222,7 @@ describe('tokenGroups', () => {
     }
   })
 
-  it('keeps the literal type scale from SettingsTypography.standard', () => {
+  it('keeps the literal type scale from PreferencesTypography.standard', () => {
     expect(light('text-row-title-size')).toBe('13px')
     expect(light('text-row-caption-size')).toBe('11px')
     expect(light('text-page-title-size')).toBe('25px')
@@ -253,7 +253,7 @@ describe('tokenGroups', () => {
 })
 
 describe('reducedMotionTokens', () => {
-  it('shortens disclosure to the SettingsDependentRowsMotion reduced values', () => {
+  it('shortens disclosure to the PreferencesDependentRowsMotion reduced values', () => {
     const reduced = new Map(reducedMotionTokens)
     expect(reduced.get('motion-disclosure')).toBe('120ms')
     expect(reduced.get('motion-disclosure-offset')).toBe('0px')

@@ -4,7 +4,7 @@ import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { tagStyles } from '../../internal/tag.js'
 
 /**
- * Mirrors `SettingsTag`: a static accent-veiled pill in the monospaced tag role. It takes
+ * Mirrors `PreferencesTag`: a static accent-veiled pill in the monospaced tag role. It takes
  * no action and no state — pair it with `fd-flow-grid` to lay a set of them out.
  *
  * @csspart tag - The pill.

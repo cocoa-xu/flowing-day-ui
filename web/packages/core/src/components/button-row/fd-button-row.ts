@@ -5,7 +5,7 @@ import { softButtonStyles } from '../../internal/soft-button.js'
 import '../row/fd-row.js'
 
 /**
- * Mirrors `SettingsButtonRow`: an `fd-row` whose trailing control is a soft button.
+ * Mirrors `PreferencesButtonRow`: an `fd-row` whose trailing control is a soft button.
  *
  * @fires fd-activate - When the button is pressed. This is the SwiftUI `action` closure.
  * @csspart button - The trailing button.
@@ -20,10 +20,10 @@ export class FdButtonRow extends FdElement {
 
   @property({ reflect: true }) caption: string | null = null
 
-  /** Text on the trailing button — `SettingsButtonRow.buttonTitle`. */
+  /** Text on the trailing button — `PreferencesButtonRow.buttonTitle`. */
   @property({ reflect: true, attribute: 'button-label' }) buttonLabel = ''
 
-  /** Mirrors `SettingsSoftButtonStyle(isProminent:)`. */
+  /** Mirrors `PreferencesSoftButtonStyle(isProminent:)`. */
   @property({ type: Boolean, reflect: true }) prominent = false
 
   @property({ type: Boolean, reflect: true }) disabled = false

@@ -6,7 +6,7 @@ import { rowLayoutStyles } from '../../internal/row-layout.js'
 import '../icon/fd-icon.js'
 
 /**
- * Mirrors `SettingsExpandableRow`: a row that is entirely a button, with a trailing
+ * Mirrors `PreferencesExpandableRow`: a row that is entirely a button, with a trailing
  * chevron turning 180° over 0.18s ease-out. It reports its state and owns nothing else —
  * pair it with `fd-dependent-rows` to reveal the rows it discloses.
  *

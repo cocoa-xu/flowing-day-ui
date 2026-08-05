@@ -31,7 +31,7 @@ describe('fd-button-row', () => {
     expect(buttonOf(element).textContent?.trim()).toBe('Clear')
   })
 
-  it('uses the 12/5 padding and control radius of SettingsSoftButtonStyle', async () => {
+  it('uses the 12/5 padding and control radius of PreferencesSoftButtonStyle', async () => {
     const element = await mount(
       '<fd-button-row label="Cache" button-label="Clear"></fd-button-row>',
     )

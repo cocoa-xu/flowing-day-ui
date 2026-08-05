@@ -24,23 +24,23 @@ import '@flowing-day/ui'                       // everything
 import '@flowing-day/ui/components/switch-row' // or one component
 ```
 
-## A whole settings window, declaratively
+## A whole preferences window, declaratively
 
 Pages are light DOM, so a static page can build one with no JavaScript at all:
 
 ```html
-<fd-settings-window app-name="Flowing Day" page="general">
+<fd-preferences-window app-name="Flowing Day" page="general">
   <fd-page-group label="Monitors">
     <fd-page page-id="general" label="General" symbol="gearshape">
       <fd-pane-stack>…</fd-pane-stack>
     </fd-page>
   </fd-page-group>
-</fd-settings-window>
+</fd-preferences-window>
 ```
 
 ## Theming
 
-Every value in `SettingsTheme.swift` is a CSS custom property. Because custom properties
+Every value in `PreferencesTheme.swift` is a CSS custom property. Because custom properties
 inherit through shadow boundaries, setting one anywhere retints the subtree below it — the
 same semantics as overriding a SwiftUI environment value:
 
@@ -50,7 +50,7 @@ same semantics as overriding a SwiftUI environment value:
 ```
 
 `--fd-accent` is the only accent knob you need. Fill, foreground, wash and veil all derive
-from it, in both light and dark. `SettingsAccent` spells those out as four literals per
+from it, in both light and dark. `PreferencesAccent` spells those out as four literals per
 appearance, but they are one hue at four lightnesses, and deriving them in oklch
 reproduces every Swift value to within 3/255.
 
@@ -78,7 +78,7 @@ Icons already on the page pick up a later registration.
 
 ## Components
 
-**Structure** — `fd-settings-window`, `fd-page`, `fd-page-group`, `fd-pane-stack`,
+**Structure** — `fd-preferences-window`, `fd-page`, `fd-page-group`, `fd-pane-stack`,
 `fd-section`, `fd-card`, `fd-separator`, `fd-dependent-rows`.
 
 **Rows** — `fd-row`, `fd-switch-row`, `fd-popup-row`, `fd-slider-row`, `fd-value-row`,
@@ -102,12 +102,12 @@ Editors pick up attribute and event completions from the bundled
 | Swift | Web | Why |
 | --- | --- | --- |
 | `title:` | `label` attribute | `title` is a global HTML attribute and would raise a native tooltip |
-| `SettingsAccent(fill:foreground:)` | one `--fd-accent` | The four literals are one hue at four lightnesses, so they derive |
-| `SettingsPopupControl`'s `NSPanel` | Popover API | The top layer escapes the scroll container as a child window did |
-| `SettingsWindowPresenter` | not ported | `NSPanel` has no web equivalent; the page decides how to present the view |
+| `PreferencesAccent(fill:foreground:)` | one `--fd-accent` | The four literals are one hue at four lightnesses, so they derive |
+| `PreferencesPopupControl`'s `NSPanel` | Popover API | The top layer escapes the scroll container as a child window did |
+| `PreferencesWindowPresenter` | not ported | `NSPanel` has no web equivalent; the page decides how to present the view |
 | `Toggle(.switch)` | custom-drawn | AppKit chrome publishes no metrics, so the geometry is tokenised |
 | `truncationMode(.middle)` | split head and tail | No CSS keyword truncates a middle, so the tail is held back and the head ellipsises into it |
-| `SettingsWrappingLayout` | `flex-wrap` | The custom `Layout` places each item at its ideal size on the row's top edge, which is a wrapping flex line |
+| `PreferencesWrappingLayout` | `flex-wrap` | The custom `Layout` places each item at its ideal size on the row's top edge, which is a wrapping flex line |
 | `action:` closure | `fd-activate` event | A `click` on the host also fires for the row label, which never ran the closure |
 | `accessibilityValue(_:)` for state | `aria-pressed` / `aria-expanded` / `aria-selected` | The state is native to the platform, and a screen reader speaks it in its own language rather than the page's |
 
@@ -120,7 +120,7 @@ This package versions independently of the Swift package. They measure different
 the Swift package has a release history, this one is still filling in components, and a
 breaking change on either side should not force a release on the other.
 
-**0.1.0 mirrors FlowingDaySettings 1.6.0.** Each release records which Swift version it
+**0.1.0 mirrors FlowingDayPreferences 1.6.0.** Each release records which Swift version it
 was ported from. The two version lines will merge once the web port reaches parity and
 this package reaches 1.0.
 

@@ -21,7 +21,7 @@ afterEach(() => {
 })
 
 describe('fd-icon-selection-button', () => {
-  it('keeps the SettingsIconSelectionButtonMetrics geometry', async () => {
+  it('keeps the PreferencesIconSelectionButtonMetrics geometry', async () => {
     const element = await mount(
       '<fd-icon-selection-button label="Grid"></fd-icon-selection-button>',
     )

@@ -2,11 +2,11 @@ import { type CSSResult, css } from 'lit'
 import { textRole } from './typography.js'
 
 /**
- * The `HStack` that `SettingsRow`, `SettingsExpandableRow` and the header of
- * `SettingsSearchPickerRow` each spell out identically: a 20pt symbol gutter, the
+ * The `HStack` that `PreferencesRow`, `PreferencesExpandableRow` and the header of
+ * `PreferencesSearchPickerRow` each spell out identically: a 20pt symbol gutter, the
  * title/caption block, and a spacer holding at least 10pt before whatever trails it.
  *
- * Vertical padding follows `SettingsRowLayout`: 6px, or 11px once a caption is present.
+ * Vertical padding follows `PreferencesRowLayout`: 6px, or 11px once a caption is present.
  * The 42px minimum absorbs the difference for a plain row, so the compact figure only
  * shows where a taller control trails the text.
  *

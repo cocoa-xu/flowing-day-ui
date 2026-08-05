@@ -83,7 +83,7 @@ describe('fd-multi-select-row', () => {
     })
   })
 
-  /** SettingsMultiSelectOption.toggle() guards on isEnabled. */
+  /** PreferencesMultiSelectOption.toggle() guards on isEnabled. */
   it('refuses to toggle a disabled option', async () => {
     const element = await mount<FdMultiSelectRow>(
       `<fd-multi-select-row label="Network">${OPTIONS}</fd-multi-select-row>`,

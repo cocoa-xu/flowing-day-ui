@@ -1,5 +1,5 @@
 /**
- * Mirrors `SettingsOptionSearch.matches(_:query:)`: the query is trimmed, an empty one
+ * Mirrors `PreferencesOptionSearch.matches(_:query:)`: the query is trimmed, an empty one
  * matches everything, and anything else is a case-insensitive substring test.
  */
 export function optionMatches(label: string, query: string): boolean {

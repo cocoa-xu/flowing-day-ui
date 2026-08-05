@@ -12,10 +12,10 @@
     </header>
 
     <main class="stage">
-      <fd-settings-window
+      <fd-preferences-window
         id="window"
         app-name="FlowingDayUI"
-        settings-title="Preferences"
+        preferences-title="Preferences"
         sidebar-footer="Every control here changes this window."
         page="appearance"
       >
@@ -95,7 +95,7 @@
 
               <fd-section
                 label="Surfaces"
-                footer="Corner radii come from SettingsMetrics: 18 for the window, 14 for cards, 9 for controls."
+                footer="Corner radii come from PreferencesMetrics: 18 for the window, 14 for cards, 9 for controls."
               >
                 <fd-segmented-row id="corners" label="Corners" value="soft" control-width="260">
                   <fd-option value="soft">Soft</fd-option>
@@ -122,7 +122,7 @@
             <fd-pane-stack>
               <fd-section
                 label="Density"
-                footer="SettingsMetrics.standard: rowInset 18, sectionSpacing 20, contentWidth 720."
+                footer="PreferencesMetrics.standard: rowInset 18, sectionSpacing 20, contentWidth 720."
               >
                 <fd-segmented-row
                   id="density"
@@ -174,7 +174,7 @@
             <fd-pane-stack>
               <fd-section
                 label="Scale"
-                footer="SettingsTypography names a role per use: rowTitle 13, rowCaption 11, pageTitle 25 rounded, sectionHeader 10.5 semibold, and thirteen more."
+                footer="PreferencesTypography names a role per use: rowTitle 13, rowCaption 11, pageTitle 25 rounded, sectionHeader 10.5 semibold, and thirteen more."
               >
                 <fd-segmented-row
                   id="text-size"
@@ -214,7 +214,7 @@
             <fd-pane-stack>
               <fd-section
                 label="Disclosure"
-                footer="SettingsDependentRowsMotion: 0.18s easeOut with a -5pt entry offset, collapsing to 0.12s linear with no offset under Reduce Motion."
+                footer="PreferencesDependentRowsMotion: 0.18s easeOut with a -5pt entry offset, collapsing to 0.12s linear with no offset under Reduce Motion."
               >
                 <fd-segmented-row
                   id="motion-speed"
@@ -243,7 +243,7 @@
 
               <fd-section
                 label="Disclosure by row"
-                footer="SettingsExpandableRow turns its chevron over 0.18s easeOut and reports the new state. Reduce Motion drops the animation outright rather than shortening it, which is why it reads a different token from the one above."
+                footer="PreferencesExpandableRow turns its chevron over 0.18s easeOut and reports the new state. Reduce Motion drops the animation outright rather than shortening it, which is why it reads a different token from the one above."
               >
                 <fd-expandable-row
                   id="advanced"
@@ -294,7 +294,7 @@
                 <fd-row
                   symbol="swatchpalette"
                   label="Per-page accent"
-                  caption="SettingsPage(accent:) — declared on the page, applied to its subtree."
+                  caption="PreferencesPage(accent:) — declared on the page, applied to its subtree."
                 ></fd-row>
               </fd-section>
             </fd-pane-stack>
@@ -349,7 +349,7 @@
                 <fd-separator></fd-separator>
                 <fd-link-row
                   label="fd-link-row"
-                  caption="A soft button that opens away from Settings, with a tooltip."
+                  caption="A soft button that opens away from Preferences, with a tooltip."
                   button-label="Source"
                   href="https://github.com/cocoa-xu/flowing-day-ui"
                   help="Open the repository on GitHub"
@@ -429,21 +429,21 @@
               >
                 <fd-row label="fd-tag" caption="In an fd-flow-grid, which wraps at 7px on both axes."></fd-row>
                 <fd-flow-grid>
-                  <fd-tag>SettingsRow</fd-tag>
-                  <fd-tag>SettingsSlider</fd-tag>
-                  <fd-tag>SettingsChip</fd-tag>
-                  <fd-tag>SettingsTag</fd-tag>
-                  <fd-tag>SettingsGrid</fd-tag>
-                  <fd-tag>SettingsFlowGrid</fd-tag>
-                  <fd-tag>SettingsEmptyRow</fd-tag>
-                  <fd-tag>SettingsValueRow</fd-tag>
-                  <fd-tag>SettingsLinkRow</fd-tag>
-                  <fd-tag>SettingsButtonRow</fd-tag>
-                  <fd-tag>SettingsExpandableRow</fd-tag>
-                  <fd-tag>SettingsSelectableTag</fd-tag>
-                  <fd-tag>SettingsColorPickerRow</fd-tag>
-                  <fd-tag>SettingsSearchPickerRow</fd-tag>
-                  <fd-tag>SettingsSoftButtonStyle</fd-tag>
+                  <fd-tag>PreferencesRow</fd-tag>
+                  <fd-tag>PreferencesSlider</fd-tag>
+                  <fd-tag>PreferencesChip</fd-tag>
+                  <fd-tag>PreferencesTag</fd-tag>
+                  <fd-tag>PreferencesGrid</fd-tag>
+                  <fd-tag>PreferencesFlowGrid</fd-tag>
+                  <fd-tag>PreferencesEmptyRow</fd-tag>
+                  <fd-tag>PreferencesValueRow</fd-tag>
+                  <fd-tag>PreferencesLinkRow</fd-tag>
+                  <fd-tag>PreferencesButtonRow</fd-tag>
+                  <fd-tag>PreferencesExpandableRow</fd-tag>
+                  <fd-tag>PreferencesSelectableTag</fd-tag>
+                  <fd-tag>PreferencesColorPickerRow</fd-tag>
+                  <fd-tag>PreferencesSearchPickerRow</fd-tag>
+                  <fd-tag>PreferencesSoftButtonStyle</fd-tag>
                 </fd-flow-grid>
                 <fd-separator></fd-separator>
                 <fd-row label="fd-selectable-tag" caption="Click one. The tag reports the press; the page decides."></fd-row>
@@ -497,14 +497,14 @@
                 footer="Metrics, colours, type and motion are taken from the Swift sources rather than eyeballed, and the tests pin the literals."
               >
                 <fd-row
-                  label="FlowingDaySettings"
+                  label="FlowingDayPreferences"
                   caption="The SwiftUI package this mirrors, one component at a time."
                 ></fd-row>
               </fd-section>
             </fd-pane-stack>
           </fd-page>
         </fd-page-group>
-      </fd-settings-window>
+      </fd-preferences-window>
     </main>
 
     <script type="module" src="./src/landing.ts"></script>

@@ -4,7 +4,7 @@ import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { checkCircleFill, circleOutline, selectionStyles } from '../../internal/selection.js'
 
 /**
- * Mirrors `SettingsCheckToggle`: one checkmark-circle pill on its own, for use outside a
+ * Mirrors `PreferencesCheckToggle`: one checkmark-circle pill on its own, for use outside a
  * multi-select strip.
  *
  * @fires fd-change - `{ checked: boolean }` when toggled.

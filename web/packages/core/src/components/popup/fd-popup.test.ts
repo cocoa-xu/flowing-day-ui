@@ -69,7 +69,7 @@ describe('fd-popup options', () => {
     expect(element.shadowRoot?.querySelector('.value')?.textContent).toBe('Ask every time')
   })
 
-  it('falls back to an em dash when nothing matches, as SettingsPopupButton.draw does', async () => {
+  it('falls back to an em dash when nothing matches, as PreferencesPopupButton.draw does', async () => {
     const element = await mount(`<fd-popup value="nope">${OPTIONS}</fd-popup>`)
     expect(element.shadowRoot?.querySelector('.value')?.textContent).toBe('—')
   })
@@ -156,7 +156,7 @@ describe('fd-popup menu', () => {
     expect(rows[0]?.querySelector('.badge')).toBeNull()
   })
 
-  it('uses the 36px row pitch from SettingsPopupMenuView', async () => {
+  it('uses the 36px row pitch from PreferencesPopupMenuView', async () => {
     const element = await mount(`<fd-popup value="hide">${OPTIONS}</fd-popup>`)
     button(element).click()
     await element.updateComplete

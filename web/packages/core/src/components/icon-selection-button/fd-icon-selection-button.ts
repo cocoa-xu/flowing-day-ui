@@ -5,7 +5,7 @@ import { checkmark } from '../../internal/glyphs.js'
 import '../icon/fd-icon.js'
 
 /**
- * Mirrors `SettingsIconSelectionButton`: a full-width row of leading glyph, title and a
+ * Mirrors `PreferencesIconSelectionButton`: a full-width row of leading glyph, title and a
  * trailing checkmark disc, tinted per instance rather than from the ambient accent.
  *
  * The tint is its own colour, not `--fd-accent` — the SwiftUI original takes it as an
@@ -111,7 +111,7 @@ export class FdIconSelectionButton extends FdElement {
   /** Icon registry key for the leading glyph; ignored when the `leading` slot is filled. */
   @property({ reflect: true }) symbol: string | null = null
 
-  /** `SettingsIconSelectionButton.tint` — any CSS colour. */
+  /** `PreferencesIconSelectionButton.tint` — any CSS colour. */
   @property({ reflect: true }) tint = 'currentColor'
 
   @property({ type: Boolean, reflect: true }) selected = false

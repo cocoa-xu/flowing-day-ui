@@ -10,7 +10,7 @@ import { textRole } from '../../internal/typography.js'
 import '../row/fd-row.js'
 
 /**
- * Mirrors `SettingsValueRow`: a read-only value at the trailing edge, selectable and
+ * Mirrors `PreferencesValueRow`: a read-only value at the trailing edge, selectable and
  * truncated in the middle so both ends of a path or an identifier stay readable, with
  * room for a further control 10px after it.
  *
@@ -48,7 +48,7 @@ export class FdValueRow extends FdElement {
 
   @property({ reflect: true }) label = ''
 
-  /** The read-only value. `SettingsValueRow` takes no caption. */
+  /** The read-only value. `PreferencesValueRow` takes no caption. */
   @property({ reflect: true }) value = ''
 
   /** Characters kept at the trailing end when the value is truncated. */

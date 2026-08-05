@@ -2,10 +2,10 @@ import type {
   FdColorPickerRow,
   FdDependentRows,
   FdExpandableRow,
+  FdPreferencesWindow,
   FdSearchPickerRow,
   FdSegmentedRow,
   FdSelectableTag,
-  FdSettingsWindow,
   FdSliderRow,
   FdSwitchRow,
   FdValueRow,
@@ -18,17 +18,17 @@ installTheme()
 registerIcons()
 
 const root = document.documentElement
-const settingsWindow = document.querySelector<FdSettingsWindow>('#window')
+const preferencesWindow = document.querySelector<FdPreferencesWindow>('#window')
 
-if (settingsWindow) makeMovableByBackground(settingsWindow)
+if (preferencesWindow) makeMovableByBackground(preferencesWindow)
 
 /**
  * Every control in this window restyles the window it lives in. Each one writes design
  * tokens onto the window element, so the change reaches the shadow root of every
  * component below without any of them knowing about it — the same propagation
- * `.settingsAccent(_:)` and its siblings give a SwiftUI subtree.
+ * `.preferencesAccent(_:)` and its siblings give a SwiftUI subtree.
  */
-const set = (token: string, value: string) => settingsWindow?.style.setProperty(token, value)
+const set = (token: string, value: string) => preferencesWindow?.style.setProperty(token, value)
 
 /** Wires one segmented row and applies its initial value, so markup and page agree. */
 function onSegment(id: string, apply: (value: string) => void): void {
@@ -147,7 +147,7 @@ onSegment('motion-speed', (value) => set('--fd-motion-disclosure', value))
 onSegment('icon-style', (value) => registerIcons(value as IconStyle))
 
 document.querySelector<FdSwitchRow>('#separators')?.addEventListener('fd-change', (event) => {
-  if (settingsWindow) settingsWindow.dataset.separators = event.detail.checked ? 'on' : 'off'
+  if (preferencesWindow) preferencesWindow.dataset.separators = event.detail.checked ? 'on' : 'off'
 })
 
 document
@@ -169,7 +169,7 @@ document.querySelector<HTMLElement>('#accent-chips')?.addEventListener('fd-activ
 
 /**
  * The tag reports the press; the selection belongs to whoever owns it. That is the
- * SwiftUI contract — `SettingsSelectableTag` takes `isSelected` and hands back an action.
+ * SwiftUI contract — `PreferencesSelectableTag` takes `isSelected` and hands back an action.
  */
 document.querySelector<HTMLElement>('#tag-group')?.addEventListener('fd-activate', (event) => {
   const pressed = event.target as FdSelectableTag
@@ -201,7 +201,7 @@ document.querySelector<HTMLElement>('#restore')?.addEventListener('fd-activate',
   location.reload()
 })
 
-settingsWindow?.addEventListener('fd-close', () => {
+preferencesWindow?.addEventListener('fd-close', () => {
   // Nothing to close in an embed; the SwiftUI original calls through to NSPanel.close().
-  settingsWindow.animate([{ opacity: 1 }, { opacity: 0.4 }, { opacity: 1 }], { duration: 260 })
+  preferencesWindow.animate([{ opacity: 1 }, { opacity: 0.4 }, { opacity: 1 }], { duration: 260 })
 })

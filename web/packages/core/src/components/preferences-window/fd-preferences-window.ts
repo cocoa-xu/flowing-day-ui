@@ -27,19 +27,19 @@ const xmark = svg`
   </svg>`
 
 /**
- * Mirrors `SettingsView`: the sidebar, its hairline divider and the scrolling content
- * pane with a page header. `SettingsWindowPresenter`'s `NSPanel` is deliberately not
+ * Mirrors `PreferencesView`: the sidebar, its hairline divider and the scrolling content
+ * pane with a page header. `PreferencesWindowPresenter`'s `NSPanel` is deliberately not
  * ported — this is the view, and the page decides how to present it.
  *
- * Pages are declared as light DOM so a static page can build a whole settings window
+ * Pages are declared as light DOM so a static page can build a whole preferences window
  * without any JavaScript:
  *
  * ```html
- * <fd-settings-window app-name="Afloat" page="general">
+ * <fd-preferences-window app-name="Afloat" page="general">
  *   <fd-page-group label="General">
  *     <fd-page page-id="general" label="General" symbol="gearshape">…</fd-page>
  *   </fd-page-group>
- * </fd-settings-window>
+ * </fd-preferences-window>
  * ```
  *
  * @slot - `fd-page-group` and `fd-page` children.
@@ -50,8 +50,8 @@ const xmark = svg`
  * @csspart content - The scrolling content pane.
  * @csspart page-header - The large page heading.
  */
-@customElement('fd-settings-window')
-export class FdSettingsWindow extends FdElement {
+@customElement('fd-preferences-window')
+export class FdPreferencesWindow extends FdElement {
   static override styles: CSSResultGroup = [
     baseStyles,
     css`
@@ -327,7 +327,7 @@ export class FdSettingsWindow extends FdElement {
 
   @property({ attribute: 'app-name', reflect: true }) appName = ''
 
-  @property({ attribute: 'settings-title', reflect: true }) settingsTitle = 'Settings'
+  @property({ attribute: 'preferences-title', reflect: true }) preferencesTitle = 'Preferences'
 
   @property({ attribute: 'sidebar-footer', reflect: true }) sidebarFooter: string | null = null
 
@@ -399,7 +399,7 @@ export class FdSettingsWindow extends FdElement {
           pages: [...group.children].filter((page): page is FdPage => page.localName === 'fd-page'),
         })
       } else if (child.localName === 'fd-page') {
-        // A bare page with no group, mirroring a single unlabelled SettingsPageGroup.
+        // A bare page with no group, mirroring a single unlabelled PreferencesPageGroup.
         const last = groups.at(-1)
         if (last && last.label === null && !last.indented) last.pages.push(child as FdPage)
         else groups.push({ label: null, indented: false, pages: [child as FdPage] })
@@ -471,7 +471,7 @@ export class FdSettingsWindow extends FdElement {
               <button
                 class="close"
                 type="button"
-                aria-label=${strings.closeSettings}
+                aria-label=${strings.closePreferences}
                 @click=${() =>
                   this.dispatchEvent(
                     new CustomEvent('fd-close', { bubbles: true, composed: true }),
@@ -486,7 +486,7 @@ export class FdSettingsWindow extends FdElement {
           <slot class="brand-icon" name="app-icon"></slot>
           <div class="brand-text">
             <span class="brand-name">${this.appName}</span>
-            <span class="brand-subtitle">${this.settingsTitle}</span>
+            <span class="brand-subtitle">${this.preferencesTitle}</span>
           </div>
         </div>
 
@@ -545,6 +545,6 @@ export class FdSettingsWindow extends FdElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'fd-settings-window': FdSettingsWindow
+    'fd-preferences-window': FdPreferencesWindow
   }
 }

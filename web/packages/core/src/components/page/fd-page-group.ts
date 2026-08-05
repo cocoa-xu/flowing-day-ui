@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js'
 import { FdElement } from '../../internal/base-element.js'
 
 /**
- * Mirrors `SettingsPageGroup`. Renders as `display: contents` so its pages take part in
+ * Mirrors `PreferencesPageGroup`. Renders as `display: contents` so its pages take part in
  * the window's content layout directly.
  *
  * @slot - `fd-page` children.

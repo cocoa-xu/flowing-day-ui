@@ -1,6 +1,6 @@
 import { type CSSResult, unsafeCSS } from 'lit'
 
-/** The 17 roles of `SettingsTypography`, kebab-cased. */
+/** The 17 roles of `PreferencesTypography`, kebab-cased. */
 export type TextRole =
   | 'brand-title'
   | 'brand-subtitle'

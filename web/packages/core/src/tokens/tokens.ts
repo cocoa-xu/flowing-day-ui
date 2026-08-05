@@ -46,7 +46,7 @@ export const lightValue = (value: TokenValue): string => (isDualValue(value) ? v
 
 export const darkValue = (value: TokenValue): string => (isDualValue(value) ? value.dark : value)
 
-/** Mirrors `SettingsPalette.srgb(_:_:)`. */
+/** Mirrors `PreferencesPalette.srgb(_:_:)`. */
 export function srgb(hex: number, alpha = 1): string {
   const r = (hex >> 16) & 0xff
   const g = (hex >> 8) & 0xff
@@ -56,7 +56,7 @@ export function srgb(hex: number, alpha = 1): string {
 }
 
 /**
- * Mirrors `SettingsPalette.translucent(light:lightAlpha:dark:darkAlpha:)`.
+ * Mirrors `PreferencesPalette.translucent(light:lightAlpha:dark:darkAlpha:)`.
  *
  * Deliberately *not* CSS `light-dark()`: Lightning CSS — Vite's default minifier, and
  * therefore in the build of many consumers — downlevels it into a guard-variable pair
@@ -72,12 +72,12 @@ export function translucent(
   return { light: srgb(light, lightAlpha), dark: srgb(dark, darkAlpha) }
 }
 
-/** Mirrors `SettingsPalette.dynamic(light:dark:)`. */
+/** Mirrors `PreferencesPalette.dynamic(light:dark:)`. */
 export function dynamic(light: number, dark: number): TokenValue {
   return translucent(light, 1, dark, 1)
 }
 
-/** The nine cases of `SettingsFontWeight`. */
+/** The nine cases of `PreferencesFontWeight`. */
 export type FontWeightName =
   | 'ultraLight'
   | 'thin'
@@ -89,15 +89,15 @@ export type FontWeightName =
   | 'heavy'
   | 'black'
 
-/** Mirrors `SettingsFontWeight`, mapped onto the CSS numeric scale. */
+/** Mirrors `PreferencesFontWeight`, mapped onto the CSS numeric scale. */
 export const fontWeights = Object.fromEntries(
   Object.entries(raw.fontWeights).filter(([name]) => !name.startsWith('$')),
 ) as Readonly<Record<FontWeightName, number>>
 
-/** Mirrors `SettingsFontDesign`. */
+/** Mirrors `PreferencesFontDesign`. */
 export type FontDesignName = 'standard' | 'rounded' | 'serif' | 'monospaced'
 
-/** Mirrors `SettingsTextStyle`, less the AppKit-only `fontName`. */
+/** Mirrors `PreferencesTextStyle`, less the AppKit-only `fontName`. */
 interface RawTextStyle {
   readonly size: number
   readonly weight?: FontWeightName
@@ -155,7 +155,7 @@ const toTokenValue = (token: RawToken): TokenValue =>
     ? { light: resolve(token, 'light'), dark: resolve(token, 'dark') }
     : resolve(token, 'light')
 
-/** Expands the 17 roles of `SettingsTypography` into their four token reads each. */
+/** Expands the 17 roles of `PreferencesTypography` into their four token reads each. */
 function textStyleTokens(): Array<readonly [string, TokenValue]> {
   return Object.entries(raw.typography.roles as Readonly<Record<string, RawTextStyle>>).flatMap(
     ([role, style]) => [

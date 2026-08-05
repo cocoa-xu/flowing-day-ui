@@ -3,10 +3,10 @@ import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 
 /**
- * Mirrors `SettingsFlowGrid`: items laid out left to right, wrapping when the next one
+ * Mirrors `PreferencesFlowGrid`: items laid out left to right, wrapping when the next one
  * no longer fits, spaced equally on both axes and pushed to the leading edge.
  *
- * `SettingsWrappingLayout`, the custom `Layout` behind it, places each item at its ideal
+ * `PreferencesWrappingLayout`, the custom `Layout` behind it, places each item at its ideal
  * size on the current row's top edge, which is what a wrapping flex line does. None of
  * its 59 lines survive the crossing.
  *
@@ -29,7 +29,7 @@ export class FdFlowGrid extends FdElement {
     `,
   ]
 
-  /** `SettingsFlowGrid.spacing`, applied to both axes. */
+  /** `PreferencesFlowGrid.spacing`, applied to both axes. */
   @property({ type: Number }) spacing = 7
 
   override render() {

@@ -35,7 +35,7 @@ describe('fd-slider-row', () => {
     expect(style.paddingBottom).toBe('11px')
   })
 
-  /** The header spaces by 10, not the 14 a SettingsRow uses. */
+  /** The header spaces by 10, not the 14 a PreferencesRow uses. */
   it('spaces the header by 10', async () => {
     const element = await mount('<fd-slider-row label="Volume"></fd-slider-row>')
     expect(getComputedStyle(partOf(element, '.header')).columnGap).toBe('10px')

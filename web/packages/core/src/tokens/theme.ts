@@ -11,7 +11,7 @@ import {
 /**
  * Inside a shadow root every token is read through a private `--_fd-*` alias whose
  * fallback is the public `--fd-*` token. Declaring the public name anywhere up the
- * tree therefore wins, which is how `.settingsAccent(_:)` and friends propagate in
+ * tree therefore wins, which is how `.preferencesAccent(_:)` and friends propagate in
  * SwiftUI — an environment value overridden for a subtree.
  */
 const toPrivateRefs = (value: string) => value.replaceAll('var(--fd-', 'var(--_fd-')
@@ -49,7 +49,7 @@ const LOCALLY_DERIVED = new Set(['accent-fill', 'accent-foreground', 'accent-was
  * Private aliases are computed once on `:host` and inherited, so redeclaring a public
  * token deeper in the same shadow root has no effect. `data-fd-accent-scope` re-derives
  * the accent aliases at that element, which is what lets a component retint one part of
- * its own shadow tree — `SettingsView` giving the sidebar the selected page's accent.
+ * its own shadow tree — `PreferencesView` giving the sidebar the selected page's accent.
  */
 const accentScopeBlock = (indent: string, pick: (value: TokenValue) => string, dualOnly = false) =>
   accentTokens()
@@ -112,7 +112,7 @@ ${reducedMotionBlock('    ')}
  *
  * Appearance follows the OS by default; `data-fd-scheme` on any element forces one
  * appearance for that subtree, which is the web analogue of handing a different
- * `SettingsSurfaces` to part of the view tree.
+ * `PreferencesSurfaces` to part of the view tree.
  */
 export function globalThemeCss(): string {
   return `/* Generated from src/tokens/tokens.ts — do not edit by hand. */

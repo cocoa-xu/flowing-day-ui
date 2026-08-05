@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 
 /**
- * Mirrors `SettingsGrid`: a `LazyVGrid` over `GridItem(.adaptive(minimum:))`, which fits
+ * Mirrors `PreferencesGrid`: a `LazyVGrid` over `GridItem(.adaptive(minimum:))`, which fits
  * as many equal columns of at least that width as the row allows.
  *
  * @slot - The items to lay out.

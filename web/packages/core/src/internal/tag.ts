@@ -2,7 +2,7 @@ import { type CSSResult, css } from 'lit'
 import { textRole } from './typography.js'
 
 /**
- * The pill geometry `SettingsTag` and `SettingsSelectableTag` share: the monospaced tag
+ * The pill geometry `PreferencesTag` and `PreferencesSelectableTag` share: the monospaced tag
  * role, 10/6 padding on a radius of 8, sized to its text and never wrapped.
  */
 export const tagStyles: CSSResult = css`

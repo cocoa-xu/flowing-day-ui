@@ -5,7 +5,7 @@ import { rowLayoutStyles } from '../../internal/row-layout.js'
 import '../icon/fd-icon.js'
 
 /**
- * Mirrors `SettingsRow`: optional symbol gutter, title/caption block, flexible gap,
+ * Mirrors `PreferencesRow`: optional symbol gutter, title/caption block, flexible gap,
  * trailing control. Vertical padding is 10px, or 11px once a caption is present.
  *
  * `label` rather than `title`, because `title` is a global HTML attribute and would

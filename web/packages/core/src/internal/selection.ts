@@ -2,7 +2,7 @@ import { type CSSResult, css, svg } from 'lit'
 import { textRole } from './typography.js'
 
 /**
- * The chrome shared by `SettingsSelectionButton` and `SettingsSymbolSelectionButton`:
+ * The chrome shared by `PreferencesSelectionButton` and `PreferencesSymbolSelectionButton`:
  * an equal-width pill that is accent-washed and accent-bordered while selected, and
  * sits on the control surface behind a hairline while it is not.
  */

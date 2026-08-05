@@ -1,9 +1,9 @@
 /**
- * Mirrors `NSPanel.isMovableByWindowBackground`, which `SettingsWindowPresenter` sets:
+ * Mirrors `NSPanel.isMovableByWindowBackground`, which `PreferencesWindowPresenter` sets:
  * the window is dragged by any part of its background, and controls keep their own
  * pointer handling.
  *
- * This lives with the page rather than with `fd-settings-window` because it is the
+ * This lives with the page rather than with `fd-preferences-window` because it is the
  * presenter's job. The component is the view; how it is presented is the page's call.
  *
  * An open popup needs no special handling: `popover="auto"` light-dismisses on the

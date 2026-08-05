@@ -5,7 +5,7 @@ import { textRole } from '../../internal/typography.js'
 import '../icon/fd-icon.js'
 
 /**
- * Mirrors `SettingsEmptyRow`: the empty state for a section, faint and leading-aligned
+ * Mirrors `PreferencesEmptyRow`: the empty state for a section, faint and leading-aligned
  * with 14px of vertical padding rather than the 10/11 a populated row takes.
  *
  * @csspart message - The message text.

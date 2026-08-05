@@ -5,7 +5,7 @@ import '../row/fd-row.js'
 import '../switch/fd-switch.js'
 
 /**
- * Mirrors `SettingsSwitchRow`: an `fd-row` whose trailing control is an `fd-switch`.
+ * Mirrors `PreferencesSwitchRow`: an `fd-row` whose trailing control is an `fd-switch`.
  * Only the switch toggles, matching the SwiftUI original which adds no row-wide gesture.
  *
  * @fires fd-change - `{ checked: boolean }`, re-dispatched from the inner switch.

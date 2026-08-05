@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { FdPage } from '../page/fd-page.js'
-import type { FdSettingsWindow } from './fd-settings-window.js'
-import './fd-settings-window.js'
+import type { FdPreferencesWindow } from './fd-preferences-window.js'
+import './fd-preferences-window.js'
 
 const MARKUP = `
-  <fd-settings-window app-name="Afloat" sidebar-footer="Version 1.6.0" page="general">
+  <fd-preferences-window app-name="Afloat" sidebar-footer="Version 1.6.0" page="general">
     <fd-page-group>
       <fd-page page-id="general" label="General" subtitle="Behavior" symbol="gearshape">
         <p id="general-body">general body</p>
@@ -15,30 +15,30 @@ const MARKUP = `
       <fd-page page-id="usb" label="USB" symbol="cable" accent="#B4795E"></fd-page>
       <fd-page page-id="privacy" label="Privacy" unavailable></fd-page>
     </fd-page-group>
-  </fd-settings-window>
+  </fd-preferences-window>
 `
 
-async function mount(markup = MARKUP): Promise<FdSettingsWindow> {
+async function mount(markup = MARKUP): Promise<FdPreferencesWindow> {
   const host = document.createElement('div')
   host.innerHTML = markup
   document.body.append(host)
-  const element = host.querySelector('fd-settings-window') as FdSettingsWindow
+  const element = host.querySelector('fd-preferences-window') as FdPreferencesWindow
   await element.updateComplete
   await element.updateComplete
   return element
 }
 
-const navRows = (element: FdSettingsWindow) =>
+const navRows = (element: FdPreferencesWindow) =>
   [...(element.shadowRoot?.querySelectorAll('.nav-row') ?? [])] as HTMLButtonElement[]
 
-const text = (element: FdSettingsWindow, selector: string) =>
+const text = (element: FdPreferencesWindow, selector: string) =>
   element.shadowRoot?.querySelector(selector)?.textContent?.trim()
 
 afterEach(() => {
   document.body.replaceChildren()
 })
 
-describe('fd-settings-window sidebar', () => {
+describe('fd-preferences-window sidebar', () => {
   it('builds one nav row per page, in declaration order', async () => {
     const element = await mount()
     expect(navRows(element).map((row) => row.textContent?.trim())).toEqual([
@@ -62,11 +62,11 @@ describe('fd-settings-window sidebar', () => {
   it('carries the brand block and footer', async () => {
     const element = await mount()
     expect(text(element, '.brand-name')).toBe('Afloat')
-    expect(text(element, '.brand-subtitle')).toBe('Settings')
+    expect(text(element, '.brand-subtitle')).toBe('Preferences')
     expect(text(element, '.sidebar-footer')).toBe('Version 1.6.0')
   })
 
-  it('uses the 224px sidebar width from SettingsViewConfiguration', async () => {
+  it('uses the 224px sidebar width from PreferencesViewConfiguration', async () => {
     const element = await mount()
     const sidebar = element.shadowRoot?.querySelector('.sidebar') as HTMLElement
     expect(sidebar.getBoundingClientRect().width).toBe(224)
@@ -88,7 +88,7 @@ describe('fd-settings-window sidebar', () => {
   })
 })
 
-describe('fd-settings-window selection', () => {
+describe('fd-preferences-window selection', () => {
   it('activates only the selected page', async () => {
     const element = await mount()
     const pages = [...element.querySelectorAll('fd-page')] as FdPage[]
@@ -150,7 +150,7 @@ describe('fd-settings-window selection', () => {
   })
 })
 
-describe('fd-settings-window page header', () => {
+describe('fd-preferences-window page header', () => {
   it('shows the page title and subtitle', async () => {
     const element = await mount()
     expect(text(element, '.page-title')).toBe('General')
@@ -179,8 +179,8 @@ describe('fd-settings-window page header', () => {
   })
 })
 
-describe('fd-settings-window accent', () => {
-  const scope = (element: FdSettingsWindow) =>
+describe('fd-preferences-window accent', () => {
+  const scope = (element: FdPreferencesWindow) =>
     element.shadowRoot?.querySelector('.root') as HTMLElement
 
   it('retints its own chrome from the selected page', async () => {
@@ -253,14 +253,14 @@ describe('fd-settings-window accent', () => {
   })
 })
 
-describe('fd-settings-window close button', () => {
+describe('fd-preferences-window close button', () => {
   it('reports a close request', async () => {
     const element = await mount()
     const onClose = vi.fn()
     element.addEventListener('fd-close', onClose)
 
     const close = element.shadowRoot?.querySelector('.close') as HTMLButtonElement
-    expect(close.getAttribute('aria-label')).toBe('Close Settings')
+    expect(close.getAttribute('aria-label')).toBe('Close Preferences')
     close.click()
 
     expect(onClose).toHaveBeenCalledOnce()

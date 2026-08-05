@@ -4,11 +4,11 @@ import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { tagStyles } from '../../internal/tag.js'
 
 /**
- * Mirrors `SettingsSelectableTag`: a tag pill with four hover × selected treatments,
+ * Mirrors `PreferencesSelectableTag`: a tag pill with four hover × selected treatments,
  * each of foreground, background and border. Selection is owned by the caller, exactly
  * as the SwiftUI original takes `isSelected` and hands back an action.
  *
- * `inactive-accent` is `SettingsAccent?`: the unselected pill re-derives the accent set
+ * `inactive-accent` is `PreferencesAccent?`: the unselected pill re-derives the accent set
  * from that colour, which is what `data-fd-accent-scope` exists for.
  *
  * @fires fd-activate - When the tag is pressed.
@@ -70,7 +70,7 @@ export class FdSelectableTag extends FdElement {
   /** Reported on `fd-activate`, so one listener can serve a whole set. */
   @property({ reflect: true }) value = ''
 
-  /** `SettingsSelectableTag.inactiveAccent` — any CSS colour. */
+  /** `PreferencesSelectableTag.inactiveAccent` — any CSS colour. */
   @property({ reflect: true, attribute: 'inactive-accent' }) inactiveAccent: string | null = null
 
   @property({ type: Boolean, reflect: true }) disabled = false

@@ -4,7 +4,7 @@ import { FdElement } from '../../internal/base-element.js'
 
 /**
  * The option element shared by every list-like control, covering
- * `SettingsPopupOption`, `SettingsSymbolSegmentOption` and `SettingsMultiSelectOption`.
+ * `PreferencesPopupOption`, `PreferencesSymbolSegmentOption` and `PreferencesMultiSelectOption`.
  *
  * Declared as a child so a plain HTML page can define a control without JavaScript:
  *
@@ -30,10 +30,10 @@ export class FdOption extends FdElement {
   /** Icon registry key, used by `fd-symbol-segmented-row`. */
   @property({ reflect: true }) symbol: string | null = null
 
-  /** Mirrors `SettingsMultiSelectOption.isOn`; only meaningful in a multi-select. */
+  /** Mirrors `PreferencesMultiSelectOption.isOn`; only meaningful in a multi-select. */
   @property({ type: Boolean, reflect: true }) selected = false
 
-  /** Mirrors `SettingsMultiSelectOption(isEnabled: false)`. */
+  /** Mirrors `PreferencesMultiSelectOption(isEnabled: false)`. */
   @property({ type: Boolean, reflect: true }) disabled = false
 
   get optionLabel(): string {

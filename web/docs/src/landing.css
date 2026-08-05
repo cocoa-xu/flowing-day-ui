@@ -32,13 +32,13 @@ body {
 }
 
 /*
- * SettingsWindowConfiguration ships 900 × 640, and the mock holds exactly that.
+ * PreferencesWindowConfiguration ships 900 × 640, and the mock holds exactly that.
  *
  * Deliberately not a percentage: the stage centres a shrink-to-fit item, so a
  * percentage width there is a cyclic size and CSS falls back to intrinsic sizing —
  * which lets the page content change the window's own dimensions as you navigate.
  */
-.stage fd-settings-window {
+.stage fd-preferences-window {
   width: 900px;
   height: 640px;
   box-shadow: var(--fd-window-shadow);
@@ -46,12 +46,12 @@ body {
   cursor: grab;
 }
 
-.stage fd-settings-window[data-dragging] {
+.stage fd-preferences-window[data-dragging] {
   cursor: grabbing;
   user-select: none;
 }
 
 /* Driven by the Appearance page's "Show row separators" switch. */
-fd-settings-window[data-separators="off"] fd-separator {
+fd-preferences-window[data-separators="off"] fd-separator {
   display: none;
 }

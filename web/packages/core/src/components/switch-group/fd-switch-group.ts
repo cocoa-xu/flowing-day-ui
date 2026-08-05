@@ -5,7 +5,7 @@ import '../dependent-rows/fd-dependent-rows.js'
 import '../switch-row/fd-switch-row.js'
 
 /**
- * Mirrors `SettingsSwitchGroup`: a master switch row with rows that appear only while it
+ * Mirrors `PreferencesSwitchGroup`: a master switch row with rows that appear only while it
  * is on.
  *
  * @slot - The dependent rows.

@@ -1,5 +1,5 @@
 /**
- * Mirrors `SettingsSliderMath`, the value ↔ fraction conversion the slider draws and
+ * Mirrors `PreferencesSliderMath`, the value ↔ fraction conversion the slider draws and
  * drags with. Ported verbatim, including the degenerate-range guard, so the two
  * platforms cannot disagree about where a knob sits.
  */

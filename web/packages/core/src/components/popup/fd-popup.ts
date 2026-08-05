@@ -12,18 +12,18 @@ export interface FdPopupOption {
   label: string
 }
 
-/** `SettingsPopupMenuView.rowHeight`. */
+/** `PreferencesPopupMenuView.rowHeight`. */
 const ROW_HEIGHT = 36
-/** `SettingsPopupMenuView.verticalInset`. */
+/** `PreferencesPopupMenuView.verticalInset`. */
 const VERTICAL_INSET = 8
-/** `SettingsPopupButton.controlHeight`. */
+/** `PreferencesPopupButton.controlHeight`. */
 const CONTROL_HEIGHT = 30
-/** Screen inset and anchor offset from `SettingsPopupButton.position(_:anchorFrame:visibleFrame:)`. */
+/** Screen inset and anchor offset from `PreferencesPopupButton.position(_:anchorFrame:visibleFrame:)`. */
 const MARGIN = 8
 const GAP = 6
 
 /**
- * Mirrors `SettingsPopupControl`, the 691 lines of AppKit that back `SettingsPopupRow`.
+ * Mirrors `PreferencesPopupControl`, the 691 lines of AppKit that back `PreferencesPopupRow`.
  *
  * The `NSPanel` and its global event monitors become a Popover API element: the top layer
  * escapes the scroll container exactly as a child window did, and light dismiss plus
@@ -223,7 +223,7 @@ export class FdPopup extends FdElement {
 
   @property({ reflect: true }) value: string | null = null
 
-  /** `SettingsPopupRow.minimumControlWidth`. */
+  /** `PreferencesPopupRow.minimumControlWidth`. */
   @property({ type: Number, attribute: 'min-width' }) minWidth = 0
 
   @property({ type: Boolean, reflect: true }) disabled = false
@@ -388,7 +388,7 @@ export class FdPopup extends FdElement {
     this.#position()
   }
 
-  /** Ports `SettingsPopupButton.position(_:anchorFrame:visibleFrame:)` into viewport space. */
+  /** Ports `PreferencesPopupButton.position(_:anchorFrame:visibleFrame:)` into viewport space. */
   #position(): void {
     const anchor = this.getBoundingClientRect()
     const viewportWidth = document.documentElement.clientWidth

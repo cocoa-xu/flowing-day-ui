@@ -6,7 +6,7 @@ import '../popup/fd-popup.js'
 import '../row/fd-row.js'
 
 /**
- * Mirrors `SettingsPopupRow`: an `fd-row` whose trailing control is an `fd-popup`.
+ * Mirrors `PreferencesPopupRow`: an `fd-row` whose trailing control is an `fd-popup`.
  *
  * @fires fd-change - `{ value: string }`, re-dispatched from the popup.
  */

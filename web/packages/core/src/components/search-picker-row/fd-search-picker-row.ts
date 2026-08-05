@@ -12,11 +12,11 @@ import '../icon/fd-icon.js'
 import '../option/fd-option.js'
 import '../separator/fd-separator.js'
 
-/** `SettingsSearchPickerRow.optionListHeight` counts 34 per visible option. */
+/** `PreferencesSearchPickerRow.optionListHeight` counts 34 per visible option. */
 const OPTION_SLOT = 34
 
 /**
- * Mirrors `SettingsSearchPickerRow`: a row that expands into a search field over a
+ * Mirrors `PreferencesSearchPickerRow`: a row that expands into a search field over a
  * scrollable, checkable option list — the picker for a list too long for a popup menu.
  *
  * Options are `fd-option` children, the same as every other selection control takes.
@@ -218,7 +218,7 @@ export class FdSearchPickerRow extends FdElement {
 
   @property({ type: Boolean, reflect: true }) expanded = false
 
-  /** `SettingsSearchPickerRow.maximumVisibleOptions`, floored at 1 as the SwiftUI init is. */
+  /** `PreferencesSearchPickerRow.maximumVisibleOptions`, floored at 1 as the SwiftUI init is. */
   @property({ type: Number, attribute: 'max-visible-options' }) maxVisibleOptions = 6
 
   @property({ type: Boolean, reflect: true }) disabled = false

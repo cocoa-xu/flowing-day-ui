@@ -3,13 +3,13 @@ import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { FdSliderMath } from '../../internal/slider-math.js'
 
-/** `SettingsSliderControl.knobDiameter`. */
+/** `PreferencesSliderControl.knobDiameter`. */
 const KNOB = 13
-/** `SettingsSliderControl.trackHeight`. */
+/** `PreferencesSliderControl.trackHeight`. */
 const TRACK = 3
 
 /**
- * Mirrors `SettingsSlider` and the `NSControl` behind it, which draws its own chrome
+ * Mirrors `PreferencesSlider` and the `NSControl` behind it, which draws its own chrome
  * rather than taking AppKit's. Every rect the Swift `draw(_:)` builds has a counterpart
  * here: a track inset by half a knob at each end, a progress fill from the track's
  * leading edge to the knob, and a 13pt knob whose 0.5pt border is stroked inside its
@@ -138,7 +138,7 @@ export class FdSlider extends FdElement {
     return this.#internals.labels
   }
 
-  /** The knob's clamped 0…1 position, as `SettingsSliderMath.fraction(of:in:)` gives it. */
+  /** The knob's clamped 0…1 position, as `PreferencesSliderMath.fraction(of:in:)` gives it. */
   get fraction(): number {
     return FdSliderMath.fraction(this.value, this.min, this.max)
   }
@@ -177,7 +177,7 @@ export class FdSlider extends FdElement {
     return getComputedStyle(this).direction === 'rtl'
   }
 
-  /** `SettingsSliderControl.updateValue(with:)`, measured from the inline start. */
+  /** `PreferencesSliderControl.updateValue(with:)`, measured from the inline start. */
   #commit(clientX: number): void {
     const bounds = this.getBoundingClientRect()
     const usableWidth = Math.max(bounds.width - KNOB, 1)

@@ -5,7 +5,7 @@ import { textRole } from '../../internal/typography.js'
 import '../card/fd-card.js'
 
 /**
- * Mirrors `SettingsSection`: uppercase header, card, and an optional footer whose
+ * Mirrors `PreferencesSection`: uppercase header, card, and an optional footer whose
  * horizontal inset matches the row text above it.
  *
  * @slot - Rows placed inside the card.

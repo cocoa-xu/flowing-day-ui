@@ -4,14 +4,14 @@ import { baseStyles, FdElement } from '../../internal/base-element.js'
 import '../separator/fd-separator.js'
 
 /**
- * Mirrors `SettingsDependentRows`: sub-rows revealed only while a controlling value is
+ * Mirrors `PreferencesDependentRows`: sub-rows revealed only while a controlling value is
  * on, with the separator, transition, animation and Reduce Motion behaviour owned here
  * rather than by the caller.
  *
  * The collapse animates `grid-template-rows` between `0fr` and `1fr`, which is the one
  * technique that animates to an unknown content height in every current browser.
  * Duration, easing and the -5px entry offset all come from the motion tokens, so Reduce
- * Motion shortens and flattens this exactly as `SettingsDependentRowsMotion` does.
+ * Motion shortens and flattens this exactly as `PreferencesDependentRowsMotion` does.
  *
  * @slot - The dependent rows.
  */

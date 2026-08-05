@@ -1,6 +1,6 @@
 # FlowingDayUI for the web
 
-Workspace for `@flowing-day/ui`, a framework-agnostic port of the `FlowingDaySettings`
+Workspace for `@flowing-day/ui`, a framework-agnostic port of the `FlowingDayPreferences`
 SwiftUI toolkit built as standard Custom Elements.
 
 **Using the library?** The package README is
@@ -15,7 +15,7 @@ web/
 └── docs/            the landing page, run with `pnpm dev`
 ```
 
-The landing page is a live, draggable settings window rather than a component gallery.
+The landing page is a live, draggable preferences window rather than a component gallery.
 Its own Appearance page restyles the window it lives in — theme, accent, density, corner
 radius and type scale are all just tokens written onto the window element — so the page
 doubles as the proof that the theming contract works, and as its own regression test.
@@ -42,7 +42,7 @@ publint and are-the-types-wrong.
 
 Every design value lives in `packages/core/src/tokens/tokens.json`. It is the sole token
 source for every platform. The TypeScript token module reads it directly, and
-`scripts/generate-swift-theme.mjs` emits the committed `SettingsTheme.swift` artifact.
+`scripts/generate-swift-theme.mjs` emits the committed `PreferencesTheme.swift` artifact.
 Do not edit generated Swift values by hand.
 
 The web token module produces two CSS artifacts from the same data:
@@ -79,13 +79,13 @@ set, since scoped packages default to restricted.
 
 ## Status
 
-Every view in `Sources/FlowingDaySettings` is ported — 34 elements, listed by group in
+Every view in `Sources/FlowingDayPreferences` is ported — 34 elements, listed by group in
 [the package README](packages/core/README.md#components).
 
-Two are deliberately left out. `SettingsWindowPresenter` has no web counterpart: `NSPanel`
+Two are deliberately left out. `PreferencesWindowPresenter` has no web counterpart: `NSPanel`
 is the presenter's job, not the view's, so how the window is presented is the page's call —
 which is why the landing page keeps its drag logic in `docs/src/drag.ts`. And
-`SettingsSliderRepresentable` is the SwiftUI↔AppKit bridge; the `SettingsSliderControl`
+`PreferencesSliderRepresentable` is the SwiftUI↔AppKit bridge; the `PreferencesSliderControl`
 behind it is what `fd-slider` reproduces.
 
 Swift and web now share the same token source. A generated-file check fails CI if either

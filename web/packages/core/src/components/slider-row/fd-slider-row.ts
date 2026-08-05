@@ -6,8 +6,8 @@ import '../icon/fd-icon.js'
 import '../slider/fd-slider.js'
 
 /**
- * Mirrors `SettingsSliderRow`: title and formatted value on one line, the slider under
- * it, and an optional caption below. A `VStack`, not a `SettingsRow` — the header stack
+ * Mirrors `PreferencesSliderRow`: title and formatted value on one line, the slider under
+ * it, and an optional caption below. A `VStack`, not a `PreferencesRow` — the header stack
  * spaces by 10 rather than 14, and the slider spans the full width beneath it.
  *
  * @fires fd-change - `{ valueAsNumber }`, re-dispatched from the slider.
@@ -86,7 +86,7 @@ export class FdSliderRow extends FdElement {
 
   @property({ reflect: true }) name = ''
 
-  /** `SettingsSliderRow.format`. Defaults to the bare number. */
+  /** `PreferencesSliderRow.format`. Defaults to the bare number. */
   @property({ attribute: false }) format: (value: number) => string = String
 
   #onSliderChange = (event: CustomEvent<{ valueAsNumber?: number }>): void => {

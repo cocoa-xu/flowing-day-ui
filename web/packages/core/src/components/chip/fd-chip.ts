@@ -4,7 +4,7 @@ import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { textRole } from '../../internal/typography.js'
 
 /**
- * Mirrors `SettingsChip`: a full-width accent-veiled button that washes on hover. The
+ * Mirrors `PreferencesChip`: a full-width accent-veiled button that washes on hover. The
  * SwiftUI original attaches no animation modifier, so the wash lands instantly.
  *
  * @fires fd-activate - When the chip is pressed. This is the SwiftUI `action` closure.

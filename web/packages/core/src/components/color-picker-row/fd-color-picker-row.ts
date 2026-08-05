@@ -4,7 +4,7 @@ import { baseStyles, FdElement } from '../../internal/base-element.js'
 import '../row/fd-row.js'
 
 /**
- * Mirrors `SettingsColorPickerRow`: a row whose trailing control opens the platform
+ * Mirrors `PreferencesColorPickerRow`: a row whose trailing control opens the platform
  * colour picker. `ColorPicker` is `<input type="color">` here — both hand the choice to
  * the OS rather than drawing a picker, which is the point of using it.
  *
@@ -67,7 +67,7 @@ export class FdColorPickerRow extends FdElement {
   /** The selected colour, as a hex string. */
   @property({ reflect: true }) value = '#000000'
 
-  /** `SettingsColorPickerRow.supportsOpacity`. */
+  /** `PreferencesColorPickerRow.supportsOpacity`. */
   @property({ type: Boolean, reflect: true, attribute: 'supports-opacity' }) supportsOpacity = false
 
   @property({ type: Boolean, reflect: true }) disabled = false

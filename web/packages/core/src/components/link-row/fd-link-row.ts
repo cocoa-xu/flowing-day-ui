@@ -5,7 +5,7 @@ import { softButtonStyles } from '../../internal/soft-button.js'
 import '../row/fd-row.js'
 
 /**
- * Mirrors `SettingsLinkRow`: `SettingsButtonRow` chrome on a `Link`, with `.help(_:)`
+ * Mirrors `PreferencesLinkRow`: `PreferencesButtonRow` chrome on a `Link`, with `.help(_:)`
  * as a tooltip.
  *
  * Deliberately without the `arrow.up.right` the SwiftUI original sets after the label:
@@ -27,16 +27,16 @@ export class FdLinkRow extends FdElement {
 
   @property({ reflect: true }) caption: string | null = null
 
-  /** Text on the trailing link — `SettingsLinkRow.buttonTitle`. */
+  /** Text on the trailing link — `PreferencesLinkRow.buttonTitle`. */
   @property({ reflect: true, attribute: 'button-label' }) buttonLabel = ''
 
-  /** `SettingsLinkRow.destination`. */
+  /** `PreferencesLinkRow.destination`. */
   @property({ reflect: true }) href = ''
 
   /** `.help(_:)`. Also the link's accessible name, which the arrow alone would not give. */
   @property({ reflect: true }) help = ''
 
-  /** Where the link opens. Defaults to a new tab, as opening a URL from Settings does. */
+  /** Where the link opens. Defaults to a new tab, as opening a URL from Preferences does. */
   @property({ reflect: true }) target = '_blank'
 
   override render() {

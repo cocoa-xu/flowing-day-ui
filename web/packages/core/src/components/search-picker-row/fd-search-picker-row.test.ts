@@ -50,7 +50,7 @@ describe('fd-search-picker-row', () => {
     expect(partOf(element, '.selected').textContent).toBe('Berlin')
   })
 
-  it('keeps the header at the SettingsRow geometry', async () => {
+  it('keeps the header at the PreferencesRow geometry', async () => {
     const element = await mount()
     const style = getComputedStyle(partOf(element, '.row'))
 
