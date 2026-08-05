@@ -14,64 +14,28 @@
     <main class="stage">
       <fd-settings-window
         id="window"
-        app-name="Flowing Day"
+        app-name="FlowingDayUI"
         settings-title="Preferences"
-        sidebar-footer="Version 1.6.0 (2461)"
+        sidebar-footer="Every control here changes this window."
         page="appearance"
       >
         <img slot="app-icon" src="./src/app-icon.svg" alt="" />
 
         <fd-page-group>
           <fd-page
-            page-id="general"
-            label="General"
-            subtitle="Application behavior and startup"
-            symbol="gearshape"
-          >
-            <fd-pane-stack>
-              <fd-section label="Startup" footer="Applies the next time Flowing Day launches.">
-                <fd-switch-row
-                  symbol="power"
-                  label="Launch at login"
-                  caption="Start Flowing Day automatically when you sign in."
-                  checked
-                ></fd-switch-row>
-                <fd-separator indented></fd-separator>
-                <fd-switch-row symbol="eye" label="Show in menu bar" checked></fd-switch-row>
-              </fd-section>
-
-              <fd-section label="Behavior">
-                <fd-popup-row label="When closing the last window" value="hide" min-width="200">
-                  <fd-option value="hide">Hide Flowing Day</fd-option>
-                  <fd-option value="quit">Quit Flowing Day</fd-option>
-                  <fd-option value="ask">Ask every time</fd-option>
-                </fd-popup-row>
-                <fd-separator></fd-separator>
-                <fd-popup-row
-                  label="Reopen windows"
-                  caption="Restores the layout from your previous session."
-                  value="always"
-                >
-                  <fd-option value="always">Always</fd-option>
-                  <fd-option value="never">Never</fd-option>
-                </fd-popup-row>
-              </fd-section>
-            </fd-pane-stack>
-          </fd-page>
-
-          <fd-page
             page-id="appearance"
             label="Appearance"
-            subtitle="Every control on this page restyles this window"
+            subtitle="One property retints the whole window"
             symbol="paintbrush"
           >
             <fd-pane-stack>
               <fd-section
                 label="Theme"
-                footer="Both settings write a single custom property, which every component below reads."
+                footer="wash and veil derive from fill, exactly as SettingsAccent does, so a single custom property retints every component."
               >
                 <fd-segmented-row
                   id="scheme"
+                  symbol="circle"
                   label="Appearance"
                   value="dark"
                   control-width="240"
@@ -80,8 +44,14 @@
                   <fd-option value="light">Light</fd-option>
                   <fd-option value="dark">Dark</fd-option>
                 </fd-segmented-row>
-                <fd-separator></fd-separator>
-                <fd-segmented-row id="accent" label="Accent" value="celadon" control-width="280">
+                <fd-separator indented></fd-separator>
+                <fd-segmented-row
+                  id="accent"
+                  symbol="swatchpalette"
+                  label="Accent"
+                  value="celadon"
+                  control-width="280"
+                >
                   <fd-option value="celadon">Celadon</fd-option>
                   <fd-option value="copper">Copper</fd-option>
                   <fd-option value="iris">Iris</fd-option>
@@ -89,158 +59,247 @@
                 </fd-segmented-row>
               </fd-section>
 
-              <fd-section label="Layout">
-                <fd-segmented-row id="density" label="Density" value="comfortable" control-width="240">
-                  <fd-option value="comfortable">Comfortable</fd-option>
-                  <fd-option value="compact">Compact</fd-option>
-                </fd-segmented-row>
-                <fd-separator></fd-separator>
-                <fd-segmented-row id="corners" label="Corners" value="soft" control-width="200">
+              <fd-section
+                label="Surfaces"
+                footer="Corner radii come from SettingsMetrics: 18 for the window, 14 for cards, 9 for controls."
+              >
+                <fd-segmented-row id="corners" label="Corners" value="soft" control-width="260">
                   <fd-option value="soft">Soft</fd-option>
+                  <fd-option value="medium">Medium</fd-option>
                   <fd-option value="sharp">Sharp</fd-option>
-                </fd-segmented-row>
-                <fd-separator></fd-separator>
-                <fd-segmented-row id="text-size" label="Text size" value="default" control-width="240">
-                  <fd-option value="small">Small</fd-option>
-                  <fd-option value="default">Default</fd-option>
-                  <fd-option value="large">Large</fd-option>
                 </fd-segmented-row>
                 <fd-separator></fd-separator>
                 <fd-switch-row
                   id="separators"
-                  label="Show row separators"
-                  caption="Hides every fd-separator on the page."
+                  label="Row separators"
+                  caption="Hairlines between rows, inset past the symbol gutter."
                   checked
                 ></fd-switch-row>
               </fd-section>
             </fd-pane-stack>
           </fd-page>
-        </fd-page-group>
 
-        <fd-page-group label="Monitors">
           <fd-page
-            page-id="network"
-            label="Network"
-            subtitle="Throughput, interfaces and sampling"
-            symbol="network"
+            page-id="layout"
+            label="Layout"
+            subtitle="Spacing, measure and the sidebar"
+            symbol="ruler"
           >
             <fd-pane-stack>
               <fd-section
-                label="Display"
-                footer="The fields and interval rows are dependent: they collapse away when the switch is off."
+                label="Density"
+                footer="SettingsMetrics.standard: rowInset 18, sectionSpacing 20, contentWidth 720."
               >
-                <fd-switch-group symbol="network" label="Show network activity" checked>
-                  <fd-multi-select-row label="Fields" control-width="320">
-                    <fd-option value="upload" selected>Upload</fd-option>
-                    <fd-option value="download" selected>Download</fd-option>
-                    <fd-option value="peaks">Peaks</fd-option>
-                  </fd-multi-select-row>
-                  <fd-separator indented></fd-separator>
-                  <fd-popup-row label="Refresh interval" value="2s">
-                    <fd-option value="1s">Every second</fd-option>
-                    <fd-option value="2s">Every 2 seconds</fd-option>
-                    <fd-option value="5s">Every 5 seconds</fd-option>
-                    <fd-option value="10s">Every 10 seconds</fd-option>
-                  </fd-popup-row>
-                </fd-switch-group>
-              </fd-section>
-
-              <fd-section label="Chart">
-                <fd-symbol-segmented-row
-                  label="Layout"
-                  value="bars"
-                  control-width="200"
+                <fd-segmented-row
+                  id="density"
+                  label="Row density"
+                  value="default"
+                  control-width="260"
                 >
-                  <fd-option value="bars" symbol="chart.bar">Bars</fd-option>
-                  <fd-option value="line" symbol="chart.line">Line</fd-option>
-                  <fd-option value="area" symbol="chart.area">Area</fd-option>
-                </fd-symbol-segmented-row>
+                  <fd-option value="compact">Compact</fd-option>
+                  <fd-option value="default">Default</fd-option>
+                  <fd-option value="roomy">Roomy</fd-option>
+                </fd-segmented-row>
+              </fd-section>
+
+              <fd-section
+                label="Measure"
+                footer="Both are live: the pane you are reading resizes as you choose."
+              >
+                <fd-segmented-row
+                  id="content-width"
+                  symbol="arrow"
+                  label="Content width"
+                  value="720"
+                  control-width="240"
+                >
+                  <fd-option value="560">560</fd-option>
+                  <fd-option value="720">720</fd-option>
+                  <fd-option value="860">860</fd-option>
+                </fd-segmented-row>
+                <fd-separator indented></fd-separator>
+                <fd-segmented-row
+                  id="sidebar-width"
+                  label="Sidebar width"
+                  value="224"
+                  control-width="240"
+                >
+                  <fd-option value="190">190</fd-option>
+                  <fd-option value="224">224</fd-option>
+                  <fd-option value="264">264</fd-option>
+                </fd-segmented-row>
               </fd-section>
             </fd-pane-stack>
           </fd-page>
 
           <fd-page
-            page-id="usb"
-            label="USB Devices"
-            subtitle="Connected hardware"
-            symbol="cable.connector"
-            accent="#B4795E"
-            accent-foreground="#C99372"
+            page-id="typography"
+            label="Typography"
+            subtitle="Seventeen roles, one scale"
+            symbol="textformat"
           >
             <fd-pane-stack>
               <fd-section
-                label="Devices"
-                footer="This page carries its own accent, retinting the whole window."
+                label="Scale"
+                footer="SettingsTypography names a role per use: rowTitle 13, rowCaption 11, pageTitle 25 rounded, sectionHeader 10.5 semibold, and thirteen more."
               >
-                <fd-switch-group symbol="cable.connector" label="Show USB devices" checked>
-                  <fd-multi-select-row label="Device fields" control-width="320">
-                    <fd-option value="name" selected>Name</fd-option>
-                    <fd-option value="vendor" selected>Vendor</fd-option>
-                    <fd-option value="serial">Serial</fd-option>
-                  </fd-multi-select-row>
-                  <fd-separator indented></fd-separator>
-                  <fd-switch-row label="Copy identifiers on click"></fd-switch-row>
-                </fd-switch-group>
+                <fd-segmented-row
+                  id="text-size"
+                  label="Type scale"
+                  value="default"
+                  control-width="260"
+                >
+                  <fd-option value="small">Small</fd-option>
+                  <fd-option value="default">Default</fd-option>
+                  <fd-option value="large">Large</fd-option>
+                </fd-segmented-row>
+                <fd-separator></fd-separator>
+                <fd-segmented-row
+                  id="heading-font"
+                  label="Heading face"
+                  caption="Applies to the page title and the brand block."
+                  value="rounded"
+                  control-width="300"
+                >
+                  <fd-option value="standard">System</fd-option>
+                  <fd-option value="rounded">Rounded</fd-option>
+                  <fd-option value="serif">Serif</fd-option>
+                  <fd-option value="monospaced">Mono</fd-option>
+                </fd-segmented-row>
               </fd-section>
             </fd-pane-stack>
           </fd-page>
         </fd-page-group>
 
-        <fd-page-group label="Advanced">
+        <fd-page-group label="Behaviour">
           <fd-page
-            page-id="keyboard"
-            label="Keyboard"
-            subtitle="Global shortcuts"
-            symbol="keyboard"
+            page-id="motion"
+            label="Motion"
+            subtitle="Disclosure, and what Reduce Motion changes"
+            symbol="bolt"
           >
             <fd-pane-stack>
-              <fd-section label="Shortcuts">
-                <fd-popup-row label="Toggle Flowing Day" value="opt-space" min-width="180">
-                  <fd-option value="opt-space">⌥ Space</fd-option>
-                  <fd-option value="ctrl-space">⌃ Space</fd-option>
-                  <fd-option value="cmd-shift-a">⌘ ⇧ A</fd-option>
-                  <fd-option value="none">None</fd-option>
-                </fd-popup-row>
+              <fd-section
+                label="Disclosure"
+                footer="SettingsDependentRowsMotion: 0.18s easeOut with a -5pt entry offset, collapsing to 0.12s linear with no offset under Reduce Motion."
+              >
+                <fd-segmented-row
+                  id="motion-speed"
+                  label="Speed"
+                  value="180ms"
+                  control-width="260"
+                >
+                  <fd-option value="1ms">Off</fd-option>
+                  <fd-option value="180ms">Standard</fd-option>
+                  <fd-option value="700ms">Slow</fd-option>
+                </fd-segmented-row>
                 <fd-separator></fd-separator>
-                <fd-multi-select-row label="Also respond to" control-width="260">
-                  <fd-option value="fn" selected>Fn</fd-option>
-                  <fd-option value="media">Media keys</fd-option>
-                </fd-multi-select-row>
-              </fd-section>
-            </fd-pane-stack>
-          </fd-page>
-
-          <fd-page
-            page-id="updates"
-            label="Updates"
-            subtitle="Release channel and checks"
-            symbol="arrow.triangle.2.circlepath"
-          >
-            <fd-pane-stack>
-              <fd-section label="Automatic updates">
-                <fd-switch-group label="Check for updates" checked>
-                  <fd-segmented-row label="Channel" value="stable" control-width="260">
-                    <fd-option value="stable">Stable</fd-option>
-                    <fd-option value="beta">Beta</fd-option>
-                    <fd-option value="nightly">Nightly</fd-option>
-                  </fd-segmented-row>
+                <fd-switch-group symbol="hare" label="Try it" checked>
+                  <fd-row
+                    label="A dependent row"
+                    caption="Height, opacity and offset animate together."
+                  ></fd-row>
                   <fd-separator indented></fd-separator>
-                  <fd-switch-row label="Download in the background" checked></fd-switch-row>
+                  <fd-multi-select-row label="And another" control-width="300">
+                    <fd-option value="a" selected>Fade</fd-option>
+                    <fd-option value="b" selected>Offset</fd-option>
+                    <fd-option value="c">Clip</fd-option>
+                  </fd-multi-select-row>
                 </fd-switch-group>
               </fd-section>
             </fd-pane-stack>
           </fd-page>
 
           <fd-page
-            page-id="privacy"
-            label="Privacy"
-            subtitle="Requires a full disk access grant"
-            symbol="lock.shield"
-            unavailable
+            page-id="icons"
+            label="Icons"
+            subtitle="Bring your own set"
+            symbol="sparkles"
+            accent="#8286C4"
+            accent-foreground="#A3A6DA"
           >
             <fd-pane-stack>
-              <fd-section label="Privacy">
-                <fd-row label="Unavailable"></fd-row>
+              <fd-section
+                label="Registry"
+                footer="SF Symbols cannot be redistributed, so the core ships the interface and no icon data. These stand-ins are registered under SF Symbol names, and re-registering swaps every icon already on screen."
+              >
+                <fd-segmented-row
+                  id="icon-style"
+                  symbol="sparkles"
+                  label="Stroke weight"
+                  caption="Watch the sidebar and the header while you change it."
+                  value="outline"
+                  control-width="260"
+                >
+                  <fd-option value="hairline">Hairline</fd-option>
+                  <fd-option value="outline">Outline</fd-option>
+                  <fd-option value="bold">Bold</fd-option>
+                </fd-segmented-row>
+              </fd-section>
+
+              <fd-section
+                label="Accent scope"
+                footer="This page carries its own accent. It retints the sidebar, the header and everything below without touching the rest of the window."
+              >
+                <fd-row
+                  symbol="swatchpalette"
+                  label="Per-page accent"
+                  caption="SettingsPage(accent:) — declared on the page, applied to its subtree."
+                ></fd-row>
+              </fd-section>
+            </fd-pane-stack>
+          </fd-page>
+        </fd-page-group>
+
+        <fd-page-group label="Reference">
+          <fd-page
+            page-id="components"
+            label="Components"
+            subtitle="Every row type, live"
+            symbol="list.bullet"
+          >
+            <fd-pane-stack>
+              <fd-section label="Rows">
+                <fd-row
+                  symbol="list.bullet"
+                  label="fd-row"
+                  caption="Symbol gutter, title, caption and a trailing slot."
+                ></fd-row>
+                <fd-separator indented></fd-separator>
+                <fd-switch-row label="fd-switch-row" checked></fd-switch-row>
+                <fd-separator></fd-separator>
+                <fd-popup-row label="fd-popup-row" value="two" min-width="180">
+                  <fd-option value="one">First choice</fd-option>
+                  <fd-option value="two">Second choice</fd-option>
+                  <fd-option value="three">Third choice</fd-option>
+                </fd-popup-row>
+              </fd-section>
+
+              <fd-section
+                label="Selection"
+                footer="Single-select strips are radio groups: one tab stop, arrow keys to move between segments."
+              >
+                <fd-segmented-row label="fd-segmented-row" value="b" control-width="240">
+                  <fd-option value="a">One</fd-option>
+                  <fd-option value="b">Two</fd-option>
+                  <fd-option value="c">Three</fd-option>
+                </fd-segmented-row>
+                <fd-separator></fd-separator>
+                <fd-symbol-segmented-row
+                  label="fd-symbol-segmented-row"
+                  value="eye"
+                  control-width="180"
+                >
+                  <fd-option value="eye" symbol="eye">Eye</fd-option>
+                  <fd-option value="bolt" symbol="bolt">Bolt</fd-option>
+                  <fd-option value="hare" symbol="hare">Hare</fd-option>
+                </fd-symbol-segmented-row>
+                <fd-separator></fd-separator>
+                <fd-multi-select-row label="fd-multi-select-row" control-width="300">
+                  <fd-option value="x" selected>Alpha</fd-option>
+                  <fd-option value="y">Beta</fd-option>
+                  <fd-option value="z" disabled>Locked</fd-option>
+                </fd-multi-select-row>
               </fd-section>
             </fd-pane-stack>
           </fd-page>
@@ -248,18 +307,28 @@
           <fd-page
             page-id="about"
             label="About"
-            subtitle="Version and project information"
+            subtitle="A SwiftUI toolkit, ported to the platform"
             symbol="info.circle"
           >
             <fd-pane-stack>
-              <fd-section label="Flowing Day">
-                <fd-row label="Version" caption="1.6.0 (2461)"></fd-row>
+              <fd-section label="FlowingDayUI">
+                <fd-row label="Package" caption="@flowing-day/ui"></fd-row>
                 <fd-separator></fd-separator>
-                <fd-row label="Design toolkit" caption="FlowingDayUI"></fd-row>
+                <fd-row label="Licence" caption="Apache-2.0"></fd-row>
                 <fd-separator></fd-separator>
                 <fd-row
-                  label="Rendered by"
-                  caption="Web components ported 1:1 from the SwiftUI sources."
+                  label="Built on"
+                  caption="Standard custom elements. No framework required, and none refused."
+                ></fd-row>
+              </fd-section>
+
+              <fd-section
+                label="Ported from"
+                footer="Metrics, colours, type and motion are taken from the Swift sources rather than eyeballed, and the tests pin the literals."
+              >
+                <fd-row
+                  label="FlowingDaySettings"
+                  caption="The SwiftUI package this mirrors, one component at a time."
                 ></fd-row>
               </fd-section>
             </fd-pane-stack>
