@@ -196,6 +196,7 @@ public struct SettingsSwitchRow: View {
 }
 
 public struct SettingsSwitch: View {
+  @Environment(\.settingsAccent) private var accent
   @Binding private var isOn: Bool
 
   public init(isOn: Binding<Bool>) {
@@ -207,6 +208,7 @@ public struct SettingsSwitch: View {
       .toggleStyle(.switch)
       .labelsHidden()
       .controlSize(.small)
+      .tint(accent.fill)
   }
 }
 
