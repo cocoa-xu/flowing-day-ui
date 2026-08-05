@@ -13,7 +13,7 @@ Add FlowingDayUI to your package dependencies:
 ```swift
 .package(
     url: "https://github.com/cocoa-xu/flowing-day-ui",
-    from: "1.3.0"
+    from: "1.4.0"
 )
 ```
 
@@ -128,6 +128,42 @@ SettingsMultiSelectRow(
         )
     ]
 )
+```
+
+## Dependent rows
+
+Associate a master switch with rows that appear only while it is enabled. The group
+provides the separator, transition, animation, and Reduce Motion behavior:
+
+```swift
+SettingsSwitchGroup(
+    symbol: "cable.connector",
+    title: "Show USB devices",
+    isOn: $showUSBDevices
+) {
+    SettingsMultiSelectRow(
+        title: "Device fields",
+        options: deviceFieldOptions
+    )
+    SettingsRowSeparator(isIndented: true)
+    SettingsSwitchRow(
+        title: "Copy identifiers on click",
+        isOn: $copyIdentifiers
+    )
+}
+```
+
+Use `SettingsDependentRows` when the controlling value belongs to another control:
+
+```swift
+SettingsMultiSelectRow(title: "Network", options: networkOptions)
+SettingsDependentRows(isVisible: showNetwork) {
+    SettingsSegmentedRow(
+        title: "Network layout",
+        selection: $networkLayout,
+        options: layoutOptions
+    )
+}
 ```
 
 ## Theming

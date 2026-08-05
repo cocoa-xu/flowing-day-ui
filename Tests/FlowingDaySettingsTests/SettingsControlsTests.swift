@@ -105,6 +105,59 @@ final class SettingsControlsTests: XCTestCase {
     XCTAssertTrue(SettingsOptionSearch.matches("Europe/London", query: ""))
     XCTAssertFalse(SettingsOptionSearch.matches("Europe/London", query: "Tokyo"))
   }
+
+  func testDependentRowsMotionRespectsReduceMotion() {
+    XCTAssertEqual(
+      SettingsDependentRowsMotion.duration(reduceMotion: false),
+      0.18
+    )
+    XCTAssertEqual(
+      SettingsDependentRowsMotion.duration(reduceMotion: true),
+      0.12
+    )
+    XCTAssertEqual(SettingsDependentRowsMotion.offset(reduceMotion: false), -5)
+    XCTAssertEqual(SettingsDependentRowsMotion.offset(reduceMotion: true), 0)
+  }
+
+  @MainActor
+  func testDependentRowsOnlyOccupySpaceWhenVisible() {
+    let hiddenHeight = fittingHeight(
+      SettingsDependentRows(isVisible: false) {
+        SettingsRow(title: "Dependent setting")
+      }
+    )
+    let visibleHeight = fittingHeight(
+      SettingsDependentRows(isVisible: true) {
+        SettingsRow(title: "Dependent setting")
+      }
+    )
+
+    XCTAssertLessThan(hiddenHeight, 1)
+    XCTAssertGreaterThan(visibleHeight, 40)
+  }
+
+  @MainActor
+  func testSwitchGroupIncludesDependentRowsWhenEnabled() {
+    let disabledHeight = fittingHeight(
+      SettingsSwitchGroup(title: "Master setting", isOn: .constant(false)) {
+        SettingsRow(title: "Dependent setting")
+      }
+    )
+    let enabledHeight = fittingHeight(
+      SettingsSwitchGroup(title: "Master setting", isOn: .constant(true)) {
+        SettingsRow(title: "Dependent setting")
+      }
+    )
+
+    XCTAssertGreaterThan(enabledHeight - disabledHeight, 40)
+  }
+
+  @MainActor
+  private func fittingHeight<Content: View>(_ content: Content) -> CGFloat {
+    let hostingView = NSHostingView(rootView: content.frame(width: 600))
+    hostingView.layoutSubtreeIfNeeded()
+    return hostingView.fittingSize.height
+  }
 }
 
 private final class BooleanState {

@@ -200,6 +200,119 @@ public struct SettingsSwitch: View {
   }
 }
 
+enum SettingsDependentRowsMotion {
+  static let standardDuration: TimeInterval = 0.18
+  static let reducedMotionDuration: TimeInterval = 0.12
+  static let detailOffset: CGFloat = -5
+
+  static func duration(reduceMotion: Bool) -> TimeInterval {
+    reduceMotion ? reducedMotionDuration : standardDuration
+  }
+
+  static func offset(reduceMotion: Bool) -> CGFloat {
+    reduceMotion ? 0 : detailOffset
+  }
+
+  static func animation(reduceMotion: Bool) -> Animation {
+    let duration = duration(reduceMotion: reduceMotion)
+    return reduceMotion
+      ? .linear(duration: duration)
+      : .easeOut(duration: duration)
+  }
+
+  static func transition(reduceMotion: Bool) -> AnyTransition {
+    let offset = offset(reduceMotion: reduceMotion)
+    return offset == 0
+      ? .opacity
+      : .opacity.combined(with: .offset(y: offset))
+  }
+}
+
+public struct SettingsDependentRows<Content: View>: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  private let isVisible: Bool
+  private let showsSeparator: Bool
+  private let isSeparatorIndented: Bool
+  private let content: Content
+
+  public init(
+    isVisible: Bool,
+    showsSeparator: Bool = true,
+    isSeparatorIndented: Bool = true,
+    @ViewBuilder content: () -> Content
+  ) {
+    self.isVisible = isVisible
+    self.showsSeparator = showsSeparator
+    self.isSeparatorIndented = isSeparatorIndented
+    self.content = content()
+  }
+
+  public var body: some View {
+    VStack(spacing: 0) {
+      if isVisible {
+        VStack(spacing: 0) {
+          if showsSeparator {
+            SettingsRowSeparator(isIndented: isSeparatorIndented)
+          }
+          content
+        }
+        .transition(SettingsDependentRowsMotion.transition(reduceMotion: reduceMotion))
+      }
+    }
+    .clipped()
+    .animation(
+      SettingsDependentRowsMotion.animation(reduceMotion: reduceMotion),
+      value: isVisible
+    )
+  }
+}
+
+public struct SettingsSwitchGroup<Content: View>: View {
+  private let symbol: String?
+  private let title: String
+  private let caption: String?
+  private let showsSeparator: Bool
+  private let isSeparatorIndented: Bool
+  @Binding private var isOn: Bool
+  private let content: Content
+
+  public init(
+    symbol: String? = nil,
+    title: String,
+    caption: String? = nil,
+    isOn: Binding<Bool>,
+    showsSeparator: Bool = true,
+    isSeparatorIndented: Bool = true,
+    @ViewBuilder content: () -> Content
+  ) {
+    self.symbol = symbol
+    self.title = title
+    self.caption = caption
+    _isOn = isOn
+    self.showsSeparator = showsSeparator
+    self.isSeparatorIndented = isSeparatorIndented
+    self.content = content()
+  }
+
+  public var body: some View {
+    VStack(spacing: 0) {
+      SettingsSwitchRow(
+        symbol: symbol,
+        title: title,
+        caption: caption,
+        isOn: $isOn
+      )
+      SettingsDependentRows(
+        isVisible: isOn,
+        showsSeparator: showsSeparator,
+        isSeparatorIndented: isSeparatorIndented
+      ) {
+        content
+      }
+    }
+  }
+}
+
 public struct SettingsSliderRow: View {
   @Environment(\.settingsMetrics) private var metrics
   @Environment(\.settingsTypography) private var typography
