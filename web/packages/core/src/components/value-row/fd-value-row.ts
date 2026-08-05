@@ -1,6 +1,11 @@
 import { type CSSResultGroup, css, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
+import {
+  DEFAULT_TAIL_LENGTH,
+  middleTruncated,
+  middleTruncateStyles,
+} from '../../internal/middle-truncate.js'
 import { textRole } from '../../internal/typography.js'
 import '../row/fd-row.js'
 
@@ -16,6 +21,7 @@ import '../row/fd-row.js'
 export class FdValueRow extends FdElement {
   static override styles: CSSResultGroup = [
     baseStyles,
+    middleTruncateStyles,
     css`
       /* The value is a lineLimit(1) label, so it compresses instead of overflowing. */
       fd-row {
@@ -31,28 +37,9 @@ export class FdValueRow extends FdElement {
 
       .value {
         ${textRole('value')}
-        min-width: 0;
         color: var(--_fd-palette-muted);
-        white-space: nowrap;
-        /*
-         * truncationMode(.middle). No CSS keyword truncates a middle, so the value is
-         * split into a head that shrinks and a tail that never does; the ellipsis lands
-         * between them exactly as it does in SwiftUI.
-         */
-        display: flex;
         user-select: text;
         -webkit-user-select: text;
-      }
-
-      .head {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .tail {
-        flex: none;
-        white-space: pre;
       }
     `,
   ]
@@ -65,17 +52,14 @@ export class FdValueRow extends FdElement {
   @property({ reflect: true }) value = ''
 
   /** Characters kept at the trailing end when the value is truncated. */
-  @property({ type: Number, attribute: 'tail-length' }) tailLength = 8
+  @property({ type: Number, attribute: 'tail-length' }) tailLength = DEFAULT_TAIL_LENGTH
 
   override render() {
-    const split = Math.max(this.value.length - this.tailLength, 0)
-
     return html`
       <fd-row symbol=${this.symbol ?? ''} label=${this.label}>
         <span class="value-group" slot="trailing">
-          <span class="value" part="value"
-            ><span class="head">${this.value.slice(0, split)}</span
-            ><span class="tail">${this.value.slice(split)}</span></span
+          <span class="value truncate" part="value"
+            >${middleTruncated(this.value, this.tailLength)}</span
           >
           <slot name="trailing"></slot>
         </span>

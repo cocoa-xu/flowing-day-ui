@@ -33,8 +33,8 @@ describe('fd-value-row', () => {
       '<fd-value-row label="Path" value="/Users/ada/Library/Application Support/flowing-day.json"></fd-value-row>',
     )
 
-    expect(partOf(element, '.tail').textContent).toBe('day.json')
-    expect(partOf(element, '.head').textContent).toBe(
+    expect(partOf(element, '.truncate-tail').textContent).toBe('day.json')
+    expect(partOf(element, '.truncate-head').textContent).toBe(
       '/Users/ada/Library/Application Support/flowing-',
     )
   })
@@ -44,22 +44,22 @@ describe('fd-value-row', () => {
       '<fd-value-row label="Key" value="ABCDEFGHIJ" tail-length="3"></fd-value-row>',
     )
 
-    expect(partOf(element, '.head').textContent).toBe('ABCDEFG')
-    expect(partOf(element, '.tail').textContent).toBe('HIJ')
+    expect(partOf(element, '.truncate-head').textContent).toBe('ABCDEFG')
+    expect(partOf(element, '.truncate-tail').textContent).toBe('HIJ')
   })
 
   it('keeps a value shorter than the tail whole', async () => {
     const element = await mount('<fd-value-row label="Version" value="1.4"></fd-value-row>')
 
-    expect(partOf(element, '.head').textContent).toBe('')
-    expect(partOf(element, '.tail').textContent).toBe('1.4')
+    expect(partOf(element, '.truncate-head').textContent).toBe('')
+    expect(partOf(element, '.truncate-tail').textContent).toBe('1.4')
   })
 
   it('ellipsises the head rather than wrapping', async () => {
     const element = await mount(
       '<fd-value-row label="Path" value="/a/very/long/path"></fd-value-row>',
     )
-    const head = getComputedStyle(partOf(element, '.head'))
+    const head = getComputedStyle(partOf(element, '.truncate-head'))
 
     expect(head.textOverflow).toBe('ellipsis')
     expect(head.overflow).toBe('hidden')
