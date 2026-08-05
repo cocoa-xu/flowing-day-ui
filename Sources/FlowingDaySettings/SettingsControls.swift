@@ -320,16 +320,16 @@ private struct SettingsSelectionIndicator: View {
 }
 
 enum SettingsDependentRowsMotion {
-  static let standardDuration: TimeInterval = 0.18
-  static let reducedMotionDuration: TimeInterval = 0.12
-  static let detailOffset: CGFloat = -5
+  static let standardDuration = SettingsMotion.disclosure
+  static let reducedMotionDuration = SettingsMotion.reducedDisclosure
+  static let detailOffset = SettingsMotion.disclosureOffset
 
   static func duration(reduceMotion: Bool) -> TimeInterval {
     reduceMotion ? reducedMotionDuration : standardDuration
   }
 
   static func offset(reduceMotion: Bool) -> CGFloat {
-    reduceMotion ? 0 : detailOffset
+    reduceMotion ? SettingsMotion.reducedDisclosureOffset : detailOffset
   }
 
   static func animation(reduceMotion: Bool) -> Animation {
@@ -785,7 +785,7 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
       }
       .clipped()
     }
-    .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isExpanded)
+    .animation(reduceMotion ? nil : .easeOut(duration: SettingsMotion.expand), value: isExpanded)
   }
 
   private var selectedLabel: String {
@@ -1369,7 +1369,7 @@ public struct SettingsExpandableRow: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isExpanded)
+    .animation(reduceMotion ? nil : .easeOut(duration: SettingsMotion.expand), value: isExpanded)
     .accessibilityValue(isExpanded ? strings.expanded : strings.collapsed)
   }
 }
@@ -1531,8 +1531,8 @@ public struct SettingsSelectableTag: View {
     .buttonStyle(.plain)
     .onHover { isHovering = $0 }
     .accessibilityValue(isSelected ? strings.on : strings.off)
-    .animation(.easeOut(duration: 0.16), value: isSelected)
-    .animation(.easeOut(duration: 0.12), value: isHovering)
+    .animation(.easeOut(duration: SettingsMotion.selection), value: isSelected)
+    .animation(.easeOut(duration: SettingsMotion.hover), value: isHovering)
   }
 
   private var inactive: SettingsAccent {

@@ -13,7 +13,9 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "manifest": "pnpm --filter @flowing-day/ui manifest"
+    "manifest": "pnpm --filter @flowing-day/ui manifest",
+    "tokens:swift": "node ../scripts/generate-swift-theme.mjs",
+    "tokens:check": "node ../scripts/generate-swift-theme.mjs --check"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.7",

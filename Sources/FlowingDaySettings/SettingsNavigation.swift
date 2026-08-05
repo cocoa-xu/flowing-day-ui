@@ -58,46 +58,6 @@ public struct SettingsPageGroup<ID: Hashable>: Identifiable {
   }
 }
 
-public struct SettingsViewConfiguration {
-  public var applicationName: String
-  public var settingsTitle: String
-  public var applicationIcon: NSImage?
-  public var sidebarFooter: String?
-  public var defaultAccent: SettingsAccent
-  public var strings: SettingsStrings
-  public var metrics: SettingsMetrics
-  public var typography: SettingsTypography
-  public var surfaces: SettingsSurfaces
-  public var sidebarWidth: CGFloat
-  public var cornerRadius: CGFloat
-
-  public init(
-    applicationName: String,
-    settingsTitle: String = "Settings",
-    applicationIcon: NSImage? = nil,
-    sidebarFooter: String? = nil,
-    defaultAccent: SettingsAccent = .celadon,
-    strings: SettingsStrings = SettingsStrings(),
-    metrics: SettingsMetrics = .standard,
-    typography: SettingsTypography = .standard,
-    surfaces: SettingsSurfaces = .standard,
-    sidebarWidth: CGFloat = 224,
-    cornerRadius: CGFloat = 18
-  ) {
-    self.applicationName = applicationName
-    self.settingsTitle = settingsTitle
-    self.applicationIcon = applicationIcon
-    self.sidebarFooter = sidebarFooter
-    self.defaultAccent = defaultAccent
-    self.strings = strings
-    self.metrics = metrics
-    self.typography = typography
-    self.surfaces = surfaces
-    self.sidebarWidth = sidebarWidth
-    self.cornerRadius = cornerRadius
-  }
-}
-
 public struct SettingsView<ID: Hashable>: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.settingsWindowActions) private var windowActions
@@ -150,7 +110,7 @@ public struct SettingsView<ID: Hashable>: View {
     .environment(\.settingsMetrics, configuration.metrics)
     .environment(\.settingsTypography, configuration.typography)
     .environment(\.settingsSurfaces, configuration.surfaces)
-    .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: selection)
+    .animation(reduceMotion ? nil : .easeInOut(duration: SettingsMotion.page), value: selection)
     .onAppear(perform: reconcileSelection)
     .onChange(of: pages.map(\.id)) { _ in reconcileSelection() }
     .onChange(of: pages.map(\.isAvailable)) { _ in reconcileSelection() }
@@ -250,12 +210,12 @@ private struct SettingsCloseButton: View {
     }
     .buttonStyle(.plain)
     .onHover { isHovering = $0 }
-    .animation(.easeOut(duration: 0.12), value: isHovering)
+    .animation(.easeOut(duration: SettingsMotion.hover), value: isHovering)
     .accessibilityLabel(strings.closeSettings)
   }
 
   private var closeColor: Color {
-    SettingsPalette.dynamic(light: 0xFF5F57, dark: 0xFF6961)
+    SettingsPalette.closeHover
   }
 }
 

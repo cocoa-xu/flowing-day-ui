@@ -10,6 +10,8 @@ on:
     paths:
       - 'Sources/**'
       - 'Tests/**'
+      - 'scripts/generate-swift-theme.mjs'
+      - 'web/packages/core/src/tokens/tokens.json'
       - 'Package.swift'
       - '.github/workflows/swift.yml'
   pull_request:
@@ -18,6 +20,8 @@ on:
     paths:
       - 'Sources/**'
       - 'Tests/**'
+      - 'scripts/generate-swift-theme.mjs'
+      - 'web/packages/core/src/tokens/tokens.json'
       - 'Package.swift'
       - '.github/workflows/swift.yml'
 
@@ -43,6 +47,9 @@ jobs:
 
       - name: Check formatting
         run: swift format lint --recursive --strict Sources Tests Package.swift
+
+      - name: Check generated theme
+        run: node scripts/generate-swift-theme.mjs --check
 
       - name: Run tests
         run: swift test

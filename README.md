@@ -31,6 +31,10 @@ Add the package by local path while developing applications alongside it:
 .package(path: "../flowing-day-ui")
 ```
 
+Design values are authored only in
+`web/packages/core/src/tokens/tokens.json`. Regenerate the committed Swift theme with
+`cd web && corepack pnpm tokens:swift`; `SettingsTheme.swift` is generated output.
+
 ## Settings window
 
 Define application-owned pages and pass their state through ordinary SwiftUI bindings:

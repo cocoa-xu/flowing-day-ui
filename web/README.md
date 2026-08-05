@@ -32,15 +32,20 @@ hot-reloads the page instead of waiting on a rebuild.
 | `pnpm test` | Run the suite in a real Chromium via Vitest browser mode |
 | `pnpm typecheck` | Type-check both packages without emitting |
 | `pnpm lint` / `pnpm format` | Biome check / write |
+| `pnpm tokens:swift` | Regenerate the Swift theme from `tokens.json` |
+| `pnpm tokens:check` | Verify that the committed Swift theme is current |
 
 `pnpm --filter @flowing-day/ui check:exports` validates the published entry points with
 publint and are-the-types-wrong.
 
 ## How the token layer is built
 
-Every token lives in `packages/core/src/tokens/tokens.ts`, annotated with the Swift symbol
-it mirrors. Two artifacts are generated from it, so the two can only ever drift in one
-place:
+Every design value lives in `packages/core/src/tokens/tokens.json`. It is the sole token
+source for every platform. The TypeScript token module reads it directly, and
+`scripts/generate-swift-theme.mjs` emits the committed `SettingsTheme.swift` artifact.
+Do not edit generated Swift values by hand.
+
+The web token module produces two CSS artifacts from the same data:
 
 - `themeStyles` — private `--_fd-*` aliases adopted into every shadow root, each falling
   back to its public `--fd-*` token, which is what makes an override anywhere up the tree
@@ -83,5 +88,5 @@ which is why the landing page keeps its drag logic in `docs/src/drag.ts`. And
 `SettingsSliderRepresentable` is the SwiftUI↔AppKit bridge; the `SettingsSliderControl`
 behind it is what `fd-slider` reproduces.
 
-Remaining: emitting `SettingsTheme.swift` from `tokens/tokens.json`, so the two platforms
-cannot drift. The web side already reads from it.
+Swift and web now share the same token source. A generated-file check fails CI if either
+the JSON or the Swift artifact changes without the other.
