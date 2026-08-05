@@ -74,11 +74,14 @@ set, since scoped packages default to restricted.
 
 ## Status
 
-Ported: the token layer, `fd-settings-window` with its sidebar and page header, `fd-page`,
-`fd-page-group`, `fd-card`, `fd-section`, `fd-separator`, `fd-pane-stack`, `fd-row`,
-`fd-switch`, `fd-switch-row`, `fd-popup`, `fd-popup-row`, `fd-segmented-row`,
-`fd-symbol-segmented-row`, `fd-multi-select-row`, `fd-check-toggle`, `fd-dependent-rows`,
-`fd-switch-group`, `fd-option` and `fd-icon`.
+Every view in `Sources/FlowingDaySettings` is ported — 34 elements, listed by group in
+[the package README](packages/core/README.md#components).
 
-Remaining: the slider, search picker, colour picker, tags, flow and adaptive grids, and
-the button, link, expandable, value and empty rows.
+Two are deliberately left out. `SettingsWindowPresenter` has no web counterpart: `NSPanel`
+is the presenter's job, not the view's, so how the window is presented is the page's call —
+which is why the landing page keeps its drag logic in `docs/src/drag.ts`. And
+`SettingsSliderRepresentable` is the SwiftUI↔AppKit bridge; the `SettingsSliderControl`
+behind it is what `fd-slider` reproduces.
+
+Remaining: emitting `SettingsTheme.swift` from `tokens/tokens.json`, so the two platforms
+cannot drift. The web side already reads from it.

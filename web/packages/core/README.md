@@ -78,10 +78,21 @@ Icons already on the page pick up a later registration.
 
 ## Components
 
-`fd-settings-window`, `fd-page`, `fd-page-group`, `fd-pane-stack`, `fd-section`, `fd-card`,
-`fd-row`, `fd-separator`, `fd-switch`, `fd-switch-row`, `fd-switch-group`,
-`fd-dependent-rows`, `fd-popup`, `fd-popup-row`, `fd-segmented-row`,
-`fd-symbol-segmented-row`, `fd-multi-select-row`, `fd-check-toggle`, `fd-option`, `fd-icon`.
+**Structure** — `fd-settings-window`, `fd-page`, `fd-page-group`, `fd-pane-stack`,
+`fd-section`, `fd-card`, `fd-separator`, `fd-dependent-rows`.
+
+**Rows** — `fd-row`, `fd-switch-row`, `fd-popup-row`, `fd-slider-row`, `fd-value-row`,
+`fd-button-row`, `fd-link-row`, `fd-expandable-row`, `fd-color-picker-row`,
+`fd-search-picker-row`, `fd-empty-row`.
+
+**Selection** — `fd-segmented-row`, `fd-symbol-segmented-row`, `fd-multi-select-row`,
+`fd-switch-group`, `fd-check-toggle`, `fd-option`.
+
+**Controls** — `fd-switch`, `fd-slider`, `fd-popup`.
+
+**Pills and layout** — `fd-chip`, `fd-tag`, `fd-selectable-tag`, `fd-flow-grid`, `fd-grid`.
+
+**Icons** — `fd-icon`.
 
 Editors pick up attribute and event completions from the bundled
 [custom elements manifest](https://github.com/webcomponents/custom-elements-manifest).
@@ -95,6 +106,9 @@ Editors pick up attribute and event completions from the bundled
 | `SettingsPopupControl`'s `NSPanel` | Popover API | The top layer escapes the scroll container as a child window did |
 | `SettingsWindowPresenter` | not ported | `NSPanel` has no web equivalent; the page decides how to present the view |
 | `Toggle(.switch)` | custom-drawn | AppKit chrome publishes no metrics, so the geometry is tokenised |
+| `truncationMode(.middle)` | split head and tail | No CSS keyword truncates a middle, so the tail is held back and the head ellipsises into it |
+| `SettingsWrappingLayout` | `flex-wrap` | The custom `Layout` places each item at its ideal size on the row's top edge, which is a wrapping flex line |
+| `action:` closure | `fd-activate` event | A `click` on the host also fires for the row label, which never ran the closure |
 
 Everything else — metrics, colours, type scale, motion durations — is taken from the Swift
 sources rather than eyeballed, and the tests pin the literals.
