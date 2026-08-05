@@ -41,4 +41,42 @@ final class SettingsNavigationTests: XCTestCase {
 
     XCTAssertNotNil(hostingView.layer)
   }
+
+  func testPageCanUseASeparateHeaderIcon() {
+    let page = SettingsPage(
+      id: "about",
+      title: "About",
+      subtitle: "Application information",
+      icon: .system("info.circle"),
+      headerIcon: .application
+    ) {
+      Color.clear
+    }
+
+    guard case .system(let sidebarSymbol) = page.icon else {
+      return XCTFail("Expected a system sidebar icon")
+    }
+    guard case .application = page.headerIcon else {
+      return XCTFail("Expected the application header icon")
+    }
+
+    XCTAssertEqual(sidebarSymbol, "info.circle")
+  }
+
+  func testPageUsesItsNavigationIconForTheHeaderByDefault() {
+    let page = SettingsPage(
+      id: "general",
+      title: "General",
+      subtitle: "Application behavior",
+      icon: .system("gearshape")
+    ) {
+      Color.clear
+    }
+
+    guard case .system(let headerSymbol) = page.headerIcon else {
+      return XCTFail("Expected the navigation icon to be reused")
+    }
+
+    XCTAssertEqual(headerSymbol, "gearshape")
+  }
 }

@@ -12,6 +12,7 @@ public struct SettingsPage<ID: Hashable>: Identifiable {
   public let title: String
   public let subtitle: String
   public let icon: SettingsPageIcon
+  public let headerIcon: SettingsPageIcon
   public let accent: SettingsAccent?
   public let isAvailable: Bool
   let content: AnyView
@@ -21,6 +22,7 @@ public struct SettingsPage<ID: Hashable>: Identifiable {
     title: String,
     subtitle: String,
     icon: SettingsPageIcon,
+    headerIcon: SettingsPageIcon? = nil,
     accent: SettingsAccent? = nil,
     isAvailable: Bool = true,
     @ViewBuilder content: () -> Content
@@ -29,6 +31,7 @@ public struct SettingsPage<ID: Hashable>: Identifiable {
     self.title = title
     self.subtitle = subtitle
     self.icon = icon
+    self.headerIcon = headerIcon ?? icon
     self.accent = accent
     self.isAvailable = isAvailable
     self.content = AnyView(content())
@@ -366,7 +369,7 @@ private struct SettingsPageHeader<ID: Hashable>: View {
 
   @ViewBuilder
   private var icon: some View {
-    switch page.icon {
+    switch page.headerIcon {
     case .system(let symbol):
       Image(systemName: symbol)
         .font(.system(size: 15, weight: .semibold))
