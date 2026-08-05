@@ -8,10 +8,6 @@ import '../row/fd-row.js'
  * Mirrors `PreferencesLinkRow`: `PreferencesButtonRow` chrome on a `Link`, with `.help(_:)`
  * as a tooltip.
  *
- * Deliberately without the `arrow.up.right` the SwiftUI original sets after the label:
- * at 9px it reads as grit rather than as an affordance, and the tooltip already says
- * where the link goes.
- *
  * `help` rather than `title`, because `title` on the host is the global HTML attribute
  * and would raise a second tooltip over the whole row.
  *
@@ -33,7 +29,7 @@ export class FdLinkRow extends FdElement {
   /** `PreferencesLinkRow.destination`. */
   @property({ reflect: true }) href = ''
 
-  /** `.help(_:)`. Also the link's accessible name, which the arrow alone would not give. */
+  /** `.help(_:)`. Also the link's accessible name. */
   @property({ reflect: true }) help = ''
 
   /** Where the link opens. Defaults to a new tab, as opening a URL from Preferences does. */

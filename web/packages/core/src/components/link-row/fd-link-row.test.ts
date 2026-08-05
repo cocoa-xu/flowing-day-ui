@@ -39,15 +39,14 @@ describe('fd-link-row', () => {
     expect(element.hasAttribute('title')).toBe(false)
   })
 
-  it('names the link by its help text, since the arrow carries no label', async () => {
+  it('names the link by its help text', async () => {
     const element = await mount(
       '<fd-link-row label="Docs" button-label="Open" href="https://example.com" help="Open the documentation"></fd-link-row>',
     )
     expect(linkOf(element).getAttribute('aria-label')).toBe('Open the documentation')
   })
 
-  /** Deliberately dropped from the SwiftUI original; the tooltip carries the meaning. */
-  it('carries no arrow after the label', async () => {
+  it('renders the configured label without decorations', async () => {
     const element = await mount(
       '<fd-link-row label="Docs" button-label="Open" href="https://example.com" help="Docs"></fd-link-row>',
     )

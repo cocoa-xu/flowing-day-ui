@@ -1299,15 +1299,9 @@ public struct PreferencesLinkRow: View {
 
   public var body: some View {
     PreferencesRow(symbol: symbol, title: title, caption: caption) {
-      Link(destination: destination) {
-        HStack(spacing: 5) {
-          Text(buttonTitle)
-          Image(systemName: "arrow.up.right")
-            .font(.system(size: 9, weight: .semibold))
-        }
-      }
-      .buttonStyle(PreferencesSoftButtonStyle())
-      .help(help)
+      Link(buttonTitle, destination: destination)
+        .buttonStyle(PreferencesSoftButtonStyle())
+        .help(help)
     }
   }
 }
