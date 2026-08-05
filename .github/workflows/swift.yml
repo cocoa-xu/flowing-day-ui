@@ -1,18 +1,31 @@
-name: CI
+name: Swift
 
+# One workflow per platform, each filtered to its own sources. macOS and Windows
+# runners are the expensive ones, and a repository holding several ports should not
+# start every platform's build because one of them changed a stylesheet.
 on:
   push:
     branches:
       - main
+    paths:
+      - 'Sources/**'
+      - 'Tests/**'
+      - 'Package.swift'
+      - '.github/workflows/swift.yml'
   pull_request:
     branches:
       - main
+    paths:
+      - 'Sources/**'
+      - 'Tests/**'
+      - 'Package.swift'
+      - '.github/workflows/swift.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

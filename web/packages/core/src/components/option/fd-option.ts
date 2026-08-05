@@ -1,0 +1,48 @@
+import { type CSSResultGroup, css } from 'lit'
+import { customElement, property } from 'lit/decorators.js'
+import { FdElement } from '../../internal/base-element.js'
+
+/**
+ * The option element shared by every list-like control, covering
+ * `SettingsPopupOption`, `SettingsSymbolSegmentOption` and `SettingsMultiSelectOption`.
+ *
+ * Declared as a child so a plain HTML page can define a control without JavaScript:
+ *
+ * ```html
+ * <fd-popup><fd-option value="auto">Automatic</fd-option></fd-popup>
+ * ```
+ *
+ * The label is the element's text content unless `label` overrides it.
+ */
+@customElement('fd-option')
+export class FdOption extends FdElement {
+  static override styles: CSSResultGroup = css`
+    :host {
+      display: none;
+    }
+  `
+
+  @property({ reflect: true }) value = ''
+
+  /** Falls back to the element's text content. */
+  @property({ reflect: true }) label: string | null = null
+
+  /** Icon registry key, used by `fd-symbol-segmented-row`. */
+  @property({ reflect: true }) symbol: string | null = null
+
+  /** Mirrors `SettingsMultiSelectOption.isOn`; only meaningful in a multi-select. */
+  @property({ type: Boolean, reflect: true }) selected = false
+
+  /** Mirrors `SettingsMultiSelectOption(isEnabled: false)`. */
+  @property({ type: Boolean, reflect: true }) disabled = false
+
+  get optionLabel(): string {
+    return this.label ?? this.textContent?.trim() ?? ''
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'fd-option': FdOption
+  }
+}

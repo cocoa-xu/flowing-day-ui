@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.base.json",
+  "include": ["src", "vite.config.ts"],
+  "compilerOptions": {
+    "types": ["node"],
+    "noEmit": true,
+    "paths": {
+      "@flowing-day/ui": ["../packages/core/src/index.ts"]
+    }
+  }
+}
