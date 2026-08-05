@@ -54,7 +54,7 @@ describe('fd-search-picker-row', () => {
     const element = await mount()
     const style = getComputedStyle(partOf(element, '.row'))
 
-    expect(style.paddingTop).toBe('10px')
+    expect(style.paddingTop).toBe('6px')
     expect(style.paddingLeft).toBe('18px')
     expect(style.minHeight).toBe('42px')
     expect(style.columnGap).toBe('14px')

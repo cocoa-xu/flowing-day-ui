@@ -6,9 +6,12 @@ import { textRole } from './typography.js'
  * `SettingsSearchPickerRow` each spell out identically: a 20pt symbol gutter, the
  * title/caption block, and a spacer holding at least 10pt before whatever trails it.
  *
- * Vertical padding is 10px, or 11px once a caption is present. That is keyed off the
- * rendered caption rather than `:host([caption])`, because a wrapping row passing its
- * own null caption down sets the attribute to the empty string.
+ * Vertical padding follows `SettingsRowLayout`: 6px, or 11px once a caption is present.
+ * The 42px minimum absorbs the difference for a plain row, so the compact figure only
+ * shows where a taller control trails the text.
+ *
+ * Keyed off the rendered caption rather than `:host([caption])`, because a wrapping row
+ * passing its own null caption down sets the attribute to the empty string.
  */
 export const rowLayoutStyles: CSSResult = css`
   .row {
@@ -17,7 +20,7 @@ export const rowLayoutStyles: CSSResult = css`
     gap: 14px;
     min-height: 42px;
     padding-inline: var(--_fd-metric-row-inset);
-    padding-block: 10px;
+    padding-block: 6px;
   }
 
   .row[data-caption] {

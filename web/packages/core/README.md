@@ -86,7 +86,7 @@ Icons already on the page pick up a later registration.
 `fd-search-picker-row`, `fd-empty-row`.
 
 **Selection** — `fd-segmented-row`, `fd-symbol-segmented-row`, `fd-multi-select-row`,
-`fd-switch-group`, `fd-check-toggle`, `fd-option`.
+`fd-switch-group`, `fd-check-toggle`, `fd-icon-selection-button`, `fd-option`.
 
 **Controls** — `fd-switch`, `fd-slider`, `fd-popup`.
 

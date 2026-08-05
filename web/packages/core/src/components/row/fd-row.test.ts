@@ -45,12 +45,12 @@ describe('fd-row', () => {
     expect(getComputedStyle(symbol).fontSize).toBe('13px')
   })
 
-  it('uses 10px vertical padding without a caption', async () => {
+  it('uses the compact 6px vertical padding without a caption', async () => {
     const row = rowOf(await mount('<fd-row label="Plain"></fd-row>'))
     const style = getComputedStyle(row)
 
-    expect(style.paddingTop).toBe('10px')
-    expect(style.paddingBottom).toBe('10px')
+    expect(style.paddingTop).toBe('6px')
+    expect(style.paddingBottom).toBe('6px')
   })
 
   it('grows to 11px vertical padding once a caption is present', async () => {
@@ -62,10 +62,10 @@ describe('fd-row', () => {
   })
 
   /** A wrapping row passing its own null caption down arrives here as `caption=""`. */
-  it('stays at 10px when handed an empty caption', async () => {
+  it('stays compact when handed an empty caption', async () => {
     const row = rowOf(await mount('<fd-row label="Plain" caption=""></fd-row>'))
 
-    expect(getComputedStyle(row).paddingTop).toBe('10px')
+    expect(getComputedStyle(row).paddingTop).toBe('6px')
     expect(row.hasAttribute('data-caption')).toBe(false)
   })
 

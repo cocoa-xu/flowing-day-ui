@@ -30,7 +30,7 @@ describe('fd-expandable-row', () => {
     const element = await mount('<fd-expandable-row label="Advanced"></fd-expandable-row>')
     const style = getComputedStyle(rowOf(element))
 
-    expect(style.paddingTop).toBe('10px')
+    expect(style.paddingTop).toBe('6px')
     expect(style.paddingLeft).toBe('18px')
     expect(style.minHeight).toBe('42px')
     expect(style.columnGap).toBe('14px')
