@@ -69,6 +69,28 @@ describe('fd-expandable-row', () => {
     expect(getComputedStyle(chevron).height).toBe('10px')
   })
 
+  /**
+   * An inline SVG rides the text baseline of its own line box and drops out the bottom
+   * of a box sized to the glyph — it sat five pixels low on a mark ten tall.
+   */
+  it('centres the glyph itself, not just the box around it', async () => {
+    const element = await mount('<fd-expandable-row label="Advanced"></fd-expandable-row>')
+    const chevron = chevronOf(element)
+    const glyph = chevron.querySelector('svg') as SVGElement
+
+    expect(getComputedStyle(glyph).display).toBe('block')
+
+    const middle = (rect: DOMRect) => rect.y + rect.height / 2
+    expect(middle(glyph.getBoundingClientRect())).toBeCloseTo(
+      middle(chevron.getBoundingClientRect()),
+      1,
+    )
+    expect(middle(glyph.getBoundingClientRect())).toBeCloseTo(
+      middle(rowOf(element).getBoundingClientRect()),
+      1,
+    )
+  })
+
   it('toggles and reports the new state on click', async () => {
     const element = await mount('<fd-expandable-row label="Advanced"></fd-expandable-row>')
     const states: boolean[] = []

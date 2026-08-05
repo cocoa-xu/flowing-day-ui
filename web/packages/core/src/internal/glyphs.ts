@@ -34,19 +34,6 @@ export const checkmark = svg`
     />
   </svg>`
 
-/** `arrow.up.right`. */
-export const arrowUpRight = svg`
-  <svg viewBox="0 0 12 12" aria-hidden="true">
-    <path
-      d="M3.4 8.6 8.6 3.4M4.6 3.4h4v4"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    />
-  </svg>`
-
 /** `magnifyingglass`. */
 export const magnifyingGlass = svg`
   <svg viewBox="0 0 12 12" aria-hidden="true">

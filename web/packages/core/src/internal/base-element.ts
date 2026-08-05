@@ -24,6 +24,15 @@ export const baseStyles: CSSResultGroup = [
     *::after {
       box-sizing: inherit;
     }
+
+    /*
+     * Every SVG here is a glyph, never run-in text. Left inline it would sit on the
+     * text baseline of its own line box and drop out the bottom of a box sized to the
+     * glyph — several pixels low, on a mark only nine tall.
+     */
+    svg {
+      display: block;
+    }
   `,
 ]
 

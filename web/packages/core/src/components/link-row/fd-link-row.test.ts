@@ -46,15 +46,14 @@ describe('fd-link-row', () => {
     expect(linkOf(element).getAttribute('aria-label')).toBe('Open the documentation')
   })
 
-  it('sets the label 5px away from a 9px arrow', async () => {
+  /** Deliberately dropped from the SwiftUI original; the tooltip carries the meaning. */
+  it('carries no arrow after the label', async () => {
     const element = await mount(
       '<fd-link-row label="Docs" button-label="Open" href="https://example.com" help="Docs"></fd-link-row>',
     )
-    const arrow = element.shadowRoot?.querySelector('.arrow') as HTMLElement
 
-    expect(getComputedStyle(linkOf(element)).columnGap).toBe('5px')
-    expect(getComputedStyle(arrow).width).toBe('9px')
-    expect(getComputedStyle(arrow).height).toBe('9px')
+    expect(element.shadowRoot?.querySelector('svg')).toBeNull()
+    expect(linkOf(element).textContent?.trim()).toBe('Open')
   })
 
   it('shares the soft button geometry with fd-button-row', async () => {

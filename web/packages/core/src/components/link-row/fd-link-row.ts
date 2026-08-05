@@ -1,13 +1,16 @@
-import { type CSSResultGroup, css, html } from 'lit'
+import { type CSSResultGroup, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
-import { arrowUpRight } from '../../internal/glyphs.js'
 import { softButtonStyles } from '../../internal/soft-button.js'
 import '../row/fd-row.js'
 
 /**
- * Mirrors `SettingsLinkRow`: `SettingsButtonRow` chrome on a `Link`, with an
- * `arrow.up.right` glyph 5px after the label and `.help(_:)` as a tooltip.
+ * Mirrors `SettingsLinkRow`: `SettingsButtonRow` chrome on a `Link`, with `.help(_:)`
+ * as a tooltip.
+ *
+ * Deliberately without the `arrow.up.right` the SwiftUI original sets after the label:
+ * at 9px it reads as grit rather than as an affordance, and the tooltip already says
+ * where the link goes.
  *
  * `help` rather than `title`, because `title` on the host is the global HTML attribute
  * and would raise a second tooltip over the whole row.
@@ -16,23 +19,7 @@ import '../row/fd-row.js'
  */
 @customElement('fd-link-row')
 export class FdLinkRow extends FdElement {
-  static override styles: CSSResultGroup = [
-    baseStyles,
-    softButtonStyles,
-    css`
-      .soft-button {
-        gap: 5px;
-      }
-
-      /* Image(systemName:).font(.system(size: 9, weight: .semibold)) */
-      .arrow {
-        width: 9px;
-        height: 9px;
-        flex: none;
-        stroke-width: 2.2;
-      }
-    `,
-  ]
+  static override styles: CSSResultGroup = [baseStyles, softButtonStyles]
 
   @property({ reflect: true }) symbol: string | null = null
 
@@ -66,7 +53,6 @@ export class FdLinkRow extends FdElement {
           aria-label=${this.help || this.buttonLabel}
         >
           ${this.buttonLabel}
-          <span class="arrow">${arrowUpRight}</span>
         </a>
       </fd-row>
     `

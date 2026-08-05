@@ -29,6 +29,21 @@ afterEach(() => {
   document.body.replaceChildren()
 })
 
+describe('fd-popup chrome', () => {
+  /** An inline SVG rides its line box's baseline and sits low in a 9px chevron slot. */
+  it('centres the chevron glyph in the control', async () => {
+    const element = await mount(`<fd-popup value="quit">${OPTIONS}</fd-popup>`)
+    const glyph = element.shadowRoot?.querySelector('.chevron svg') as SVGElement
+
+    const middle = (rect: DOMRect) => rect.y + rect.height / 2
+    expect(getComputedStyle(glyph).display).toBe('block')
+    expect(middle(glyph.getBoundingClientRect())).toBeCloseTo(
+      middle(button(element).getBoundingClientRect()),
+      1,
+    )
+  })
+})
+
 describe('fd-popup options', () => {
   it('resolves options from fd-option children', async () => {
     const element = await mount(`<fd-popup value="quit">${OPTIONS}</fd-popup>`)
