@@ -8,13 +8,13 @@ let package = Package(
     .macOS(.v13)
   ],
   products: [
-    .library(name: "FlowingDaySettings", targets: ["FlowingDaySettings"])
+    .library(name: "FlowingDayPreferences", targets: ["FlowingDayPreferences"])
   ],
   targets: [
-    .target(name: "FlowingDaySettings"),
+    .target(name: "FlowingDayPreferences"),
     .testTarget(
-      name: "FlowingDaySettingsTests",
-      dependencies: ["FlowingDaySettings"]
+      name: "FlowingDayPreferencesTests",
+      dependencies: ["FlowingDayPreferences"]
     ),
   ]
 )

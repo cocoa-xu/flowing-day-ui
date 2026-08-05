@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const tokensPath = resolve(repositoryRoot, 'web/packages/core/src/tokens/tokens.json')
-const outputPath = resolve(repositoryRoot, 'Sources/FlowingDaySettings/SettingsTheme.swift')
+const outputPath = resolve(repositoryRoot, 'Sources/FlowingDayPreferences/PreferencesTheme.swift')
 const raw = JSON.parse(await readFile(tokensPath, 'utf8'))
 const groups = raw.groups
 const tokens = new Map(
@@ -30,7 +30,7 @@ const swiftFontDesigns = new Set(['standard', 'rounded', 'serif', 'monospaced'])
 
 const tokenFontWeights = Object.keys(raw.fontWeights).filter((name) => !name.startsWith('$'))
 if (tokenFontWeights.join() !== swiftFontWeights.join()) {
-  throw new Error('fontWeights must match SettingsFontWeight')
+  throw new Error('fontWeights must match PreferencesFontWeight')
 }
 
 for (const [role, style] of Object.entries(raw.typography.roles)) {
@@ -81,7 +81,7 @@ function colorArguments(value) {
   return { light, dark, lightAlpha, darkAlpha }
 }
 
-function colorExpression(value, functionName = 'SettingsPalette.dynamic', indentation = '  ') {
+function colorExpression(value, functionName = 'PreferencesPalette.dynamic', indentation = '  ') {
   const { light, dark, lightAlpha, darkAlpha } = colorArguments(value)
   if (lightAlpha === 1 && darkAlpha === 1) {
     return `${functionName}(light: ${swiftHex(light)}, dark: ${swiftHex(dark)})`
@@ -91,11 +91,11 @@ function colorExpression(value, functionName = 'SettingsPalette.dynamic', indent
 }
 
 function surfaceExpression(name) {
-  const reference = consume(name, 'SettingsSurfaces.standard').ref
+  const reference = consume(name, 'PreferencesSurfaces.standard').ref
   if (!reference?.startsWith('palette-')) {
     throw new Error(`${name} must reference a palette token`)
   }
-  return `SettingsPalette.${swiftIdentifier(reference.slice('palette-'.length))}`
+  return `PreferencesPalette.${swiftIdentifier(reference.slice('palette-'.length))}`
 }
 
 function textStyleExpression(style, indentation = '') {
@@ -103,13 +103,13 @@ function textStyleExpression(style, indentation = '') {
   if (style.weight !== undefined) argumentsList.push(`weight: .${style.weight}`)
   if (style.design !== undefined) argumentsList.push(`design: .${style.design}`)
   if (style.monospacedDigits === true) argumentsList.push('usesMonospacedDigits: true')
-  if (argumentsList.length === 1) return `SettingsTextStyle(${argumentsList[0]})`
-  return `SettingsTextStyle(\n${indentation}  ${argumentsList.join(`,\n${indentation}  `)}\n${indentation})`
+  if (argumentsList.length === 1) return `PreferencesTextStyle(${argumentsList[0]})`
+  return `PreferencesTextStyle(\n${indentation}  ${argumentsList.join(`,\n${indentation}  `)}\n${indentation})`
 }
 
 function typographyProperties() {
   return Object.keys(raw.typography.roles)
-    .map((role) => `  public var ${swiftIdentifier(role)}: SettingsTextStyle`)
+    .map((role) => `  public var ${swiftIdentifier(role)}: PreferencesTextStyle`)
     .join('\n')
 }
 
@@ -117,7 +117,7 @@ function typographyParameters() {
   return Object.entries(raw.typography.roles)
     .map(
       ([role, style]) =>
-        `    ${swiftIdentifier(role)}: SettingsTextStyle = ${textStyleExpression(style, '    ')}`,
+        `    ${swiftIdentifier(role)}: PreferencesTextStyle = ${textStyleExpression(style, '    ')}`,
     )
     .join(',\n')
 }
@@ -136,7 +136,7 @@ function paletteDeclarations() {
   return names
     .map((name) => {
       const identifier = swiftIdentifier(name.slice('palette-'.length))
-      return `  public static let ${identifier} = ${colorExpression(consume(name, 'SettingsPalette'))}`
+      return `  public static let ${identifier} = ${colorExpression(consume(name, 'PreferencesPalette'))}`
     })
     .join('\n')
 }
@@ -168,29 +168,29 @@ const motionDeclarations = [
   .filter(Boolean)
   .join('\n')
 
-const accentBase = appearanceValue(consume('accent', 'SettingsAccent.celadon').color, 'light')
-const accentLift = consume('accent-lift', 'SettingsAccent.celadon').number
-const accentContrast = consume('accent-contrast', 'SettingsAccent.celadon').number
+const accentBase = appearanceValue(consume('accent', 'PreferencesAccent.celadon').color, 'light')
+const accentLift = consume('accent-lift', 'PreferencesAccent.celadon').number
+const accentContrast = consume('accent-contrast', 'PreferencesAccent.celadon').number
 const metric = (name) =>
-  swiftNumber(consume(`metric-${name}`, 'SettingsMetrics.standard').px)
+  swiftNumber(consume(`metric-${name}`, 'PreferencesMetrics.standard').px)
 const windowValue = (name) =>
-  swiftNumber(consume(name, 'SettingsViewConfiguration').px)
+  swiftNumber(consume(name, 'PreferencesViewConfiguration').px)
 const knobFill = colorExpression(
-  consume('knob-fill', 'SettingsPalette'),
-  'SettingsPalette.dynamicNSColor',
+  consume('knob-fill', 'PreferencesPalette'),
+  'PreferencesPalette.dynamicNSColor',
 )
 const knobBorder = colorExpression(
-  consume('knob-border', 'SettingsPalette'),
-  'SettingsPalette.dynamicNSColor',
+  consume('knob-border', 'PreferencesPalette'),
+  'PreferencesPalette.dynamicNSColor',
 )
-const closeHover = colorExpression(consume('close-hover', 'SettingsViewConfiguration'))
+const closeHover = colorExpression(consume('close-hover', 'PreferencesViewConfiguration'))
 
 const output = `// Generated by scripts/generate-swift-theme.mjs from tokens.json. Do not edit.
 
 import AppKit
 import SwiftUI
 
-public struct SettingsMetrics: Equatable, Sendable {
+public struct PreferencesMetrics: Equatable, Sendable {
   public var cardRadius: CGFloat
   public var controlRadius: CGFloat
   public var rowInset: CGFloat
@@ -211,10 +211,10 @@ public struct SettingsMetrics: Equatable, Sendable {
     self.sectionSpacing = sectionSpacing
   }
 
-  public static let standard = SettingsMetrics()
+  public static let standard = PreferencesMetrics()
 }
 
-public struct SettingsTypography: Sendable {
+public struct PreferencesTypography: Sendable {
 ${typographyProperties()}
 
   public init(
@@ -223,10 +223,10 @@ ${typographyParameters()}
 ${typographyAssignments()}
   }
 
-  public static let standard = SettingsTypography()
+  public static let standard = PreferencesTypography()
 }
 
-public struct SettingsSurfaces: Equatable, Sendable {
+public struct PreferencesSurfaces: Equatable, Sendable {
   public var canvas: Color
   public var sidebar: Color
   public var card: Color
@@ -247,37 +247,37 @@ public struct SettingsSurfaces: Equatable, Sendable {
     self.field = field
   }
 
-  public static let standard = SettingsSurfaces()
+  public static let standard = PreferencesSurfaces()
 }
 
-public struct SettingsViewConfiguration {
+public struct PreferencesViewConfiguration {
   public var applicationName: String
-  public var settingsTitle: String
+  public var preferencesTitle: String
   public var applicationIcon: NSImage?
   public var sidebarFooter: String?
-  public var defaultAccent: SettingsAccent
-  public var strings: SettingsStrings
-  public var metrics: SettingsMetrics
-  public var typography: SettingsTypography
-  public var surfaces: SettingsSurfaces
+  public var defaultAccent: PreferencesAccent
+  public var strings: PreferencesStrings
+  public var metrics: PreferencesMetrics
+  public var typography: PreferencesTypography
+  public var surfaces: PreferencesSurfaces
   public var sidebarWidth: CGFloat
   public var cornerRadius: CGFloat
 
   public init(
     applicationName: String,
-    settingsTitle: String = "Settings",
+    preferencesTitle: String = "Preferences",
     applicationIcon: NSImage? = nil,
     sidebarFooter: String? = nil,
-    defaultAccent: SettingsAccent = .celadon,
-    strings: SettingsStrings = SettingsStrings(),
-    metrics: SettingsMetrics = .standard,
-    typography: SettingsTypography = .standard,
-    surfaces: SettingsSurfaces = .standard,
+    defaultAccent: PreferencesAccent = .celadon,
+    strings: PreferencesStrings = PreferencesStrings(),
+    metrics: PreferencesMetrics = .standard,
+    typography: PreferencesTypography = .standard,
+    surfaces: PreferencesSurfaces = .standard,
     sidebarWidth: CGFloat = ${windowValue('sidebar-width')},
     cornerRadius: CGFloat = ${windowValue('window-radius')}
   ) {
     self.applicationName = applicationName
-    self.settingsTitle = settingsTitle
+    self.preferencesTitle = preferencesTitle
     self.applicationIcon = applicationIcon
     self.sidebarFooter = sidebarFooter
     self.defaultAccent = defaultAccent
@@ -290,27 +290,27 @@ public struct SettingsViewConfiguration {
   }
 }
 
-enum SettingsAccentToken {
+enum PreferencesAccentToken {
   static let base: UInt32 = ${swiftHex(accentBase)}
-  static let fillLightness = SettingsAppearanceValue<CGFloat>(
+  static let fillLightness = PreferencesAppearanceValue<CGFloat>(
     light: ${swiftNumber(accentLift.light)},
     dark: ${swiftNumber(accentLift.dark)}
   )
-  static let foregroundContrast = SettingsAppearanceValue<CGFloat>(
+  static let foregroundContrast = PreferencesAppearanceValue<CGFloat>(
     light: ${swiftNumber(accentContrast.light)},
     dark: ${swiftNumber(accentContrast.dark)}
   )
 }
 
-extension SettingsAccent {
-  public static let celadon = SettingsAccent.derived(
-    base: SettingsAccentToken.base,
-    fillLightness: SettingsAccentToken.fillLightness,
-    foregroundContrast: SettingsAccentToken.foregroundContrast
+extension PreferencesAccent {
+  public static let celadon = PreferencesAccent.derived(
+    base: PreferencesAccentToken.base,
+    fillLightness: PreferencesAccentToken.fillLightness,
+    foregroundContrast: PreferencesAccentToken.foregroundContrast
   )
 }
 
-extension SettingsPalette {
+extension PreferencesPalette {
 ${paletteDeclarations()}
 
   static let sliderKnobColor = ${knobFill}
@@ -318,7 +318,7 @@ ${paletteDeclarations()}
   static let closeHover = ${closeHover}
 }
 
-enum SettingsMotion {
+enum PreferencesMotion {
 ${motionDeclarations}
 }
 `
@@ -335,7 +335,7 @@ if (unhandledTokens.length > 0) {
 if (process.argv.includes('--check')) {
   const current = await readFile(outputPath, 'utf8').catch(() => '')
   if (current !== output) {
-    console.error('SettingsTheme.swift is out of date. Run node scripts/generate-swift-theme.mjs.')
+    console.error('PreferencesTheme.swift is out of date. Run node scripts/generate-swift-theme.mjs.')
     process.exitCode = 1
   }
 } else {

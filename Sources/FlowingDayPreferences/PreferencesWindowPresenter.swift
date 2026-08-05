@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-public struct SettingsWindowActions: Sendable {
+public struct PreferencesWindowActions: Sendable {
   private let dismissAction: @MainActor @Sendable () -> Void
 
   public init(dismiss: @escaping @MainActor @Sendable () -> Void = {}) {
@@ -14,25 +14,25 @@ public struct SettingsWindowActions: Sendable {
   }
 }
 
-private struct SettingsWindowActionsKey: EnvironmentKey {
-  static let defaultValue = SettingsWindowActions()
+private struct PreferencesWindowActionsKey: EnvironmentKey {
+  static let defaultValue = PreferencesWindowActions()
 }
 
 extension EnvironmentValues {
-  public var settingsWindowActions: SettingsWindowActions {
-    get { self[SettingsWindowActionsKey.self] }
-    set { self[SettingsWindowActionsKey.self] = newValue }
+  public var preferencesWindowActions: PreferencesWindowActions {
+    get { self[PreferencesWindowActionsKey.self] }
+    set { self[PreferencesWindowActionsKey.self] = newValue }
   }
 }
 
-public struct SettingsWindowConfiguration: Equatable {
+public struct PreferencesWindowConfiguration: Equatable {
   public var title: String
   public var size: CGSize
   public var minimumSize: CGSize
   public var activatesApplication: Bool
 
   public init(
-    title: String = "Settings",
+    title: String = "Preferences",
     size: CGSize = CGSize(width: 900, height: 640),
     minimumSize: CGSize = CGSize(width: 820, height: 560),
     activatesApplication: Bool = true
@@ -45,21 +45,21 @@ public struct SettingsWindowConfiguration: Equatable {
 }
 
 @MainActor
-public final class SettingsWindowPresenter<Content: View> {
+public final class PreferencesWindowPresenter<Content: View> {
   public let window: NSPanel
 
-  private let configuration: SettingsWindowConfiguration
+  private let configuration: PreferencesWindowConfiguration
   private let onShow: () -> Void
 
   public init(
-    configuration: SettingsWindowConfiguration = SettingsWindowConfiguration(),
+    configuration: PreferencesWindowConfiguration = PreferencesWindowConfiguration(),
     rootView: Content,
     onShow: @escaping () -> Void = {}
   ) {
     self.configuration = configuration
     self.onShow = onShow
 
-    let panel = SettingsPanel(
+    let panel = PreferencesPanel(
       contentRect: NSRect(origin: .zero, size: configuration.size),
       styleMask: [.borderless, .resizable],
       backing: .buffered,
@@ -78,8 +78,8 @@ public final class SettingsWindowPresenter<Content: View> {
     panel.level = .normal
     panel.contentView = NSHostingView(
       rootView: rootView.environment(
-        \.settingsWindowActions,
-        SettingsWindowActions { [weak panel] in panel?.close() }
+        \.preferencesWindowActions,
+        PreferencesWindowActions { [weak panel] in panel?.close() }
       )
     )
     window = panel
@@ -102,7 +102,7 @@ public final class SettingsWindowPresenter<Content: View> {
 }
 
 @MainActor
-private final class SettingsPanel: NSPanel {
+private final class PreferencesPanel: NSPanel {
   override var canBecomeKey: Bool { true }
   override var canBecomeMain: Bool { true }
 

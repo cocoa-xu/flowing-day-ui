@@ -1,12 +1,12 @@
 import SwiftUI
 import XCTest
 
-@testable import FlowingDaySettings
+@testable import FlowingDayPreferences
 
-final class SettingsControlsTests: XCTestCase {
-  func testDefaultThemeMatchesSettingsVisualHierarchy() {
-    let typography = SettingsTypography.standard
-    let surfaces = SettingsSurfaces.standard
+final class PreferencesControlsTests: XCTestCase {
+  func testDefaultThemeMatchesPreferencesVisualHierarchy() {
+    let typography = PreferencesTypography.standard
+    let surfaces = PreferencesSurfaces.standard
 
     XCTAssertEqual(typography.pageTitle.size, 25)
     XCTAssertEqual(typography.pageTitle.weight, .semibold)
@@ -15,19 +15,19 @@ final class SettingsControlsTests: XCTestCase {
     XCTAssertEqual(typography.body.size, 12)
     XCTAssertEqual(typography.rowTitle.size, 13)
     XCTAssertEqual(typography.sectionHeader.size, 10.5)
-    XCTAssertEqual(surfaces.sidebar, SettingsPalette.card)
-    XCTAssertEqual(surfaces.card, SettingsPalette.control)
+    XCTAssertEqual(surfaces.sidebar, PreferencesPalette.card)
+    XCTAssertEqual(surfaces.card, PreferencesPalette.control)
   }
 
   func testThemeCanBeCustomizedPerApplication() {
-    let typography = SettingsTypography(
-      rowTitle: SettingsTextStyle(
+    let typography = PreferencesTypography(
+      rowTitle: PreferencesTextStyle(
         size: 15,
         weight: .medium,
         fontName: "Helvetica Neue"
       )
     )
-    let surfaces = SettingsSurfaces(card: .orange, field: .purple)
+    let surfaces = PreferencesSurfaces(card: .orange, field: .purple)
 
     XCTAssertEqual(typography.rowTitle.size, 15)
     XCTAssertEqual(typography.rowTitle.weight, .medium)
@@ -39,23 +39,23 @@ final class SettingsControlsTests: XCTestCase {
   func testSliderMathClampsFractions() {
     let range = 10.0...20.0
 
-    XCTAssertEqual(SettingsSliderMath.fraction(of: 5, in: range), 0)
-    XCTAssertEqual(SettingsSliderMath.fraction(of: 15, in: range), 0.5)
-    XCTAssertEqual(SettingsSliderMath.fraction(of: 25, in: range), 1)
-    XCTAssertEqual(SettingsSliderMath.value(atFraction: -1, in: range), 10)
-    XCTAssertEqual(SettingsSliderMath.value(atFraction: 0.25, in: range), 12.5)
-    XCTAssertEqual(SettingsSliderMath.value(atFraction: 2, in: range), 20)
+    XCTAssertEqual(PreferencesSliderMath.fraction(of: 5, in: range), 0)
+    XCTAssertEqual(PreferencesSliderMath.fraction(of: 15, in: range), 0.5)
+    XCTAssertEqual(PreferencesSliderMath.fraction(of: 25, in: range), 1)
+    XCTAssertEqual(PreferencesSliderMath.value(atFraction: -1, in: range), 10)
+    XCTAssertEqual(PreferencesSliderMath.value(atFraction: 0.25, in: range), 12.5)
+    XCTAssertEqual(PreferencesSliderMath.value(atFraction: 2, in: range), 20)
   }
 
   func testSelectionIndicatorsDistinguishSingleAndMultipleChoice() {
-    XCTAssertNil(SettingsSelectionStyle.single.symbol(isSelected: true))
-    XCTAssertNil(SettingsSelectionStyle.single.symbol(isSelected: false))
+    XCTAssertNil(PreferencesSelectionStyle.single.symbol(isSelected: true))
+    XCTAssertNil(PreferencesSelectionStyle.single.symbol(isSelected: false))
     XCTAssertEqual(
-      SettingsSelectionStyle.multiple.symbol(isSelected: true),
+      PreferencesSelectionStyle.multiple.symbol(isSelected: true),
       "checkmark.circle.fill"
     )
     XCTAssertEqual(
-      SettingsSelectionStyle.multiple.symbol(isSelected: false),
+      PreferencesSelectionStyle.multiple.symbol(isSelected: false),
       "circle"
     )
   }
@@ -63,7 +63,7 @@ final class SettingsControlsTests: XCTestCase {
   @MainActor
   func testMultiSelectOptionTogglesItsBinding() {
     let state = BooleanState(false)
-    let option = SettingsMultiSelectOption(
+    let option = PreferencesMultiSelectOption(
       "Activity",
       isOn: Binding(
         get: { state.value },
@@ -83,7 +83,7 @@ final class SettingsControlsTests: XCTestCase {
   @MainActor
   func testDisabledMultiSelectOptionDoesNotToggle() {
     let state = BooleanState(true)
-    let option = SettingsMultiSelectOption(
+    let option = PreferencesMultiSelectOption(
       "Chart",
       id: "network-chart",
       isOn: Binding(
@@ -101,28 +101,28 @@ final class SettingsControlsTests: XCTestCase {
   }
 
   func testOptionSearchIgnoresCaseAndSurroundingWhitespace() {
-    XCTAssertTrue(SettingsOptionSearch.matches("Asia/Tokyo", query: "  TOKYO "))
-    XCTAssertTrue(SettingsOptionSearch.matches("Europe/London", query: ""))
-    XCTAssertFalse(SettingsOptionSearch.matches("Europe/London", query: "Tokyo"))
+    XCTAssertTrue(PreferencesOptionSearch.matches("Asia/Tokyo", query: "  TOKYO "))
+    XCTAssertTrue(PreferencesOptionSearch.matches("Europe/London", query: ""))
+    XCTAssertFalse(PreferencesOptionSearch.matches("Europe/London", query: "Tokyo"))
   }
 
   func testDependentRowsMotionRespectsReduceMotion() {
     XCTAssertEqual(
-      SettingsDependentRowsMotion.duration(reduceMotion: false),
+      PreferencesDependentRowsMotion.duration(reduceMotion: false),
       0.18
     )
     XCTAssertEqual(
-      SettingsDependentRowsMotion.duration(reduceMotion: true),
+      PreferencesDependentRowsMotion.duration(reduceMotion: true),
       0.12
     )
-    XCTAssertEqual(SettingsDependentRowsMotion.offset(reduceMotion: false), -5)
-    XCTAssertEqual(SettingsDependentRowsMotion.offset(reduceMotion: true), 0)
+    XCTAssertEqual(PreferencesDependentRowsMotion.offset(reduceMotion: false), -5)
+    XCTAssertEqual(PreferencesDependentRowsMotion.offset(reduceMotion: true), 0)
   }
 
   @MainActor
   func testSelectionButtonTogglesItsBinding() {
     let state = BooleanState(false)
-    let button = SettingsIconSelectionButton(
+    let button = PreferencesIconSelectionButton(
       symbol: "network",
       title: "Network",
       tint: .blue,
@@ -140,7 +140,7 @@ final class SettingsControlsTests: XCTestCase {
   @MainActor
   func testSelectionButtonUsesCompactRowHeight() {
     let height = fittingHeight(
-      SettingsIconSelectionButton(
+      PreferencesIconSelectionButton(
         symbol: "display",
         title: "Displays",
         tint: .orange,
@@ -148,41 +148,41 @@ final class SettingsControlsTests: XCTestCase {
       )
     )
 
-    XCTAssertEqual(height, SettingsIconSelectionButtonMetrics.height)
+    XCTAssertEqual(height, PreferencesIconSelectionButtonMetrics.height)
   }
 
   @MainActor
   func testRowsWithoutCaptionsUseCompactHeight() {
     let compactHeight = fittingHeight(
-      SettingsPopupRow(
+      PreferencesPopupRow(
         title: "Background",
         selection: .constant("Canvas"),
-        options: [SettingsPopupOption("Canvas", label: "Canvas")]
+        options: [PreferencesPopupOption("Canvas", label: "Canvas")]
       )
     )
     let detailedHeight = fittingHeight(
-      SettingsPopupRow(
+      PreferencesPopupRow(
         title: "Background",
         caption: "Choose how the exported canvas is rendered.",
         selection: .constant("Canvas"),
-        options: [SettingsPopupOption("Canvas", label: "Canvas")]
+        options: [PreferencesPopupOption("Canvas", label: "Canvas")]
       )
     )
 
-    XCTAssertEqual(compactHeight, SettingsRowLayout.minimumHeight)
+    XCTAssertEqual(compactHeight, PreferencesRowLayout.minimumHeight)
     XCTAssertLessThan(compactHeight, detailedHeight)
   }
 
   @MainActor
   func testDependentRowsOnlyOccupySpaceWhenVisible() {
     let hiddenHeight = fittingHeight(
-      SettingsDependentRows(isVisible: false) {
-        SettingsRow(title: "Dependent setting")
+      PreferencesDependentRows(isVisible: false) {
+        PreferencesRow(title: "Dependent setting")
       }
     )
     let visibleHeight = fittingHeight(
-      SettingsDependentRows(isVisible: true) {
-        SettingsRow(title: "Dependent setting")
+      PreferencesDependentRows(isVisible: true) {
+        PreferencesRow(title: "Dependent setting")
       }
     )
 
@@ -193,13 +193,13 @@ final class SettingsControlsTests: XCTestCase {
   @MainActor
   func testSwitchGroupIncludesDependentRowsWhenEnabled() {
     let disabledHeight = fittingHeight(
-      SettingsSwitchGroup(title: "Master setting", isOn: .constant(false)) {
-        SettingsRow(title: "Dependent setting")
+      PreferencesSwitchGroup(title: "Master setting", isOn: .constant(false)) {
+        PreferencesRow(title: "Dependent setting")
       }
     )
     let enabledHeight = fittingHeight(
-      SettingsSwitchGroup(title: "Master setting", isOn: .constant(true)) {
-        SettingsRow(title: "Dependent setting")
+      PreferencesSwitchGroup(title: "Master setting", isOn: .constant(true)) {
+        PreferencesRow(title: "Dependent setting")
       }
     )
 

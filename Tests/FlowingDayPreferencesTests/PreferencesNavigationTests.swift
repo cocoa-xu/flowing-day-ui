@@ -2,12 +2,12 @@ import AppKit
 import SwiftUI
 import XCTest
 
-@testable import FlowingDaySettings
+@testable import FlowingDayPreferences
 
 @MainActor
-final class SettingsNavigationTests: XCTestCase {
+final class PreferencesNavigationTests: XCTestCase {
   func testPageGroupsPreserveApplicationMetadata() {
-    let page = SettingsPage(
+    let page = PreferencesPage(
       id: "general",
       title: "General",
       subtitle: "Application behavior",
@@ -15,7 +15,7 @@ final class SettingsNavigationTests: XCTestCase {
     ) {
       Color.clear
     }
-    let group = SettingsPageGroup(
+    let group = PreferencesPageGroup(
       id: "primary",
       title: "Application",
       pages: [page],
@@ -28,11 +28,11 @@ final class SettingsNavigationTests: XCTestCase {
     XCTAssertTrue(group.isIndented)
   }
 
-  func testSettingsViewAcceptsAnEmptyPageCollection() {
-    let root = SettingsView(
+  func testPreferencesViewAcceptsAnEmptyPageCollection() {
+    let root = PreferencesView(
       selection: .constant("missing"),
-      configuration: SettingsViewConfiguration(applicationName: "Example"),
-      groups: [SettingsPageGroup<String>(id: "empty", pages: [])]
+      configuration: PreferencesViewConfiguration(applicationName: "Example"),
+      groups: [PreferencesPageGroup<String>(id: "empty", pages: [])]
     )
     let hostingView = NSHostingView(rootView: root)
 
@@ -43,7 +43,7 @@ final class SettingsNavigationTests: XCTestCase {
   }
 
   func testPageCanUseASeparateHeaderIcon() {
-    let page = SettingsPage(
+    let page = PreferencesPage(
       id: "about",
       title: "About",
       subtitle: "Application information",
@@ -64,7 +64,7 @@ final class SettingsNavigationTests: XCTestCase {
   }
 
   func testPageUsesItsNavigationIconForTheHeaderByDefault() {
-    let page = SettingsPage(
+    let page = PreferencesPage(
       id: "general",
       title: "General",
       subtitle: "Application behavior",
@@ -81,7 +81,7 @@ final class SettingsNavigationTests: XCTestCase {
   }
 
   func testPageSupportsAHeaderWithoutASubtitle() {
-    let page = SettingsPage(
+    let page = PreferencesPage(
       id: "companion",
       title: "Companion",
       icon: .system("leaf")
@@ -94,7 +94,7 @@ final class SettingsNavigationTests: XCTestCase {
 
   func testPageSupportsAnAccentColoredTemplateImage() {
     let image = NSImage(size: NSSize(width: 18, height: 18))
-    let page = SettingsPage(
+    let page = PreferencesPage(
       id: "companion",
       title: "Companion",
       icon: .template(image)

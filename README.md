@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/ci.yml)
 
-FlowingDayUI is a personal SwiftUI design toolkit for macOS applications. Its first module, `FlowingDaySettings`, provides an integrated settings window, sidebar navigation, adaptive themes, and a focused set of settings controls.
+FlowingDayUI is a personal SwiftUI design toolkit for macOS applications. Its first module, `FlowingDayPreferences`, provides an integrated preferences window, sidebar navigation, adaptive themes, and a focused set of preferences controls.
 
 The package requires macOS 13 or later.
 
@@ -13,14 +13,14 @@ Add FlowingDayUI to your package dependencies:
 ```swift
 .package(
     url: "https://github.com/cocoa-xu/flowing-day-ui",
-    from: "1.6.0"
+    from: "2.0.0"
 )
 ```
 
-Then add `FlowingDaySettings` to the application target and import it:
+Then add `FlowingDayPreferences` to the application target and import it:
 
 ```swift
-import FlowingDaySettings
+import FlowingDayPreferences
 ```
 
 ## Local development
@@ -33,9 +33,9 @@ Add the package by local path while developing applications alongside it:
 
 Design values are authored only in
 `web/packages/core/src/tokens/tokens.json`. Regenerate the committed Swift theme with
-`cd web && corepack pnpm tokens:swift`; `SettingsTheme.swift` is generated output.
+`cd web && corepack pnpm tokens:swift`; `PreferencesTheme.swift` is generated output.
 
-## Settings window
+## Preferences window
 
 Define application-owned pages and pass their state through ordinary SwiftUI bindings:
 
@@ -45,33 +45,33 @@ private enum Page: Hashable {
     case about
 }
 
-struct AppSettingsView: View {
+struct AppPreferencesView: View {
     @State private var selection = Page.general
     @AppStorage("launchAtLogin") private var launchAtLogin = false
 
     var body: some View {
-        SettingsView(
+        PreferencesView(
             selection: $selection,
-            configuration: SettingsViewConfiguration(
+            configuration: PreferencesViewConfiguration(
                 applicationName: "Example",
-                defaultAccent: SettingsAccent(
-                    fill: SettingsPalette.dynamic(light: 0x6D9EA5, dark: 0x93C8CF),
-                    foreground: SettingsPalette.dynamic(light: 0x4E7B82, dark: 0x9FD1D8)
+                defaultAccent: PreferencesAccent(
+                    fill: PreferencesPalette.dynamic(light: 0x6D9EA5, dark: 0x93C8CF),
+                    foreground: PreferencesPalette.dynamic(light: 0x4E7B82, dark: 0x9FD1D8)
                 )
             ),
             groups: [
-                SettingsPageGroup(
+                PreferencesPageGroup(
                     id: "primary",
                     pages: [
-                        SettingsPage(
+                        PreferencesPage(
                             id: .general,
                             title: "General",
                             subtitle: "Application behavior",
                             icon: .system("gearshape")
                         ) {
-                            SettingsPaneStack {
-                                SettingsSection("Startup") {
-                                    SettingsSwitchRow(
+                            PreferencesPaneStack {
+                                PreferencesSection("Startup") {
+                                    PreferencesSwitchRow(
                                         title: "Launch at login",
                                         isOn: $launchAtLogin
                                     )
@@ -90,42 +90,42 @@ Present it with the reusable AppKit window lifecycle:
 
 ```swift
 @MainActor
-let settingsWindow = SettingsWindowPresenter(rootView: AppSettingsView())
+let preferencesWindow = PreferencesWindowPresenter(rootView: AppPreferencesView())
 
-settingsWindow.show()
+preferencesWindow.show()
 ```
 
-Applications own their settings, persistence, localization, and business logic. The package owns presentation, navigation, interaction behavior, accessibility, and visual consistency.
+Applications own their preferences, persistence, localization, and business logic. The package owns presentation, navigation, interaction behavior, accessibility, and visual consistency.
 
 Section footers align with the title and caption text inside their rows by default.
 
 Pages can use distinct navigation and header artwork when the larger page heading needs more visual identity:
 
 ```swift
-SettingsPage(
+PreferencesPage(
     id: .about,
     title: "About",
     subtitle: "Version and project information",
     icon: .system("info.circle"),
     headerIcon: .application
 ) {
-    AboutSettingsView()
+    AboutPreferencesView()
 }
 ```
 
 ## Multi-select rows
 
-Group related independent options into one settings row while preserving individual bindings and disabled states:
+Group related independent options into one preferences row while preserving individual bindings and disabled states:
 
 ```swift
-SettingsMultiSelectRow(
+PreferencesMultiSelectRow(
     symbol: "network",
     title: "Network",
     caption: "Choose which network content appears.",
     controlWidth: 260,
     options: [
-        SettingsMultiSelectOption("Activity", isOn: $showNetwork),
-        SettingsMultiSelectOption(
+        PreferencesMultiSelectOption("Activity", isOn: $showNetwork),
+        PreferencesMultiSelectOption(
             "Chart",
             isOn: $showNetworkChart,
             isEnabled: showNetwork
@@ -140,29 +140,29 @@ Associate a master switch with rows that appear only while it is enabled. The gr
 provides the separator, transition, animation, and Reduce Motion behavior:
 
 ```swift
-SettingsSwitchGroup(
+PreferencesSwitchGroup(
     symbol: "cable.connector",
     title: "Show USB devices",
     isOn: $showUSBDevices
 ) {
-    SettingsMultiSelectRow(
+    PreferencesMultiSelectRow(
         title: "Device fields",
         options: deviceFieldOptions
     )
-    SettingsRowSeparator(isIndented: true)
-    SettingsSwitchRow(
+    PreferencesRowSeparator(isIndented: true)
+    PreferencesSwitchRow(
         title: "Copy identifiers on click",
         isOn: $copyIdentifiers
     )
 }
 ```
 
-Use `SettingsDependentRows` when the controlling value belongs to another control:
+Use `PreferencesDependentRows` when the controlling value belongs to another control:
 
 ```swift
-SettingsMultiSelectRow(title: "Network", options: networkOptions)
-SettingsDependentRows(isVisible: showNetwork) {
-    SettingsSegmentedRow(
+PreferencesMultiSelectRow(title: "Network", options: networkOptions)
+PreferencesDependentRows(isVisible: showNetwork) {
+    PreferencesSegmentedRow(
         title: "Network layout",
         selection: $networkLayout,
         options: layoutOptions
@@ -172,20 +172,20 @@ SettingsDependentRows(isVisible: showNetwork) {
 
 ## Theming
 
-`FlowingDaySettings` ships with the typography, spacing, and surface hierarchy used by Afloat. Applications can replace any semantic font or background without rebuilding the components:
+`FlowingDayPreferences` ships with the typography, spacing, and surface hierarchy used by Afloat. Applications can replace any semantic font or background without rebuilding the components:
 
 ```swift
-let configuration = SettingsViewConfiguration(
+let configuration = PreferencesViewConfiguration(
     applicationName: "Example",
     defaultAccent: accent,
-    typography: SettingsTypography(
-        rowTitle: SettingsTextStyle(
+    typography: PreferencesTypography(
+        rowTitle: PreferencesTextStyle(
             size: 14,
             weight: .medium,
             fontName: "Avenir Next Medium"
         )
     ),
-    surfaces: SettingsSurfaces(
+    surfaces: PreferencesSurfaces(
         card: Color(nsColor: .controlBackgroundColor),
         field: Color(nsColor: .textBackgroundColor)
     )

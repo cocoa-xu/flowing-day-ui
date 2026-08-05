@@ -1,33 +1,33 @@
 import AppKit
 import SwiftUI
 
-struct SettingsPopupControl<Value: Hashable>: NSViewRepresentable {
+struct PreferencesPopupControl<Value: Hashable>: NSViewRepresentable {
   @Binding var selection: Value
-  let options: [SettingsPopupOption<Value>]
+  let options: [PreferencesPopupOption<Value>]
   let minimumWidth: CGFloat
-  let accent: SettingsAccent
-  let strings: SettingsStrings
+  let accent: PreferencesAccent
+  let strings: PreferencesStrings
   let controlRadius: CGFloat
-  let textStyle: SettingsTextStyle
-  let optionTextStyle: SettingsTextStyle
+  let textStyle: PreferencesTextStyle
+  let optionTextStyle: PreferencesTextStyle
   let menuBackgroundColor: Color
 
   func makeCoordinator() -> Coordinator {
     Coordinator(self)
   }
 
-  func makeNSView(context: Context) -> SettingsPopupButton {
-    let button = SettingsPopupButton()
+  func makeNSView(context: Context) -> PreferencesPopupButton {
+    let button = PreferencesPopupButton()
     update(button, coordinator: context.coordinator)
     return button
   }
 
-  func updateNSView(_ button: SettingsPopupButton, context: Context) {
+  func updateNSView(_ button: PreferencesPopupButton, context: Context) {
     context.coordinator.parent = self
     update(button, coordinator: context.coordinator)
   }
 
-  private func update(_ button: SettingsPopupButton, coordinator: Coordinator) {
+  private func update(_ button: PreferencesPopupButton, coordinator: Coordinator) {
     button.configure(
       labels: options.map(\.label),
       selectedIndex: options.firstIndex { $0.value == selection },
@@ -43,9 +43,9 @@ struct SettingsPopupControl<Value: Hashable>: NSViewRepresentable {
   }
 
   final class Coordinator {
-    var parent: SettingsPopupControl
+    var parent: PreferencesPopupControl
 
-    init(_ parent: SettingsPopupControl) {
+    init(_ parent: PreferencesPopupControl) {
       self.parent = parent
     }
 
@@ -58,20 +58,20 @@ struct SettingsPopupControl<Value: Hashable>: NSViewRepresentable {
 }
 
 @MainActor
-final class SettingsPopupButton: NSButton {
+final class PreferencesPopupButton: NSButton {
   private static let controlHeight: CGFloat = 30
 
   var onSelect: ((Int) -> Void)?
   private var labels: [String] = []
   private var selectedIndex: Int?
   private var minimumWidth: CGFloat = 0
-  private var accent = SettingsAccent.celadon
-  private var strings = SettingsStrings()
+  private var accent = PreferencesAccent.celadon
+  private var strings = PreferencesStrings()
   private var controlRadius: CGFloat = 9
-  private var textFont = SettingsTypography.standard.value.appKitFont
-  private var optionFont = SettingsTypography.standard.selectionLabel.appKitFont
-  private var menuBackgroundColor = NSColor(SettingsPalette.control)
-  private var menuPanel: SettingsPopupPanel?
+  private var textFont = PreferencesTypography.standard.value.appKitFont
+  private var optionFont = PreferencesTypography.standard.selectionLabel.appKitFont
+  private var menuBackgroundColor = NSColor(PreferencesPalette.control)
+  private var menuPanel: PreferencesPopupPanel?
   private var localMonitor: Any?
   private var globalMonitor: Any?
   private var observers: [NSObjectProtocol] = []
@@ -122,11 +122,11 @@ final class SettingsPopupButton: NSButton {
     labels: [String],
     selectedIndex: Int?,
     minimumWidth: CGFloat,
-    accent: SettingsAccent,
-    strings: SettingsStrings,
+    accent: PreferencesAccent,
+    strings: PreferencesStrings,
     controlRadius: CGFloat,
-    textStyle: SettingsTextStyle,
-    optionTextStyle: SettingsTextStyle,
+    textStyle: PreferencesTextStyle,
+    optionTextStyle: PreferencesTextStyle,
     menuBackgroundColor: Color
   ) {
     let structureChanged = self.labels != labels || self.accent != accent
@@ -142,7 +142,7 @@ final class SettingsPopupButton: NSButton {
     if structureChanged, menuPanel != nil {
       dismiss()
     }
-    if let menu = menuPanel?.contentView as? SettingsPopupMenuView {
+    if let menu = menuPanel?.contentView as? PreferencesPopupMenuView {
       menu.selectedIndex = selectedIndex
     }
     setAccessibilityValue(selectedIndex.flatMap { labels[safe: $0] } ?? "")
@@ -208,13 +208,13 @@ final class SettingsPopupButton: NSButton {
     shape.fill()
     (menuPanel != nil
       ? NSColor(accent.foreground).withAlphaComponent(0.22)
-      : NSColor(SettingsPalette.hairline)).setStroke()
+      : NSColor(PreferencesPalette.hairline)).setStroke()
     shape.lineWidth = 1
     shape.stroke()
 
     let chevronName = menuPanel == nil ? "chevron.down" : "chevron.up"
     let configuration = NSImage.SymbolConfiguration(pointSize: 9, weight: .semibold)
-      .applying(.init(paletteColors: [NSColor(SettingsPalette.faint)]))
+      .applying(.init(paletteColors: [NSColor(PreferencesPalette.faint)]))
     let chevron = NSImage(
       systemSymbolName: chevronName,
       accessibilityDescription: nil
@@ -255,14 +255,14 @@ final class SettingsPopupButton: NSButton {
       ?? NSScreen.main
     let visibleFrame = screen?.visibleFrame ?? anchorFrame.insetBy(dx: -400, dy: -400)
     let menuWidth = min(
-      max(bounds.width, SettingsPopupMenuView.preferredWidth(for: labels, font: optionFont)),
+      max(bounds.width, PreferencesPopupMenuView.preferredWidth(for: labels, font: optionFont)),
       visibleFrame.width - 16
     )
-    let menuSize = SettingsPopupMenuView.menuSize(
+    let menuSize = PreferencesPopupMenuView.menuSize(
       width: menuWidth,
       itemCount: labels.count
     )
-    let panel = SettingsPopupPanel(
+    let panel = PreferencesPopupPanel(
       contentRect: NSRect(origin: .zero, size: menuSize),
       styleMask: [.borderless, .nonactivatingPanel],
       backing: .buffered,
@@ -275,7 +275,7 @@ final class SettingsPopupButton: NSButton {
     panel.hidesOnDeactivate = false
     panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
     panel.appearance = effectiveAppearance
-    panel.contentView = SettingsPopupMenuView(
+    panel.contentView = PreferencesPopupMenuView(
       frame: NSRect(origin: .zero, size: menuSize),
       labels: labels,
       selectedIndex: selectedIndex,
@@ -333,7 +333,7 @@ final class SettingsPopupButton: NSButton {
   }
 
   private func updateKeyboardHighlight() {
-    (menuPanel?.contentView as? SettingsPopupMenuView)?
+    (menuPanel?.contentView as? PreferencesPopupMenuView)?
       .keyboardHighlightedIndex = highlightedIndex
   }
 
@@ -359,7 +359,7 @@ final class SettingsPopupButton: NSButton {
     ) { [weak self] event in
       guard let self, let panel = self.menuPanel else { return event }
       if event.type == .keyDown {
-        if SettingsPanelShortcut.isClose(event) {
+        if PreferencesPanelShortcut.isClose(event) {
           self.dismiss()
           _ = parentWindow.performKeyEquivalent(with: event)
           return nil
@@ -451,7 +451,7 @@ final class SettingsPopupButton: NSButton {
   }
 }
 
-private enum SettingsPanelShortcut {
+private enum PreferencesPanelShortcut {
   static func isClose(_ event: NSEvent) -> Bool {
     let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift])
     return modifiers == .command
@@ -459,13 +459,13 @@ private enum SettingsPanelShortcut {
   }
 }
 
-private final class SettingsPopupPanel: NSPanel {
+private final class PreferencesPopupPanel: NSPanel {
   override var canBecomeKey: Bool { true }
   override var canBecomeMain: Bool { false }
 }
 
 @MainActor
-private final class SettingsPopupMenuView: NSView {
+private final class PreferencesPopupMenuView: NSView {
   static let rowHeight: CGFloat = 36
   static let verticalInset: CGFloat = 8
 
@@ -477,17 +477,17 @@ private final class SettingsPopupMenuView: NSView {
     didSet { updateButtons() }
   }
 
-  private let accent: SettingsAccent
+  private let accent: PreferencesAccent
   private let backgroundColor: NSColor
   private let controlRadius: CGFloat
-  private var buttons: [SettingsPopupOptionButton] = []
+  private var buttons: [PreferencesPopupOptionButton] = []
 
   init(
     frame: NSRect,
     labels: [String],
     selectedIndex: Int?,
-    accent: SettingsAccent,
-    strings: SettingsStrings,
+    accent: PreferencesAccent,
+    strings: PreferencesStrings,
     font: NSFont,
     backgroundColor: NSColor,
     controlRadius: CGFloat,
@@ -501,7 +501,7 @@ private final class SettingsPopupMenuView: NSView {
 
     for (index, label) in labels.enumerated() {
       let y = bounds.height - Self.verticalInset - CGFloat(index + 1) * Self.rowHeight
-      let button = SettingsPopupOptionButton(
+      let button = PreferencesPopupOptionButton(
         frame: NSRect(x: 8, y: y + 2, width: bounds.width - 16, height: 32),
         title: label,
         accent: accent,
@@ -560,10 +560,10 @@ private final class SettingsPopupMenuView: NSView {
   }
 }
 
-private final class SettingsPopupOptionButton: NSButton {
+private final class PreferencesPopupOptionButton: NSButton {
   private let optionTitle: String
-  private let accent: SettingsAccent
-  private let strings: SettingsStrings
+  private let accent: PreferencesAccent
+  private let strings: PreferencesStrings
   private let optionFont: NSFont
   private let controlRadius: CGFloat
   private let perform: () -> Void
@@ -584,8 +584,8 @@ private final class SettingsPopupOptionButton: NSButton {
   init(
     frame: NSRect,
     title: String,
-    accent: SettingsAccent,
-    strings: SettingsStrings,
+    accent: PreferencesAccent,
+    strings: PreferencesStrings,
     font: NSFont,
     controlRadius: CGFloat,
     perform: @escaping () -> Void
@@ -674,7 +674,7 @@ private final class SettingsPopupOptionButton: NSButton {
         .font: optionFont,
         .foregroundColor: isSelected
           ? NSColor(accent.foreground)
-          : NSColor(SettingsPalette.ink),
+          : NSColor(PreferencesPalette.ink),
       ]
     )
   }

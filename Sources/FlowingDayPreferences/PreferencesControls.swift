@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-enum SettingsRowLayout {
+enum PreferencesRowLayout {
   static let compactVerticalPadding: CGFloat = 6
   static let detailedVerticalPadding: CGFloat = 11
   static let minimumHeight: CGFloat = 42
@@ -11,8 +11,8 @@ enum SettingsRowLayout {
   }
 }
 
-public struct SettingsSectionHeader: View {
-  @Environment(\.settingsTypography) private var typography
+public struct PreferencesSectionHeader: View {
+  @Environment(\.preferencesTypography) private var typography
   private let title: String
 
   public init(_ title: String) {
@@ -23,15 +23,15 @@ public struct SettingsSectionHeader: View {
     Text(title.uppercased())
       .font(typography.sectionHeader.font)
       .tracking(0.7)
-      .foregroundStyle(SettingsPalette.faint)
+      .foregroundStyle(PreferencesPalette.faint)
       .padding(.leading, 4)
       .padding(.bottom, 7)
   }
 }
 
-public struct SettingsCard<Content: View>: View {
-  @Environment(\.settingsMetrics) private var metrics
-  @Environment(\.settingsSurfaces) private var surfaces
+public struct PreferencesCard<Content: View>: View {
+  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.preferencesSurfaces) private var surfaces
   private let content: Content
 
   public init(@ViewBuilder content: () -> Content) {
@@ -46,13 +46,13 @@ public struct SettingsCard<Content: View>: View {
     .clipShape(RoundedRectangle(cornerRadius: metrics.cardRadius, style: .continuous))
     .overlay {
       RoundedRectangle(cornerRadius: metrics.cardRadius, style: .continuous)
-        .strokeBorder(SettingsPalette.edge)
+        .strokeBorder(PreferencesPalette.edge)
     }
   }
 }
 
-public struct SettingsRowSeparator: View {
-  @Environment(\.settingsMetrics) private var metrics
+public struct PreferencesRowSeparator: View {
+  @Environment(\.preferencesMetrics) private var metrics
   private let isIndented: Bool
 
   public init(isIndented: Bool = false) {
@@ -61,14 +61,14 @@ public struct SettingsRowSeparator: View {
 
   public var body: some View {
     Rectangle()
-      .fill(SettingsPalette.hairline)
+      .fill(PreferencesPalette.hairline)
       .frame(height: 1)
       .padding(.leading, metrics.rowInset + (isIndented ? 34 : 0))
   }
 }
 
-public struct SettingsPaneStack<Content: View>: View {
-  @Environment(\.settingsMetrics) private var metrics
+public struct PreferencesPaneStack<Content: View>: View {
+  @Environment(\.preferencesMetrics) private var metrics
   private let content: Content
 
   public init(@ViewBuilder content: () -> Content) {
@@ -82,9 +82,9 @@ public struct SettingsPaneStack<Content: View>: View {
   }
 }
 
-public struct SettingsSection<Content: View>: View {
-  @Environment(\.settingsMetrics) private var metrics
-  @Environment(\.settingsTypography) private var typography
+public struct PreferencesSection<Content: View>: View {
+  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.preferencesTypography) private var typography
   private let title: String
   private let footer: String?
   private let content: Content
@@ -101,12 +101,12 @@ public struct SettingsSection<Content: View>: View {
 
   public var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      SettingsSectionHeader(title)
-      SettingsCard { content }
+      PreferencesSectionHeader(title)
+      PreferencesCard { content }
       if let footer {
         Text(footer)
           .font(typography.rowCaption.font)
-          .foregroundStyle(SettingsPalette.faint)
+          .foregroundStyle(PreferencesPalette.faint)
           .fixedSize(horizontal: false, vertical: true)
           .padding(.horizontal, metrics.rowInset)
           .padding(.top, 7)
@@ -116,9 +116,9 @@ public struct SettingsSection<Content: View>: View {
   }
 }
 
-public struct SettingsRow<Trailing: View>: View {
-  @Environment(\.settingsMetrics) private var metrics
-  @Environment(\.settingsTypography) private var typography
+public struct PreferencesRow<Trailing: View>: View {
+  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.preferencesTypography) private var typography
   private let symbol: String?
   private let title: String
   private let caption: String?
@@ -141,17 +141,17 @@ public struct SettingsRow<Trailing: View>: View {
       if let symbol {
         Image(systemName: symbol)
           .font(.system(size: 13, weight: .medium))
-          .foregroundStyle(SettingsPalette.muted)
+          .foregroundStyle(PreferencesPalette.muted)
           .frame(width: 20)
       }
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
           .font(typography.rowTitle.font)
-          .foregroundStyle(SettingsPalette.ink)
+          .foregroundStyle(PreferencesPalette.ink)
         if let caption {
           Text(caption)
             .font(typography.rowCaption.font)
-            .foregroundStyle(SettingsPalette.faint)
+            .foregroundStyle(PreferencesPalette.faint)
             .fixedSize(horizontal: false, vertical: true)
         }
       }
@@ -159,18 +159,18 @@ public struct SettingsRow<Trailing: View>: View {
       trailing
     }
     .padding(.horizontal, metrics.rowInset)
-    .padding(.vertical, SettingsRowLayout.verticalPadding(hasCaption: caption != nil))
-    .frame(minHeight: SettingsRowLayout.minimumHeight)
+    .padding(.vertical, PreferencesRowLayout.verticalPadding(hasCaption: caption != nil))
+    .frame(minHeight: PreferencesRowLayout.minimumHeight)
   }
 }
 
-extension SettingsRow where Trailing == EmptyView {
+extension PreferencesRow where Trailing == EmptyView {
   public init(symbol: String? = nil, title: String, caption: String? = nil) {
     self.init(symbol: symbol, title: title, caption: caption) { EmptyView() }
   }
 }
 
-public struct SettingsSwitchRow: View {
+public struct PreferencesSwitchRow: View {
   private let symbol: String?
   private let title: String
   private let caption: String?
@@ -189,14 +189,14 @@ public struct SettingsSwitchRow: View {
   }
 
   public var body: some View {
-    SettingsRow(symbol: symbol, title: title, caption: caption) {
-      SettingsSwitch(isOn: $isOn)
+    PreferencesRow(symbol: symbol, title: title, caption: caption) {
+      PreferencesSwitch(isOn: $isOn)
     }
   }
 }
 
-public struct SettingsSwitch: View {
-  @Environment(\.settingsAccent) private var accent
+public struct PreferencesSwitch: View {
+  @Environment(\.preferencesAccent) private var accent
   @Binding private var isOn: Bool
 
   public init(isOn: Binding<Bool>) {
@@ -212,7 +212,7 @@ public struct SettingsSwitch: View {
   }
 }
 
-enum SettingsIconSelectionButtonMetrics {
+enum PreferencesIconSelectionButtonMetrics {
   static let height: CGFloat = 31
   static let horizontalInset: CGFloat = 10
   static let contentSpacing: CGFloat = 9
@@ -221,7 +221,7 @@ enum SettingsIconSelectionButtonMetrics {
   static let indicatorSize: CGFloat = 15
 }
 
-public struct SettingsIconSelectionButton<Leading: View>: View {
+public struct PreferencesIconSelectionButton<Leading: View>: View {
   private let title: String
   private let tint: Color
   private let help: String?
@@ -244,26 +244,26 @@ public struct SettingsIconSelectionButton<Leading: View>: View {
 
   public var body: some View {
     Button(action: toggle) {
-      HStack(spacing: SettingsIconSelectionButtonMetrics.contentSpacing) {
+      HStack(spacing: PreferencesIconSelectionButtonMetrics.contentSpacing) {
         leading
           .font(.system(size: 9, weight: .medium))
           .foregroundStyle(tint.opacity(isSelected ? 1 : 0.3))
-          .frame(width: SettingsIconSelectionButtonMetrics.iconWidth)
+          .frame(width: PreferencesIconSelectionButtonMetrics.iconWidth)
         Text(title)
           .font(.system(size: 11, weight: .medium))
         Spacer()
-        SettingsSelectionIndicator(isSelected: isSelected, tint: tint)
+        PreferencesSelectionIndicator(isSelected: isSelected, tint: tint)
       }
-      .foregroundStyle(isSelected ? SettingsPalette.ink : SettingsPalette.faint)
-      .padding(.horizontal, SettingsIconSelectionButtonMetrics.horizontalInset)
-      .frame(height: SettingsIconSelectionButtonMetrics.height)
+      .foregroundStyle(isSelected ? PreferencesPalette.ink : PreferencesPalette.faint)
+      .padding(.horizontal, PreferencesIconSelectionButtonMetrics.horizontalInset)
+      .frame(height: PreferencesIconSelectionButtonMetrics.height)
       .contentShape(Rectangle())
       .background(
         tint.opacity(isSelected ? 0.065 : 0),
-        in: RoundedRectangle(cornerRadius: SettingsIconSelectionButtonMetrics.cornerRadius)
+        in: RoundedRectangle(cornerRadius: PreferencesIconSelectionButtonMetrics.cornerRadius)
       )
       .overlay {
-        RoundedRectangle(cornerRadius: SettingsIconSelectionButtonMetrics.cornerRadius)
+        RoundedRectangle(cornerRadius: PreferencesIconSelectionButtonMetrics.cornerRadius)
           .stroke(isSelected ? tint.opacity(0.15) : Color.clear)
       }
     }
@@ -278,7 +278,7 @@ public struct SettingsIconSelectionButton<Leading: View>: View {
   }
 }
 
-extension SettingsIconSelectionButton where Leading == Image {
+extension PreferencesIconSelectionButton where Leading == Image {
   public init(
     symbol: String,
     title: String,
@@ -297,7 +297,7 @@ extension SettingsIconSelectionButton where Leading == Image {
   }
 }
 
-private struct SettingsSelectionIndicator: View {
+private struct PreferencesSelectionIndicator: View {
   let isSelected: Bool
   let tint: Color
 
@@ -306,30 +306,30 @@ private struct SettingsSelectionIndicator: View {
       Circle()
         .fill(isSelected ? tint : Color.clear)
       Circle()
-        .stroke(isSelected ? tint : SettingsPalette.edge)
+        .stroke(isSelected ? tint : PreferencesPalette.edge)
       Image(systemName: "checkmark")
         .font(.system(size: 7, weight: .bold))
         .foregroundStyle(.white)
         .opacity(isSelected ? 1 : 0)
     }
     .frame(
-      width: SettingsIconSelectionButtonMetrics.indicatorSize,
-      height: SettingsIconSelectionButtonMetrics.indicatorSize
+      width: PreferencesIconSelectionButtonMetrics.indicatorSize,
+      height: PreferencesIconSelectionButtonMetrics.indicatorSize
     )
   }
 }
 
-enum SettingsDependentRowsMotion {
-  static let standardDuration = SettingsMotion.disclosure
-  static let reducedMotionDuration = SettingsMotion.reducedDisclosure
-  static let detailOffset = SettingsMotion.disclosureOffset
+enum PreferencesDependentRowsMotion {
+  static let standardDuration = PreferencesMotion.disclosure
+  static let reducedMotionDuration = PreferencesMotion.reducedDisclosure
+  static let detailOffset = PreferencesMotion.disclosureOffset
 
   static func duration(reduceMotion: Bool) -> TimeInterval {
     reduceMotion ? reducedMotionDuration : standardDuration
   }
 
   static func offset(reduceMotion: Bool) -> CGFloat {
-    reduceMotion ? SettingsMotion.reducedDisclosureOffset : detailOffset
+    reduceMotion ? PreferencesMotion.reducedDisclosureOffset : detailOffset
   }
 
   static func animation(reduceMotion: Bool) -> Animation {
@@ -347,7 +347,7 @@ enum SettingsDependentRowsMotion {
   }
 }
 
-public struct SettingsDependentRows<Content: View>: View {
+public struct PreferencesDependentRows<Content: View>: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   private let isVisible: Bool
   private let showsSeparator: Bool
@@ -371,22 +371,22 @@ public struct SettingsDependentRows<Content: View>: View {
       if isVisible {
         VStack(spacing: 0) {
           if showsSeparator {
-            SettingsRowSeparator(isIndented: isSeparatorIndented)
+            PreferencesRowSeparator(isIndented: isSeparatorIndented)
           }
           content
         }
-        .transition(SettingsDependentRowsMotion.transition(reduceMotion: reduceMotion))
+        .transition(PreferencesDependentRowsMotion.transition(reduceMotion: reduceMotion))
       }
     }
     .clipped()
     .animation(
-      SettingsDependentRowsMotion.animation(reduceMotion: reduceMotion),
+      PreferencesDependentRowsMotion.animation(reduceMotion: reduceMotion),
       value: isVisible
     )
   }
 }
 
-public struct SettingsSwitchGroup<Content: View>: View {
+public struct PreferencesSwitchGroup<Content: View>: View {
   private let symbol: String?
   private let title: String
   private let caption: String?
@@ -415,13 +415,13 @@ public struct SettingsSwitchGroup<Content: View>: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      SettingsSwitchRow(
+      PreferencesSwitchRow(
         symbol: symbol,
         title: title,
         caption: caption,
         isOn: $isOn
       )
-      SettingsDependentRows(
+      PreferencesDependentRows(
         isVisible: isOn,
         showsSeparator: showsSeparator,
         isSeparatorIndented: isSeparatorIndented
@@ -432,9 +432,9 @@ public struct SettingsSwitchGroup<Content: View>: View {
   }
 }
 
-public struct SettingsSliderRow: View {
-  @Environment(\.settingsMetrics) private var metrics
-  @Environment(\.settingsTypography) private var typography
+public struct PreferencesSliderRow: View {
+  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.preferencesTypography) private var typography
   private let symbol: String?
   private let title: String
   private let caption: String?
@@ -467,22 +467,22 @@ public struct SettingsSliderRow: View {
         if let symbol {
           Image(systemName: symbol)
             .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(SettingsPalette.muted)
+            .foregroundStyle(PreferencesPalette.muted)
             .frame(width: 20)
         }
         Text(title)
           .font(typography.rowTitle.font)
-          .foregroundStyle(SettingsPalette.ink)
+          .foregroundStyle(PreferencesPalette.ink)
         Spacer(minLength: 10)
         Text(format(value))
           .font(typography.sliderValue.font)
-          .foregroundStyle(SettingsPalette.muted)
+          .foregroundStyle(PreferencesPalette.muted)
       }
-      SettingsSlider(value: $value, range: range, step: step)
+      PreferencesSlider(value: $value, range: range, step: step)
       if let caption {
         Text(caption)
           .font(typography.rowCaption.font)
-          .foregroundStyle(SettingsPalette.faint)
+          .foregroundStyle(PreferencesPalette.faint)
           .fixedSize(horizontal: false, vertical: true)
       }
     }
@@ -491,7 +491,7 @@ public struct SettingsSliderRow: View {
   }
 }
 
-public enum SettingsSliderMath {
+public enum PreferencesSliderMath {
   public static func fraction(
     of value: Double,
     in range: ClosedRange<Double>
@@ -510,11 +510,11 @@ public enum SettingsSliderMath {
   }
 }
 
-public struct SettingsSlider: View {
+public struct PreferencesSlider: View {
   @Binding private var value: Double
   private let range: ClosedRange<Double>
   private let step: Double?
-  @Environment(\.settingsAccent) private var accent
+  @Environment(\.preferencesAccent) private var accent
 
   public init(
     value: Binding<Double>,
@@ -527,7 +527,7 @@ public struct SettingsSlider: View {
   }
 
   public var body: some View {
-    SettingsSliderRepresentable(value: $value, range: range, step: step, accent: accent)
+    PreferencesSliderRepresentable(value: $value, range: range, step: step, accent: accent)
       .frame(height: 16)
       .accessibilityElement()
       .accessibilityValue(Text(String(format: "%.2f", value)))
@@ -539,32 +539,32 @@ public struct SettingsSlider: View {
   }
 }
 
-private struct SettingsSliderRepresentable: NSViewRepresentable {
+private struct PreferencesSliderRepresentable: NSViewRepresentable {
   @Binding var value: Double
   let range: ClosedRange<Double>
   let step: Double?
-  let accent: SettingsAccent
+  let accent: PreferencesAccent
 
   func makeCoordinator() -> Coordinator {
     Coordinator(value: $value)
   }
 
-  func makeNSView(context: Context) -> SettingsSliderControl {
-    let control = SettingsSliderControl()
+  func makeNSView(context: Context) -> PreferencesSliderControl {
+    let control = PreferencesSliderControl()
     control.target = context.coordinator
     control.action = #selector(Coordinator.valueChanged(_:))
     return control
   }
 
-  func updateNSView(_ control: SettingsSliderControl, context: Context) {
+  func updateNSView(_ control: PreferencesSliderControl, context: Context) {
     context.coordinator.value = $value
     control.value = value
     control.range = range
     control.step = step
     control.accentColor = NSColor(accent.fill)
-    control.trackColor = NSColor(SettingsPalette.hairline)
-    control.knobColor = SettingsPalette.sliderKnobColor
-    control.knobBorderColor = SettingsPalette.sliderKnobBorderColor
+    control.trackColor = NSColor(PreferencesPalette.hairline)
+    control.knobColor = PreferencesPalette.sliderKnobColor
+    control.knobBorderColor = PreferencesPalette.sliderKnobBorderColor
     control.needsDisplay = true
   }
 
@@ -576,13 +576,13 @@ private struct SettingsSliderRepresentable: NSViewRepresentable {
     }
 
     @MainActor
-    @objc func valueChanged(_ sender: SettingsSliderControl) {
+    @objc func valueChanged(_ sender: PreferencesSliderControl) {
       value.wrappedValue = sender.value
     }
   }
 }
 
-final class SettingsSliderControl: NSControl {
+final class PreferencesSliderControl: NSControl {
   var value = 0.0
   var range = 0.0...1.0
   var step: Double?
@@ -610,7 +610,7 @@ final class SettingsSliderControl: NSControl {
 
   override func draw(_ dirtyRect: NSRect) {
     let usableWidth = max(bounds.width - knobDiameter, 1)
-    let fraction = SettingsSliderMath.fraction(of: value, in: range)
+    let fraction = PreferencesSliderMath.fraction(of: value, in: range)
     let knobX = usableWidth * fraction
     let trackRect = NSRect(
       x: knobDiameter / 2,
@@ -665,7 +665,7 @@ final class SettingsSliderControl: NSControl {
     let location = convert(event.locationInWindow, from: nil)
     let usableWidth = max(bounds.width - knobDiameter, 1)
     let fraction = (location.x - knobDiameter / 2) / usableWidth
-    let proposed = SettingsSliderMath.value(atFraction: fraction, in: range)
+    let proposed = PreferencesSliderMath.value(atFraction: fraction, in: range)
     if let step, step > 0 {
       let steps = ((proposed - range.lowerBound) / step).rounded()
       value = min(max(range.lowerBound + steps * step, range.lowerBound), range.upperBound)
@@ -677,7 +677,7 @@ final class SettingsSliderControl: NSControl {
   }
 }
 
-public struct SettingsPopupOption<Value: Hashable>: Identifiable {
+public struct PreferencesPopupOption<Value: Hashable>: Identifiable {
   public let value: Value
   public let label: String
   public var id: Value { value }
@@ -688,18 +688,18 @@ public struct SettingsPopupOption<Value: Hashable>: Identifiable {
   }
 }
 
-public struct SettingsPopupRow<Value: Hashable>: View {
-  @Environment(\.settingsAccent) private var accent
-  @Environment(\.settingsStrings) private var strings
-  @Environment(\.settingsMetrics) private var metrics
-  @Environment(\.settingsTypography) private var typography
-  @Environment(\.settingsSurfaces) private var surfaces
+public struct PreferencesPopupRow<Value: Hashable>: View {
+  @Environment(\.preferencesAccent) private var accent
+  @Environment(\.preferencesStrings) private var strings
+  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.preferencesTypography) private var typography
+  @Environment(\.preferencesSurfaces) private var surfaces
   private let symbol: String?
   private let title: String
   private let caption: String?
   private let minimumControlWidth: CGFloat?
   @Binding private var selection: Value
-  private let options: [SettingsPopupOption<Value>]
+  private let options: [PreferencesPopupOption<Value>]
 
   public init(
     symbol: String? = nil,
@@ -707,7 +707,7 @@ public struct SettingsPopupRow<Value: Hashable>: View {
     caption: String? = nil,
     minimumControlWidth: CGFloat? = nil,
     selection: Binding<Value>,
-    options: [SettingsPopupOption<Value>]
+    options: [PreferencesPopupOption<Value>]
   ) {
     self.symbol = symbol
     self.title = title
@@ -718,8 +718,8 @@ public struct SettingsPopupRow<Value: Hashable>: View {
   }
 
   public var body: some View {
-    SettingsRow(symbol: symbol, title: title, caption: caption) {
-      SettingsPopupControl(
+    PreferencesRow(symbol: symbol, title: title, caption: caption) {
+      PreferencesPopupControl(
         selection: $selection,
         options: options,
         minimumWidth: minimumControlWidth ?? 0,
@@ -735,19 +735,19 @@ public struct SettingsPopupRow<Value: Hashable>: View {
   }
 }
 
-enum SettingsOptionSearch {
+enum PreferencesOptionSearch {
   static func matches(_ label: String, query: String) -> Bool {
     let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
     return query.isEmpty || label.localizedCaseInsensitiveContains(query)
   }
 }
 
-public struct SettingsSearchPickerRow<Value: Hashable>: View {
+public struct PreferencesSearchPickerRow<Value: Hashable>: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Environment(\.settingsAccent) private var accent
-  @Environment(\.settingsMetrics) private var metrics
-  @Environment(\.settingsStrings) private var strings
-  @Environment(\.settingsTypography) private var typography
+  @Environment(\.preferencesAccent) private var accent
+  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.preferencesStrings) private var strings
+  @Environment(\.preferencesTypography) private var typography
   @State private var isExpanded = false
   @State private var query = ""
   private let symbol: String?
@@ -755,7 +755,7 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
   private let caption: String?
   private let maximumVisibleOptions: Int
   @Binding private var selection: Value
-  private let options: [SettingsPopupOption<Value>]
+  private let options: [PreferencesPopupOption<Value>]
 
   public init(
     symbol: String? = nil,
@@ -763,7 +763,7 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
     caption: String? = nil,
     maximumVisibleOptions: Int = 6,
     selection: Binding<Value>,
-    options: [SettingsPopupOption<Value>]
+    options: [PreferencesPopupOption<Value>]
   ) {
     self.symbol = symbol
     self.title = title
@@ -778,22 +778,22 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
       header
       VStack(spacing: 0) {
         if isExpanded {
-          SettingsRowSeparator()
+          PreferencesRowSeparator()
           picker
             .transition(.opacity)
         }
       }
       .clipped()
     }
-    .animation(reduceMotion ? nil : .easeOut(duration: SettingsMotion.expand), value: isExpanded)
+    .animation(reduceMotion ? nil : .easeOut(duration: PreferencesMotion.expand), value: isExpanded)
   }
 
   private var selectedLabel: String {
     options.first { $0.value == selection }?.label ?? "—"
   }
 
-  private var filteredOptions: [SettingsPopupOption<Value>] {
-    options.filter { SettingsOptionSearch.matches($0.label, query: query) }
+  private var filteredOptions: [PreferencesPopupOption<Value>] {
+    options.filter { PreferencesOptionSearch.matches($0.label, query: query) }
   }
 
   private var header: some View {
@@ -807,17 +807,17 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
         if let symbol {
           Image(systemName: symbol)
             .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(SettingsPalette.muted)
+            .foregroundStyle(PreferencesPalette.muted)
             .frame(width: 20)
         }
         VStack(alignment: .leading, spacing: 2) {
           Text(title)
             .font(typography.rowTitle.font)
-            .foregroundStyle(SettingsPalette.ink)
+            .foregroundStyle(PreferencesPalette.ink)
           if let caption {
             Text(caption)
               .font(typography.rowCaption.font)
-              .foregroundStyle(SettingsPalette.faint)
+              .foregroundStyle(PreferencesPalette.faint)
               .fixedSize(horizontal: false, vertical: true)
           }
         }
@@ -829,12 +829,12 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
           .truncationMode(.middle)
         Image(systemName: "chevron.down")
           .font(.system(size: 9, weight: .semibold))
-          .foregroundStyle(SettingsPalette.faint)
+          .foregroundStyle(PreferencesPalette.faint)
           .rotationEffect(.degrees(isExpanded ? 180 : 0))
       }
       .padding(.horizontal, metrics.rowInset)
-      .padding(.vertical, SettingsRowLayout.verticalPadding(hasCaption: caption != nil))
-      .frame(minHeight: SettingsRowLayout.minimumHeight)
+      .padding(.vertical, PreferencesRowLayout.verticalPadding(hasCaption: caption != nil))
+      .frame(minHeight: PreferencesRowLayout.minimumHeight)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -850,7 +850,7 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
         TextField(strings.search, text: $query)
           .textFieldStyle(.plain)
           .font(typography.value.font)
-          .foregroundStyle(SettingsPalette.ink)
+          .foregroundStyle(PreferencesPalette.ink)
       }
       .padding(.horizontal, 10)
       .frame(height: 30)
@@ -863,7 +863,7 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
       if filteredOptions.isEmpty {
         Text(strings.noResults)
           .font(typography.value.font)
-          .foregroundStyle(SettingsPalette.faint)
+          .foregroundStyle(PreferencesPalette.faint)
           .frame(maxWidth: .infinity, minHeight: 36)
       } else {
         ScrollViewReader { proxy in
@@ -891,7 +891,7 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
     CGFloat(min(filteredOptions.count, maximumVisibleOptions)) * 34
   }
 
-  private func optionButton(_ option: SettingsPopupOption<Value>) -> some View {
+  private func optionButton(_ option: PreferencesPopupOption<Value>) -> some View {
     let isSelected = option.value == selection
     return Button {
       selection = option.value
@@ -901,7 +901,7 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
       HStack(spacing: 9) {
         Text(option.label)
           .font(typography.selectionLabel.font)
-          .foregroundStyle(isSelected ? accent.foreground : SettingsPalette.ink)
+          .foregroundStyle(isSelected ? accent.foreground : PreferencesPalette.ink)
           .lineLimit(1)
         Spacer(minLength: 8)
         if isSelected {
@@ -923,7 +923,7 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
   }
 }
 
-public struct SettingsColorPickerRow: View {
+public struct PreferencesColorPickerRow: View {
   private let symbol: String?
   private let title: String
   private let caption: String?
@@ -945,7 +945,7 @@ public struct SettingsColorPickerRow: View {
   }
 
   public var body: some View {
-    SettingsRow(symbol: symbol, title: title, caption: caption) {
+    PreferencesRow(symbol: symbol, title: title, caption: caption) {
       ColorPicker("", selection: $selection, supportsOpacity: supportsOpacity)
         .labelsHidden()
         .controlSize(.small)
@@ -953,13 +953,13 @@ public struct SettingsColorPickerRow: View {
   }
 }
 
-public struct SettingsSegmentedRow<Value: Hashable>: View {
+public struct PreferencesSegmentedRow<Value: Hashable>: View {
   private let symbol: String?
   private let title: String
   private let caption: String?
   private let controlWidth: CGFloat
   @Binding private var selection: Value
-  private let options: [SettingsPopupOption<Value>]
+  private let options: [PreferencesPopupOption<Value>]
 
   public init(
     symbol: String? = nil,
@@ -967,7 +967,7 @@ public struct SettingsSegmentedRow<Value: Hashable>: View {
     caption: String? = nil,
     controlWidth: CGFloat = 300,
     selection: Binding<Value>,
-    options: [SettingsPopupOption<Value>]
+    options: [PreferencesPopupOption<Value>]
   ) {
     self.symbol = symbol
     self.title = title
@@ -978,10 +978,10 @@ public struct SettingsSegmentedRow<Value: Hashable>: View {
   }
 
   public var body: some View {
-    SettingsRow(symbol: symbol, title: title, caption: caption) {
+    PreferencesRow(symbol: symbol, title: title, caption: caption) {
       HStack(spacing: 6) {
         ForEach(options) { option in
-          SettingsSelectionButton(
+          PreferencesSelectionButton(
             title: option.label,
             isSelected: selection == option.value,
             isCompact: true,
@@ -996,7 +996,7 @@ public struct SettingsSegmentedRow<Value: Hashable>: View {
   }
 }
 
-public struct SettingsSymbolSegmentOption<Value: Hashable>: Identifiable {
+public struct PreferencesSymbolSegmentOption<Value: Hashable>: Identifiable {
   public let value: Value
   public let label: String
   public let symbol: String?
@@ -1009,13 +1009,13 @@ public struct SettingsSymbolSegmentOption<Value: Hashable>: Identifiable {
   }
 }
 
-public struct SettingsSymbolSegmentedRow<Value: Hashable>: View {
+public struct PreferencesSymbolSegmentedRow<Value: Hashable>: View {
   private let rowSymbol: String?
   private let title: String
   private let caption: String?
   private let controlWidth: CGFloat
   @Binding private var selection: Value
-  private let options: [SettingsSymbolSegmentOption<Value>]
+  private let options: [PreferencesSymbolSegmentOption<Value>]
 
   public init(
     rowSymbol: String? = nil,
@@ -1023,7 +1023,7 @@ public struct SettingsSymbolSegmentedRow<Value: Hashable>: View {
     caption: String? = nil,
     controlWidth: CGFloat = 300,
     selection: Binding<Value>,
-    options: [SettingsSymbolSegmentOption<Value>]
+    options: [PreferencesSymbolSegmentOption<Value>]
   ) {
     self.rowSymbol = rowSymbol
     self.title = title
@@ -1034,10 +1034,10 @@ public struct SettingsSymbolSegmentedRow<Value: Hashable>: View {
   }
 
   public var body: some View {
-    SettingsRow(symbol: rowSymbol, title: title, caption: caption) {
+    PreferencesRow(symbol: rowSymbol, title: title, caption: caption) {
       HStack(spacing: 6) {
         ForEach(options) { option in
-          SettingsSymbolSelectionButton(
+          PreferencesSymbolSelectionButton(
             label: option.label,
             symbol: option.symbol,
             isSelected: selection == option.value
@@ -1051,7 +1051,7 @@ public struct SettingsSymbolSegmentedRow<Value: Hashable>: View {
   }
 }
 
-public struct SettingsMultiSelectOption: Identifiable {
+public struct PreferencesMultiSelectOption: Identifiable {
   public let id: String
   public let label: String
   public let isEnabled: Bool
@@ -1079,19 +1079,19 @@ public struct SettingsMultiSelectOption: Identifiable {
   }
 }
 
-public struct SettingsMultiSelectRow: View {
+public struct PreferencesMultiSelectRow: View {
   private let symbol: String?
   private let title: String
   private let caption: String?
   private let controlWidth: CGFloat
-  private let options: [SettingsMultiSelectOption]
+  private let options: [PreferencesMultiSelectOption]
 
   public init(
     symbol: String? = nil,
     title: String,
     caption: String? = nil,
     controlWidth: CGFloat = 300,
-    options: [SettingsMultiSelectOption]
+    options: [PreferencesMultiSelectOption]
   ) {
     self.symbol = symbol
     self.title = title
@@ -1101,10 +1101,10 @@ public struct SettingsMultiSelectRow: View {
   }
 
   public var body: some View {
-    SettingsRow(symbol: symbol, title: title, caption: caption) {
+    PreferencesRow(symbol: symbol, title: title, caption: caption) {
       HStack(spacing: 6) {
         ForEach(options) { option in
-          SettingsSelectionButton(
+          PreferencesSelectionButton(
             title: option.label,
             isSelected: option.isSelected,
             style: .multiple
@@ -1120,7 +1120,7 @@ public struct SettingsMultiSelectRow: View {
   }
 }
 
-public struct SettingsCheckToggle: View {
+public struct PreferencesCheckToggle: View {
   private let title: String
   @Binding private var isOn: Bool
 
@@ -1130,7 +1130,7 @@ public struct SettingsCheckToggle: View {
   }
 
   public var body: some View {
-    SettingsSelectionButton(
+    PreferencesSelectionButton(
       title: title,
       isSelected: isOn,
       style: .multiple
@@ -1140,7 +1140,7 @@ public struct SettingsCheckToggle: View {
   }
 }
 
-enum SettingsSelectionStyle {
+enum PreferencesSelectionStyle {
   case single
   case multiple
 
@@ -1153,16 +1153,16 @@ enum SettingsSelectionStyle {
   }
 }
 
-private struct SettingsSelectionButton: View {
-  @Environment(\.settingsAccent) private var accent
-  @Environment(\.settingsStrings) private var strings
-  @Environment(\.settingsMetrics) private var metrics
-  @Environment(\.settingsTypography) private var typography
-  @Environment(\.settingsSurfaces) private var surfaces
+private struct PreferencesSelectionButton: View {
+  @Environment(\.preferencesAccent) private var accent
+  @Environment(\.preferencesStrings) private var strings
+  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.preferencesTypography) private var typography
+  @Environment(\.preferencesSurfaces) private var surfaces
   let title: String
   let isSelected: Bool
   var isCompact = false
-  let style: SettingsSelectionStyle
+  let style: PreferencesSelectionStyle
   let action: () -> Void
 
   var body: some View {
@@ -1177,7 +1177,7 @@ private struct SettingsSelectionButton: View {
           .lineLimit(1)
           .minimumScaleFactor(isCompact ? 0.72 : 1)
       }
-      .foregroundStyle(isSelected ? accent.foreground : SettingsPalette.muted)
+      .foregroundStyle(isSelected ? accent.foreground : PreferencesPalette.muted)
       .frame(maxWidth: .infinity)
       .padding(.horizontal, isCompact ? 6 : 9)
       .padding(.vertical, 7)
@@ -1188,7 +1188,7 @@ private struct SettingsSelectionButton: View {
       .overlay {
         RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
           .strokeBorder(
-            isSelected ? accent.foreground.opacity(0.22) : SettingsPalette.hairline
+            isSelected ? accent.foreground.opacity(0.22) : PreferencesPalette.hairline
           )
       }
     }
@@ -1198,12 +1198,12 @@ private struct SettingsSelectionButton: View {
   }
 }
 
-private struct SettingsSymbolSelectionButton: View {
-  @Environment(\.settingsAccent) private var accent
-  @Environment(\.settingsStrings) private var strings
-  @Environment(\.settingsMetrics) private var metrics
-  @Environment(\.settingsTypography) private var typography
-  @Environment(\.settingsSurfaces) private var surfaces
+private struct PreferencesSymbolSelectionButton: View {
+  @Environment(\.preferencesAccent) private var accent
+  @Environment(\.preferencesStrings) private var strings
+  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.preferencesTypography) private var typography
+  @Environment(\.preferencesSurfaces) private var surfaces
   let label: String
   let symbol: String?
   let isSelected: Bool
@@ -1221,7 +1221,7 @@ private struct SettingsSymbolSelectionButton: View {
             .lineLimit(1)
         }
       }
-      .foregroundStyle(isSelected ? accent.foreground : SettingsPalette.muted)
+      .foregroundStyle(isSelected ? accent.foreground : PreferencesPalette.muted)
       .frame(maxWidth: .infinity)
       .padding(.horizontal, 6)
       .padding(.vertical, 8)
@@ -1232,7 +1232,7 @@ private struct SettingsSymbolSelectionButton: View {
       .overlay {
         RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
           .strokeBorder(
-            isSelected ? accent.foreground.opacity(0.22) : SettingsPalette.hairline
+            isSelected ? accent.foreground.opacity(0.22) : PreferencesPalette.hairline
           )
       }
     }
@@ -1244,7 +1244,7 @@ private struct SettingsSymbolSelectionButton: View {
   }
 }
 
-public struct SettingsButtonRow: View {
+public struct PreferencesButtonRow: View {
   private let symbol: String?
   private let title: String
   private let caption: String?
@@ -1266,14 +1266,14 @@ public struct SettingsButtonRow: View {
   }
 
   public var body: some View {
-    SettingsRow(symbol: symbol, title: title, caption: caption) {
+    PreferencesRow(symbol: symbol, title: title, caption: caption) {
       Button(buttonTitle, action: action)
-        .buttonStyle(SettingsSoftButtonStyle())
+        .buttonStyle(PreferencesSoftButtonStyle())
     }
   }
 }
 
-public struct SettingsLinkRow: View {
+public struct PreferencesLinkRow: View {
   private let symbol: String?
   private let title: String
   private let caption: String?
@@ -1298,7 +1298,7 @@ public struct SettingsLinkRow: View {
   }
 
   public var body: some View {
-    SettingsRow(symbol: symbol, title: title, caption: caption) {
+    PreferencesRow(symbol: symbol, title: title, caption: caption) {
       Link(destination: destination) {
         HStack(spacing: 5) {
           Text(buttonTitle)
@@ -1306,18 +1306,18 @@ public struct SettingsLinkRow: View {
             .font(.system(size: 9, weight: .semibold))
         }
       }
-      .buttonStyle(SettingsSoftButtonStyle())
+      .buttonStyle(PreferencesSoftButtonStyle())
       .help(help)
     }
   }
 }
 
-public struct SettingsExpandableRow: View {
+public struct PreferencesExpandableRow: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Environment(\.settingsAccent) private var accent
-  @Environment(\.settingsStrings) private var strings
-  @Environment(\.settingsMetrics) private var metrics
-  @Environment(\.settingsTypography) private var typography
+  @Environment(\.preferencesAccent) private var accent
+  @Environment(\.preferencesStrings) private var strings
+  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.preferencesTypography) private var typography
   private let symbol: String?
   private let title: String
   private let caption: String?
@@ -1343,17 +1343,17 @@ public struct SettingsExpandableRow: View {
         if let symbol {
           Image(systemName: symbol)
             .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(SettingsPalette.muted)
+            .foregroundStyle(PreferencesPalette.muted)
             .frame(width: 20)
         }
         VStack(alignment: .leading, spacing: 2) {
           Text(title)
             .font(typography.rowTitle.font)
-            .foregroundStyle(SettingsPalette.ink)
+            .foregroundStyle(PreferencesPalette.ink)
           if let caption {
             Text(caption)
               .font(typography.rowCaption.font)
-              .foregroundStyle(SettingsPalette.faint)
+              .foregroundStyle(PreferencesPalette.faint)
               .fixedSize(horizontal: false, vertical: true)
           }
         }
@@ -1364,18 +1364,18 @@ public struct SettingsExpandableRow: View {
           .rotationEffect(.degrees(isExpanded ? 180 : 0))
       }
       .padding(.horizontal, metrics.rowInset)
-      .padding(.vertical, SettingsRowLayout.verticalPadding(hasCaption: caption != nil))
-      .frame(minHeight: SettingsRowLayout.minimumHeight)
+      .padding(.vertical, PreferencesRowLayout.verticalPadding(hasCaption: caption != nil))
+      .frame(minHeight: PreferencesRowLayout.minimumHeight)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .animation(reduceMotion ? nil : .easeOut(duration: SettingsMotion.expand), value: isExpanded)
+    .animation(reduceMotion ? nil : .easeOut(duration: PreferencesMotion.expand), value: isExpanded)
     .accessibilityValue(isExpanded ? strings.expanded : strings.collapsed)
   }
 }
 
-public struct SettingsValueRow<Trailing: View>: View {
-  @Environment(\.settingsTypography) private var typography
+public struct PreferencesValueRow<Trailing: View>: View {
+  @Environment(\.preferencesTypography) private var typography
   private let symbol: String?
   private let title: String
   private let value: String
@@ -1394,11 +1394,11 @@ public struct SettingsValueRow<Trailing: View>: View {
   }
 
   public var body: some View {
-    SettingsRow(symbol: symbol, title: title) {
+    PreferencesRow(symbol: symbol, title: title) {
       HStack(spacing: 10) {
         Text(value)
           .font(typography.value.font)
-          .foregroundStyle(SettingsPalette.muted)
+          .foregroundStyle(PreferencesPalette.muted)
           .lineLimit(1)
           .truncationMode(.middle)
           .textSelection(.enabled)
@@ -1408,15 +1408,15 @@ public struct SettingsValueRow<Trailing: View>: View {
   }
 }
 
-extension SettingsValueRow where Trailing == EmptyView {
+extension PreferencesValueRow where Trailing == EmptyView {
   public init(symbol: String? = nil, title: String, value: String) {
     self.init(symbol: symbol, title: title, value: value) { EmptyView() }
   }
 }
 
-public struct SettingsEmptyRow: View {
-  @Environment(\.settingsMetrics) private var metrics
-  @Environment(\.settingsTypography) private var typography
+public struct PreferencesEmptyRow: View {
+  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.preferencesTypography) private var typography
   private let message: String
   private let symbol: String?
 
@@ -1434,16 +1434,16 @@ public struct SettingsEmptyRow: View {
         .fixedSize(horizontal: false, vertical: true)
     }
     .font(typography.value.font)
-    .foregroundStyle(SettingsPalette.faint)
+    .foregroundStyle(PreferencesPalette.faint)
     .padding(.horizontal, metrics.rowInset)
     .padding(.vertical, 14)
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
 
-public struct SettingsChip: View {
-  @Environment(\.settingsAccent) private var accent
-  @Environment(\.settingsTypography) private var typography
+public struct PreferencesChip: View {
+  @Environment(\.preferencesAccent) private var accent
+  @Environment(\.preferencesTypography) private var typography
   @State private var isHovering = false
   private let title: String
   private let action: () -> Void
@@ -1471,9 +1471,9 @@ public struct SettingsChip: View {
   }
 }
 
-public struct SettingsTag: View {
-  @Environment(\.settingsAccent) private var accent
-  @Environment(\.settingsTypography) private var typography
+public struct PreferencesTag: View {
+  @Environment(\.preferencesAccent) private var accent
+  @Environment(\.preferencesTypography) private var typography
   private let title: String
 
   public init(_ title: String) {
@@ -1492,20 +1492,20 @@ public struct SettingsTag: View {
   }
 }
 
-public struct SettingsSelectableTag: View {
-  @Environment(\.settingsAccent) private var accent
-  @Environment(\.settingsStrings) private var strings
-  @Environment(\.settingsTypography) private var typography
+public struct PreferencesSelectableTag: View {
+  @Environment(\.preferencesAccent) private var accent
+  @Environment(\.preferencesStrings) private var strings
+  @Environment(\.preferencesTypography) private var typography
   @State private var isHovering = false
   private let title: String
   private let isSelected: Bool
-  private let inactiveAccent: SettingsAccent?
+  private let inactiveAccent: PreferencesAccent?
   private let action: () -> Void
 
   public init(
     _ title: String,
     isSelected: Bool,
-    inactiveAccent: SettingsAccent? = nil,
+    inactiveAccent: PreferencesAccent? = nil,
     action: @escaping () -> Void
   ) {
     self.title = title
@@ -1531,11 +1531,11 @@ public struct SettingsSelectableTag: View {
     .buttonStyle(.plain)
     .onHover { isHovering = $0 }
     .accessibilityValue(isSelected ? strings.on : strings.off)
-    .animation(.easeOut(duration: SettingsMotion.selection), value: isSelected)
-    .animation(.easeOut(duration: SettingsMotion.hover), value: isHovering)
+    .animation(.easeOut(duration: PreferencesMotion.selection), value: isSelected)
+    .animation(.easeOut(duration: PreferencesMotion.hover), value: isHovering)
   }
 
-  private var inactive: SettingsAccent {
+  private var inactive: PreferencesAccent {
     inactiveAccent ?? accent
   }
 
@@ -1565,8 +1565,8 @@ public struct SettingsSelectableTag: View {
   }
 }
 
-public struct SettingsFlowGrid<Item: Identifiable, Label: View>: View {
-  @Environment(\.settingsMetrics) private var metrics
+public struct PreferencesFlowGrid<Item: Identifiable, Label: View>: View {
+  @Environment(\.preferencesMetrics) private var metrics
   private let items: [Item]
   private let spacing: CGFloat
   private let label: (Item) -> Label
@@ -1582,7 +1582,7 @@ public struct SettingsFlowGrid<Item: Identifiable, Label: View>: View {
   }
 
   public var body: some View {
-    SettingsWrappingLayout(spacing: spacing) {
+    PreferencesWrappingLayout(spacing: spacing) {
       ForEach(items) { label($0) }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1591,7 +1591,7 @@ public struct SettingsFlowGrid<Item: Identifiable, Label: View>: View {
   }
 }
 
-private struct SettingsWrappingLayout: Layout {
+private struct PreferencesWrappingLayout: Layout {
   let spacing: CGFloat
 
   func sizeThatFits(
@@ -1650,8 +1650,8 @@ private struct SettingsWrappingLayout: Layout {
   }
 }
 
-public struct SettingsGrid<Item: Identifiable, Label: View>: View {
-  @Environment(\.settingsMetrics) private var metrics
+public struct PreferencesGrid<Item: Identifiable, Label: View>: View {
+  @Environment(\.preferencesMetrics) private var metrics
   private let items: [Item]
   private let minimumWidth: CGFloat
   private let label: (Item) -> Label
@@ -1678,10 +1678,10 @@ public struct SettingsGrid<Item: Identifiable, Label: View>: View {
   }
 }
 
-public struct SettingsSoftButtonStyle: ButtonStyle {
-  @Environment(\.settingsAccent) private var accent
-  @Environment(\.settingsMetrics) private var metrics
-  @Environment(\.settingsTypography) private var typography
+public struct PreferencesSoftButtonStyle: ButtonStyle {
+  @Environment(\.preferencesAccent) private var accent
+  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.preferencesTypography) private var typography
   private let isProminent: Bool
 
   public init(isProminent: Bool = false) {
@@ -1708,7 +1708,7 @@ public struct SettingsSoftButtonStyle: ButtonStyle {
       }
       .overlay {
         RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
-          .strokeBorder(isProminent ? Color.clear : SettingsPalette.hairline)
+          .strokeBorder(isProminent ? Color.clear : PreferencesPalette.hairline)
       }
       .opacity(configuration.isPressed ? 0.6 : 1)
   }

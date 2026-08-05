@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-public struct SettingsAccent: Equatable, Sendable {
+public struct PreferencesAccent: Equatable, Sendable {
   public let fill: Color
   public let foreground: Color
   public let wash: Color
@@ -20,32 +20,32 @@ public struct SettingsAccent: Equatable, Sendable {
   }
 }
 
-struct SettingsAppearanceValue<Value: Sendable>: Sendable {
+struct PreferencesAppearanceValue<Value: Sendable>: Sendable {
   let light: Value
   let dark: Value
 }
 
-struct SettingsAccentHexValues: Equatable {
+struct PreferencesAccentHexValues: Equatable {
   let fillLight: UInt32
   let fillDark: UInt32
   let foregroundLight: UInt32
   let foregroundDark: UInt32
 }
 
-extension SettingsAccent {
+extension PreferencesAccent {
   static func derived(
     base: UInt32,
-    fillLightness: SettingsAppearanceValue<CGFloat>,
-    foregroundContrast: SettingsAppearanceValue<CGFloat>
-  ) -> SettingsAccent {
-    let values = SettingsAccentDerivation.values(
+    fillLightness: PreferencesAppearanceValue<CGFloat>,
+    foregroundContrast: PreferencesAppearanceValue<CGFloat>
+  ) -> PreferencesAccent {
+    let values = PreferencesAccentDerivation.values(
       base: base,
       fillLightness: fillLightness,
       foregroundContrast: foregroundContrast
     )
-    return SettingsAccent(
-      fill: SettingsPalette.dynamic(light: values.fillLight, dark: values.fillDark),
-      foreground: SettingsPalette.dynamic(
+    return PreferencesAccent(
+      fill: PreferencesPalette.dynamic(light: values.fillLight, dark: values.fillDark),
+      foreground: PreferencesPalette.dynamic(
         light: values.foregroundLight,
         dark: values.foregroundDark
       )
@@ -53,27 +53,27 @@ extension SettingsAccent {
   }
 }
 
-enum SettingsAccentDerivation {
+enum PreferencesAccentDerivation {
   static func values(
     base: UInt32,
-    fillLightness: SettingsAppearanceValue<CGFloat>,
-    foregroundContrast: SettingsAppearanceValue<CGFloat>
-  ) -> SettingsAccentHexValues {
-    let baseColor = SettingsOKLabColor(sRGB: base)
+    fillLightness: PreferencesAppearanceValue<CGFloat>,
+    foregroundContrast: PreferencesAppearanceValue<CGFloat>
+  ) -> PreferencesAccentHexValues {
+    let baseColor = PreferencesOKLabColor(sRGB: base)
     let fillLight = baseColor.sRGB(adjustingLightnessBy: fillLightness.light)
     let fillDark = baseColor.sRGB(adjustingLightnessBy: fillLightness.dark)
-    return SettingsAccentHexValues(
+    return PreferencesAccentHexValues(
       fillLight: fillLight,
       fillDark: fillDark,
-      foregroundLight: SettingsOKLabColor(sRGB: fillLight)
+      foregroundLight: PreferencesOKLabColor(sRGB: fillLight)
         .sRGB(adjustingLightnessBy: foregroundContrast.light),
-      foregroundDark: SettingsOKLabColor(sRGB: fillDark)
+      foregroundDark: PreferencesOKLabColor(sRGB: fillDark)
         .sRGB(adjustingLightnessBy: foregroundContrast.dark)
     )
   }
 }
 
-private struct SettingsOKLabColor {
+private struct PreferencesOKLabColor {
   let lightness: Double
   let a: Double
   let b: Double
@@ -121,8 +121,8 @@ private struct SettingsOKLabColor {
   }
 }
 
-public struct SettingsStrings: Equatable, Sendable {
-  public var closeSettings: String
+public struct PreferencesStrings: Equatable, Sendable {
+  public var closePreferences: String
   public var selected: String
   public var notSelected: String
   public var expanded: String
@@ -133,7 +133,7 @@ public struct SettingsStrings: Equatable, Sendable {
   public var noResults: String
 
   public init(
-    closeSettings: String = "Close Settings",
+    closePreferences: String = "Close Preferences",
     selected: String = "Selected",
     notSelected: String = "Not Selected",
     expanded: String = "Expanded",
@@ -143,7 +143,7 @@ public struct SettingsStrings: Equatable, Sendable {
     search: String = "Search",
     noResults: String = "No Results"
   ) {
-    self.closeSettings = closeSettings
+    self.closePreferences = closePreferences
     self.selected = selected
     self.notSelected = notSelected
     self.expanded = expanded
@@ -155,7 +155,7 @@ public struct SettingsStrings: Equatable, Sendable {
   }
 }
 
-public enum SettingsFontWeight: String, Sendable {
+public enum PreferencesFontWeight: String, Sendable {
   case ultraLight
   case thin
   case light
@@ -195,7 +195,7 @@ public enum SettingsFontWeight: String, Sendable {
   }
 }
 
-public enum SettingsFontDesign: String, Sendable {
+public enum PreferencesFontDesign: String, Sendable {
   case standard
   case rounded
   case serif
@@ -211,17 +211,17 @@ public enum SettingsFontDesign: String, Sendable {
   }
 }
 
-public struct SettingsTextStyle: Sendable {
+public struct PreferencesTextStyle: Sendable {
   public var size: CGFloat
-  public var weight: SettingsFontWeight
-  public var design: SettingsFontDesign
+  public var weight: PreferencesFontWeight
+  public var design: PreferencesFontDesign
   public var usesMonospacedDigits: Bool
   public var fontName: String?
 
   public init(
     size: CGFloat,
-    weight: SettingsFontWeight = .regular,
-    design: SettingsFontDesign = .standard,
+    weight: PreferencesFontWeight = .regular,
+    design: PreferencesFontDesign = .standard,
     usesMonospacedDigits: Bool = false,
     fontName: String? = nil
   ) {
@@ -262,76 +262,76 @@ public struct SettingsTextStyle: Sendable {
   }
 }
 
-private struct SettingsAccentKey: EnvironmentKey {
-  static let defaultValue = SettingsAccent.celadon
+private struct PreferencesAccentKey: EnvironmentKey {
+  static let defaultValue = PreferencesAccent.celadon
 }
 
-private struct SettingsStringsKey: EnvironmentKey {
-  static let defaultValue = SettingsStrings()
+private struct PreferencesStringsKey: EnvironmentKey {
+  static let defaultValue = PreferencesStrings()
 }
 
-private struct SettingsMetricsKey: EnvironmentKey {
-  static let defaultValue = SettingsMetrics.standard
+private struct PreferencesMetricsKey: EnvironmentKey {
+  static let defaultValue = PreferencesMetrics.standard
 }
 
-private struct SettingsTypographyKey: EnvironmentKey {
-  static let defaultValue = SettingsTypography.standard
+private struct PreferencesTypographyKey: EnvironmentKey {
+  static let defaultValue = PreferencesTypography.standard
 }
 
-private struct SettingsSurfacesKey: EnvironmentKey {
-  static let defaultValue = SettingsSurfaces.standard
+private struct PreferencesSurfacesKey: EnvironmentKey {
+  static let defaultValue = PreferencesSurfaces.standard
 }
 
 extension EnvironmentValues {
-  public var settingsAccent: SettingsAccent {
-    get { self[SettingsAccentKey.self] }
-    set { self[SettingsAccentKey.self] = newValue }
+  public var preferencesAccent: PreferencesAccent {
+    get { self[PreferencesAccentKey.self] }
+    set { self[PreferencesAccentKey.self] = newValue }
   }
 
-  public var settingsStrings: SettingsStrings {
-    get { self[SettingsStringsKey.self] }
-    set { self[SettingsStringsKey.self] = newValue }
+  public var preferencesStrings: PreferencesStrings {
+    get { self[PreferencesStringsKey.self] }
+    set { self[PreferencesStringsKey.self] = newValue }
   }
 
-  public var settingsMetrics: SettingsMetrics {
-    get { self[SettingsMetricsKey.self] }
-    set { self[SettingsMetricsKey.self] = newValue }
+  public var preferencesMetrics: PreferencesMetrics {
+    get { self[PreferencesMetricsKey.self] }
+    set { self[PreferencesMetricsKey.self] = newValue }
   }
 
-  public var settingsTypography: SettingsTypography {
-    get { self[SettingsTypographyKey.self] }
-    set { self[SettingsTypographyKey.self] = newValue }
+  public var preferencesTypography: PreferencesTypography {
+    get { self[PreferencesTypographyKey.self] }
+    set { self[PreferencesTypographyKey.self] = newValue }
   }
 
-  public var settingsSurfaces: SettingsSurfaces {
-    get { self[SettingsSurfacesKey.self] }
-    set { self[SettingsSurfacesKey.self] = newValue }
+  public var preferencesSurfaces: PreferencesSurfaces {
+    get { self[PreferencesSurfacesKey.self] }
+    set { self[PreferencesSurfacesKey.self] = newValue }
   }
 }
 
 extension View {
-  public func settingsAccent(_ accent: SettingsAccent) -> some View {
-    environment(\.settingsAccent, accent)
+  public func preferencesAccent(_ accent: PreferencesAccent) -> some View {
+    environment(\.preferencesAccent, accent)
   }
 
-  public func settingsStrings(_ strings: SettingsStrings) -> some View {
-    environment(\.settingsStrings, strings)
+  public func preferencesStrings(_ strings: PreferencesStrings) -> some View {
+    environment(\.preferencesStrings, strings)
   }
 
-  public func settingsMetrics(_ metrics: SettingsMetrics) -> some View {
-    environment(\.settingsMetrics, metrics)
+  public func preferencesMetrics(_ metrics: PreferencesMetrics) -> some View {
+    environment(\.preferencesMetrics, metrics)
   }
 
-  public func settingsTypography(_ typography: SettingsTypography) -> some View {
-    environment(\.settingsTypography, typography)
+  public func preferencesTypography(_ typography: PreferencesTypography) -> some View {
+    environment(\.preferencesTypography, typography)
   }
 
-  public func settingsSurfaces(_ surfaces: SettingsSurfaces) -> some View {
-    environment(\.settingsSurfaces, surfaces)
+  public func preferencesSurfaces(_ surfaces: PreferencesSurfaces) -> some View {
+    environment(\.preferencesSurfaces, surfaces)
   }
 }
 
-public enum SettingsPalette {
+public enum PreferencesPalette {
   public static func dynamic(light: UInt32, dark: UInt32) -> Color {
     translucent(light: light, lightAlpha: 1, dark: dark, darkAlpha: 1)
   }

@@ -2,19 +2,19 @@ import AppKit
 import SwiftUI
 import XCTest
 
-@testable import FlowingDaySettings
+@testable import FlowingDayPreferences
 
 @MainActor
-final class SettingsWindowTests: XCTestCase {
-  func testPresenterBuildsIntegratedSettingsPanel() {
-    let presenter = SettingsWindowPresenter(rootView: Color.clear)
+final class PreferencesWindowTests: XCTestCase {
+  func testPresenterBuildsIntegratedPreferencesPanel() {
+    let presenter = PreferencesWindowPresenter(rootView: Color.clear)
     let window = presenter.window
     defer { window.close() }
 
     XCTAssertFalse(window.styleMask.contains(.titled))
     XCTAssertTrue(window.styleMask.contains(.resizable))
     XCTAssertFalse(window.styleMask.contains(.nonactivatingPanel))
-    XCTAssertEqual(window.title, "Settings")
+    XCTAssertEqual(window.title, "Preferences")
     XCTAssertFalse(window.isOpaque)
     XCTAssertTrue(window.hasShadow)
     XCTAssertTrue(window.isMovableByWindowBackground)
@@ -24,8 +24,8 @@ final class SettingsWindowTests: XCTestCase {
   }
 
   func testPresenterUsesConfiguredWindowTitle() {
-    let presenter = SettingsWindowPresenter(
-      configuration: SettingsWindowConfiguration(title: "App Preferences"),
+    let presenter = PreferencesWindowPresenter(
+      configuration: PreferencesWindowConfiguration(title: "App Preferences"),
       rootView: Color.clear
     )
     defer { presenter.window.close() }
@@ -34,7 +34,7 @@ final class SettingsWindowTests: XCTestCase {
   }
 
   func testShowingPanelUsesNormalWindowLevel() {
-    let presenter = SettingsWindowPresenter(rootView: Color.clear)
+    let presenter = PreferencesWindowPresenter(rootView: Color.clear)
     defer { presenter.window.close() }
 
     presenter.show()
@@ -44,7 +44,7 @@ final class SettingsWindowTests: XCTestCase {
   }
 
   func testCommandWClosesPanel() throws {
-    let presenter = SettingsWindowPresenter(rootView: Color.clear)
+    let presenter = PreferencesWindowPresenter(rootView: Color.clear)
     let window = presenter.window
     let event = try XCTUnwrap(
       NSEvent.keyEvent(
@@ -75,7 +75,7 @@ final class SettingsWindowTests: XCTestCase {
     window.isReleasedWhenClosed = false
     defer { window.close() }
 
-    let button = SettingsPopupButton(
+    let button = PreferencesPopupButton(
       frame: NSRect(x: 100, y: 100, width: 160, height: 30)
     )
     var selectedIndex: Int?
@@ -84,11 +84,11 @@ final class SettingsWindowTests: XCTestCase {
       selectedIndex: 0,
       minimumWidth: 140,
       accent: .celadon,
-      strings: SettingsStrings(),
+      strings: PreferencesStrings(),
       controlRadius: 9,
-      textStyle: SettingsTypography.standard.value,
-      optionTextStyle: SettingsTypography.standard.selectionLabel,
-      menuBackgroundColor: SettingsPalette.control
+      textStyle: PreferencesTypography.standard.value,
+      optionTextStyle: PreferencesTypography.standard.selectionLabel,
+      menuBackgroundColor: PreferencesPalette.control
     )
     button.onSelect = { selectedIndex = $0 }
     window.contentView?.addSubview(button)
@@ -113,17 +113,17 @@ final class SettingsWindowTests: XCTestCase {
 
   func testPopupValueUsesTheConfiguredAccent() throws {
     let foreground = NSColor(calibratedRed: 0.22, green: 0.47, blue: 0.68, alpha: 1)
-    let button = SettingsPopupButton()
+    let button = PreferencesPopupButton()
     button.configure(
       labels: ["Selected"],
       selectedIndex: 0,
       minimumWidth: 120,
-      accent: SettingsAccent(fill: .blue, foreground: Color(nsColor: foreground)),
-      strings: SettingsStrings(),
+      accent: PreferencesAccent(fill: .blue, foreground: Color(nsColor: foreground)),
+      strings: PreferencesStrings(),
       controlRadius: 9,
-      textStyle: SettingsTypography.standard.value,
-      optionTextStyle: SettingsTypography.standard.selectionLabel,
-      menuBackgroundColor: SettingsPalette.control
+      textStyle: PreferencesTypography.standard.value,
+      optionTextStyle: PreferencesTypography.standard.selectionLabel,
+      menuBackgroundColor: PreferencesPalette.control
     )
 
     let actual = try XCTUnwrap(button.valueTextColor.usingColorSpace(.deviceRGB))
