@@ -31,13 +31,19 @@ marketing page as a live, clickable mock rather than a screenshot:
 ```
 web/
 ├── packages/core/   @flowing-day/ui — the components and tokens
-└── docs/            run with `pnpm dev`
-    ├── /            component playground with live theme controls
-    └── /window.html a 1:1 settings window mock on a black backdrop
+└── docs/            the landing page, run with `pnpm dev`
 ```
 
-The playground resolves `@flowing-day/ui` to the core package's *sources*, so editing a
-component hot-reloads the page instead of waiting on a rebuild.
+The landing page is a live, draggable settings window rather than a component gallery.
+Its own Appearance page restyles the window it lives in — theme, accent, density, corner
+radius and type scale are all just tokens written onto the window element — so the page
+doubles as the proof that the theming contract works.
+
+Dragging mirrors `NSPanel.isMovableByWindowBackground`, which `SettingsWindowPresenter`
+sets. It lives with the page, not the component: presentation is the caller's business.
+
+The page resolves `@flowing-day/ui` to the core package's *sources*, so editing a
+component hot-reloads it instead of waiting on a rebuild.
 
 The Swift package at the repository root is untouched; it remains the design's source of
 truth and every ported value is annotated with the Swift symbol it came from.
@@ -116,8 +122,9 @@ Swift source. A `@flowing-day/ui-icons-lucide` mapping package is planned.
 
 Ported: the token layer, `fd-settings-window` with its sidebar and page header, `fd-page`,
 `fd-page-group`, `fd-card`, `fd-section`, `fd-separator`, `fd-pane-stack`, `fd-row`,
-`fd-switch`, `fd-switch-row`, `fd-popup`, `fd-popup-row`, `fd-option` and `fd-icon`.
+`fd-switch`, `fd-switch-row`, `fd-popup`, `fd-popup-row`, `fd-segmented-row`,
+`fd-symbol-segmented-row`, `fd-multi-select-row`, `fd-check-toggle`, `fd-dependent-rows`,
+`fd-switch-group`, `fd-option` and `fd-icon`.
 
-Remaining: the slider, search picker, segmented, symbol-segmented and multi-select rows,
-dependent rows, tags, flow and adaptive grids, button, link, expandable, value and empty
-rows.
+Remaining: the slider, search picker, colour picker, tags, flow and adaptive grids, and
+the button, link, expandable, value and empty rows.

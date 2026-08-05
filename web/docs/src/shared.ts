@@ -46,6 +46,9 @@ export function registerPlaceholderIcons(): void {
       '<path d="M3.5 9.5A8.5 8.5 0 0 1 19 7"/><path d="M20.5 14.5A8.5 8.5 0 0 1 5 17"/><path d="M19 3v4h-4M5 21v-4h4"/>',
     ),
     'info.circle': stroke('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>'),
+    'chart.bar': stroke('<path d="M5 20V11M12 20V4M19 20v-6"/>'),
+    'chart.line': stroke('<path d="M3.5 16.5 9 10.5l4 4 7.5-8"/>'),
+    'chart.area': stroke('<path d="M3.5 18.5 9 11l4 4 7.5-8v11.5h-17z"/>'),
     'lock.shield': stroke(
       '<path d="M12 2.5 20 6v6c0 4.6-3.3 8.4-8 9.5-4.7-1.1-8-4.9-8-9.5V6z"/><rect x="9" y="10.5" width="6" height="5" rx="1.2"/><path d="M10.5 10.5V9a1.5 1.5 0 0 1 3 0v1.5"/>',
     ),

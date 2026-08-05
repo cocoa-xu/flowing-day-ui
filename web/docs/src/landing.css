@@ -1,0 +1,57 @@
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 30%, #17171a 0%, #050506 62%, #000 100%);
+  font-family: var(--fd-font-standard);
+}
+
+.masthead {
+  position: fixed;
+  inset: 26px auto auto 32px;
+  z-index: 1;
+}
+
+.wordmark {
+  font-family: var(--fd-font-rounded);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: rgb(255 255 255 / 0.62);
+}
+
+.stage {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 48px 24px;
+}
+
+/*
+ * SettingsWindowConfiguration ships 900 × 640, and the mock holds exactly that.
+ *
+ * Deliberately not a percentage: the stage centres a shrink-to-fit item, so a
+ * percentage width there is a cyclic size and CSS falls back to intrinsic sizing —
+ * which lets the page content change the window's own dimensions as you navigate.
+ */
+.stage fd-settings-window {
+  width: 900px;
+  height: 640px;
+  box-shadow: var(--fd-window-shadow);
+  /* Mirrors NSPanel's isMovableByWindowBackground. */
+  cursor: grab;
+}
+
+.stage fd-settings-window[data-dragging] {
+  cursor: grabbing;
+  user-select: none;
+}
+
+/* Driven by the Appearance page's "Show row separators" switch. */
+fd-settings-window[data-separators="off"] fd-separator {
+  display: none;
+}
