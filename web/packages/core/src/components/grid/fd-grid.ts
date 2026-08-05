@@ -1,4 +1,4 @@
-import { type CSSResultGroup, css, html, type PropertyValues } from 'lit'
+import { type CSSResultGroup, css, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 
@@ -14,11 +14,6 @@ export class FdGrid extends FdElement {
   static override styles: CSSResultGroup = [
     baseStyles,
     css`
-      :host {
-        --_minimum-width: var(--fd-grid-minimum-width, 96px);
-        --_spacing: var(--fd-grid-spacing, 7px);
-      }
-
       .grid {
         display: grid;
         /*
@@ -26,7 +21,6 @@ export class FdGrid extends FdElement {
          * fits, as .adaptive does, rather than one column that overflows.
          */
         grid-template-columns: repeat(auto-fill, minmax(min(var(--_minimum-width), 100%), 1fr));
-        gap: var(--_spacing);
         padding-inline: var(--_fd-metric-row-inset);
         padding-block: 13px;
       }
@@ -39,14 +33,16 @@ export class FdGrid extends FdElement {
   /** Spacing between columns and between rows, both 7 in the SwiftUI original. */
   @property({ type: Number }) spacing = 7
 
-  override updated(changed: PropertyValues<this>): void {
-    super.updated(changed)
-    this.style.setProperty('--_minimum-width', `${this.minimumWidth}px`)
-    this.style.setProperty('--_spacing', `${this.spacing}px`)
-  }
-
   override render() {
-    return html`<div class="grid" part="grid"><slot></slot></div>`
+    return html`
+      <div
+        class="grid"
+        part="grid"
+        style="--_minimum-width: ${this.minimumWidth}px; gap: ${this.spacing}px"
+      >
+        <slot></slot>
+      </div>
+    `
   }
 }
 

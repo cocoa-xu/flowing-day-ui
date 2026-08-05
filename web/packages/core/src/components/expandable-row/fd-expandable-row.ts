@@ -1,7 +1,7 @@
 import { type CSSResultGroup, css, html, nothing } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
-import { chevron } from '../../internal/glyphs.js'
+import { chevronDown } from '../../internal/glyphs.js'
 import { rowLayoutStyles } from '../../internal/row-layout.js'
 import { FdStringsRegistry } from '../../internal/strings.js'
 import '../icon/fd-icon.js'
@@ -100,7 +100,7 @@ export class FdExpandableRow extends FdElement {
           ${this.caption ? html`<span class="caption" part="caption">${this.caption}</span>` : nothing}
         </span>
         <span class="spacer"></span>
-        <span class="chevron" part="chevron">${chevron(false)}</span>
+        <span class="chevron" part="chevron">${chevronDown}</span>
       </button>
     `
   }

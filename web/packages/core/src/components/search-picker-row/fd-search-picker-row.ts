@@ -1,7 +1,7 @@
 import { type CSSResultGroup, css, html, nothing, type PropertyValues } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
-import { checkmark, chevron, magnifyingGlass } from '../../internal/glyphs.js'
+import { checkmark, chevronDown, magnifyingGlass } from '../../internal/glyphs.js'
 import { middleTruncated, middleTruncateStyles } from '../../internal/middle-truncate.js'
 import { optionMatches } from '../../internal/option-search.js'
 import { type CollectedOption, collectOptions } from '../../internal/options.js'
@@ -272,10 +272,18 @@ export class FdSearchPickerRow extends FdElement {
     this.value = state
   }
 
+  /**
+   * `scrollIntoView` would take every scrollable ancestor with it, and this list sits
+   * inside a scrolling pane inside the page. Only the list may move.
+   */
   #revealSelection(): void {
-    this.renderRoot
-      .querySelector('.option[aria-selected="true"]')
-      ?.scrollIntoView({ block: 'center' })
+    const list = this.renderRoot.querySelector('.list')
+    const selected = list?.querySelector('.option[aria-selected="true"]')
+    if (!list || !selected) return
+
+    const listBox = list.getBoundingClientRect()
+    const selectedBox = selected.getBoundingClientRect()
+    list.scrollTop += selectedBox.top - listBox.top - (listBox.height - selectedBox.height) / 2
   }
 
   #onSlotChange = (event: Event): void => {
@@ -352,7 +360,7 @@ export class FdSearchPickerRow extends FdElement {
         </span>
         <span class="spacer"></span>
         <span class="selected truncate">${middleTruncated(this.selectedLabel)}</span>
-        <span class="chevron">${chevron(false)}</span>
+        <span class="chevron">${chevronDown}</span>
       </button>
 
       <div class="reveal">

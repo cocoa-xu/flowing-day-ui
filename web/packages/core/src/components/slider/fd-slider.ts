@@ -167,7 +167,9 @@ export class FdSlider extends FdElement {
   }
 
   formStateRestoreCallback(state: string | null): void {
-    if (state !== null) this.value = Number(state)
+    const restored = Number(state)
+    // A non-numeric state would otherwise land as NaN and take the knob with it.
+    if (state !== null && Number.isFinite(restored)) this.value = restored
   }
 
   /** True while the control is laid out right to left, which flips the whole axis. */

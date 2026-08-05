@@ -86,6 +86,7 @@ export class FdSelectableTag extends FdElement {
   }
 
   override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed)
     if (changed.has('selected')) this.#useMotion('selection')
   }
 

@@ -154,7 +154,6 @@ describe('fd-slider', () => {
     drag(element, 6.5 + 100, 'pointermove', 0)
     expect(element.value).toBeCloseTo(10, 4)
 
-    // And it stays put on every later hover, rather than latching onto the pointer.
     drag(element, 6.5 + 180, 'pointermove', 0)
     drag(element, 6.5 + 40, 'pointermove', 1)
     expect(element.value).toBeCloseTo(10, 4)

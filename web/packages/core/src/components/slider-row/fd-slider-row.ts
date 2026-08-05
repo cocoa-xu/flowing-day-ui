@@ -55,7 +55,6 @@ export class FdSliderRow extends FdElement {
         min-width: 10px;
       }
 
-      /* Tabular digits, so a changing value cannot jitter the row. */
       .value {
         ${textRole('slider-value')}
         flex: none;

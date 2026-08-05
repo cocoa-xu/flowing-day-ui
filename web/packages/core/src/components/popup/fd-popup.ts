@@ -2,7 +2,7 @@ import { type CSSResultGroup, css, html, nothing, type PropertyValues } from 'li
 import { customElement, property, query, state } from 'lit/decorators.js'
 import { repeat } from 'lit/directives/repeat.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
-import { checkmark, chevron } from '../../internal/glyphs.js'
+import { checkmark, chevronDown, chevronUp } from '../../internal/glyphs.js'
 import { textRole } from '../../internal/typography.js'
 import type { FdOption } from '../option/fd-option.js'
 import '../option/fd-option.js'
@@ -487,7 +487,7 @@ export class FdPopup extends FdElement {
         popovertarget=${menuId}
       >
         <span class="value" part="value">${options[selected]?.label ?? '—'}</span>
-        <span class="chevron">${chevron(this.open)}</span>
+        <span class="chevron">${this.open ? chevronUp : chevronDown}</span>
       </button>
 
       <div

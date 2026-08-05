@@ -8,11 +8,10 @@ import { svg } from 'lit'
  * Each takes its size from the element it sits in and its colour from `currentColor`.
  */
 
-/** `chevron.down`, or `chevron.up` when the popup opens upward. */
-export const chevron = (up: boolean) => svg`
+const chevron = (path: string) => svg`
   <svg viewBox="0 0 12 12" aria-hidden="true">
     <path
-      d=${up ? 'M2.5 7.5 6 4l3.5 3.5' : 'M2.5 4.5 6 8l3.5-3.5'}
+      d=${path}
       fill="none"
       stroke="currentColor"
       stroke-width="1.8"
@@ -20,6 +19,12 @@ export const chevron = (up: boolean) => svg`
       stroke-linejoin="round"
     />
   </svg>`
+
+/** `chevron.down`. Rows that disclose rotate this rather than swapping it. */
+export const chevronDown = chevron('M2.5 4.5 6 8l3.5-3.5')
+
+/** `chevron.up`. */
+export const chevronUp = chevron('M2.5 7.5 6 4l3.5 3.5')
 
 /** `checkmark`. */
 export const checkmark = svg`
