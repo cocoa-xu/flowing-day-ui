@@ -26,15 +26,18 @@ extension EnvironmentValues {
 }
 
 public struct SettingsWindowConfiguration: Equatable {
+  public var title: String
   public var size: CGSize
   public var minimumSize: CGSize
   public var activatesApplication: Bool
 
   public init(
+    title: String = "Settings",
     size: CGSize = CGSize(width: 900, height: 640),
     minimumSize: CGSize = CGSize(width: 820, height: 560),
     activatesApplication: Bool = true
   ) {
+    self.title = title
     self.size = size
     self.minimumSize = minimumSize
     self.activatesApplication = activatesApplication
@@ -58,10 +61,11 @@ public final class SettingsWindowPresenter<Content: View> {
 
     let panel = SettingsPanel(
       contentRect: NSRect(origin: .zero, size: configuration.size),
-      styleMask: [.borderless, .resizable, .nonactivatingPanel],
+      styleMask: [.borderless, .resizable],
       backing: .buffered,
       defer: false
     )
+    panel.title = configuration.title
     panel.becomesKeyOnlyIfNeeded = false
     panel.isFloatingPanel = false
     panel.hidesOnDeactivate = false
@@ -93,17 +97,14 @@ public final class SettingsWindowPresenter<Content: View> {
         NSApp.activate(ignoringOtherApps: true)
       }
     }
-    window.level = .floating
-    window.orderFrontRegardless()
-    window.makeKey()
-    window.level = .normal
+    window.makeKeyAndOrderFront(nil)
   }
 }
 
 @MainActor
 private final class SettingsPanel: NSPanel {
   override var canBecomeKey: Bool { true }
-  override var canBecomeMain: Bool { false }
+  override var canBecomeMain: Bool { true }
 
   override func performKeyEquivalent(with event: NSEvent) -> Bool {
     if Self.isCloseShortcut(event) {

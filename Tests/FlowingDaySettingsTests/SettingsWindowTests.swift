@@ -13,16 +13,27 @@ final class SettingsWindowTests: XCTestCase {
 
     XCTAssertFalse(window.styleMask.contains(.titled))
     XCTAssertTrue(window.styleMask.contains(.resizable))
-    XCTAssertTrue(window.styleMask.contains(.nonactivatingPanel))
+    XCTAssertFalse(window.styleMask.contains(.nonactivatingPanel))
+    XCTAssertEqual(window.title, "Settings")
     XCTAssertFalse(window.isOpaque)
     XCTAssertTrue(window.hasShadow)
     XCTAssertTrue(window.isMovableByWindowBackground)
     XCTAssertTrue(window.canBecomeKey)
-    XCTAssertFalse(window.canBecomeMain)
+    XCTAssertTrue(window.canBecomeMain)
     XCTAssertEqual(window.level, .normal)
   }
 
-  func testShowingPanelRestoresNormalWindowLevel() {
+  func testPresenterUsesConfiguredWindowTitle() {
+    let presenter = SettingsWindowPresenter(
+      configuration: SettingsWindowConfiguration(title: "App Preferences"),
+      rootView: Color.clear
+    )
+    defer { presenter.window.close() }
+
+    XCTAssertEqual(presenter.window.title, "App Preferences")
+  }
+
+  func testShowingPanelUsesNormalWindowLevel() {
     let presenter = SettingsWindowPresenter(rootView: Color.clear)
     defer { presenter.window.close() }
 
