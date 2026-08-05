@@ -198,6 +198,37 @@ export const tokenGroups: readonly TokenGroup[] = [
       ['track-off', dynamic(0xe3e3e1, 0x48484a)],
     ],
   },
+  {
+    title: 'Window chrome — SettingsViewConfiguration and the close button',
+    tokens: [
+      ['window-radius', '18px'],
+      ['sidebar-width', '224px'],
+      ['close-hover', dynamic(0xff5f57, 0xff6961)],
+    ],
+  },
+  {
+    /**
+     * AppKit draws the popup panel and settings window shadows itself and publishes no
+     * values, so these approximate the platform look and are exposed for tuning.
+     */
+    title: 'Elevation — approximations of the AppKit panel and window shadows',
+    tokens: [
+      [
+        'menu-shadow',
+        {
+          light: `0 8px 24px ${srgb(0x000000, 0.16)}, 0 2px 6px ${srgb(0x000000, 0.1)}`,
+          dark: `0 8px 24px ${srgb(0x000000, 0.46)}, 0 2px 6px ${srgb(0x000000, 0.32)}`,
+        },
+      ],
+      [
+        'window-shadow',
+        {
+          light: `0 28px 68px ${srgb(0x000000, 0.28)}, 0 6px 18px ${srgb(0x000000, 0.14)}`,
+          dark: `0 28px 68px ${srgb(0x000000, 0.62)}, 0 6px 18px ${srgb(0x000000, 0.4)}`,
+        },
+      ],
+    ],
+  },
 ]
 
 /**
