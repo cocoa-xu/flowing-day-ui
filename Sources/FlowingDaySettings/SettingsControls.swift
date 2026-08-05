@@ -200,6 +200,113 @@ public struct SettingsSwitch: View {
   }
 }
 
+enum SettingsIconSelectionButtonMetrics {
+  static let height: CGFloat = 31
+  static let horizontalInset: CGFloat = 10
+  static let contentSpacing: CGFloat = 9
+  static let cornerRadius: CGFloat = 9
+  static let iconWidth: CGFloat = 14
+  static let indicatorSize: CGFloat = 15
+}
+
+public struct SettingsIconSelectionButton<Leading: View>: View {
+  private let title: String
+  private let tint: Color
+  private let help: String?
+  private let leading: Leading
+  @Binding private var isSelected: Bool
+
+  public init(
+    title: String,
+    tint: Color,
+    isSelected: Binding<Bool>,
+    help: String? = nil,
+    @ViewBuilder leading: () -> Leading
+  ) {
+    self.title = title
+    self.tint = tint
+    self.help = help
+    self.leading = leading()
+    _isSelected = isSelected
+  }
+
+  public var body: some View {
+    Button(action: toggle) {
+      HStack(spacing: SettingsIconSelectionButtonMetrics.contentSpacing) {
+        leading
+          .font(.system(size: 9, weight: .medium))
+          .foregroundStyle(tint.opacity(isSelected ? 1 : 0.3))
+          .frame(width: SettingsIconSelectionButtonMetrics.iconWidth)
+        Text(title)
+          .font(.system(size: 11, weight: .medium))
+        Spacer()
+        SettingsSelectionIndicator(isSelected: isSelected, tint: tint)
+      }
+      .foregroundStyle(isSelected ? SettingsPalette.ink : SettingsPalette.faint)
+      .padding(.horizontal, SettingsIconSelectionButtonMetrics.horizontalInset)
+      .frame(height: SettingsIconSelectionButtonMetrics.height)
+      .contentShape(Rectangle())
+      .background(
+        tint.opacity(isSelected ? 0.065 : 0),
+        in: RoundedRectangle(cornerRadius: SettingsIconSelectionButtonMetrics.cornerRadius)
+      )
+      .overlay {
+        RoundedRectangle(cornerRadius: SettingsIconSelectionButtonMetrics.cornerRadius)
+          .stroke(isSelected ? tint.opacity(0.15) : Color.clear)
+      }
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(title)
+    .accessibilityValue(isSelected ? "Selected" : "Not selected")
+    .help(help ?? (isSelected ? "Hide \(title)" : "Show \(title)"))
+  }
+
+  func toggle() {
+    isSelected.toggle()
+  }
+}
+
+extension SettingsIconSelectionButton where Leading == Image {
+  public init(
+    symbol: String,
+    title: String,
+    tint: Color,
+    isSelected: Binding<Bool>,
+    help: String? = nil
+  ) {
+    self.init(
+      title: title,
+      tint: tint,
+      isSelected: isSelected,
+      help: help
+    ) {
+      Image(systemName: symbol)
+    }
+  }
+}
+
+private struct SettingsSelectionIndicator: View {
+  let isSelected: Bool
+  let tint: Color
+
+  var body: some View {
+    ZStack {
+      Circle()
+        .fill(isSelected ? tint : Color.clear)
+      Circle()
+        .stroke(isSelected ? tint : SettingsPalette.edge)
+      Image(systemName: "checkmark")
+        .font(.system(size: 7, weight: .bold))
+        .foregroundStyle(.white)
+        .opacity(isSelected ? 1 : 0)
+    }
+    .frame(
+      width: SettingsIconSelectionButtonMetrics.indicatorSize,
+      height: SettingsIconSelectionButtonMetrics.indicatorSize
+    )
+  }
+}
+
 enum SettingsDependentRowsMotion {
   static let standardDuration: TimeInterval = 0.18
   static let reducedMotionDuration: TimeInterval = 0.12

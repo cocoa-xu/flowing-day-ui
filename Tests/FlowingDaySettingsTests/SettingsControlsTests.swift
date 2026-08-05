@@ -120,6 +120,38 @@ final class SettingsControlsTests: XCTestCase {
   }
 
   @MainActor
+  func testSelectionButtonTogglesItsBinding() {
+    let state = BooleanState(false)
+    let button = SettingsIconSelectionButton(
+      symbol: "network",
+      title: "Network",
+      tint: .blue,
+      isSelected: Binding(
+        get: { state.value },
+        set: { state.value = $0 }
+      )
+    )
+
+    button.toggle()
+
+    XCTAssertTrue(state.value)
+  }
+
+  @MainActor
+  func testSelectionButtonUsesCompactRowHeight() {
+    let height = fittingHeight(
+      SettingsIconSelectionButton(
+        symbol: "display",
+        title: "Displays",
+        tint: .orange,
+        isSelected: .constant(true)
+      )
+    )
+
+    XCTAssertEqual(height, SettingsIconSelectionButtonMetrics.height)
+  }
+
+  @MainActor
   func testDependentRowsOnlyOccupySpaceWhenVisible() {
     let hiddenHeight = fittingHeight(
       SettingsDependentRows(isVisible: false) {
