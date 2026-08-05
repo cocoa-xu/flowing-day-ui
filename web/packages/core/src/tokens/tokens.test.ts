@@ -4,12 +4,14 @@ import {
   darkValue,
   dynamic,
   fontWeights,
+  isDualValue,
   lightValue,
   reducedMotionTokens,
   srgb,
   tokenGroups,
   translucent,
 } from './tokens.js'
+import raw from './tokens.json' with { type: 'json' }
 
 describe('srgb', () => {
   it('renders opaque colours as hex, mirroring the Swift literals', () => {
@@ -54,6 +56,92 @@ describe('fontWeights', () => {
     ])
     expect(fontWeights.regular).toBe(400)
     expect(fontWeights.semibold).toBe(600)
+  })
+})
+
+interface RawGroup {
+  readonly title: string
+  readonly source: string | null
+  readonly note?: string
+  readonly expand?: string
+  readonly tokens?: Readonly<Record<string, { swift?: string; platform?: string; note?: string }>>
+}
+
+const rawGroups = raw.groups as readonly RawGroup[]
+
+const rawTokens = rawGroups.flatMap((group) =>
+  Object.entries(group.tokens ?? {}).map(([name, token]) => ({ name, token, group })),
+)
+
+/**
+ * tokens.json is the only place a value is written, and everything in it is meant to
+ * come from the Swift sources. These guard that claim: a value that appears without
+ * saying where it came from is the beginning of the drift the file exists to prevent.
+ */
+describe('tokens.json as the source', () => {
+  it('traces every token to a Swift symbol, or says why it cannot', () => {
+    const untraceable = rawTokens
+      .filter(({ token, group }) => !group.source && !token.swift && token.platform !== 'web')
+      .map(({ name }) => name)
+
+    expect(untraceable).toEqual([])
+  })
+
+  /** AppKit draws these itself and publishes no values, so there is nothing to align to. */
+  it('marks exactly the three tokens with no Swift counterpart as web-only', () => {
+    const webOnly = rawTokens
+      .filter(({ token }) => token.platform === 'web')
+      .map(({ name }) => name)
+
+    expect(webOnly).toEqual(['track-off', 'menu-shadow', 'window-shadow'])
+  })
+
+  it('explains every web-only token, on the token or on its group', () => {
+    const unexplained = rawTokens
+      .filter(({ token }) => token.platform === 'web')
+      .filter(({ token, group }) => !token.note && !group.note)
+      .map(({ name }) => name)
+
+    expect(unexplained).toEqual([])
+  })
+
+  it('expands each value kind into the CSS it stands for', () => {
+    const flat = new Map(tokenGroups.flatMap((group) => group.tokens))
+
+    expect(flat.get('metric-card-radius')).toBe('14px') // px
+    expect(flat.get('motion-page')).toBe('220ms') // ms
+    expect(flat.get('surface-sidebar')).toBe('var(--fd-palette-card)') // ref
+    expect(flat.get('motion-easing')).toBe('cubic-bezier(0, 0, 0.58, 1)') // css
+    expect(flat.get('accent')).toBe('#6D9EA5') // opaque colour
+    expect(flat.get('accent-lift')).toEqual({ light: '0', dark: '0.131' }) // paired scalar
+    expect(flat.get('palette-hairline')).toEqual({
+      light: 'rgb(0 0 0 / 0.07)',
+      dark: 'rgb(255 255 255 / 0.09)',
+    }) // paired colour carrying alpha
+  })
+
+  it('pairs a token exactly when one of its facets differs by appearance', () => {
+    const flat = new Map(tokenGroups.flatMap((group) => group.tokens))
+
+    // Same hex on both sides, different alpha — still appearance-dependent.
+    expect(flat.get('knob-border')).toEqual({
+      light: 'rgb(0 0 0 / 0.12)',
+      dark: 'rgb(0 0 0 / 0.42)',
+    })
+    expect(isDualValue(flat.get('knob-shadow') ?? '')).toBe(false)
+  })
+
+  it('emits every token the JSON declares, and no others', () => {
+    const emitted = tokenGroups.flatMap((group) => group.tokens.map(([name]) => name))
+    const declared = [
+      ...rawTokens.map(({ name }) => name),
+      ...Object.keys(raw.typography.roles).flatMap((role) =>
+        ['size', 'weight', 'family', 'numeric'].map((facet) => `text-${role}-${facet}`),
+      ),
+    ]
+
+    expect(new Set(emitted)).toEqual(new Set(declared))
+    expect(emitted).toHaveLength(declared.length)
   })
 })
 
