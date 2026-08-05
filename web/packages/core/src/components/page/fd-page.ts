@@ -1,4 +1,4 @@
-import { type CSSResultGroup, css, html } from 'lit'
+import { type CSSResultGroup, css, html, type PropertyValues } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { FdElement } from '../../internal/base-element.js'
 
@@ -45,6 +45,19 @@ export class FdPage extends FdElement {
 
   /** Set by `fd-settings-window`; not intended to be authored. */
   @property({ type: Boolean, reflect: true }) active = false
+
+  override updated(changed: PropertyValues<this>): void {
+    super.updated(changed)
+    // The page's own content lives in light DOM, so its accent has to be published here
+    // rather than by the window: slotted nodes inherit from their light-DOM parent.
+    for (const [token, value] of [
+      ['--fd-accent-fill', this.accent],
+      ['--fd-accent-foreground', this.accentForeground],
+    ] as const) {
+      if (value) this.style.setProperty(token, value)
+      else this.style.removeProperty(token)
+    }
+  }
 
   override render() {
     return html`<slot></slot>`

@@ -32,6 +32,20 @@ const aliasBlock = (indent: string, pick: (value: TokenValue) => string, dualOnl
 const reducedMotionBlock = (indent: string) =>
   reducedMotionTokens.map(([name, value]) => `${indent}--_fd-${name}: ${value};`).join('\n')
 
+const accentTokens = () => allTokens().filter(([name]) => name.startsWith('accent-'))
+
+/**
+ * Private aliases are computed once on `:host` and inherited, so redeclaring a public
+ * token deeper in the same shadow root has no effect. `data-fd-accent-scope` re-derives
+ * the accent aliases at that element, which is what lets a component retint one part of
+ * its own shadow tree — `SettingsView` giving the sidebar the selected page's accent.
+ */
+const accentScopeBlock = (indent: string, pick: (value: TokenValue) => string, dualOnly = false) =>
+  accentTokens()
+    .filter(([, value]) => !dualOnly || isDualValue(value))
+    .map(([name, value]) => alias(indent, name, pick(value)))
+    .join('\n')
+
 const publicBlock = (indent: string, pick: (value: TokenValue) => string, dualOnly = false) =>
   (dualOnly ? dualTokens() : allTokens())
     .map(([name, value]) => `${indent}--fd-${name}: ${pick(value)};`)
@@ -52,9 +66,17 @@ export const themeStyles: CSSResult = unsafeCSS(`
 ${aliasBlock('  ', lightValue)}
 }
 
+[data-fd-accent-scope] {
+${accentScopeBlock('  ', lightValue)}
+}
+
 @media (prefers-color-scheme: dark) {
   :host {
 ${aliasBlock('    ', darkValue, true)}
+  }
+
+  [data-fd-accent-scope] {
+${accentScopeBlock('    ', darkValue, true)}
   }
 }
 

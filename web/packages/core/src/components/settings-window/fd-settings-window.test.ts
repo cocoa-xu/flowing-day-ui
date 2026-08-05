@@ -180,23 +180,60 @@ describe('fd-settings-window page header', () => {
 })
 
 describe('fd-settings-window accent', () => {
-  it('retints the window from the selected page', async () => {
+  const scope = (element: FdSettingsWindow) =>
+    element.shadowRoot?.querySelector('.root') as HTMLElement
+
+  it('retints its own chrome from the selected page', async () => {
     const element = await mount()
-    expect(element.style.getPropertyValue('--fd-accent-fill')).toBe('')
+    expect(scope(element).style.getPropertyValue('--fd-accent-fill')).toBe('')
 
     element.page = 'usb'
     await element.updateComplete
-    expect(element.style.getPropertyValue('--fd-accent-fill')).toBe('#B4795E')
+    expect(scope(element).style.getPropertyValue('--fd-accent-fill')).toBe('#B4795E')
 
     element.page = 'general'
     await element.updateComplete
-    expect(element.style.getPropertyValue('--fd-accent-fill')).toBe('')
+    expect(scope(element).style.getPropertyValue('--fd-accent-fill')).toBe('')
+  })
+
+  /**
+   * The host's inline style belongs to the consumer. Writing the page accent there
+   * silently undid any theming they had applied on the very next render.
+   */
+  it("never writes to the host, so a caller's own accent survives navigation", async () => {
+    const element = await mount()
+    element.style.setProperty('--fd-accent-fill', '#123456')
+
+    element.page = 'usb'
+    await element.updateComplete
+    element.page = 'general'
+    await element.updateComplete
+
+    expect(element.style.getPropertyValue('--fd-accent-fill')).toBe('#123456')
+  })
+
+  it('publishes the accent on the page itself, which its slotted content inherits', async () => {
+    const element = await mount()
+    const usb = element.querySelector('fd-page[page-id="usb"]') as HTMLElement
+    const general = element.querySelector('fd-page[page-id="general"]') as HTMLElement
+
+    expect(usb.style.getPropertyValue('--fd-accent-fill')).toBe('#B4795E')
+    expect(general.style.getPropertyValue('--fd-accent-fill')).toBe('')
   })
 
   it('gives a page-specific accent to its own sidebar row', async () => {
     const element = await mount()
     expect(navRows(element)[2]?.style.getPropertyValue('--fd-accent-fill')).toBe('#B4795E')
-    expect(navRows(element)[0]?.getAttribute('style')).toBeNull()
+    expect(navRows(element)[0]?.style.getPropertyValue('--fd-accent-fill')).toBe('')
+  })
+
+  it('re-derives the accent aliases inside an accent scope', async () => {
+    const element = await mount()
+    element.page = 'usb'
+    await element.updateComplete
+
+    const resolved = getComputedStyle(scope(element)).getPropertyValue('--_fd-accent-fill')
+    expect(resolved.trim()).toBe('#B4795E')
   })
 })
 

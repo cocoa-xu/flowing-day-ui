@@ -56,11 +56,16 @@ export class FdSettingsWindow extends FdElement {
     baseStyles,
     css`
       :host {
-        display: flex;
+        display: block;
         position: relative;
         overflow: hidden;
         background: var(--_fd-surface-canvas);
         border-radius: var(--_fd-window-radius);
+      }
+
+      .root {
+        display: flex;
+        height: 100%;
       }
 
       :host::after {
@@ -336,6 +341,8 @@ export class FdSettingsWindow extends FdElement {
 
   @query('.content-inner') private contentInner!: HTMLElement
 
+  @query('.root') private root!: HTMLElement | null
+
   #observer: MutationObserver | null = null
 
   get pages(): FdPage[] {
@@ -367,8 +374,17 @@ export class FdSettingsWindow extends FdElement {
     const selected = this.selectedPage
     for (const page of this.pages) page.active = page === selected
 
-    this.style.setProperty('--fd-accent-fill', selected?.accent ?? '')
-    this.style.setProperty('--fd-accent-foreground', selected?.accentForeground ?? '')
+    // Applied to the shadow root's accent scope, never to the host: the host's inline
+    // style belongs to whoever is using this element, and overwriting it every render
+    // would silently undo their theming.
+    for (const [token, value] of [
+      ['--fd-accent-fill', selected?.accent],
+      ['--fd-accent-foreground', selected?.accentForeground],
+    ] as const) {
+      if (value) this.root?.style.setProperty(token, value)
+      else this.root?.style.removeProperty(token)
+    }
+
     if (changed.has('page') && changed.get('page') !== undefined) this.#animatePageChange()
   }
 
@@ -423,6 +439,7 @@ export class FdSettingsWindow extends FdElement {
         aria-current=${selected ? 'page' : nothing}
         ?data-indented=${indented}
         ?disabled=${page.unavailable}
+        data-fd-accent-scope
         style=${
           [
             page.accent ? `--fd-accent-fill: ${page.accent}` : '',
@@ -445,6 +462,7 @@ export class FdSettingsWindow extends FdElement {
     const headerSymbol = selected?.headerSymbol ?? selected?.symbol
 
     return html`
+      <div class="root" data-fd-accent-scope>
       <div class="sidebar" part="sidebar">
         ${
           this.hideClose
@@ -519,6 +537,7 @@ export class FdSettingsWindow extends FdElement {
           }
           <slot></slot>
         </div>
+      </div>
       </div>
     `
   }
