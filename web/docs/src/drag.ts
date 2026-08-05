@@ -10,6 +10,11 @@
  * pointerdown that starts the drag, which is what `NSWindow.didMoveNotification` does
  * for the AppKit panel.
  */
+/**
+ * Controls whose own pointer handling sits on the host element. Anything that handles
+ * a press through an inner `button` or `input` is already covered — `composedPath()`
+ * crosses the shadow boundary, so the inner element is in the path.
+ */
 const INTERACTIVE = [
   'button',
   'input',
@@ -19,6 +24,7 @@ const INTERACTIVE = [
   'fd-switch',
   'fd-popup',
   'fd-check-toggle',
+  'fd-slider',
 ].join(',')
 
 /** Keeps this much of the window on screen, so it can always be grabbed again. */
@@ -44,7 +50,10 @@ export function makeMovableByBackground(element: HTMLElement): void {
   }
 
   element.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0 || startsOnAControl(event)) return
+    // `defaultPrevented` catches a control that claimed the press without being on the
+    // list above; capturing the pointer here would take it back off them, and with it
+    // every event up to and including the pointerup that ends their gesture.
+    if (event.button !== 0 || event.defaultPrevented || startsOnAControl(event)) return
     activePointer = event.pointerId
     originX = event.clientX - offsetX
     originY = event.clientY - offsetY

@@ -16,7 +16,7 @@ const partOf = (element: FdSlider, selector: string) =>
   element.shadowRoot?.querySelector(selector) as HTMLElement
 
 /** The Swift control reads locationInWindow; a pointer event carries clientX. */
-function drag(element: FdSlider, offsetX: number, type = 'pointerdown'): void {
+function drag(element: FdSlider, offsetX: number, type = 'pointerdown', buttons = 1): void {
   const bounds = element.getBoundingClientRect()
   element.dispatchEvent(
     new PointerEvent(type, {
@@ -24,6 +24,7 @@ function drag(element: FdSlider, offsetX: number, type = 'pointerdown'): void {
       clientY: bounds.top + 8,
       bubbles: true,
       pointerId: 1,
+      buttons,
     }),
   )
 }
@@ -128,6 +129,35 @@ describe('fd-slider', () => {
     drag(element, 6.5 + 100, 'pointerup')
     drag(element, 6.5 + 200, 'pointermove')
     expect(element.value).toBeCloseTo(50, 4)
+  })
+
+  /**
+   * A draggable ancestor capturing the same pointer takes every later event with it,
+   * pointerup included. Left unhandled the knob follows the pointer for good, and no
+   * gesture can stop it, because the next press is captured away too.
+   */
+  it('ends the drag when an ancestor takes the pointer capture', async () => {
+    const element = await mount('<fd-slider min="0" max="100"></fd-slider>')
+
+    drag(element, 6.5 + 20)
+    element.dispatchEvent(new PointerEvent('lostpointercapture', { pointerId: 1, bubbles: true }))
+    drag(element, 6.5 + 180, 'pointermove')
+
+    expect(element.value).toBeCloseTo(10, 4)
+  })
+
+  it('ends the drag once no button is held, however the pointerup was lost', async () => {
+    const element = await mount('<fd-slider min="0" max="100"></fd-slider>')
+
+    drag(element, 6.5 + 20)
+    // The press ended somewhere this element never heard about.
+    drag(element, 6.5 + 100, 'pointermove', 0)
+    expect(element.value).toBeCloseTo(10, 4)
+
+    // And it stays put on every later hover, rather than latching onto the pointer.
+    drag(element, 6.5 + 180, 'pointermove', 0)
+    drag(element, 6.5 + 40, 'pointermove', 1)
+    expect(element.value).toBeCloseTo(10, 4)
   })
 
   it('reports each move', async () => {

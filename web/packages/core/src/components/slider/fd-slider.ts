@@ -123,6 +123,10 @@ export class FdSlider extends FdElement {
     this.addEventListener('pointermove', this.#onPointerMove)
     this.addEventListener('pointerup', this.#endDrag)
     this.addEventListener('pointercancel', this.#endDrag)
+    // An ancestor may capture the same pointer for itself — a draggable window does
+    // exactly that. Capture then transfers away and every later event, pointerup
+    // included, goes there instead, so this is the only signal the drag has ended.
+    this.addEventListener('lostpointercapture', this.#endDrag)
     this.addEventListener('keydown', this.#onKeydown)
   }
 
@@ -215,6 +219,13 @@ export class FdSlider extends FdElement {
 
   #onPointerMove = (event: PointerEvent): void => {
     if (this.disabled || !this.#dragging) return
+    // Ground truth, whatever became of the capture: no button down, no drag. Without
+    // this a press whose pointerup was delivered elsewhere leaves the knob following
+    // the pointer for good, with no gesture left that could stop it.
+    if (event.buttons === 0) {
+      this.#endDrag()
+      return
+    }
     this.#commit(event.clientX)
   }
 
