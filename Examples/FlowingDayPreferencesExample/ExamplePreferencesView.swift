@@ -1,35 +1,28 @@
 import FlowingDayPreferences
 import SwiftUI
 
-private enum ExamplePage: Hashable {
-  case general
+enum ExamplePage: String, CaseIterable {
   case appearance
-  case devices
+  case layout
+  case typography
+  case motion
+  case icons
+  case components
   case about
 }
 
-private enum UpdateChannel: Hashable {
-  case stable
-  case preview
-}
-
-private enum AppearanceMode: Hashable {
-  case system
-  case light
-  case dark
-}
-
 struct ExamplePreferencesView: View {
-  @State private var selection = ExamplePage.general
-  @State private var launchesAtLogin = true
-  @State private var updateChannel = UpdateChannel.stable
-  @State private var appearance = AppearanceMode.system
-  @State private var contentWidth = 720.0
-  @State private var detectsDisplays = true
-  @State private var detectsStorage = true
-  @State private var detectsAudio = false
-  @State private var advancedDevices = false
-  @State private var deviceScope = "Connected"
+  @State private var selection = ExamplePage.appearance
+  @State private var appearance = ExampleAppearance.system
+  @State private var accent = ExampleAccent.celadon
+  @State private var customAccent = ExampleAccent.celadon.color
+  @State private var corners = ExampleCorners.soft
+  @State private var density = ExampleDensity.standard
+  @State private var contentWidth = ExampleContentWidth.standard
+  @State private var sidebarWidth = 224.0
+  @State private var textScale = ExampleTextScale.standard
+  @State private var headingFace = PreferencesFontDesign.rounded
+  @State private var showsSeparators = true
 
   var body: some View {
     PreferencesView(
@@ -37,143 +30,140 @@ struct ExamplePreferencesView: View {
       configuration: configuration,
       groups: pageGroups
     )
-    .preferredColorScheme(preferredColorScheme)
+    .preferredColorScheme(appearance.colorScheme)
   }
 
   private var configuration: PreferencesViewConfiguration {
-    var metrics = PreferencesMetrics.standard
-    metrics.contentWidth = contentWidth
-    return PreferencesViewConfiguration(
+    PreferencesViewConfiguration(
       applicationName: "FlowingDayUI",
-      sidebarFooter: "Preferences example",
-      metrics: metrics
+      sidebarFooter: "Every control here changes this window.",
+      defaultAccent: accent.value(customColor: customAccent),
+      metrics: metrics,
+      typography: typography,
+      sidebarWidth: sidebarWidth,
+      cornerRadius: corners.windowRadius
     )
   }
 
-  private var preferredColorScheme: ColorScheme? {
-    switch appearance {
-    case .system: nil
-    case .light: .light
-    case .dark: .dark
-    }
+  private var metrics: PreferencesMetrics {
+    var metrics = PreferencesMetrics.standard
+    metrics.cardRadius = corners.cardRadius
+    metrics.controlRadius = corners.controlRadius
+    metrics.rowInset = density.rowInset
+    metrics.contentWidth = contentWidth.value
+    metrics.sectionSpacing = density.sectionSpacing
+    return metrics
+  }
+
+  private var typography: PreferencesTypography {
+    var typography = PreferencesTypography.standard
+    typography.apply(scale: textScale.multiplier, headingFace: headingFace)
+    return typography
+  }
+
+  private var customAccentBinding: Binding<Color> {
+    Binding(
+      get: { customAccent },
+      set: {
+        customAccent = $0
+        accent = .custom
+      }
+    )
   }
 
   private var pageGroups: [PreferencesPageGroup<ExamplePage>] {
     [
       PreferencesPageGroup(
-        id: "application",
-        title: "Application",
-        pages: [generalPage, appearancePage]
+        id: "design",
+        pages: [appearancePage, layoutPage, typographyPage]
       ),
       PreferencesPageGroup(
-        id: "hardware",
-        title: "Hardware",
-        pages: [devicesPage]
+        id: "behavior",
+        title: "Behavior",
+        pages: [motionPage, iconsPage]
       ),
       PreferencesPageGroup(
-        id: "information",
-        pages: [aboutPage]
+        id: "reference",
+        title: "Reference",
+        pages: [componentsPage, aboutPage]
       ),
     ]
-  }
-
-  private var generalPage: PreferencesPage<ExamplePage> {
-    PreferencesPage(
-      id: .general,
-      title: "General",
-      subtitle: "Everyday application behavior",
-      icon: .system("gearshape")
-    ) {
-      PreferencesPaneStack {
-        PreferencesSection("Startup") {
-          PreferencesSwitchRow(
-            symbol: "power",
-            title: "Launch at Login",
-            caption: "Open the example when you sign in.",
-            isOn: $launchesAtLogin
-          )
-          PreferencesRowSeparator(isIndented: true)
-          PreferencesPopupRow(
-            symbol: "arrow.triangle.2.circlepath",
-            title: "Update Channel",
-            selection: $updateChannel,
-            options: [
-              PreferencesPopupOption(.stable, label: "Stable"),
-              PreferencesPopupOption(.preview, label: "Preview"),
-            ]
-          )
-        }
-      }
-    }
   }
 
   private var appearancePage: PreferencesPage<ExamplePage> {
     PreferencesPage(
       id: .appearance,
       title: "Appearance",
-      subtitle: "Live preferences for this window",
-      icon: .system("paintpalette")
+      subtitle: "Theme and surface components, live",
+      icon: .system("paintbrush")
     ) {
-      PreferencesPaneStack {
-        PreferencesSection("Window") {
-          PreferencesSegmentedRow(
-            symbol: "circle.lefthalf.filled",
-            title: "Appearance",
-            selection: $appearance,
-            options: [
-              PreferencesPopupOption(.system, label: "System"),
-              PreferencesPopupOption(.light, label: "Light"),
-              PreferencesPopupOption(.dark, label: "Dark"),
-            ]
-          )
-          PreferencesRowSeparator(isIndented: true)
-          PreferencesSliderRow(
-            symbol: "rectangle.expand.vertical",
-            title: "Content Width",
-            value: $contentWidth,
-            in: 560...760,
-            step: 20
-          ) { "\(Int($0)) pt" }
-        }
-      }
+      AppearanceShowcase(
+        appearance: $appearance,
+        accent: $accent,
+        customAccent: customAccentBinding,
+        corners: $corners,
+        showsSeparators: $showsSeparators
+      )
     }
   }
 
-  private var devicesPage: PreferencesPage<ExamplePage> {
+  private var layoutPage: PreferencesPage<ExamplePage> {
     PreferencesPage(
-      id: .devices,
-      title: "Devices",
-      subtitle: "A compact example of dependent controls",
-      icon: .system("externaldrive.connected.to.line.below")
+      id: .layout,
+      title: "Layout",
+      subtitle: "Spacing, measure, and the sidebar",
+      icon: .system("ruler")
     ) {
-      PreferencesPaneStack {
-        PreferencesSection("Discovery") {
-          PreferencesMultiSelectRow(
-            symbol: "sensor",
-            title: "Device Types",
-            options: [
-              PreferencesMultiSelectOption("Displays", isOn: $detectsDisplays),
-              PreferencesMultiSelectOption("Storage", isOn: $detectsStorage),
-              PreferencesMultiSelectOption("Audio", isOn: $detectsAudio),
-            ]
-          )
-          PreferencesRowSeparator(isIndented: true)
-          PreferencesSwitchGroup(
-            symbol: "slider.horizontal.3",
-            title: "Advanced Discovery",
-            isOn: $advancedDevices
-          ) {
-            PreferencesPopupRow(
-              title: "Device Scope",
-              selection: $deviceScope,
-              options: [
-                PreferencesPopupOption("Connected", label: "Connected"),
-                PreferencesPopupOption("All", label: "All Known"),
-              ]
-            )
-          }
-        }
-      }
+      LayoutShowcase(
+        density: $density,
+        contentWidth: $contentWidth,
+        sidebarWidth: $sidebarWidth
+      )
+    }
+  }
+
+  private var typographyPage: PreferencesPage<ExamplePage> {
+    PreferencesPage(
+      id: .typography,
+      title: "Typography",
+      subtitle: "Seventeen semantic text roles",
+      icon: .system("textformat")
+    ) {
+      TypographyShowcase(textScale: $textScale, headingFace: $headingFace)
+    }
+  }
+
+  private var motionPage: PreferencesPage<ExamplePage> {
+    PreferencesPage(
+      id: .motion,
+      title: "Motion",
+      subtitle: "Disclosure and Reduce Motion behavior",
+      icon: .system("bolt")
+    ) {
+      MotionShowcase()
+    }
+  }
+
+  private var iconsPage: PreferencesPage<ExamplePage> {
+    PreferencesPage(
+      id: .icons,
+      title: "Icons",
+      subtitle: "SF Symbols and page-level accents",
+      icon: .system("sparkles"),
+      accent: ExampleAccent.iris.value(customColor: customAccent)
+    ) {
+      IconsShowcase()
+    }
+  }
+
+  private var componentsPage: PreferencesPage<ExamplePage> {
+    PreferencesPage(
+      id: .components,
+      title: "Components",
+      subtitle: "Every control type, live",
+      icon: .system("list.bullet")
+    ) {
+      ComponentsShowcase(accent: $accent)
     }
   }
 
@@ -181,27 +171,11 @@ struct ExamplePreferencesView: View {
     PreferencesPage(
       id: .about,
       title: "About",
-      subtitle: "FlowingDayUI 2.0 development example",
+      subtitle: "The package behind this window",
       icon: .system("info.circle"),
       headerIcon: .application
     ) {
-      PreferencesPaneStack {
-        PreferencesSection("FlowingDayUI") {
-          PreferencesValueRow(
-            symbol: "shippingbox",
-            title: "Module",
-            value: "FlowingDayPreferences"
-          )
-          PreferencesRowSeparator(isIndented: true)
-          PreferencesLinkRow(
-            symbol: "chevron.left.forwardslash.chevron.right",
-            title: "Source Code",
-            buttonTitle: "GitHub",
-            destination: URL(string: "https://github.com/cocoa-xu/flowing-day-ui")!,
-            help: "Open FlowingDayUI on GitHub"
-          )
-        }
-      }
+      AboutShowcase()
     }
   }
 }

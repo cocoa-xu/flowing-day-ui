@@ -23,7 +23,7 @@ let package = Package(
     ),
     .testTarget(
       name: "FlowingDayPreferencesTests",
-      dependencies: ["FlowingDayPreferences"]
+      dependencies: ["FlowingDayPreferences", "FlowingDayPreferencesExample"]
     ),
   ]
 )
