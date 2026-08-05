@@ -31,16 +31,7 @@ body {
   padding: 48px 24px;
 }
 
-/*
- * PreferencesWindowConfiguration ships 900 × 640, and the mock holds exactly that.
- *
- * Deliberately not a percentage: the stage centres a shrink-to-fit item, so a
- * percentage width there is a cyclic size and CSS falls back to intrinsic sizing —
- * which lets the page content change the window's own dimensions as you navigate.
- */
 .stage fd-preferences-window {
-  width: 900px;
-  height: 640px;
   box-shadow: var(--fd-window-shadow);
   /* Mirrors NSPanel's isMovableByWindowBackground. */
   cursor: grab;

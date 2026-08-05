@@ -38,6 +38,19 @@ Pages are light DOM, so a static page can build one with no JavaScript at all:
 </fd-preferences-window>
 ```
 
+The window starts at `900 × 640`, which is also its default minimum. Its default maximum
+is `1160 × 860`. Applications can set their own bounds without reaching into the shadow
+tree:
+
+```css
+fd-preferences-window {
+  --fd-preferences-min-width: 840px;
+  --fd-preferences-min-height: 600px;
+  --fd-preferences-max-width: 1080px;
+  --fd-preferences-max-height: 760px;
+}
+```
+
 ## Theming
 
 Every value in `PreferencesTheme.swift` is a CSS custom property. Because custom properties
@@ -50,9 +63,7 @@ same semantics as overriding a SwiftUI environment value:
 ```
 
 `--fd-accent` is the only accent knob you need. Fill, foreground, wash and veil all derive
-from it, in both light and dark. `PreferencesAccent` spells those out as four literals per
-appearance, but they are one hue at four lightnesses, and deriving them in oklch
-reproduces every Swift value to within 3/255.
+from it in both light and dark, using the same lightness steps as `PreferencesAccent`.
 
 Import the stylesheet when you want the tokens available to your own CSS too:
 

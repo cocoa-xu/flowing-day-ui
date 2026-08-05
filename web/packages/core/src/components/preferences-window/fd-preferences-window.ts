@@ -49,6 +49,10 @@ const xmark = svg`
  * @csspart sidebar - The sidebar column.
  * @csspart content - The scrolling content pane.
  * @csspart page-header - The large page heading.
+ * @cssprop [--fd-preferences-min-width=900px] - Minimum host width.
+ * @cssprop [--fd-preferences-min-height=640px] - Minimum host height.
+ * @cssprop [--fd-preferences-max-width=1160px] - Maximum host width.
+ * @cssprop [--fd-preferences-max-height=860px] - Maximum host height.
  */
 @customElement('fd-preferences-window')
 export class FdPreferencesWindow extends FdElement {
@@ -59,6 +63,13 @@ export class FdPreferencesWindow extends FdElement {
         display: block;
         position: relative;
         overflow: hidden;
+        box-sizing: border-box;
+        width: var(--fd-preferences-min-width, 900px);
+        height: var(--fd-preferences-min-height, 640px);
+        min-width: var(--fd-preferences-min-width, 900px);
+        min-height: var(--fd-preferences-min-height, 640px);
+        max-width: var(--fd-preferences-max-width, 1160px);
+        max-height: var(--fd-preferences-max-height, 860px);
         background: var(--_fd-surface-canvas);
         border-radius: var(--_fd-window-radius);
       }

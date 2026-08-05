@@ -21,6 +21,52 @@ final class PreferencesWindowTests: XCTestCase {
     XCTAssertTrue(window.canBecomeKey)
     XCTAssertTrue(window.canBecomeMain)
     XCTAssertEqual(window.level, .normal)
+    XCTAssertEqual(
+      window.contentRect(forFrameRect: window.frame).size,
+      CGSize(width: 900, height: 640)
+    )
+    XCTAssertEqual(window.minSize, CGSize(width: 900, height: 640))
+    XCTAssertEqual(window.maxSize, CGSize(width: 1160, height: 860))
+  }
+
+  func testPresenterAppliesCustomWindowBounds() {
+    let presenter = PreferencesWindowPresenter(
+      configuration: PreferencesWindowConfiguration(
+        size: CGSize(width: 980, height: 700),
+        minimumSize: CGSize(width: 840, height: 600),
+        maximumSize: CGSize(width: 1080, height: 760)
+      ),
+      rootView: Color.clear
+    )
+    defer { presenter.window.close() }
+
+    let window = presenter.window
+    XCTAssertEqual(
+      window.contentRect(forFrameRect: window.frame).size,
+      CGSize(width: 980, height: 700)
+    )
+    XCTAssertEqual(window.minSize, CGSize(width: 840, height: 600))
+    XCTAssertEqual(window.maxSize, CGSize(width: 1080, height: 760))
+  }
+
+  func testPresenterNormalizesInvalidWindowBounds() {
+    let presenter = PreferencesWindowPresenter(
+      configuration: PreferencesWindowConfiguration(
+        size: CGSize(width: 500, height: 400),
+        minimumSize: CGSize(width: 900, height: 640),
+        maximumSize: CGSize(width: 800, height: 500)
+      ),
+      rootView: Color.clear
+    )
+    defer { presenter.window.close() }
+
+    let window = presenter.window
+    XCTAssertEqual(
+      window.contentRect(forFrameRect: window.frame).size,
+      CGSize(width: 900, height: 640)
+    )
+    XCTAssertEqual(window.minSize, CGSize(width: 900, height: 640))
+    XCTAssertEqual(window.maxSize, CGSize(width: 900, height: 640))
   }
 
   func testPresenterUsesConfiguredWindowTitle() {

@@ -95,6 +95,17 @@ let preferencesWindow = PreferencesWindowPresenter(rootView: AppPreferencesView(
 preferencesWindow.show()
 ```
 
+The default `900 × 640` size is also the default minimum; the default maximum is
+`1160 × 860`. Applications can choose a different range:
+
+```swift
+let windowConfiguration = PreferencesWindowConfiguration(
+    size: CGSize(width: 980, height: 700),
+    minimumSize: CGSize(width: 840, height: 600),
+    maximumSize: CGSize(width: 1080, height: 760)
+)
+```
+
 Applications own their preferences, persistence, localization, and business logic. The package owns presentation, navigation, interaction behavior, accessibility, and visual consistency.
 
 Section footers align with the title and caption text inside their rows by default.

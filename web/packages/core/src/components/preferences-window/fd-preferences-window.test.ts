@@ -88,6 +88,34 @@ describe('fd-preferences-window sidebar', () => {
   })
 })
 
+describe('fd-preferences-window sizing', () => {
+  it('uses the Swift window defaults as its initial and constrained size', async () => {
+    const element = await mount()
+    const style = getComputedStyle(element)
+
+    expect(style.width).toBe('900px')
+    expect(style.height).toBe('640px')
+    expect(style.minWidth).toBe('900px')
+    expect(style.minHeight).toBe('640px')
+    expect(style.maxWidth).toBe('1160px')
+    expect(style.maxHeight).toBe('860px')
+  })
+
+  it('accepts application-defined minimum and maximum bounds', async () => {
+    const element = await mount()
+    element.style.setProperty('--fd-preferences-min-width', '840px')
+    element.style.setProperty('--fd-preferences-min-height', '600px')
+    element.style.setProperty('--fd-preferences-max-width', '1080px')
+    element.style.setProperty('--fd-preferences-max-height', '760px')
+    const style = getComputedStyle(element)
+
+    expect(style.minWidth).toBe('840px')
+    expect(style.minHeight).toBe('600px')
+    expect(style.maxWidth).toBe('1080px')
+    expect(style.maxHeight).toBe('760px')
+  })
+})
+
 describe('fd-preferences-window selection', () => {
   it('activates only the selected page', async () => {
     const element = await mount()

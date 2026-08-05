@@ -26,20 +26,26 @@ extension EnvironmentValues {
 }
 
 public struct PreferencesWindowConfiguration: Equatable {
+  public static let defaultSize = CGSize(width: 900, height: 640)
+  public static let defaultMaximumSize = CGSize(width: 1160, height: 860)
+
   public var title: String
   public var size: CGSize
   public var minimumSize: CGSize
+  public var maximumSize: CGSize
   public var activatesApplication: Bool
 
   public init(
     title: String = "Preferences",
-    size: CGSize = CGSize(width: 900, height: 640),
-    minimumSize: CGSize = CGSize(width: 820, height: 560),
+    size: CGSize = PreferencesWindowConfiguration.defaultSize,
+    minimumSize: CGSize = PreferencesWindowConfiguration.defaultSize,
+    maximumSize: CGSize = PreferencesWindowConfiguration.defaultMaximumSize,
     activatesApplication: Bool = true
   ) {
     self.title = title
     self.size = size
     self.minimumSize = minimumSize
+    self.maximumSize = maximumSize
     self.activatesApplication = activatesApplication
   }
 }
@@ -58,9 +64,10 @@ public final class PreferencesWindowPresenter<Content: View> {
   ) {
     self.configuration = configuration
     self.onShow = onShow
+    let bounds = PreferencesWindowBounds(configuration: configuration)
 
     let panel = PreferencesPanel(
-      contentRect: NSRect(origin: .zero, size: configuration.size),
+      contentRect: NSRect(origin: .zero, size: bounds.initialSize),
       styleMask: [.borderless, .resizable],
       backing: .buffered,
       defer: false
@@ -74,7 +81,8 @@ public final class PreferencesWindowPresenter<Content: View> {
     panel.hasShadow = true
     panel.isMovableByWindowBackground = true
     panel.isReleasedWhenClosed = false
-    panel.minSize = configuration.minimumSize
+    panel.minSize = bounds.minimumSize
+    panel.maxSize = bounds.maximumSize
     panel.level = .normal
     panel.contentView = NSHostingView(
       rootView: rootView.environment(
@@ -98,6 +106,27 @@ public final class PreferencesWindowPresenter<Content: View> {
       }
     }
     window.makeKeyAndOrderFront(nil)
+  }
+}
+
+private struct PreferencesWindowBounds {
+  let initialSize: CGSize
+  let minimumSize: CGSize
+  let maximumSize: CGSize
+
+  init(configuration: PreferencesWindowConfiguration) {
+    minimumSize = CGSize(
+      width: max(configuration.minimumSize.width, 0),
+      height: max(configuration.minimumSize.height, 0)
+    )
+    maximumSize = CGSize(
+      width: max(configuration.maximumSize.width, minimumSize.width),
+      height: max(configuration.maximumSize.height, minimumSize.height)
+    )
+    initialSize = CGSize(
+      width: min(max(configuration.size.width, minimumSize.width), maximumSize.width),
+      height: min(max(configuration.size.height, minimumSize.height), maximumSize.height)
+    )
   }
 }
 
