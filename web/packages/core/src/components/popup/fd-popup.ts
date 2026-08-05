@@ -274,6 +274,8 @@ export class FdPopup extends FdElement {
 
   #resizeObserver: ResizeObserver | null = null
 
+  #measured = false
+
   constructor() {
     super()
     this.#internals = this.attachInternals()
@@ -300,8 +302,15 @@ export class FdPopup extends FdElement {
     window.addEventListener('scroll', this.dismiss, { capture: true, passive: true })
 
     // A popup on an inactive fd-page renders inside display: none, where text measures
-    // zero. This catches the moment it is laid out for the first time.
-    this.#resizeObserver = new ResizeObserver(() => this.#applyWidths())
+    // zero. This catches the moment it is laid out for the first time, then stands down.
+    // Measuring resizes the host, so the write is deferred out of the observation cycle
+    // — writing inline would leave the observer reporting an undelivered loop.
+    this.#resizeObserver = new ResizeObserver(() => {
+      if (this.#measured) return
+      requestAnimationFrame(() => {
+        if (!this.#measured) this.#applyWidths()
+      })
+    })
     this.#resizeObserver.observe(this)
   }
 
@@ -324,7 +333,10 @@ export class FdPopup extends FdElement {
     this.#internals.setFormValue(this.value)
     this.#applyWidths()
     // `configure` dismisses an open menu whenever the option list changes underneath it.
-    if (changed.has('options')) this.dismiss()
+    if (changed.has('options')) {
+      this.#measured = false
+      this.dismiss()
+    }
   }
 
   formResetCallback(): void {
@@ -342,6 +354,7 @@ export class FdPopup extends FdElement {
 
   #onSlotChange = (event: Event): void => {
     // Flattened, because `fd-popup-row` forwards its own slot into this one.
+    this.#measured = false
     this.slotted = (event.target as HTMLSlotElement)
       .assignedElements({ flatten: true })
       .filter((element): element is FdOption => element.localName === 'fd-option')
@@ -381,6 +394,7 @@ export class FdPopup extends FdElement {
       this.style.setProperty('--_button-width', width)
     }
     this.#menuWidth = widest(this.measureOption) + 68
+    this.#measured = true
   }
 
   /**

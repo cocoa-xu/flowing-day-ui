@@ -62,14 +62,34 @@ describe('tokenGroups', () => {
   const light = (name: string) => lightValue(flat.get(name) ?? '')
   const dark = (name: string) => darkValue(flat.get(name) ?? '')
 
-  it('carries the celadon accent from SettingsAccent.celadon', () => {
-    expect(flat.get('accent-fill')).toEqual({ light: '#6D9EA5', dark: '#93C8CF' })
-    expect(flat.get('accent-foreground')).toEqual({ light: '#4E7B82', dark: '#9FD1D8' })
+  it('takes the celadon fill of SettingsAccent.celadon as the single accent knob', () => {
+    expect(flat.get('accent')).toBe('#6D9EA5')
   })
 
-  it('derives wash and veil from fill at the Swift opacities', () => {
+  /**
+   * The four literals of SettingsAccent.celadon are one hue at four lightnesses, so
+   * every other accent token chains off `accent` rather than being spelled out.
+   */
+  it('derives the whole accent set from that one colour', () => {
+    expect(light('accent-fill')).toBe(
+      'oklch(from var(--fd-accent) calc(l + var(--fd-accent-lift)) c h)',
+    )
+    expect(light('accent-foreground')).toBe(
+      'oklch(from var(--fd-accent-fill) calc(l + var(--fd-accent-contrast)) c h)',
+    )
     expect(light('accent-wash')).toBe('color-mix(in srgb, var(--fd-accent-fill) 13%, transparent)')
     expect(light('accent-veil')).toBe('color-mix(in srgb, var(--fd-accent-fill) 8%, transparent)')
+  })
+
+  /**
+   * The formulas stay appearance-independent so they can be re-evaluated wherever
+   * `--fd-accent` is set; only the two lightness steps differ between appearances.
+   */
+  it('keeps the appearance difference in the two lightness steps alone', () => {
+    expect(flat.get('accent-lift')).toEqual({ light: '0', dark: '0.131' })
+    expect(flat.get('accent-contrast')).toEqual({ light: '-0.114', dark: '0.03' })
+    expect(dark('accent-fill')).toBe(light('accent-fill'))
+    expect(dark('accent-foreground')).toBe(light('accent-foreground'))
   })
 
   it('leaves derived tokens appearance-independent so one override retints both', () => {
@@ -168,6 +188,30 @@ describe('generated stylesheets', () => {
         expect(css).toContain(`--fd-${name}: ${lightValue(value)};`)
       }
     }
+  })
+
+  /**
+   * A var() is substituted at the element its declaration sits on, so publishing the
+   * accent formulas on :root would freeze them there and setting --fd-accent deeper in
+   * the tree could never move them.
+   */
+  it('keeps the accent formulas off :root so they can be re-derived at any depth', () => {
+    const rootBlock = css.slice(css.indexOf(':root {'), css.indexOf('[data-fd-accent-scope]'))
+
+    expect(rootBlock).toContain('--fd-accent:')
+    expect(rootBlock).toContain('--fd-accent-lift:')
+    expect(rootBlock).not.toContain('--fd-accent-fill:')
+    expect(rootBlock).not.toContain('--fd-accent-foreground:')
+    expect(rootBlock).not.toContain('--fd-accent-wash:')
+  })
+
+  it('publishes the accent formulas on an opt-in scope instead', () => {
+    const scopeBlock = css.slice(css.indexOf('[data-fd-accent-scope]'))
+
+    expect(scopeBlock).toContain('--fd-accent-fill:')
+    expect(scopeBlock).toContain('--fd-accent-foreground:')
+    expect(scopeBlock).toContain('--fd-accent-wash:')
+    expect(scopeBlock).toContain('--fd-accent-veil:')
   })
 
   it('aliases every token privately with a public fallback', () => {

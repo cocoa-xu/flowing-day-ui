@@ -29,11 +29,15 @@ function onSegment(id: string, apply: (value: string) => void): void {
   if (row.value) apply(row.value)
 }
 
-const ACCENTS: Record<string, { fill: string; foreground: string }> = {
-  celadon: { fill: '#6D9EA5', foreground: '#9FD1D8' },
-  copper: { fill: '#B4795E', foreground: '#C99372' },
-  iris: { fill: '#8286C4', foreground: '#A3A6DA' },
-  moss: { fill: '#7E9B6B', foreground: '#9FB98C' },
+/**
+ * One colour each. Fill, foreground, wash and veil derive from it, in both
+ * appearances — an accent is a set, not four values to keep in step by hand.
+ */
+const ACCENTS: Record<string, string> = {
+  celadon: '#6D9EA5',
+  copper: '#B4795E',
+  iris: '#8286C4',
+  moss: '#7E9B6B',
 }
 
 const CORNERS: Record<string, { window: string; card: string; control: string }> = {
@@ -66,9 +70,7 @@ onSegment('scheme', (value) => {
 
 onSegment('accent', (value) => {
   const accent = ACCENTS[value]
-  if (!accent) return
-  set('--fd-accent-fill', accent.fill)
-  set('--fd-accent-foreground', accent.foreground)
+  if (accent) set('--fd-accent', accent)
 })
 
 onSegment('corners', (value) => {

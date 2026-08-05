@@ -185,15 +185,15 @@ describe('fd-settings-window accent', () => {
 
   it('retints its own chrome from the selected page', async () => {
     const element = await mount()
-    expect(scope(element).style.getPropertyValue('--fd-accent-fill')).toBe('')
+    expect(scope(element).style.getPropertyValue('--fd-accent')).toBe('')
 
     element.page = 'usb'
     await element.updateComplete
-    expect(scope(element).style.getPropertyValue('--fd-accent-fill')).toBe('#B4795E')
+    expect(scope(element).style.getPropertyValue('--fd-accent')).toBe('#B4795E')
 
     element.page = 'general'
     await element.updateComplete
-    expect(scope(element).style.getPropertyValue('--fd-accent-fill')).toBe('')
+    expect(scope(element).style.getPropertyValue('--fd-accent')).toBe('')
   })
 
   /**
@@ -202,14 +202,14 @@ describe('fd-settings-window accent', () => {
    */
   it("never writes to the host, so a caller's own accent survives navigation", async () => {
     const element = await mount()
-    element.style.setProperty('--fd-accent-fill', '#123456')
+    element.style.setProperty('--fd-accent', '#123456')
 
     element.page = 'usb'
     await element.updateComplete
     element.page = 'general'
     await element.updateComplete
 
-    expect(element.style.getPropertyValue('--fd-accent-fill')).toBe('#123456')
+    expect(element.style.getPropertyValue('--fd-accent')).toBe('#123456')
   })
 
   it('publishes the accent on the page itself, which its slotted content inherits', async () => {
@@ -217,23 +217,39 @@ describe('fd-settings-window accent', () => {
     const usb = element.querySelector('fd-page[page-id="usb"]') as HTMLElement
     const general = element.querySelector('fd-page[page-id="general"]') as HTMLElement
 
-    expect(usb.style.getPropertyValue('--fd-accent-fill')).toBe('#B4795E')
-    expect(general.style.getPropertyValue('--fd-accent-fill')).toBe('')
+    expect(usb.style.getPropertyValue('--fd-accent')).toBe('#B4795E')
+    expect(general.style.getPropertyValue('--fd-accent')).toBe('')
   })
 
   it('gives a page-specific accent to its own sidebar row', async () => {
     const element = await mount()
-    expect(navRows(element)[2]?.style.getPropertyValue('--fd-accent-fill')).toBe('#B4795E')
-    expect(navRows(element)[0]?.style.getPropertyValue('--fd-accent-fill')).toBe('')
+    expect(navRows(element)[2]?.style.getPropertyValue('--fd-accent')).toBe('#B4795E')
+    expect(navRows(element)[0]?.style.getPropertyValue('--fd-accent')).toBe('')
   })
 
-  it('re-derives the accent aliases inside an accent scope', async () => {
+  /** One colour in, a whole accent set out — fill, foreground, wash and veil. */
+  it('re-derives the whole accent set inside an accent scope', async () => {
     const element = await mount()
+    const defaultForeground = getComputedStyle(navRows(element)[0] as Element).color
+
     element.page = 'usb'
     await element.updateComplete
 
-    const resolved = getComputedStyle(scope(element)).getPropertyValue('--_fd-accent-fill')
-    expect(resolved.trim()).toBe('#B4795E')
+    const style = getComputedStyle(scope(element))
+    expect(style.getPropertyValue('--_fd-accent').trim()).toBe('#B4795E')
+    expect(style.getPropertyValue('--_fd-accent-fill')).toContain('oklch(from #B4795E')
+    expect(style.getPropertyValue('--_fd-accent-foreground')).toContain(
+      'oklch(from oklch(from #B4795E',
+    )
+    expect(style.getPropertyValue('--_fd-accent-wash')).toContain('#B4795E')
+
+    const icon = element.shadowRoot?.querySelector(
+      '.nav-row[aria-current="page"] .nav-icon',
+    ) as HTMLElement
+    const resolved = getComputedStyle(icon).color
+
+    expect(resolved).toMatch(/^(rgb|color|oklch)/)
+    expect(resolved).not.toBe(defaultForeground)
   })
 })
 

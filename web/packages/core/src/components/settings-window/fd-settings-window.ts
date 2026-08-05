@@ -378,7 +378,7 @@ export class FdSettingsWindow extends FdElement {
     // style belongs to whoever is using this element, and overwriting it every render
     // would silently undo their theming.
     for (const [token, value] of [
-      ['--fd-accent-fill', selected?.accent],
+      ['--fd-accent', selected?.accent],
       ['--fd-accent-foreground', selected?.accentForeground],
     ] as const) {
       if (value) this.root?.style.setProperty(token, value)
@@ -442,7 +442,7 @@ export class FdSettingsWindow extends FdElement {
         data-fd-accent-scope
         style=${
           [
-            page.accent ? `--fd-accent-fill: ${page.accent}` : '',
+            page.accent ? `--fd-accent: ${page.accent}` : '',
             page.accentForeground ? `--fd-accent-foreground: ${page.accentForeground}` : '',
           ]
             .filter(Boolean)

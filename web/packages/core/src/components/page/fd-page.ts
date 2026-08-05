@@ -33,10 +33,13 @@ export class FdPage extends FdElement {
   /** Mirrors `headerIcon`, which falls back to `icon`. */
   @property({ attribute: 'header-symbol', reflect: true }) headerSymbol: string | null = null
 
-  /** Mirrors `SettingsAccent.fill`: retints the window while this page is selected. */
+  /**
+   * Mirrors `SettingsPage(accent:)`. One colour: the fill, foreground, wash and veil all
+   * derive from it, in both appearances.
+   */
   @property({ reflect: true }) accent: string | null = null
 
-  /** Mirrors `SettingsAccent.foreground`; defaults to the inherited one when omitted. */
+  /** Escape hatch for a foreground the derivation does not suit. */
   @property({ attribute: 'accent-foreground', reflect: true }) accentForeground: string | null =
     null
 
@@ -51,7 +54,7 @@ export class FdPage extends FdElement {
     // The page's own content lives in light DOM, so its accent has to be published here
     // rather than by the window: slotted nodes inherit from their light-DOM parent.
     for (const [token, value] of [
-      ['--fd-accent-fill', this.accent],
+      ['--fd-accent', this.accent],
       ['--fd-accent-foreground', this.accentForeground],
     ] as const) {
       if (value) this.style.setProperty(token, value)

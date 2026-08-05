@@ -72,8 +72,32 @@ below it — the same semantics as overriding a SwiftUI environment value:
 .danger-zone         { --fd-accent-fill: #C4453D; }  /* one subtree     */
 ```
 
-Derived tokens follow, exactly as `wash ?? fill.opacity(0.13)` does in Swift — override
-`--fd-accent-fill` alone and `--fd-accent-wash` and `--fd-accent-veil` move with it.
+### An accent is one colour
+
+`--fd-accent` is the only knob you need. Fill, foreground, wash and veil all derive from
+it, in both appearances:
+
+```css
+:root { --fd-accent: #B4795E; }   /* that is the whole change */
+```
+
+`SettingsAccent` spells out `fill` and `foreground` per appearance, but the four literals
+of `.celadon` are a single hue at four lightnesses — the fill lifts by 0.131 for dark
+surfaces, and the foreground steps away from whatever surface it sits on. Deriving them in
+oklch reproduces every Swift literal to within 3/255, and means "make it copper" is one
+line rather than four values to keep in step. Each derived token stays individually
+overridable when one appearance needs art direction by hand.
+
+Only `--fd-accent-lift` and `--fd-accent-contrast` — the two lightness steps — depend on
+the appearance. The formulas themselves do not, which is what lets `--fd-accent` be set at
+any depth: a `var()` is substituted at the element its declaration sits on, so a derived
+token published on `:root` would be frozen there for everything below it. That is also why
+`theme.css` publishes the formulas under `[data-fd-accent-scope]` rather than on `:root`;
+components derive them inside their own shadow root, and plain HTML opts in with the
+attribute.
+
+This is the one place the port deliberately improves on the original rather than copying
+it, and it relies on relative colour syntax — Chrome 119, Safari 16.4, Firefox 128.
 
 Internally each component reads a private `--_fd-*` alias whose fallback is the public
 token, so the defaults work with no stylesheet import at all. Import `theme.css` when you

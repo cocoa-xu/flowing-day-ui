@@ -157,10 +157,32 @@ export const tokenGroups: readonly TokenGroup[] = [
     ],
   },
   {
-    title: 'Accent — SettingsAccent.celadon (wash/veil derive from fill, as in Swift)',
+    /**
+     * An accent is one colour, not four. `SettingsAccent` spells out `fill` and
+     * `foreground` per appearance, but the four literals of `.celadon` are a single hue
+     * at four lightnesses: the fill lifts by 0.131 for dark surfaces, and the foreground
+     * steps away from the surface it sits on — down 0.114 on light, up 0.030 on dark.
+     *
+     * Deriving them reproduces every Swift literal to within 3/255, and makes the accent
+     * a single knob that adapts to both appearances, which is what a caller wants when
+     * they say "make it copper". Each derived token stays individually overridable for
+     * anyone who needs to art-direct one appearance by hand.
+     */
+    title: 'Accent — one colour, adapted per appearance (SettingsAccent.celadon)',
     tokens: [
-      ['accent-fill', dynamic(0x6d9ea5, 0x93c8cf)],
-      ['accent-foreground', dynamic(0x4e7b82, 0x9fd1d8)],
+      ['accent', srgb(0x6d9ea5)],
+      /*
+       * Only the two lightness steps depend on the appearance. Keeping the formulas
+       * themselves appearance-independent is what lets `--fd-accent` be set at any depth:
+       * a derived token substituted high up would be frozen for everything below it.
+       */
+      ['accent-lift', { light: '0', dark: '0.131' }],
+      ['accent-contrast', { light: '-0.114', dark: '0.03' }],
+      ['accent-fill', 'oklch(from var(--fd-accent) calc(l + var(--fd-accent-lift)) c h)'],
+      [
+        'accent-foreground',
+        'oklch(from var(--fd-accent-fill) calc(l + var(--fd-accent-contrast)) c h)',
+      ],
       ['accent-wash', 'color-mix(in srgb, var(--fd-accent-fill) 13%, transparent)'],
       ['accent-veil', 'color-mix(in srgb, var(--fd-accent-fill) 8%, transparent)'],
     ],
