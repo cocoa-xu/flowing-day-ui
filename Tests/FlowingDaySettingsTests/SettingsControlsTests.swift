@@ -152,6 +152,28 @@ final class SettingsControlsTests: XCTestCase {
   }
 
   @MainActor
+  func testRowsWithoutCaptionsUseCompactHeight() {
+    let compactHeight = fittingHeight(
+      SettingsPopupRow(
+        title: "Background",
+        selection: .constant("Canvas"),
+        options: [SettingsPopupOption("Canvas", label: "Canvas")]
+      )
+    )
+    let detailedHeight = fittingHeight(
+      SettingsPopupRow(
+        title: "Background",
+        caption: "Choose how the exported canvas is rendered.",
+        selection: .constant("Canvas"),
+        options: [SettingsPopupOption("Canvas", label: "Canvas")]
+      )
+    )
+
+    XCTAssertEqual(compactHeight, SettingsRowLayout.minimumHeight)
+    XCTAssertLessThan(compactHeight, detailedHeight)
+  }
+
+  @MainActor
   func testDependentRowsOnlyOccupySpaceWhenVisible() {
     let hiddenHeight = fittingHeight(
       SettingsDependentRows(isVisible: false) {

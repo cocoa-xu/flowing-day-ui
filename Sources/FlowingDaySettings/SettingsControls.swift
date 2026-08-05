@@ -1,6 +1,16 @@
 import AppKit
 import SwiftUI
 
+enum SettingsRowLayout {
+  static let compactVerticalPadding: CGFloat = 6
+  static let detailedVerticalPadding: CGFloat = 11
+  static let minimumHeight: CGFloat = 42
+
+  static func verticalPadding(hasCaption: Bool) -> CGFloat {
+    hasCaption ? detailedVerticalPadding : compactVerticalPadding
+  }
+}
+
 public struct SettingsSectionHeader: View {
   @Environment(\.settingsTypography) private var typography
   private let title: String
@@ -149,8 +159,8 @@ public struct SettingsRow<Trailing: View>: View {
       trailing
     }
     .padding(.horizontal, metrics.rowInset)
-    .padding(.vertical, caption == nil ? 10 : 11)
-    .frame(minHeight: 42)
+    .padding(.vertical, SettingsRowLayout.verticalPadding(hasCaption: caption != nil))
+    .frame(minHeight: SettingsRowLayout.minimumHeight)
   }
 }
 
@@ -821,8 +831,8 @@ public struct SettingsSearchPickerRow<Value: Hashable>: View {
           .rotationEffect(.degrees(isExpanded ? 180 : 0))
       }
       .padding(.horizontal, metrics.rowInset)
-      .padding(.vertical, caption == nil ? 10 : 11)
-      .frame(minHeight: 42)
+      .padding(.vertical, SettingsRowLayout.verticalPadding(hasCaption: caption != nil))
+      .frame(minHeight: SettingsRowLayout.minimumHeight)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -1352,8 +1362,8 @@ public struct SettingsExpandableRow: View {
           .rotationEffect(.degrees(isExpanded ? 180 : 0))
       }
       .padding(.horizontal, metrics.rowInset)
-      .padding(.vertical, caption == nil ? 10 : 11)
-      .frame(minHeight: 42)
+      .padding(.vertical, SettingsRowLayout.verticalPadding(hasCaption: caption != nil))
+      .frame(minHeight: SettingsRowLayout.minimumHeight)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
