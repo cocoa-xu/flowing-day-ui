@@ -35,6 +35,15 @@ Design values are authored only in
 `web/packages/core/src/tokens/tokens.json`. Regenerate the committed Swift theme with
 `cd web && corepack pnpm tokens:swift`; `PreferencesTheme.swift` is generated output.
 
+Run the dogfooding example as a native macOS executable:
+
+```sh
+swift run FlowingDayPreferencesExample
+```
+
+It opens only the Preferences window and exercises the package's own navigation,
+controls, live appearance changes, and AppKit presenter.
+
 ## Preferences window
 
 Define application-owned pages and pass their state through ordinary SwiftUI bindings:
