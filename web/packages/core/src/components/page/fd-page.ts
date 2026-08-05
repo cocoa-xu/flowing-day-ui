@@ -1,0 +1,58 @@
+import { type CSSResultGroup, css, html } from 'lit'
+import { customElement, property } from 'lit/decorators.js'
+import { FdElement } from '../../internal/base-element.js'
+
+/**
+ * Mirrors `SettingsPage`. Declared as a child of `fd-settings-window`, which reads the
+ * metadata to build the sidebar and shows only the active page's content.
+ *
+ * @slot - The page body, typically an `fd-pane-stack`.
+ */
+@customElement('fd-page')
+export class FdPage extends FdElement {
+  static override styles: CSSResultGroup = css`
+    :host {
+      display: none;
+    }
+
+    :host([active]) {
+      display: block;
+    }
+  `
+
+  /** Identifier used by `fd-settings-window`'s `page` attribute. */
+  @property({ attribute: 'page-id', reflect: true }) pageId = ''
+
+  @property({ reflect: true }) label = ''
+
+  @property({ reflect: true }) subtitle: string | null = null
+
+  /** Icon registry key for the sidebar row. */
+  @property({ reflect: true }) symbol: string | null = null
+
+  /** Mirrors `headerIcon`, which falls back to `icon`. */
+  @property({ attribute: 'header-symbol', reflect: true }) headerSymbol: string | null = null
+
+  /** Mirrors `SettingsAccent.fill`: retints the window while this page is selected. */
+  @property({ reflect: true }) accent: string | null = null
+
+  /** Mirrors `SettingsAccent.foreground`; defaults to the inherited one when omitted. */
+  @property({ attribute: 'accent-foreground', reflect: true }) accentForeground: string | null =
+    null
+
+  /** Mirrors `isAvailable: false`: dimmed and not selectable. */
+  @property({ type: Boolean, reflect: true }) unavailable = false
+
+  /** Set by `fd-settings-window`; not intended to be authored. */
+  @property({ type: Boolean, reflect: true }) active = false
+
+  override render() {
+    return html`<slot></slot>`
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'fd-page': FdPage
+  }
+}
