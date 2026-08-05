@@ -80,6 +80,30 @@ describe('fd-popup metrics', () => {
     const element = await mount(`<fd-popup min-width="240" value="hide">${OPTIONS}</fd-popup>`)
     expect(button(element).getBoundingClientRect().width).toBe(240)
   })
+
+  /**
+   * A popup on an inactive `fd-page` first renders inside `display: none`, where text
+   * measures zero. Sizing it from that measurement collapsed the control to 40px and
+   * clipped the value for good, since nothing measured it again.
+   */
+  it('sizes itself once an unrendered subtree is laid out', async () => {
+    const host = document.createElement('div')
+    host.style.display = 'none'
+    host.innerHTML = `<fd-popup value="hide">${OPTIONS}</fd-popup>`
+    document.body.append(host)
+
+    const element = host.querySelector('fd-popup') as FdPopup
+    await element.updateComplete
+    await element.updateComplete
+    expect(element.style.getPropertyValue('--_button-width')).toBe('')
+
+    host.style.display = 'block'
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    await element.updateComplete
+
+    expect(button(element).getBoundingClientRect().width).toBeGreaterThan(60)
+    expect(element.shadowRoot?.querySelector('.value')?.textContent).toBe('Hide Afloat')
+  })
 })
 
 describe('fd-popup menu', () => {

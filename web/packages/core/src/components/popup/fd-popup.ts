@@ -69,6 +69,8 @@ export class FdPopup extends FdElement {
     css`
       :host {
         display: inline-block;
+        /* Contains the measuring spans so they cannot reach an outer scroll area. */
+        position: relative;
       }
 
       .button {
@@ -223,6 +225,8 @@ export class FdPopup extends FdElement {
 
       .measure {
         position: absolute;
+        top: 0;
+        left: 0;
         visibility: hidden;
         white-space: pre;
         pointer-events: none;
@@ -268,6 +272,8 @@ export class FdPopup extends FdElement {
 
   #menuWidth = 0
 
+  #resizeObserver: ResizeObserver | null = null
+
   constructor() {
     super()
     this.#internals = this.attachInternals()
@@ -292,12 +298,19 @@ export class FdPopup extends FdElement {
     this.#defaultValue = this.value
     window.addEventListener('resize', this.dismiss)
     window.addEventListener('scroll', this.dismiss, { capture: true, passive: true })
+
+    // A popup on an inactive fd-page renders inside display: none, where text measures
+    // zero. This catches the moment it is laid out for the first time.
+    this.#resizeObserver = new ResizeObserver(() => this.#applyWidths())
+    this.#resizeObserver.observe(this)
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback()
     window.removeEventListener('resize', this.dismiss)
     window.removeEventListener('scroll', this.dismiss, { capture: true })
+    this.#resizeObserver?.disconnect()
+    this.#resizeObserver = null
   }
 
   override firstUpdated(changed: PropertyValues<this>): void {
@@ -343,6 +356,8 @@ export class FdPopup extends FdElement {
   #applyWidths(): void {
     if (!this.measureValue) return
     const labels = this.resolvedOptions.map((option) => option.label)
+    // Options arrive on slotchange, a frame after the first render.
+    if (labels.length === 0) return
 
     const widest = (element: HTMLElement) => {
       let max = 0
@@ -354,8 +369,17 @@ export class FdPopup extends FdElement {
       return Math.ceil(max)
     }
 
-    const buttonWidth = Math.max(this.minWidth, widest(this.measureValue) + 40)
-    this.style.setProperty('--_button-width', `${buttonWidth}px`)
+    const textWidth = widest(this.measureValue)
+    // Zero for a non-empty label means nothing is laid out yet — an unrendered subtree.
+    // Leaving the property unset lets the control size to its content until it is.
+    if (textWidth === 0 && labels.some((label) => label.length > 0)) return
+
+    // Writing an unchanged value would resize the host again and leave the observer
+    // looping for another frame.
+    const width = `${Math.max(this.minWidth, textWidth + 40)}px`
+    if (this.style.getPropertyValue('--_button-width') !== width) {
+      this.style.setProperty('--_button-width', width)
+    }
     this.#menuWidth = widest(this.measureOption) + 68
   }
 
