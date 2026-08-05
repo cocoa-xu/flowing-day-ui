@@ -57,6 +57,40 @@
                   <fd-option value="iris">Iris</fd-option>
                   <fd-option value="moss">Moss</fd-option>
                 </fd-segmented-row>
+                <fd-separator indented></fd-separator>
+                <fd-search-picker-row
+                  id="accent-library"
+                  symbol="swatchpalette"
+                  label="Accent library"
+                  caption="Too long for a popup menu, so it expands into a searchable list."
+                  value="#6D9EA5"
+                  max-visible-options="6"
+                >
+                  <fd-option value="#C09A4E" label="Amber"></fd-option>
+                  <fd-option value="#6D9EA5" label="Celadon"></fd-option>
+                  <fd-option value="#5C7FC0" label="Cobalt"></fd-option>
+                  <fd-option value="#B4795E" label="Copper"></fd-option>
+                  <fd-option value="#C46F6A" label="Coral"></fd-option>
+                  <fd-option value="#B96A93" label="Cyclamen"></fd-option>
+                  <fd-option value="#6FA37A" label="Fern"></fd-option>
+                  <fd-option value="#7C8188" label="Graphite"></fd-option>
+                  <fd-option value="#6C6BB0" label="Indigo"></fd-option>
+                  <fd-option value="#8286C4" label="Iris"></fd-option>
+                  <fd-option value="#A180C2" label="Lilac"></fd-option>
+                  <fd-option value="#7E9B6B" label="Moss"></fd-option>
+                  <fd-option value="#B08850" label="Ochre"></fd-option>
+                  <fd-option value="#C6903F" label="Saffron"></fd-option>
+                  <fd-option value="#6E8391" label="Slate"></fd-option>
+                  <fd-option value="#4F9B95" label="Teal"></fd-option>
+                </fd-search-picker-row>
+                <fd-separator indented></fd-separator>
+                <fd-color-picker-row
+                  id="custom-accent"
+                  symbol="circle"
+                  label="Custom accent"
+                  caption="Any colour at all. The whole set re-derives from it."
+                  value="#6d9ea5"
+                ></fd-color-picker-row>
               </fd-section>
 
               <fd-section
@@ -117,17 +151,16 @@
                   <fd-option value="720">720</fd-option>
                   <fd-option value="860">860</fd-option>
                 </fd-segmented-row>
-                <fd-separator indented></fd-separator>
-                <fd-segmented-row
+                <fd-separator></fd-separator>
+                <fd-slider-row
                   id="sidebar-width"
                   label="Sidebar width"
+                  caption="Continuous, and the sidebar follows the knob."
+                  min="180"
+                  max="320"
+                  step="1"
                   value="224"
-                  control-width="240"
-                >
-                  <fd-option value="190">190</fd-option>
-                  <fd-option value="224">224</fd-option>
-                  <fd-option value="264">264</fd-option>
-                </fd-segmented-row>
+                ></fd-slider-row>
               </fd-section>
             </fd-pane-stack>
           </fd-page>
@@ -207,6 +240,24 @@
                   </fd-multi-select-row>
                 </fd-switch-group>
               </fd-section>
+
+              <fd-section
+                label="Disclosure by row"
+                footer="SettingsExpandableRow turns its chevron over 0.18s easeOut and reports the new state. Reduce Motion drops the animation outright rather than shortening it, which is why it reads a different token from the one above."
+              >
+                <fd-expandable-row
+                  id="advanced"
+                  symbol="bolt"
+                  label="Advanced"
+                  caption="The whole row is the hit target, padding included."
+                ></fd-expandable-row>
+                <fd-dependent-rows id="advanced-rows">
+                  <fd-row
+                    label="Revealed by the row above"
+                    caption="The row owns the chevron; fd-dependent-rows owns the reveal."
+                  ></fd-row>
+                </fd-dependent-rows>
+              </fd-section>
             </fd-pane-stack>
           </fd-page>
 
@@ -272,6 +323,77 @@
                   <fd-option value="two">Second choice</fd-option>
                   <fd-option value="three">Third choice</fd-option>
                 </fd-popup-row>
+                <fd-separator></fd-separator>
+                <fd-slider-row
+                  label="fd-slider-row"
+                  caption="Title and formatted value on one line, slider beneath."
+                  min="0"
+                  max="100"
+                  step="1"
+                  value="64"
+                ></fd-slider-row>
+                <fd-separator></fd-separator>
+                <fd-value-row
+                  id="accent-readout"
+                  symbol="swatchpalette"
+                  label="fd-value-row"
+                  value="#6D9EA5"
+                ></fd-value-row>
+                <fd-separator indented></fd-separator>
+                <fd-button-row
+                  id="restore"
+                  label="fd-button-row"
+                  caption="Reloads the page, putting every token back to its default."
+                  button-label="Restore"
+                ></fd-button-row>
+                <fd-separator></fd-separator>
+                <fd-link-row
+                  label="fd-link-row"
+                  caption="A soft button with an arrow.up.right and a tooltip."
+                  button-label="Source"
+                  href="https://github.com/cocoa-xu/flowing-day-ui"
+                  help="Open the repository on GitHub"
+                ></fd-link-row>
+                <fd-separator></fd-separator>
+                <fd-color-picker-row
+                  label="fd-color-picker-row"
+                  caption="ColorPicker, which is the platform picker on both sides."
+                  value="#6d9ea5"
+                ></fd-color-picker-row>
+              </fd-section>
+
+              <fd-section
+                label="Disclosure"
+                footer="fd-empty-row is the empty state a section falls back to: 14px of vertical padding rather than the 10 a populated row takes."
+              >
+                <fd-expandable-row
+                  id="reference-expand"
+                  label="fd-expandable-row"
+                  caption="Reports its state; pair it with fd-dependent-rows."
+                ></fd-expandable-row>
+                <fd-dependent-rows id="reference-expand-rows">
+                  <fd-empty-row symbol="list.bullet" message="fd-empty-row — nothing here yet."></fd-empty-row>
+                </fd-dependent-rows>
+              </fd-section>
+
+              <fd-section
+                label="Search"
+                footer="fd-search-picker-row is the picker for a list too long for a popup menu: an empty query matches everything, and anything else is a trimmed, case-insensitive substring test."
+              >
+                <fd-search-picker-row
+                  label="fd-search-picker-row"
+                  value="dublin"
+                  max-visible-options="4"
+                >
+                  <fd-option value="amsterdam" label="Amsterdam"></fd-option>
+                  <fd-option value="berlin" label="Berlin"></fd-option>
+                  <fd-option value="copenhagen" label="Copenhagen"></fd-option>
+                  <fd-option value="dublin" label="Dublin"></fd-option>
+                  <fd-option value="edinburgh" label="Edinburgh"></fd-option>
+                  <fd-option value="florence" label="Florence"></fd-option>
+                  <fd-option value="geneva" label="Geneva"></fd-option>
+                  <fd-option value="helsinki" label="Helsinki"></fd-option>
+                </fd-search-picker-row>
               </fd-section>
 
               <fd-section
@@ -299,6 +421,55 @@
                   <fd-option value="y">Beta</fd-option>
                   <fd-option value="z" disabled>Locked</fd-option>
                 </fd-multi-select-row>
+              </fd-section>
+
+              <fd-section
+                label="Pills"
+                footer="fd-tag is static and monospaced. fd-selectable-tag carries four hover × selected treatments and leaves the selection to whoever owns it, exactly as the SwiftUI original does."
+              >
+                <fd-row label="fd-tag" caption="In an fd-flow-grid, which wraps at 7px on both axes."></fd-row>
+                <fd-flow-grid>
+                  <fd-tag>SettingsRow</fd-tag>
+                  <fd-tag>SettingsSlider</fd-tag>
+                  <fd-tag>SettingsChip</fd-tag>
+                  <fd-tag>SettingsTag</fd-tag>
+                  <fd-tag>SettingsGrid</fd-tag>
+                  <fd-tag>SettingsFlowGrid</fd-tag>
+                  <fd-tag>SettingsEmptyRow</fd-tag>
+                  <fd-tag>SettingsValueRow</fd-tag>
+                  <fd-tag>SettingsLinkRow</fd-tag>
+                  <fd-tag>SettingsButtonRow</fd-tag>
+                  <fd-tag>SettingsExpandableRow</fd-tag>
+                  <fd-tag>SettingsSelectableTag</fd-tag>
+                  <fd-tag>SettingsColorPickerRow</fd-tag>
+                  <fd-tag>SettingsSearchPickerRow</fd-tag>
+                  <fd-tag>SettingsSoftButtonStyle</fd-tag>
+                </fd-flow-grid>
+                <fd-separator></fd-separator>
+                <fd-row label="fd-selectable-tag" caption="Click one. The tag reports the press; the page decides."></fd-row>
+                <fd-flow-grid id="tag-group">
+                  <fd-selectable-tag value="fill" selected>fill</fd-selectable-tag>
+                  <fd-selectable-tag value="foreground">foreground</fd-selectable-tag>
+                  <fd-selectable-tag value="wash">wash</fd-selectable-tag>
+                  <fd-selectable-tag value="veil">veil</fd-selectable-tag>
+                  <fd-selectable-tag value="hairline" inactive-accent="#7C8188">hairline</fd-selectable-tag>
+                </fd-flow-grid>
+              </fd-section>
+
+              <fd-section
+                label="Grid"
+                footer="fd-grid fits as many equal columns of at least 96px as the pane allows, so the count follows the content width you set on the Layout page. Each chip retints the window."
+              >
+                <fd-grid id="accent-chips">
+                  <fd-chip value="#6D9EA5">Celadon</fd-chip>
+                  <fd-chip value="#B4795E">Copper</fd-chip>
+                  <fd-chip value="#8286C4">Iris</fd-chip>
+                  <fd-chip value="#7E9B6B">Moss</fd-chip>
+                  <fd-chip value="#C46F6A">Coral</fd-chip>
+                  <fd-chip value="#5C7FC0">Cobalt</fd-chip>
+                  <fd-chip value="#C09A4E">Amber</fd-chip>
+                  <fd-chip value="#4F9B95">Teal</fd-chip>
+                </fd-grid>
               </fd-section>
             </fd-pane-stack>
           </fd-page>

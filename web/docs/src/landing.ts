@@ -1,4 +1,15 @@
-import type { FdSegmentedRow, FdSettingsWindow, FdSwitchRow } from '@flowing-day/ui'
+import type {
+  FdColorPickerRow,
+  FdDependentRows,
+  FdExpandableRow,
+  FdSearchPickerRow,
+  FdSegmentedRow,
+  FdSelectableTag,
+  FdSettingsWindow,
+  FdSliderRow,
+  FdSwitchRow,
+  FdValueRow,
+} from '@flowing-day/ui'
 import '@flowing-day/ui'
 import { makeMovableByBackground } from './drag.js'
 import { type IconStyle, installTheme, registerIcons } from './shared.js'
@@ -27,6 +38,16 @@ function onSegment(id: string, apply: (value: string) => void): void {
     if (event.detail.value) apply(event.detail.value)
   })
   if (row.value) apply(row.value)
+}
+
+/** The same, for the controls that report a number rather than a string. */
+function onSlider(id: string, apply: (value: number) => void): void {
+  const row = document.querySelector<FdSliderRow>(`#${id}`)
+  if (!row) return
+  row.addEventListener('fd-change', (event) => {
+    if (event.detail.valueAsNumber !== undefined) apply(event.detail.valueAsNumber)
+  })
+  apply(row.value)
 }
 
 /**
@@ -68,9 +89,22 @@ onSegment('scheme', (value) => {
   }
 })
 
+/**
+ * Every accent control on the page ends here. One custom property is the whole knob, so
+ * a segmented row, a searchable list, a colour well and a grid of chips can all drive it
+ * without knowing about one another.
+ */
+function applyAccent(hex: string): void {
+  set('--fd-accent', hex)
+  const readout = document.querySelector<FdValueRow>('#accent-readout')
+  if (readout) readout.value = hex.toUpperCase()
+  const well = document.querySelector<FdColorPickerRow>('#custom-accent')
+  if (well) well.value = hex.toLowerCase()
+}
+
 onSegment('accent', (value) => {
   const accent = ACCENTS[value]
-  if (accent) set('--fd-accent', accent)
+  if (accent) applyAccent(accent)
 })
 
 onSegment('corners', (value) => {
@@ -90,7 +124,9 @@ onSegment('density', (value) => {
 
 onSegment('content-width', (value) => set('--fd-metric-content-width', `${value}px`))
 
-onSegment('sidebar-width', (value) => set('--fd-sidebar-width', `${value}px`))
+const sidebarWidth = document.querySelector<FdSliderRow>('#sidebar-width')
+if (sidebarWidth) sidebarWidth.format = (value) => `${Math.round(value)}px`
+onSlider('sidebar-width', (value) => set('--fd-sidebar-width', `${Math.round(value)}px`))
 
 onSegment('text-size', (value) => {
   const size = TEXT_SIZE[value]
@@ -112,6 +148,57 @@ onSegment('icon-style', (value) => registerIcons(value as IconStyle))
 
 document.querySelector<FdSwitchRow>('#separators')?.addEventListener('fd-change', (event) => {
   if (settingsWindow) settingsWindow.dataset.separators = event.detail.checked ? 'on' : 'off'
+})
+
+document
+  .querySelector<FdSearchPickerRow>('#accent-library')
+  ?.addEventListener('fd-change', (event) => {
+    if (event.detail.value) applyAccent(event.detail.value)
+  })
+
+document
+  .querySelector<FdColorPickerRow>('#custom-accent')
+  ?.addEventListener('fd-change', (event) => {
+    if (event.detail.value) applyAccent(event.detail.value)
+  })
+
+/** fd-chip reports the press and nothing else, so the value it carries is the accent. */
+document.querySelector<HTMLElement>('#accent-chips')?.addEventListener('fd-activate', (event) => {
+  if (event.detail.value) applyAccent(event.detail.value)
+})
+
+/**
+ * The tag reports the press; the selection belongs to whoever owns it. That is the
+ * SwiftUI contract — `SettingsSelectableTag` takes `isSelected` and hands back an action.
+ */
+document.querySelector<HTMLElement>('#tag-group')?.addEventListener('fd-activate', (event) => {
+  const pressed = event.target as FdSelectableTag
+  for (const tag of document.querySelectorAll<FdSelectableTag>('#tag-group fd-selectable-tag')) {
+    tag.selected = tag === pressed
+  }
+})
+
+/** Pairs a disclosure row with the rows it reveals. */
+function discloses(rowId: string, rowsId: string): void {
+  const row = document.querySelector<FdExpandableRow>(`#${rowId}`)
+  const rows = document.querySelector<FdDependentRows>(`#${rowsId}`)
+  if (!row || !rows) return
+  rows.visible = row.expanded
+  row.addEventListener('fd-change', (event) => {
+    rows.visible = event.detail.checked ?? false
+  })
+}
+
+discloses('advanced', 'advanced-rows')
+discloses('reference-expand', 'reference-expand-rows')
+
+/**
+ * A reload rather than a token sweep: the controls hold the state that produced the
+ * tokens, so clearing one without the other would leave the window and the rows
+ * disagreeing. The inline `translate` the drag writes is not ours to clear either.
+ */
+document.querySelector<HTMLElement>('#restore')?.addEventListener('fd-activate', () => {
+  location.reload()
 })
 
 settingsWindow?.addEventListener('fd-close', () => {
