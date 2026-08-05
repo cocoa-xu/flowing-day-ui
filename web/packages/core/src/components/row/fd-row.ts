@@ -1,7 +1,7 @@
 import { type CSSResultGroup, css, html, nothing } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
-import { textRole } from '../../internal/typography.js'
+import { rowLayoutStyles } from '../../internal/row-layout.js'
 import '../icon/fd-icon.js'
 
 /**
@@ -20,55 +20,16 @@ import '../icon/fd-icon.js'
 export class FdRow extends FdElement {
   static override styles: CSSResultGroup = [
     baseStyles,
+    rowLayoutStyles,
     css`
-      .row {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        min-height: 42px;
-        padding-inline: var(--_fd-metric-row-inset);
-        padding-block: 10px;
-      }
-
-      :host([caption]) .row {
-        padding-block: 11px;
-      }
-
-      .symbol {
-        width: 20px;
-        flex: none;
-        display: flex;
-        justify-content: center;
-        font-size: 13px;
-        font-weight: 500;
-        color: var(--_fd-palette-muted);
-      }
-
-      .text {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        min-width: 0;
-      }
-
-      .label {
-        ${textRole('row-title')}
-        color: var(--_fd-palette-ink);
-      }
-
-      .caption {
-        ${textRole('row-caption')}
-        color: var(--_fd-palette-faint);
-      }
-
-      /* Spacer(minLength: 10); the stack's 14px spacing sits on either side of it. */
-      .spacer {
-        flex: 1 1 auto;
-        min-width: 10px;
-      }
-
+      /*
+       * Rigid, because the controls that trail a row carry a .frame(width:) that never
+       * gives way. A trailing view that is text rather than a control opts into
+       * compressing by setting --_fd-row-trailing-flex, as fd-value-row does.
+       */
       .trailing {
-        flex: none;
+        flex: var(--_fd-row-trailing-flex, none);
+        min-width: 0;
         display: flex;
         align-items: center;
       }
@@ -86,7 +47,7 @@ export class FdRow extends FdElement {
 
   override render() {
     return html`
-      <div class="row" part="row">
+      <div class="row" part="row" ?data-caption=${!!this.caption}>
         ${this.symbol ? html`<fd-icon class="symbol" name=${this.symbol}></fd-icon>` : nothing}
         <div class="text">
           <span class="label" part="label">${this.label}</span>

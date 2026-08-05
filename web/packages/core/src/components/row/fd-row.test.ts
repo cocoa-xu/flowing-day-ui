@@ -61,6 +61,14 @@ describe('fd-row', () => {
     expect(style.paddingBottom).toBe('11px')
   })
 
+  /** A wrapping row passing its own null caption down arrives here as `caption=""`. */
+  it('stays at 10px when handed an empty caption', async () => {
+    const row = rowOf(await mount('<fd-row label="Plain" caption=""></fd-row>'))
+
+    expect(getComputedStyle(row).paddingTop).toBe('10px')
+    expect(row.hasAttribute('data-caption')).toBe(false)
+  })
+
   it('insets horizontally by the row inset metric and honours an override', async () => {
     const element = await mount('<fd-row label="Plain"></fd-row>')
     expect(getComputedStyle(rowOf(element)).paddingLeft).toBe('18px')

@@ -1,7 +1,8 @@
-import { type CSSResultGroup, css, html, nothing, type PropertyValues, svg } from 'lit'
+import { type CSSResultGroup, css, html, nothing, type PropertyValues } from 'lit'
 import { customElement, property, query, state } from 'lit/decorators.js'
 import { repeat } from 'lit/directives/repeat.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
+import { checkmark, chevron } from '../../internal/glyphs.js'
 import { textRole } from '../../internal/typography.js'
 import type { FdOption } from '../option/fd-option.js'
 import '../option/fd-option.js'
@@ -20,31 +21,6 @@ const CONTROL_HEIGHT = 30
 /** Screen inset and anchor offset from `SettingsPopupButton.position(_:anchorFrame:visibleFrame:)`. */
 const MARGIN = 8
 const GAP = 6
-
-/** Drawn inline rather than taken from the icon registry, as AppKit draws its own chrome. */
-const chevron = (up: boolean) => svg`
-  <svg viewBox="0 0 12 12" aria-hidden="true">
-    <path
-      d=${up ? 'M2.5 7.5 6 4l3.5 3.5' : 'M2.5 4.5 6 8l3.5-3.5'}
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    />
-  </svg>`
-
-const checkmark = svg`
-  <svg viewBox="0 0 12 12" aria-hidden="true">
-    <path
-      d="M2.6 6.3 4.9 8.6 9.4 3.8"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    />
-  </svg>`
 
 /**
  * Mirrors `SettingsPopupControl`, the 691 lines of AppKit that back `SettingsPopupRow`.

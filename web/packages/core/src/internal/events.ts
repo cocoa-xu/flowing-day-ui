@@ -18,9 +18,21 @@ export interface FdChangeDetail {
   values?: string[]
 }
 
+/**
+ * The SwiftUI `action` closure, for controls that report a press rather than a new value.
+ *
+ * A plain `click` listener on the host would not do: a click anywhere in the row bubbles
+ * out of the shadow root, including from the label, which never ran the closure.
+ */
+export interface FdActivateDetail {
+  /** The activated element's `value`, where it carries one. */
+  value?: string
+}
+
 declare global {
   interface HTMLElementEventMap {
     'fd-change': CustomEvent<FdChangeDetail>
+    'fd-activate': CustomEvent<FdActivateDetail>
     'fd-page-change': CustomEvent<{ page: string }>
     'fd-close': CustomEvent<undefined>
   }

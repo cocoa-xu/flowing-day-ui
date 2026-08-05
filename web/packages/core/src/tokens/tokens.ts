@@ -204,6 +204,11 @@ export const tokenGroups: readonly TokenGroup[] = [
     tokens: [
       ['motion-disclosure', '180ms'],
       ['motion-disclosure-offset', '-5px'],
+      /*
+       * Same 0.18s as the disclosure, but a different reduce-motion branch: the
+       * expandable rows pass `nil` rather than shortening, so this collapses to nothing.
+       */
+      ['motion-expand', '180ms'],
       ['motion-hover', '120ms'],
       ['motion-selection', '160ms'],
       ['motion-page', '220ms'],
@@ -262,6 +267,7 @@ export const tokenGroups: readonly TokenGroup[] = [
 export const reducedMotionTokens: ReadonlyArray<readonly [string, string]> = [
   ['motion-disclosure', '120ms'],
   ['motion-disclosure-offset', '0px'],
+  ['motion-expand', '1ms'],
   ['motion-hover', '1ms'],
   ['motion-selection', '1ms'],
   ['motion-page', '1ms'],
