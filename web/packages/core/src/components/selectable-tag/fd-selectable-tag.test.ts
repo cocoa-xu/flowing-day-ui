@@ -139,13 +139,14 @@ describe('fd-selectable-tag', () => {
     expect(element.selected).toBe(false)
   })
 
-  it('exposes its state to assistive technology', async () => {
+  it('exposes its state without repeating it in the name', async () => {
     const element = await mount('<fd-selectable-tag label="beta"></fd-selectable-tag>')
-    expect(tagOf(element).getAttribute('aria-label')).toBe('beta, Off')
+
+    expect(tagOf(element).hasAttribute('aria-label')).toBe(false)
+    expect(page.getByRole('button', { name: 'beta', pressed: false }).elements()).toHaveLength(1)
 
     element.selected = true
     await element.updateComplete
-    expect(tagOf(element).getAttribute('aria-pressed')).toBe('true')
-    expect(tagOf(element).getAttribute('aria-label')).toBe('beta, On')
+    expect(page.getByRole('button', { name: 'beta', pressed: true }).elements()).toHaveLength(1)
   })
 })

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import { page } from 'vitest/browser'
 import type { FdExpandableRow } from './fd-expandable-row.js'
 import './fd-expandable-row.js'
 
@@ -108,15 +109,23 @@ describe('fd-expandable-row', () => {
     expect(states).toEqual([true, false])
   })
 
-  it('exposes the disclosure state to assistive technology', async () => {
+  /**
+   * aria-expanded carries the state, and a screen reader speaks it in its own language.
+   * Repeating it in the name would only announce it twice, in one language.
+   */
+  it('exposes the disclosure state without repeating it in the name', async () => {
     const element = await mount('<fd-expandable-row label="Advanced"></fd-expandable-row>')
-    expect(rowOf(element).getAttribute('aria-expanded')).toBe('false')
-    expect(rowOf(element).getAttribute('aria-label')).toBe('Advanced, Collapsed')
+
+    expect(rowOf(element).hasAttribute('aria-label')).toBe(false)
+    expect(page.getByRole('button', { name: 'Advanced', expanded: false }).elements()).toHaveLength(
+      1,
+    )
 
     element.expanded = true
     await element.updateComplete
-    expect(rowOf(element).getAttribute('aria-expanded')).toBe('true')
-    expect(rowOf(element).getAttribute('aria-label')).toBe('Advanced, Expanded')
+    expect(page.getByRole('button', { name: 'Advanced', expanded: true }).elements()).toHaveLength(
+      1,
+    )
   })
 
   /** contentShape(Rectangle()) — the padding is part of the hit target, not dead space. */

@@ -3,7 +3,6 @@ import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { chevronDown } from '../../internal/glyphs.js'
 import { rowLayoutStyles } from '../../internal/row-layout.js'
-import { FdStringsRegistry } from '../../internal/strings.js'
 import '../icon/fd-icon.js'
 
 /**
@@ -81,15 +80,12 @@ export class FdExpandableRow extends FdElement {
   }
 
   override render() {
-    const strings = FdStringsRegistry.get()
-
     return html`
       <button
         class="row"
         part="row"
         type="button"
         aria-expanded=${this.expanded}
-        aria-label="${this.label}, ${this.expanded ? strings.expanded : strings.collapsed}"
         ?data-caption=${!!this.caption}
         ?disabled=${this.disabled}
         @click=${this.#toggle}

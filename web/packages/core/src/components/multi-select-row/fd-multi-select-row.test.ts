@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { page } from 'vitest/browser'
 import type { FdCheckToggle } from '../check-toggle/fd-check-toggle.js'
 import '../check-toggle/fd-check-toggle.js'
 import type { FdOption } from '../option/fd-option.js'
@@ -105,8 +106,10 @@ describe('fd-multi-select-row', () => {
     const strip = element.shadowRoot?.querySelector('.strip') as HTMLElement
 
     expect(strip.getAttribute('role')).toBe('group')
-    expect(segments(element)[0]?.getAttribute('aria-label')).toBe('Activity, Selected')
-    expect(segments(element)[1]?.getAttribute('aria-label')).toBe('Chart, Not Selected')
+    // aria-pressed carries each option's state; the name comes from the visible label.
+    expect(segments(element)[0]?.hasAttribute('aria-label')).toBe(false)
+    expect(page.getByRole('button', { name: 'Activity', pressed: true }).elements()).toHaveLength(1)
+    expect(page.getByRole('button', { name: 'Chart', pressed: false }).elements()).toHaveLength(1)
   })
 
   it('submits every selected value under one name', async () => {

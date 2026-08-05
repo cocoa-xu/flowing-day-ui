@@ -3,7 +3,6 @@ import { customElement, property, state } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { type CollectedOption, collectOptions } from '../../internal/options.js'
 import { checkCircleFill, circleOutline, selectionStyles } from '../../internal/selection.js'
-import { FdStringsRegistry } from '../../internal/strings.js'
 import '../option/fd-option.js'
 import '../row/fd-row.js'
 
@@ -100,8 +99,6 @@ export class FdMultiSelectRow extends FdElement {
   }
 
   override render() {
-    const strings = FdStringsRegistry.get()
-
     return html`
       <fd-row symbol=${this.symbol ?? ''} label=${this.label} caption=${this.caption ?? ''}>
         <div class="strip" slot="trailing" role="group" aria-label=${this.label}>
@@ -112,9 +109,6 @@ export class FdMultiSelectRow extends FdElement {
                 part="segment"
                 type="button"
                 aria-pressed=${option.selected}
-                aria-label="${option.label}, ${
-                  option.selected ? strings.selected : strings.notSelected
-                }"
                 ?data-selected=${option.selected}
                 ?disabled=${this.disabled || option.disabled}
                 @click=${() => this.#toggle(index)}

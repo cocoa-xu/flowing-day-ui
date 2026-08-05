@@ -2,7 +2,6 @@ import { type CSSResultGroup, css, html, type PropertyValues } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { checkCircleFill, circleOutline, selectionStyles } from '../../internal/selection.js'
-import { FdStringsRegistry } from '../../internal/strings.js'
 
 /**
  * Mirrors `SettingsCheckToggle`: one checkmark-circle pill on its own, for use outside a
@@ -84,7 +83,6 @@ export class FdCheckToggle extends FdElement {
   }
 
   override render() {
-    const strings = FdStringsRegistry.get()
     const label = this.label ?? this.textContent?.trim() ?? ''
 
     return html`
@@ -93,7 +91,6 @@ export class FdCheckToggle extends FdElement {
         part="segment"
         type="button"
         aria-pressed=${this.checked}
-        aria-label="${label}, ${this.checked ? strings.selected : strings.notSelected}"
         ?data-selected=${this.checked}
         ?disabled=${this.disabled}
         @click=${() => this.#toggle()}

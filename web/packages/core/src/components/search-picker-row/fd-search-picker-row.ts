@@ -315,7 +315,6 @@ export class FdSearchPickerRow extends FdElement {
   }
 
   #renderOption(option: CollectedOption) {
-    const strings = FdStringsRegistry.get()
     const isSelected = option.value === this.value
 
     return html`
@@ -325,7 +324,6 @@ export class FdSearchPickerRow extends FdElement {
         type="button"
         role="option"
         aria-selected=${isSelected}
-        aria-label="${option.label}, ${isSelected ? strings.selected : strings.notSelected}"
         ?disabled=${option.disabled}
         @click=${() => this.#select(option)}
       >

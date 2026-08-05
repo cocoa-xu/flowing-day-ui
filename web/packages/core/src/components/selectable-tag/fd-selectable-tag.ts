@@ -1,7 +1,6 @@
 import { type CSSResultGroup, css, html, nothing, type PropertyValues } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
-import { FdStringsRegistry } from '../../internal/strings.js'
 import { tagStyles } from '../../internal/tag.js'
 
 /**
@@ -106,7 +105,6 @@ export class FdSelectableTag extends FdElement {
   }
 
   override render() {
-    const strings = FdStringsRegistry.get()
     const retint = this.inactiveAccent !== null && !this.selected
 
     return html`
@@ -115,9 +113,6 @@ export class FdSelectableTag extends FdElement {
         part="tag"
         type="button"
         aria-pressed=${this.selected}
-        aria-label="${this.label ?? this.textContent?.trim() ?? ''}, ${
-          this.selected ? strings.on : strings.off
-        }"
         ?data-selected=${this.selected}
         ?data-fd-accent-scope=${retint}
         style=${retint ? `--fd-accent: ${this.inactiveAccent}` : nothing}

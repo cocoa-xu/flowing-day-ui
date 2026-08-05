@@ -109,6 +109,7 @@ Editors pick up attribute and event completions from the bundled
 | `truncationMode(.middle)` | split head and tail | No CSS keyword truncates a middle, so the tail is held back and the head ellipsises into it |
 | `SettingsWrappingLayout` | `flex-wrap` | The custom `Layout` places each item at its ideal size on the row's top edge, which is a wrapping flex line |
 | `action:` closure | `fd-activate` event | A `click` on the host also fires for the row label, which never ran the closure |
+| `accessibilityValue(_:)` for state | `aria-pressed` / `aria-expanded` / `aria-selected` | The state is native to the platform, and a screen reader speaks it in its own language rather than the page's |
 
 Everything else — metrics, colours, type scale, motion durations — is taken from the Swift
 sources rather than eyeballed, and the tests pin the literals.
