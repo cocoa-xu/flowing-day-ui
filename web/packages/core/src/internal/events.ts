@@ -16,6 +16,8 @@ export interface FdChangeDetail {
   selected?: boolean
   /** `fd-multi-select-row`: every value currently switched on. */
   values?: string[]
+  /** `fd-slider`, `fd-slider-row`. Named as `HTMLInputElement.valueAsNumber` is. */
+  valueAsNumber?: number
 }
 
 /**
