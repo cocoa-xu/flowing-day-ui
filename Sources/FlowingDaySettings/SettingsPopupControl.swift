@@ -80,6 +80,7 @@ final class SettingsPopupButton: NSButton {
   private var highlightedIndex: Int?
 
   var presentedPanel: NSPanel? { menuPanel }
+  var valueTextColor: NSColor { NSColor(accent.foreground) }
 
   override init(frame frameRect: NSRect) {
     super.init(frame: frameRect)
@@ -235,7 +236,7 @@ final class SettingsPopupButton: NSButton {
       in: NSRect(x: 10, y: bounds.midY - 8, width: bounds.width - 39, height: 17),
       withAttributes: [
         .font: textFont,
-        .foregroundColor: NSColor(SettingsPalette.ink),
+        .foregroundColor: valueTextColor,
         .paragraphStyle: paragraph,
       ]
     )

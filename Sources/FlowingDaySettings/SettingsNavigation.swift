@@ -5,12 +5,13 @@ public enum SettingsPageIcon {
   case system(String)
   case application
   case image(NSImage)
+  case template(NSImage)
 }
 
 public struct SettingsPage<ID: Hashable>: Identifiable {
   public let id: ID
   public let title: String
-  public let subtitle: String
+  public let subtitle: String?
   public let icon: SettingsPageIcon
   public let headerIcon: SettingsPageIcon
   public let accent: SettingsAccent?
@@ -20,7 +21,7 @@ public struct SettingsPage<ID: Hashable>: Identifiable {
   public init<Content: View>(
     id: ID,
     title: String,
-    subtitle: String,
+    subtitle: String? = nil,
     icon: SettingsPageIcon,
     headerIcon: SettingsPageIcon? = nil,
     accent: SettingsAccent? = nil,
@@ -343,6 +344,13 @@ private struct SettingsSidebarRow<ID: Hashable>: View {
         .resizable()
         .scaledToFit()
         .frame(width: 18, height: 18)
+    case .template(let image):
+      Image(nsImage: image)
+        .renderingMode(.template)
+        .resizable()
+        .scaledToFit()
+        .foregroundStyle(accent.foreground)
+        .frame(width: 18, height: 18)
     }
   }
 }
@@ -359,10 +367,12 @@ private struct SettingsPageHeader<ID: Hashable>: View {
         Text(page.title)
           .font(typography.pageTitle.font)
           .foregroundStyle(SettingsPalette.ink)
-        Text(page.subtitle)
-          .font(typography.pageSubtitle.font)
-          .foregroundStyle(SettingsPalette.muted)
-          .lineLimit(2)
+        if let subtitle = page.subtitle {
+          Text(subtitle)
+            .font(typography.pageSubtitle.font)
+            .foregroundStyle(SettingsPalette.muted)
+            .lineLimit(2)
+        }
       }
     }
   }
@@ -389,6 +399,18 @@ private struct SettingsPageHeader<ID: Hashable>: View {
         .resizable()
         .scaledToFit()
         .frame(width: 38, height: 38)
+    case .template(let image):
+      Image(nsImage: image)
+        .renderingMode(.template)
+        .resizable()
+        .scaledToFit()
+        .foregroundStyle(accent.foreground)
+        .frame(width: 18, height: 18)
+        .frame(width: 38, height: 38)
+        .background(
+          accent.wash,
+          in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+        )
     }
   }
 }

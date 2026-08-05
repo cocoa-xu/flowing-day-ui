@@ -99,4 +99,26 @@ final class SettingsWindowTests: XCTestCase {
     XCTAssertEqual(selectedIndex, 1)
     XCTAssertNil(button.presentedPanel)
   }
+
+  func testPopupValueUsesTheConfiguredAccent() throws {
+    let foreground = NSColor(calibratedRed: 0.22, green: 0.47, blue: 0.68, alpha: 1)
+    let button = SettingsPopupButton()
+    button.configure(
+      labels: ["Selected"],
+      selectedIndex: 0,
+      minimumWidth: 120,
+      accent: SettingsAccent(fill: .blue, foreground: Color(nsColor: foreground)),
+      strings: SettingsStrings(),
+      controlRadius: 9,
+      textStyle: SettingsTypography.standard.value,
+      optionTextStyle: SettingsTypography.standard.selectionLabel,
+      menuBackgroundColor: SettingsPalette.control
+    )
+
+    let actual = try XCTUnwrap(button.valueTextColor.usingColorSpace(.deviceRGB))
+    let expected = try XCTUnwrap(foreground.usingColorSpace(.deviceRGB))
+    XCTAssertEqual(actual.redComponent, expected.redComponent, accuracy: 0.001)
+    XCTAssertEqual(actual.greenComponent, expected.greenComponent, accuracy: 0.001)
+    XCTAssertEqual(actual.blueComponent, expected.blueComponent, accuracy: 0.001)
+  }
 }

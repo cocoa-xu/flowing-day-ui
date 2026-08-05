@@ -79,4 +79,32 @@ final class SettingsNavigationTests: XCTestCase {
 
     XCTAssertEqual(headerSymbol, "gearshape")
   }
+
+  func testPageSupportsAHeaderWithoutASubtitle() {
+    let page = SettingsPage(
+      id: "companion",
+      title: "Companion",
+      icon: .system("leaf")
+    ) {
+      Color.clear
+    }
+
+    XCTAssertNil(page.subtitle)
+  }
+
+  func testPageSupportsAnAccentColoredTemplateImage() {
+    let image = NSImage(size: NSSize(width: 18, height: 18))
+    let page = SettingsPage(
+      id: "companion",
+      title: "Companion",
+      icon: .template(image)
+    ) {
+      Color.clear
+    }
+
+    guard case .template(let pageImage) = page.icon else {
+      return XCTFail("Expected a template image")
+    }
+    XCTAssertTrue(pageImage === image)
+  }
 }
