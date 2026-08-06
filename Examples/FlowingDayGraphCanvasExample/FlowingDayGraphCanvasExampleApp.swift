@@ -9,9 +9,17 @@ struct FlowingDayGraphCanvasExampleApp: App {
   private let runsPerformancePreview = ProcessInfo.processInfo.arguments.contains(
     "--canvas-performance-preview"
   )
+  private let runsMetalSpike = ProcessInfo.processInfo.arguments.contains(
+    "--canvas-metal-spike"
+  )
+
   var body: some Scene {
     WindowGroup("Graph Canvas") {
-      if runsPerformancePreview {
+      if runsMetalSpike {
+        MetalCanvasSpikeView()
+          .frame(minWidth: 960, minHeight: 640)
+          .preferredColorScheme(.light)
+      } else if runsPerformancePreview {
         GraphCanvasPerformancePreviewView()
           .frame(minWidth: 960, minHeight: 640)
           .preferredColorScheme(.light)
