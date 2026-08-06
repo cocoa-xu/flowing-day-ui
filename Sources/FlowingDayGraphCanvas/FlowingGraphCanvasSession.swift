@@ -122,7 +122,11 @@ public enum FlowingGraphCanvasSessionCommandAction<
   public typealias ElementID = FlowingGraphCompositionElementID<Schema>
 
   case focus(elementID: ElementID, zoom: CGFloat? = nil)
-  case pan(to: CGPoint, zoom: CGFloat? = nil)
+  case pan(
+    worldPoint: CGPoint,
+    viewportPoint: CGPoint? = nil,
+    zoom: CGFloat? = nil
+  )
   case select(FlowingGraphCanvasSelectionCommand<Schema>)
   case fit(
     scope: FlowingGraphCanvasFitScope<Schema>,
@@ -150,6 +154,10 @@ public struct FlowingGraphCanvasSessionCommand<
     self.targetSessionID = targetSessionID
     self.action = action
     self.animated = animated
+  }
+
+  public func targets(_ sessionID: FlowingGraphCanvasSessionID) -> Bool {
+    targetSessionID == sessionID
   }
 }
 
@@ -213,13 +221,13 @@ public enum FlowingGraphCanvasSessionReducer {
     to selection: inout Set<FlowingGraphCompositionElementID<Schema>>
   ) {
     switch command {
-    case let .replace(elementIDs):
+    case .replace(let elementIDs):
       selection = elementIDs
-    case let .add(elementIDs):
+    case .add(let elementIDs):
       selection.formUnion(elementIDs)
-    case let .remove(elementIDs):
+    case .remove(let elementIDs):
       selection.subtract(elementIDs)
-    case let .toggle(elementIDs):
+    case .toggle(let elementIDs):
       for elementID in elementIDs {
         if !selection.insert(elementID).inserted {
           selection.remove(elementID)

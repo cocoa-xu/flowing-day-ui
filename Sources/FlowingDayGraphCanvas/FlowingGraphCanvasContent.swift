@@ -83,6 +83,7 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
   private let canonicalIDByLocalID: [LocalElementID: ElementID]
   private let localIDByCanonicalID: [ElementID: LocalElementID]
   private let nodeByLocalID: [LocalElementID: FlowingGraphPresentationNode<Schema>]
+  private let nodeOrderByLocalID: [LocalElementID: Int]
   private let portByLocalID: [LocalElementID: FlowingGraphPresentationPort<Schema>]
   private let edgeByLocalID: [LocalElementID: FlowingGraphPresentationEdge<Schema>]
   private let edgeByID: [LocalElementID: FlowingGraphLayoutEdge<LayoutSchema>]
@@ -130,6 +131,9 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
     canonicalIDByLocalID = index.canonicalIDByLocalID
     localIDByCanonicalID = index.localIDByCanonicalID
     nodeByLocalID = index.nodeByLocalID
+    nodeOrderByLocalID = Dictionary(
+      uniqueKeysWithValues: presentation.nodes.enumerated().map { ($1.localID, $0) }
+    )
     portByLocalID = index.portByLocalID
     edgeByLocalID = index.edgeByLocalID
     nodeLocalIDByPortLocalID = index.nodeLocalIDByPortLocalID
@@ -199,6 +203,10 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
 
   public func frame(for nodeLocalID: LocalElementID) -> CGRect? {
     layoutResult.frame(for: nodeLocalID)
+  }
+
+  public func nodePresentationOrder(for localID: LocalElementID) -> Int? {
+    nodeOrderByLocalID[localID]
   }
 
   public func route(for edgeLocalID: LocalElementID) -> FlowingGraphEdgeRoute? {

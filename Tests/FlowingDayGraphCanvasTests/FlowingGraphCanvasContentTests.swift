@@ -2,6 +2,7 @@ import FlowingDayGraphCanvas
 import FlowingDayGraphComposition
 import FlowingDayGraphCore
 import FlowingDayGraphLayout
+import SwiftUI
 import XCTest
 
 private enum CanvasGraphSchema: FlowingGraphSchema {
@@ -172,6 +173,44 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
         )
       ]
     )
+  }
+
+  @MainActor
+  func testPublicViewSupportsAnOptionalPortBuilder() throws {
+    let fixture = try makeFixture()
+    let content = try FlowingGraphCanvasContent<CanvasCompositionSchema>(
+      presentation: fixture.presentation,
+      layoutInput: fixture.input,
+      layoutResult: fixture.result
+    )
+    let session = Binding.constant(
+      FlowingGraphCanvasSessionState<CanvasCompositionSchema>()
+    )
+    let view = FlowingGraphCanvas(
+      content: content,
+      sessionID: .init(),
+      session: session
+    ) { _ in
+      Color.clear
+    } node: { node, _ in
+      Text(node.value)
+    } edge: { _, context in
+      FlowingGraphCanvasDefaultEdge(context: context)
+    }
+
+    XCTAssertFalse(String(reflecting: type(of: view)).isEmpty)
+  }
+
+  func testSessionCommandsOnlyTargetTheirDeclaredSession() {
+    let target = FlowingGraphCanvasSessionID()
+    let other = FlowingGraphCanvasSessionID()
+    let command = FlowingGraphCanvasSessionCommand<CanvasCompositionSchema>(
+      targetSessionID: target,
+      action: .fit(scope: .presentation, padding: 24)
+    )
+
+    XCTAssertTrue(command.targets(target))
+    XCTAssertFalse(command.targets(other))
   }
 
   private func makeFixture() throws -> CanvasFixture {
