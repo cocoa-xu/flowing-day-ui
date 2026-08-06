@@ -175,6 +175,128 @@ final class FlowingSpatialIndexTests: XCTestCase {
     XCTAssertEqual(slice.nodeFrames, [])
     XCTAssertEqual(slice.edgeIDs, ["edge"])
     XCTAssertEqual(slice.edgeRoutes.map(\.edgeID), ["edge"])
+
+    let zeroMarginIndex = try FlowingGraphRenderIndex(
+      input: input,
+      result: result,
+      configuration: FlowingGraphRenderIndexConfiguration(edgeCullingMargin: 0)
+    )
+    XCTAssertEqual(
+      zeroMarginIndex.slice(
+        intersecting: CGRect(x: 450, y: 29, width: 100, height: 2)
+      ).edgeIDs,
+      ["edge"]
+    )
+  }
+
+  func testRenderIndexSupportsAnEdgeLargerThanTheSpatialGridBudget() throws {
+    let topology = try FlowingGraphLayoutTopology<RenderSchema>(
+      nodeIDs: ["first", "second"],
+      ports: [],
+      edges: [
+        FlowingGraphLayoutEdge(
+          id: "edge",
+          endpoints: .directed(source: .node("first"), target: .node("second"))
+        )
+      ]
+    )
+    let input = try makeInput(topology: topology)
+    let placement = try makePlacement(input: input)
+    let result = try FlowingGraphLayoutResult(
+      input: input,
+      placement: placement,
+      edgeRoutes: [
+        FlowingGraphLayoutEdgeRoute(
+          edgeID: "edge",
+          route: FlowingGraphEdgeRoute(
+            start: .zero,
+            segments: [.line(end: CGPoint(x: 100_000_000, y: 100_000_000))]
+          )
+        )
+      ]
+    )
+    let index = try FlowingGraphRenderIndex(input: input, result: result)
+
+    XCTAssertEqual(
+      index.slice(
+        intersecting: CGRect(x: 49_999_900, y: 49_999_900, width: 200, height: 200)
+      ).edgeIDs,
+      ["edge"]
+    )
+  }
+
+  func testRenderIndexCullsTenThousandElongatedEdges() throws {
+    let edgeCount = 10_000
+    let edges = (0..<edgeCount).map { edgeIndex in
+      FlowingGraphLayoutEdge<RenderSchema>(
+        id: "edge-\(edgeIndex)",
+        endpoints: .directed(source: .node("first"), target: .node("second"))
+      )
+    }
+    let topology = try FlowingGraphLayoutTopology<RenderSchema>(
+      nodeIDs: ["first", "second"],
+      ports: [],
+      edges: edges
+    )
+    let input = try makeInput(topology: topology)
+    let placement = try makePlacement(input: input)
+    let routes = edges.enumerated().map { edgeIndex, edge in
+      let y = CGFloat(edgeIndex) * 100
+      return FlowingGraphLayoutEdgeRoute<RenderSchema>(
+        edgeID: edge.id,
+        route: FlowingGraphEdgeRoute(
+          start: CGPoint(x: 0, y: y),
+          segments: [.line(end: CGPoint(x: 100_000, y: y))]
+        )
+      )
+    }
+    let result = try FlowingGraphLayoutResult(
+      input: input,
+      placement: placement,
+      edgeRoutes: routes
+    )
+    let index = try FlowingGraphRenderIndex(input: input, result: result)
+
+    XCTAssertEqual(
+      index.slice(
+        intersecting: CGRect(x: 49_900, y: 499_950, width: 200, height: 100)
+      ).edgeIDs,
+      ["edge-5000"]
+    )
+  }
+
+  private func makeInput(
+    topology: FlowingGraphLayoutTopology<RenderSchema>
+  ) throws -> FlowingGraphLayoutInput<RenderSchema> {
+    try FlowingGraphLayoutResolution.input(
+      topology: topology,
+      nodeSizeResolver: FlowingFixedNodeSizeResolver(
+        size: CGSize(width: 100, height: 60)
+      ),
+      portAnchorResolver: FlowingCenteredPortAnchorResolver(),
+      pipelineIdentity: FlowingLayoutPipelineIdentity(
+        component: FlowingLayoutComponentIdentity()
+      )
+    )
+  }
+
+  private func makePlacement(
+    input: FlowingGraphLayoutInput<RenderSchema>
+  ) throws -> FlowingGraphNodePlacement<RenderSchema> {
+    try FlowingGraphNodePlacement(
+      input: input,
+      nodeFrames: [
+        FlowingGraphNodeFrame(
+          nodeID: "first",
+          frame: CGRect(x: 0, y: 0, width: 100, height: 60)
+        ),
+        FlowingGraphNodeFrame(
+          nodeID: "second",
+          frame: CGRect(x: 1_000, y: 0, width: 100, height: 60)
+        ),
+      ],
+      contentBounds: CGRect(x: 0, y: 0, width: 1_100, height: 60)
+    )
   }
 }
 

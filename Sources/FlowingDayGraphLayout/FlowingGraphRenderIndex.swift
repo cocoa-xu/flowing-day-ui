@@ -3,19 +3,18 @@ import Foundation
 
 public struct FlowingGraphRenderIndexConfiguration: Sendable, Equatable {
   public let nodeIndex: FlowingSpatialIndexConfiguration
-  public let edgeIndex: FlowingSpatialIndexConfiguration
+  public let edgeLeafCapacity: Int
   public let edgeCullingMargin: CGFloat
 
   public init(
     nodeIndex: FlowingSpatialIndexConfiguration = .init(),
-    edgeIndex: FlowingSpatialIndexConfiguration = .init(
-      maximumCellsPerItem: 65_536
-    ),
+    edgeLeafCapacity: Int = 8,
     edgeCullingMargin: CGFloat = 12
   ) {
+    precondition(edgeLeafCapacity > 0)
     precondition(edgeCullingMargin >= 0 && edgeCullingMargin.isFinite)
     self.nodeIndex = nodeIndex
-    self.edgeIndex = edgeIndex
+    self.edgeLeafCapacity = edgeLeafCapacity
     self.edgeCullingMargin = edgeCullingMargin
   }
 }
@@ -52,7 +51,7 @@ public struct FlowingGraphRenderIndex<Schema: FlowingGraphLayoutSchema>: Sendabl
 
   private let result: FlowingGraphLayoutResult<Schema>
   private let nodeIndex: FlowingSpatialIndex<Schema.NodeID>
-  private let edgeIndex: FlowingSpatialIndex<Schema.EdgeID>
+  private let edgeIndex: FlowingBoundsIndex<Schema.EdgeID>
 
   public init(
     input: FlowingGraphLayoutInput<Schema>,
@@ -71,7 +70,7 @@ public struct FlowingGraphRenderIndex<Schema: FlowingGraphLayoutSchema>: Sendabl
       },
       configuration: configuration.nodeIndex
     )
-    edgeIndex = try FlowingSpatialIndex(
+    edgeIndex = try FlowingBoundsIndex(
       entries: result.edgeRoutes.map {
         FlowingSpatialIndexEntry(
           id: $0.edgeID,
@@ -81,7 +80,7 @@ public struct FlowingGraphRenderIndex<Schema: FlowingGraphLayoutSchema>: Sendabl
           )
         )
       },
-      configuration: configuration.edgeIndex
+      leafCapacity: configuration.edgeLeafCapacity
     )
   }
 
