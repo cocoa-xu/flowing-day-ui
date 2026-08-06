@@ -207,6 +207,122 @@ final class FlowingGraphCollaborationReducerTests: XCTestCase {
     )
   }
 
+  func testSubgraphTransactionsValidateOwnershipCyclesAtCommit() throws {
+    let replicaID = replicaID(1)
+    let firstID = FlowingCollaborationOperationID(replicaID: replicaID, counter: 1)
+    let definitionPosition = try position(
+      after: initialNodePosition(),
+      operationID: firstID,
+      commandIndex: 0
+    )
+    let firstLinkPosition = try position(
+      after: nil,
+      operationID: firstID,
+      commandIndex: 1
+    )
+    let first = envelope(
+      operationID: firstID,
+      commands: [
+        .insertDefinition(id: 2, position: definitionPosition),
+        .insertSubgraphLink(
+          .init(
+            id: 1,
+            site: .init(graphID: 1, nodeID: 1),
+            ownership: .owned,
+            targetGraphID: 2,
+            value: "child"
+          ),
+          position: firstLinkPosition
+        ),
+      ]
+    )
+    let secondID = FlowingCollaborationOperationID(replicaID: replicaID, counter: 2)
+    let nodePosition = try position(after: nil, operationID: secondID, commandIndex: 0)
+    let secondLinkPosition = try position(
+      after: firstLinkPosition,
+      operationID: secondID,
+      commandIndex: 1
+    )
+    let cycle = envelope(
+      operationID: secondID,
+      dependencies: FlowingCausalVersion([replicaID: 1]),
+      commands: [
+        .insertNode(graphID: 2, node: .init(id: 2, value: "cycle"), position: nodePosition),
+        .insertSubgraphLink(
+          .init(
+            id: 2,
+            site: .init(graphID: 2, nodeID: 2),
+            ownership: .owned,
+            targetGraphID: 1,
+            value: "cycle"
+          ),
+          position: secondLinkPosition
+        ),
+      ]
+    )
+    var replica = makeReplica()
+
+    _ = replica.ingest([cycle, first])
+    let snapshot = replica.materialize()
+    let child = snapshot.state.document.definitions.first { $0.id == 2 }!
+
+    XCTAssertTrue(child.graph.isEmpty)
+    XCTAssertEqual(snapshot.state.document.subgraphLinks.map(\.id), [1])
+    guard case .rejected(.documentValidation) = snapshot.audit.last?.outcome else {
+      return XCTFail("Expected ownership cycle rejection")
+    }
+  }
+
+  func testCheckpointRetainsDeletionTombstones() throws {
+    let replicaID = replicaID(1)
+    let deletion = envelope(
+      operationID: .init(replicaID: replicaID, counter: 1),
+      commands: [.removeNode(graphID: 1, id: 1)]
+    )
+    var replica = makeReplica()
+    _ = replica.ingest([deletion])
+    let deleted = replica.materialize()
+    try replica.compact(through: replica.checkpoint(from: deleted))
+    let insertionID = FlowingCollaborationOperationID(replicaID: replicaID, counter: 2)
+    let insertion = envelope(
+      operationID: insertionID,
+      dependencies: FlowingCausalVersion([replicaID: 1]),
+      commands: [
+        .insertNode(
+          graphID: 1,
+          node: .init(id: 1, value: "replacement"),
+          position: try position(after: nil, operationID: insertionID, commandIndex: 0)
+        )
+      ]
+    )
+
+    _ = replica.ingest([insertion])
+    let snapshot = replica.materialize()
+
+    XCTAssertTrue(nodeIDs(in: snapshot.state).isEmpty)
+    XCTAssertEqual(
+      snapshot.audit.map(\.outcome),
+      [.rejected(.tombstonedElement(.graphElement(graphID: 1, elementID: .node(1))))]
+    )
+  }
+
+  func testNonFiniteSharedPlacementIsRejected() {
+    let address = NodeAddress(graphID: 1, nodeID: 1)
+    let operation = envelope(
+      operationID: .init(replicaID: replicaID(1), counter: 1),
+      commands: [
+        .setSharedNodePlacement(address: address, position: CGPoint(x: CGFloat.nan, y: 0))
+      ]
+    )
+    var replica = makeReplica()
+
+    _ = replica.ingest([operation])
+    let snapshot = replica.materialize()
+
+    XCTAssertTrue(snapshot.state.sharedNodePlacements.isEmpty)
+    XCTAssertEqual(snapshot.audit.map(\.outcome), [.rejected(.nonFinitePlacement(address))])
+  }
+
   private typealias NodeAddress = FlowingGraphDefinitionNodeAddress<Int, Int>
   private typealias OperationSchema = FlowingGraphCollaborationOperationSchema<TestSchema>
 

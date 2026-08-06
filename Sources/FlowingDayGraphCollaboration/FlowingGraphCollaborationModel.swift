@@ -159,6 +159,9 @@ public enum FlowingGraphCollaborationFailure<Schema: FlowingGraphCollaborationSc
   case placementConflict(
     FlowingGraphDefinitionNodeAddress<Schema.GraphID, Schema.GraphSchema.NodeID>
   )
+  case nonFinitePlacement(
+    FlowingGraphDefinitionNodeAddress<Schema.GraphID, Schema.GraphSchema.NodeID>
+  )
 }
 
 public struct FlowingGraphCollaborationState<Schema: FlowingGraphCollaborationSchema>:
@@ -206,6 +209,20 @@ public struct FlowingGraphCollaborationState<Schema: FlowingGraphCollaborationSc
       nodePositions[definition.id] = try Self.initialPositions(definition.graph.nodeIDs)
       portPositions[definition.id] = try Self.initialPositions(definition.graph.portKeys)
       edgePositions[definition.id] = try Self.initialPositions(definition.graph.edgeIDs)
+    }
+    for (address, position) in sharedNodePlacements {
+      guard position.x.isFinite, position.y.isFinite else {
+        throw FlowingGraphCollaborationFailure<Schema>.nonFinitePlacement(address)
+      }
+      guard
+        document.definitions.first(where: { $0.id == address.graphID })?.graph.node(
+          id: address.nodeID
+        ) != nil
+      else {
+        throw FlowingGraphCollaborationFailure<Schema>.unknownElement(
+          .graphElement(graphID: address.graphID, elementID: .node(address.nodeID))
+        )
+      }
     }
   }
 

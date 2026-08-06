@@ -354,15 +354,21 @@ extension FlowingGraphCollaborationState {
 
     case .setSharedNodePlacement(let address, let position):
       try requireNode(address)
+      try validatePlacement(position, address: address)
       sharedNodePlacements[address] = position
 
     case .translateSharedNodePlacement(let address, let delta):
       try requireNode(address)
+      guard delta.width.isFinite, delta.height.isFinite else {
+        throw FlowingGraphCollaborationFailure<Schema>.nonFinitePlacement(address)
+      }
       let current = sharedNodePlacements[address, default: .zero]
-      sharedNodePlacements[address] = CGPoint(
+      let next = CGPoint(
         x: current.x + delta.width,
         y: current.y + delta.height
       )
+      try validatePlacement(next, address: address)
+      sharedNodePlacements[address] = next
 
     case .clearSharedNodePlacement(let address):
       try requireNode(address)
@@ -370,6 +376,12 @@ extension FlowingGraphCollaborationState {
 
     case .compareAndSetSharedNodePlacement(let address, let expected, let replacement):
       try requireNode(address)
+      if let expected {
+        try validatePlacement(expected, address: address)
+      }
+      if let replacement {
+        try validatePlacement(replacement, address: address)
+      }
       guard sharedNodePlacements[address] == expected else {
         throw FlowingGraphCollaborationFailure<Schema>.placementConflict(address)
       }
@@ -508,6 +520,15 @@ extension FlowingGraphCollaborationState {
     _ address: FlowingGraphDefinitionNodeAddress<Schema.GraphID, Schema.GraphSchema.NodeID>
   ) throws(FlowingGraphCollaborationFailure<Schema>) {
     try requireGraphElement(address.graphID, .node(address.nodeID))
+  }
+
+  private func validatePlacement(
+    _ position: CGPoint,
+    address: FlowingGraphDefinitionNodeAddress<Schema.GraphID, Schema.GraphSchema.NodeID>
+  ) throws(FlowingGraphCollaborationFailure<Schema>) {
+    guard position.x.isFinite, position.y.isFinite else {
+      throw FlowingGraphCollaborationFailure<Schema>.nonFinitePlacement(address)
+    }
   }
 
   private func graphElement(
