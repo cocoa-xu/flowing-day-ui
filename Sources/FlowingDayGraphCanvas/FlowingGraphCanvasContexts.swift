@@ -1,11 +1,12 @@
-#if canImport(AppKit)
-import AppKit
-#endif
 import CoreGraphics
 import FlowingDayCanvas
 import FlowingDayGraphComposition
 import FlowingDayGraphLayout
 import SwiftUI
+
+#if canImport(AppKit)
+  import AppKit
+#endif
 
 public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
   public let canvas: FlowingCanvasConfiguration
@@ -29,10 +30,10 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
 public enum FlowingGraphCanvasPlatformInput {
   public static var isAdditiveSelectionActive: Bool {
     #if canImport(AppKit)
-    let flags = NSEvent.modifierFlags
-    return flags.contains(.command) || flags.contains(.shift)
+      let flags = NSEvent.modifierFlags
+      return flags.contains(.command) || flags.contains(.shift)
     #else
-    return false
+      return false
     #endif
   }
 }
@@ -59,6 +60,10 @@ public struct FlowingGraphCanvasElementActions<Schema: FlowingGraphCanvasSchema>
   public func send(_ action: FlowingGraphCanvasElementAction) {
     elementAction(action)
   }
+
+  public static var disabled: Self {
+    Self(select: { _ in }, send: { _ in })
+  }
 }
 
 @MainActor
@@ -76,6 +81,30 @@ public struct FlowingGraphCanvasNodeContext<Schema: FlowingGraphCanvasSchema> {
   public let isHovered: Bool
   public let isBeingDragged: Bool
   public let actions: FlowingGraphCanvasElementActions<Schema>
+
+  public init(
+    elementID: ElementID,
+    localID: LocalElementID,
+    baseFrame: CGRect,
+    frame: CGRect,
+    renderedFrame: CGRect,
+    renderScale: CGFloat,
+    isSelected: Bool,
+    isHovered: Bool,
+    isBeingDragged: Bool,
+    actions: FlowingGraphCanvasElementActions<Schema>
+  ) {
+    self.elementID = elementID
+    self.localID = localID
+    self.baseFrame = baseFrame
+    self.frame = frame
+    self.renderedFrame = renderedFrame
+    self.renderScale = renderScale
+    self.isSelected = isSelected
+    self.isHovered = isHovered
+    self.isBeingDragged = isBeingDragged
+    self.actions = actions
+  }
 }
 
 @MainActor
@@ -92,6 +121,28 @@ public struct FlowingGraphCanvasPortContext<Schema: FlowingGraphCanvasSchema> {
   public let isSelected: Bool
   public let isHovered: Bool
   public let actions: FlowingGraphCanvasElementActions<Schema>
+
+  public init(
+    elementID: ElementID,
+    localID: LocalElementID,
+    nodeLocalID: LocalElementID,
+    anchor: FlowingGraphCanvasAnchor,
+    renderedPosition: CGPoint,
+    renderScale: CGFloat,
+    isSelected: Bool,
+    isHovered: Bool,
+    actions: FlowingGraphCanvasElementActions<Schema>
+  ) {
+    self.elementID = elementID
+    self.localID = localID
+    self.nodeLocalID = nodeLocalID
+    self.anchor = anchor
+    self.renderedPosition = renderedPosition
+    self.renderScale = renderScale
+    self.isSelected = isSelected
+    self.isHovered = isHovered
+    self.actions = actions
+  }
 }
 
 @MainActor
@@ -111,6 +162,34 @@ public struct FlowingGraphCanvasEdgeContext<Schema: FlowingGraphCanvasSchema> {
   public let isHovered: Bool
   public let isTransient: Bool
   public let actions: FlowingGraphCanvasElementActions<Schema>
+
+  public init(
+    elementID: ElementID,
+    localID: LocalElementID,
+    worldRoute: FlowingGraphEdgeRoute,
+    renderedRoute: FlowingGraphEdgeRoute,
+    anchors: FlowingGraphCanvasEdgeAnchors,
+    worldFrame: CGRect,
+    renderedFrame: CGRect,
+    renderScale: CGFloat,
+    isSelected: Bool,
+    isHovered: Bool,
+    isTransient: Bool,
+    actions: FlowingGraphCanvasElementActions<Schema>
+  ) {
+    self.elementID = elementID
+    self.localID = localID
+    self.worldRoute = worldRoute
+    self.renderedRoute = renderedRoute
+    self.anchors = anchors
+    self.worldFrame = worldFrame
+    self.renderedFrame = renderedFrame
+    self.renderScale = renderScale
+    self.isSelected = isSelected
+    self.isHovered = isHovered
+    self.isTransient = isTransient
+    self.actions = actions
+  }
 }
 
 @MainActor

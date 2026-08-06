@@ -282,8 +282,8 @@ public struct FlowingGraphCanvas<
         )
         : baseRoute
       let resolvedAnchors = FlowingGraphCanvasEdgeAnchors(
-        first: translated(anchors.first, by: firstDelta),
-        second: translated(anchors.second, by: secondDelta),
+        first: FlowingGraphCanvasRenderingGeometry.translated(anchors.first, by: firstDelta),
+        second: FlowingGraphCanvasRenderingGeometry.translated(anchors.second, by: secondDelta),
         isDirected: anchors.isDirected
       )
       let worldPadding = configuration.edgeRenderPadding / context.zoom
@@ -292,7 +292,7 @@ public struct FlowingGraphCanvas<
         dy: -worldPadding
       )
       let renderedFrame = surface.localTransform.applying(to: worldFrame)
-      let renderedRoute = transformed(
+      let renderedRoute = FlowingGraphCanvasRenderingGeometry.transformed(
         worldRoute,
         by: surface.localTransform,
         relativeTo: renderedFrame.origin
@@ -878,43 +878,4 @@ where PortContent == EmptyView, Decorations == EmptyView {
       overlays: overlays
     )
   }
-}
-
-private func translated(
-  _ anchor: FlowingGraphCanvasAnchor,
-  by delta: CGSize
-) -> FlowingGraphCanvasAnchor {
-  FlowingGraphCanvasAnchor(
-    position: translated(anchor.position, by: delta),
-    normal: anchor.normal
-  )
-}
-
-private func transformed(
-  _ route: FlowingGraphEdgeRoute,
-  by transform: FlowingCanvasTransform,
-  relativeTo origin: CGPoint
-) -> FlowingGraphEdgeRoute {
-  func point(_ point: CGPoint) -> CGPoint {
-    let transformed = transform.applying(to: point)
-    return CGPoint(x: transformed.x - origin.x, y: transformed.y - origin.y)
-  }
-
-  return FlowingGraphEdgeRoute(
-    start: point(route.start),
-    segments: route.segments.map { segment in
-      switch segment {
-      case .line(let end):
-        return .line(end: point(end))
-      case .quadratic(let control, let end):
-        return .quadratic(control: point(control), end: point(end))
-      case .cubic(let control1, let control2, let end):
-        return .cubic(
-          control1: point(control1),
-          control2: point(control2),
-          end: point(end)
-        )
-      }
-    }
-  )
 }

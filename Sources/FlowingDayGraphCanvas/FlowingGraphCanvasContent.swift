@@ -306,6 +306,10 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
 
   public func bounds(for elementID: ElementID) -> CGRect? {
     guard let localID = localIDByCanonicalID[elementID] else { return nil }
+    return bounds(forLocalID: localID)
+  }
+
+  public func bounds(forLocalID localID: LocalElementID) -> CGRect? {
     if let frame = layoutResult.frame(for: localID) {
       return frame
     }
