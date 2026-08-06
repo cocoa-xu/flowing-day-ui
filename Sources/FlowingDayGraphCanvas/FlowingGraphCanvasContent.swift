@@ -4,7 +4,7 @@ import FlowingDayGraphCore
 import FlowingDayGraphLayout
 import Foundation
 
-public protocol FlowingGraphCanvasSchema: FlowingGraphCompositionSchema
+public protocol FlowingGraphCanvasSchema: FlowingGraphCompositionSchema, SendableMetatype
 where
   DocumentID: Sendable,
   GraphID: Sendable,
@@ -13,7 +13,8 @@ where
   OccurrenceID: Sendable,
   GraphSchema.NodeID: Sendable,
   GraphSchema.PortID: Sendable,
-  GraphSchema.EdgeID: Sendable
+  GraphSchema.EdgeID: Sendable,
+  GraphSchema: SendableMetatype
 {}
 
 public enum FlowingGraphCanvasLayoutSchema<
@@ -164,6 +165,15 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
 
   public var contentBounds: CGRect {
     layoutResult.contentBounds
+  }
+
+  func miniMapSnapshotSource() -> FlowingGraphCanvasMiniMapSnapshotSource<Schema> {
+    FlowingGraphCanvasMiniMapSnapshotSource(
+      contentBounds: layoutResult.contentBounds,
+      canonicalIDByLocalID: canonicalIDByLocalID,
+      nodeFrames: layoutResult.nodeFrames,
+      edgeRoutes: layoutResult.edgeRoutes
+    )
   }
 
   public var elementIDs: Set<ElementID> {
@@ -352,6 +362,64 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
       return [topology.nodeID(for: source), topology.nodeID(for: target)]
     case .undirected(let first, let second):
       return [topology.nodeID(for: first), topology.nodeID(for: second)]
+    }
+  }
+
+}
+
+struct FlowingGraphCanvasMiniMapSnapshotSource<
+  Schema: FlowingGraphCanvasSchema
+>: Sendable {
+  typealias ElementID = FlowingGraphCompositionElementID<Schema>
+  typealias LocalElementID = FlowingGraphPresentationLocalElementID<Schema>
+  typealias LayoutSchema = FlowingGraphCanvasLayoutSchema<Schema>
+
+  private static var cancellationCheckStride: Int { 2_048 }
+
+  let contentBounds: CGRect
+  let canonicalIDByLocalID: [LocalElementID: ElementID]
+  let nodeFrames: [FlowingGraphNodeFrame<LayoutSchema>]
+  let edgeRoutes: [FlowingGraphLayoutEdgeRoute<LayoutSchema>]
+
+  func makeSnapshot() throws -> FlowingGraphMiniMapSnapshot<ElementID, ElementID> {
+    var nodes: [FlowingGraphMiniMapNode<ElementID>] = []
+    nodes.reserveCapacity(nodeFrames.count)
+    for (index, entry) in nodeFrames.enumerated() {
+      if index.isMultiple(of: Self.cancellationCheckStride) {
+        try Task.checkCancellation()
+      }
+      guard let elementID = canonicalIDByLocalID[entry.nodeID] else { continue }
+      nodes.append(FlowingGraphMiniMapNode(id: elementID, frame: entry.frame))
+    }
+
+    var edges: [FlowingGraphMiniMapEdge<ElementID>] = []
+    edges.reserveCapacity(edgeRoutes.count)
+    for (index, entry) in edgeRoutes.enumerated() {
+      if index.isMultiple(of: Self.cancellationCheckStride) {
+        try Task.checkCancellation()
+      }
+      guard let elementID = canonicalIDByLocalID[entry.edgeID] else { continue }
+      edges.append(
+        FlowingGraphMiniMapEdge(
+          id: elementID,
+          start: entry.route.start,
+          end: Self.endPoint(of: entry.route)
+        )
+      )
+    }
+
+    return FlowingGraphMiniMapSnapshot(
+      contentBounds: contentBounds,
+      nodes: nodes,
+      edges: edges
+    )
+  }
+
+  private static func endPoint(of route: FlowingGraphEdgeRoute) -> CGPoint {
+    guard let segment = route.segments.last else { return route.start }
+    switch segment {
+    case .line(let end), .quadratic(_, let end), .cubic(_, _, let end):
+      return end
     }
   }
 }

@@ -201,12 +201,33 @@ struct GraphCanvasShowcaseView: View {
         },
         port: { ShowcasePort(port: $0, context: $1) },
         decorations: { ShowcaseWorldDecoration(context: $0) },
-        overlays: {
-          ShowcaseCanvasTools(
-            session: $session,
-            content: $0.content,
-            proxy: $0.proxy
-          )
+        overlays: { context in
+          ZStack {
+            ShowcaseCanvasTools(
+              session: $session,
+              content: context.content,
+              proxy: context.proxy
+            )
+            FlowingGraphMiniMapOverlay(placement: .topTrailing) {
+              FlowingGraphCanvasMiniMap(
+                content: context.content,
+                proxy: context.proxy,
+                configuration: FlowingGraphMiniMapConfiguration(visibility: .always),
+                style: FlowingGraphMiniMapStyle(
+                  background: PreferencesPalette.control.opacity(0.96),
+                  border: PreferencesPalette.hairline,
+                  edge: PreferencesPalette.faint.opacity(0.4),
+                  viewportFill: PreferencesAccent.celadon.fill.opacity(0.12),
+                  viewportStroke: PreferencesAccent.celadon.fill,
+                  nodeStyles: [
+                    FlowingGraphMiniMapNodeStyle(
+                      fill: PreferencesPalette.muted.opacity(0.62)
+                    )
+                  ]
+                )
+              )
+            }
+          }
         }
       )
     } else {

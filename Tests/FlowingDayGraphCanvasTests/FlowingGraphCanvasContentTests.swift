@@ -1,10 +1,11 @@
 import FlowingDayCanvas
-import FlowingDayGraphCanvas
 import FlowingDayGraphComposition
 import FlowingDayGraphCore
 import FlowingDayGraphLayout
 import SwiftUI
 import XCTest
+
+@testable import FlowingDayGraphCanvas
 
 private enum CanvasGraphSchema: FlowingGraphSchema {
   typealias NodeID = String
@@ -58,6 +59,25 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
     XCTAssertNotNil(content.anchor(for: firstPort.localID))
     XCTAssertNotNil(content.route(for: edge.localID))
     XCTAssertEqual(content.incidentEdgeLocalIDs(of: firstNode.localID), [edge.localID])
+  }
+
+  func testMiniMapSnapshotSourceMaterializesCanonicalGeometry() throws {
+    let fixture = try makeFixture()
+    let content = try FlowingGraphCanvasContent<CanvasCompositionSchema>(
+      presentation: fixture.presentation,
+      layoutInput: fixture.input,
+      layoutResult: fixture.result
+    )
+    let firstNode = try XCTUnwrap(fixture.presentation.nodes.first)
+    let edge = try XCTUnwrap(fixture.presentation.edges.first)
+
+    let miniMapSnapshot = try content.miniMapSnapshotSource().makeSnapshot()
+
+    XCTAssertEqual(miniMapSnapshot.nodes.count, fixture.presentation.nodes.count)
+    XCTAssertEqual(miniMapSnapshot.edges.count, fixture.presentation.edges.count)
+    XCTAssertEqual(miniMapSnapshot.contentBounds, fixture.result.contentBounds)
+    XCTAssertEqual(miniMapSnapshot.nodes.first?.id, firstNode.id)
+    XCTAssertEqual(miniMapSnapshot.edges.first?.id, edge.id)
   }
 
   func testContentRejectsGeometryForADifferentTopology() throws {
