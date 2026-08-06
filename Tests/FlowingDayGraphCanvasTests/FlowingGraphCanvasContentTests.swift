@@ -110,6 +110,71 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
     }
   }
 
+  func testContentAcceptsCyclicAndUndirectedPresentations() throws {
+    var graph = FlowingGraph<CanvasGraphSchema>()
+    let mutation = graph.update { transaction in
+      for nodeID in ["first", "second", "third"] {
+        transaction.insert(FlowingGraphNode(id: nodeID, value: nodeID))
+      }
+      transaction.insert(
+        FlowingGraphEdge(
+          id: "forward",
+          endpoints: .directed(source: .node("first"), target: .node("second")),
+          value: "Forward"
+        )
+      )
+      transaction.insert(
+        FlowingGraphEdge(
+          id: "backward",
+          endpoints: .directed(source: .node("second"), target: .node("first")),
+          value: "Backward"
+        )
+      )
+      transaction.insert(
+        FlowingGraphEdge(
+          id: "undirected",
+          endpoints: .undirected(.node("second"), .node("third")),
+          value: "Undirected"
+        )
+      )
+    }
+    guard case .committed = mutation else {
+      return XCTFail("Fixture graph mutation failed")
+    }
+    let presentation = try project(graph)
+    let content = try makeManualContent(presentation: presentation)
+
+    XCTAssertEqual(content.presentation.edges.count, 3)
+    XCTAssertEqual(
+      content.presentation.edges.compactMap { content.edgeAnchors(for: $0.localID)?.isDirected },
+      [true, true, false]
+    )
+  }
+
+  func testContentIndexesTenThousandNodesWithoutMaterializingTheWorld() throws {
+    let nodeCount = 10_001
+    var graph = FlowingGraph<CanvasGraphSchema>()
+    let mutation = graph.update { transaction in
+      for index in 0..<nodeCount {
+        let nodeID = "node-\(index)"
+        transaction.insert(FlowingGraphNode(id: nodeID, value: nodeID))
+      }
+    }
+    guard case .committed = mutation else {
+      return XCTFail("Fixture graph mutation failed")
+    }
+    let presentation = try project(graph)
+    let content = try makeManualContent(presentation: presentation)
+    let anchorNode = presentation.nodes[5_050]
+    let anchorFrame = try XCTUnwrap(content.frame(for: anchorNode.localID))
+
+    let slice = content.renderSlice(intersecting: anchorFrame.insetBy(dx: -180, dy: -120))
+
+    XCTAssertEqual(content.presentation.nodes.count, nodeCount)
+    XCTAssertLessThan(slice.nodeIDs.count, 30)
+    XCTAssertTrue(slice.nodeIDs.contains(anchorNode.localID))
+  }
+
   func testSelectionReducerAppliesEveryMutationMode() throws {
     let presentation = try makeFixture().presentation
     let ids: [CanvasElementID] = presentation.nodes.map(\.id)
@@ -259,6 +324,76 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
       input: input,
       result: result,
       strategy: strategy
+    )
+  }
+
+  private func project(
+    _ graph: FlowingGraph<CanvasGraphSchema>
+  ) throws -> FlowingGraphPresentation<CanvasCompositionSchema> {
+    let document = FlowingGraphDocument<CanvasCompositionSchema>(
+      id: "document",
+      defaultEntryPointID: "main",
+      entryPoints: [
+        FlowingGraphEntryPoint(id: "main", name: "Main", graphID: "root")
+      ],
+      definitions: [FlowingGraphDefinition(id: "root", graph: graph)],
+      subgraphLinks: []
+    )
+    return try FlowingGraphProjector(document: document).projectDefault()
+  }
+
+  private func makeManualContent(
+    presentation: FlowingGraphPresentation<CanvasCompositionSchema>
+  ) throws -> FlowingGraphCanvasContent<CanvasCompositionSchema> {
+    let topology = try FlowingGraphCanvasLayoutAdapter.topology(for: presentation)
+    let pipelineIdentity = FlowingLayoutPipelineIdentity(
+      component: FlowingLayoutComponentIdentity()
+    )
+    let input = try FlowingGraphLayoutResolution.input(
+      topology: topology,
+      nodeSizeResolver: FlowingFixedNodeSizeResolver(size: CGSize(width: 120, height: 64)),
+      portAnchorResolver: FlowingCenteredPortAnchorResolver(),
+      pipelineIdentity: pipelineIdentity
+    )
+    let nodeFrames: [FlowingGraphNodeFrame<CanvasLayoutSchema>] =
+      input.topology.nodeIDs.enumerated().map { index, nodeID in
+        let column = index % 100
+        let row = index / 100
+        return FlowingGraphNodeFrame<CanvasLayoutSchema>(
+          nodeID: nodeID,
+          frame: CGRect(
+            x: CGFloat(column * 160),
+            y: CGFloat(row * 104),
+            width: 120,
+            height: 64
+          )
+        )
+      }
+    let contentBounds = nodeFrames.map(\.frame).reduce(CGRect.null) { $0.union($1) }
+    let placement = try FlowingGraphNodePlacement(
+      input: input,
+      nodeFrames: nodeFrames,
+      contentBounds: contentBounds
+    )
+    let edgeRoutes = input.topology.edges.enumerated().map { index, edge in
+      let y = CGFloat(index * 8)
+      return FlowingGraphLayoutEdgeRoute<CanvasLayoutSchema>(
+        edgeID: edge.id,
+        route: FlowingGraphEdgeRoute(
+          start: CGPoint(x: 0, y: y),
+          segments: [.line(end: CGPoint(x: 100, y: y))]
+        )
+      )
+    }
+    let result = try FlowingGraphLayoutResult(
+      input: input,
+      placement: placement,
+      edgeRoutes: edgeRoutes
+    )
+    return try FlowingGraphCanvasContent(
+      presentation: presentation,
+      layoutInput: input,
+      layoutResult: result
     )
   }
 
