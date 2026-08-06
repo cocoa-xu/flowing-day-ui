@@ -51,7 +51,7 @@ let package = Package(
     ),
     .testTarget(
       name: "FlowingDayGraphCanvasTests",
-      dependencies: ["FlowingDayGraphCanvas"]
+      dependencies: ["FlowingDayCanvas", "FlowingDayGraphCanvas"]
     ),
     .testTarget(
       name: "FlowingDayGraphCompositionTests",

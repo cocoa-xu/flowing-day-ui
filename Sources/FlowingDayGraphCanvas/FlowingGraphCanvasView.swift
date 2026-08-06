@@ -545,6 +545,19 @@ public struct FlowingGraphCanvas<
         action: action,
         animated: command.animated
       )
+    case .restoreViewport(let transform):
+      canvasRequest = FlowingCanvasRequest(
+        id: command.id,
+        action: .anchor(
+          worldPoint: .zero,
+          viewportPoint: CGPoint(
+            x: transform.offset.width,
+            y: transform.offset.height
+          ),
+          zoom: transform.zoom
+        ),
+        animated: command.animated
+      )
     case .select(let selectionCommand):
       FlowingGraphCanvasSessionReducer.apply(
         filtered(selectionCommand),

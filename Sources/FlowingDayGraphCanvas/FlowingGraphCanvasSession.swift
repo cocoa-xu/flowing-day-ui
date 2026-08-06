@@ -127,6 +127,7 @@ public enum FlowingGraphCanvasSessionCommandAction<
     viewportPoint: CGPoint? = nil,
     zoom: CGFloat? = nil
   )
+  case restoreViewport(FlowingCanvasTransform)
   case select(FlowingGraphCanvasSelectionCommand<Schema>)
   case fit(
     scope: FlowingGraphCanvasFitScope<Schema>,

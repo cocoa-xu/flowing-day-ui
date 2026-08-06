@@ -1,3 +1,4 @@
+import FlowingDayCanvas
 import FlowingDayGraphCanvas
 import FlowingDayGraphComposition
 import FlowingDayGraphCore
@@ -341,6 +342,21 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
 
     XCTAssertTrue(command.targets(target))
     XCTAssertFalse(command.targets(other))
+  }
+
+  func testViewportRestoreCommandCarriesExplicitSessionGeometry() {
+    let transform = FlowingCanvasTransform(
+      zoom: 1.75,
+      offset: CGSize(width: 48, height: -32)
+    )
+    let command = FlowingGraphCanvasSessionCommand<CanvasCompositionSchema>(
+      targetSessionID: FlowingGraphCanvasSessionID(),
+      action: .restoreViewport(transform),
+      animated: false
+    )
+
+    XCTAssertEqual(command.action, .restoreViewport(transform))
+    XCTAssertFalse(command.animated)
   }
 
   private func makeFixture() throws -> CanvasFixture {
