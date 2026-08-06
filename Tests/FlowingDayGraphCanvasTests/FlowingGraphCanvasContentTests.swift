@@ -341,6 +341,32 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
     XCTAssertEqual(request.candidateNodeIDs, [nodeIDs[1]])
   }
 
+  func testGeometryIntentsPinTheExactLayoutInputIdentity() throws {
+    let fixture = try makeFixture()
+    let nodeID = try XCTUnwrap(fixture.presentation.nodes.first?.id)
+    let drag = FlowingGraphCanvasNodeDragIntent<CanvasCompositionSchema>(
+      nodeID: nodeID,
+      basePresentationSnapshotID: fixture.presentation.snapshotID,
+      baseLayoutInputID: fixture.input.id,
+      translation: CGSize(width: 12, height: 8)
+    )
+    let arrangement = FlowingGraphCanvasNodeArrangementIntent<CanvasCompositionSchema>(
+      action: .align(.leading),
+      translations: [nodeID: CGSize(width: 12, height: 0)],
+      basePresentationSnapshotID: fixture.presentation.snapshotID,
+      baseLayoutInputID: fixture.input.id
+    )
+    let transient = FlowingGraphCanvasTransientNodeDrag<CanvasCompositionSchema>(
+      nodeID: nodeID,
+      basePresentationSnapshotID: fixture.presentation.snapshotID,
+      baseLayoutInputID: fixture.input.id
+    )
+
+    XCTAssertEqual(drag.baseLayoutInputID, fixture.input.id)
+    XCTAssertEqual(arrangement.baseLayoutInputID, fixture.input.id)
+    XCTAssertEqual(transient.baseLayoutInputID, fixture.input.id)
+  }
+
   func testTransientGeometryMovesEndpointsWithoutRecomputingLayout() {
     let route = FlowingGraphEdgeRoute(
       start: CGPoint(x: 0, y: 0),

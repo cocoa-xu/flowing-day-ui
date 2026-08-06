@@ -1,6 +1,7 @@
 import CoreGraphics
 import FlowingDayGraphComposition
 import FlowingDayGraphCore
+import FlowingDayGraphLayout
 
 public struct FlowingGraphCanvasSnappingConfiguration: Equatable, Sendable {
   public static let standardTolerance: CGFloat = 6
@@ -345,14 +346,17 @@ public struct FlowingGraphCanvasNodeArrangementIntent<Schema: FlowingGraphCanvas
   public let action: FlowingGraphCanvasArrangementAction
   public let translations: [ElementID: CGSize]
   public let basePresentationSnapshotID: FlowingGraphPresentationSnapshotID
+  public let baseLayoutInputID: FlowingLayoutInputID
 
   public init(
     action: FlowingGraphCanvasArrangementAction,
     translations: [ElementID: CGSize],
-    basePresentationSnapshotID: FlowingGraphPresentationSnapshotID
+    basePresentationSnapshotID: FlowingGraphPresentationSnapshotID,
+    baseLayoutInputID: FlowingLayoutInputID
   ) {
     self.action = action
     self.translations = translations
     self.basePresentationSnapshotID = basePresentationSnapshotID
+    self.baseLayoutInputID = baseLayoutInputID
   }
 }

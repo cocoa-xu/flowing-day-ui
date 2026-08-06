@@ -2,6 +2,7 @@ import CoreGraphics
 import FlowingDayCanvas
 import FlowingDayGraphComposition
 import FlowingDayGraphCore
+import FlowingDayGraphLayout
 import Foundation
 
 public struct FlowingGraphCanvasSessionID: Hashable, Sendable {
@@ -50,6 +51,7 @@ public struct FlowingGraphCanvasTransientNodeDrag<
   public let nodeID: ElementID
   public let nodeIDs: Set<ElementID>
   public let basePresentationSnapshotID: FlowingGraphPresentationSnapshotID
+  public let baseLayoutInputID: FlowingLayoutInputID
   public let baseBounds: CGRect?
   public var translation: CGSize
   public var guides: [FlowingGraphCanvasGuide]
@@ -58,6 +60,7 @@ public struct FlowingGraphCanvasTransientNodeDrag<
     nodeID: ElementID,
     nodeIDs: Set<ElementID>? = nil,
     basePresentationSnapshotID: FlowingGraphPresentationSnapshotID,
+    baseLayoutInputID: FlowingLayoutInputID,
     baseBounds: CGRect? = nil,
     translation: CGSize = .zero,
     guides: [FlowingGraphCanvasGuide] = []
@@ -67,6 +70,7 @@ public struct FlowingGraphCanvasTransientNodeDrag<
     self.nodeID = nodeID
     self.nodeIDs = resolvedNodeIDs
     self.basePresentationSnapshotID = basePresentationSnapshotID
+    self.baseLayoutInputID = baseLayoutInputID
     self.baseBounds = baseBounds
     self.translation = translation
     self.guides = guides
@@ -189,12 +193,14 @@ public struct FlowingGraphCanvasNodeDragIntent<
   public let nodeID: ElementID
   public let nodeIDs: Set<ElementID>
   public let basePresentationSnapshotID: FlowingGraphPresentationSnapshotID
+  public let baseLayoutInputID: FlowingLayoutInputID
   public let translation: CGSize
 
   public init(
     nodeID: ElementID,
     nodeIDs: Set<ElementID>? = nil,
     basePresentationSnapshotID: FlowingGraphPresentationSnapshotID,
+    baseLayoutInputID: FlowingLayoutInputID,
     translation: CGSize
   ) {
     let resolvedNodeIDs = nodeIDs ?? [nodeID]
@@ -202,6 +208,7 @@ public struct FlowingGraphCanvasNodeDragIntent<
     self.nodeID = nodeID
     self.nodeIDs = resolvedNodeIDs
     self.basePresentationSnapshotID = basePresentationSnapshotID
+    self.baseLayoutInputID = baseLayoutInputID
     self.translation = translation
   }
 }

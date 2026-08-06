@@ -174,7 +174,11 @@ final class GraphCanvasShowcaseModel: ObservableObject {
   func send(_ intent: FlowingGraphCanvasInteractionIntent<ShowcaseCanvasSchema>) {
     switch intent {
     case .nodeDragCompleted(let drag):
-      guard drag.basePresentationSnapshotID == presentation?.snapshotID else { return }
+      guard drag.basePresentationSnapshotID == presentation?.snapshotID,
+        drag.baseLayoutInputID == content?.id
+      else {
+        return
+      }
       for nodeID in drag.nodeIDs {
         let current = placementOffsets[nodeID, default: .zero]
         placementOffsets[nodeID] = CGSize(
@@ -186,7 +190,11 @@ final class GraphCanvasShowcaseModel: ObservableObject {
       refreshLayout()
       lastEvent = "Applied node placement intent"
     case .nodeArrangementRequested(let arrangement):
-      guard arrangement.basePresentationSnapshotID == presentation?.snapshotID else { return }
+      guard arrangement.basePresentationSnapshotID == presentation?.snapshotID,
+        arrangement.baseLayoutInputID == content?.id
+      else {
+        return
+      }
       for (nodeID, translation) in arrangement.translations {
         let current = placementOffsets[nodeID, default: .zero]
         placementOffsets[nodeID] = CGSize(

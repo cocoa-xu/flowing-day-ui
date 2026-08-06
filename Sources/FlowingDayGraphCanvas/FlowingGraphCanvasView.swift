@@ -222,7 +222,7 @@ public struct FlowingGraphCanvas<
         isSelected: session.selection.contains(elementID),
         isFocused: session.focusedElementID == elementID,
         isHovered: session.hoveredElementID == elementID,
-        isBeingDragged: session.transientNodeDrag?.nodeIDs.contains(elementID) == true,
+        isBeingDragged: activeNodeDrag?.nodeIDs.contains(elementID) == true,
         capabilities: capabilities,
         actions: actions(for: elementID)
       )
@@ -231,7 +231,10 @@ public struct FlowingGraphCanvas<
         .position(x: renderedFrame.midX, y: renderedFrame.midY)
         .contentShape(Rectangle())
         .allowsHitTesting(session.tool == .select)
-        .gesture(nodeDragGesture(elementID: elementID))
+        .gesture(
+          nodeDragGesture(elementID: elementID),
+          including: nodeDragGestureMask(capabilities: capabilities)
+        )
         .onTapGesture {
           select(elementID, mode: nil)
         }
@@ -387,7 +390,8 @@ public struct FlowingGraphCanvas<
 
   private var activeNodeDrag: FlowingGraphCanvasTransientNodeDrag<Schema>? {
     guard let drag = session.transientNodeDrag,
-      drag.basePresentationSnapshotID == content.presentation.snapshotID
+      drag.basePresentationSnapshotID == content.presentation.snapshotID,
+      drag.baseLayoutInputID == content.id
     else {
       return nil
     }
@@ -438,6 +442,7 @@ public struct FlowingGraphCanvas<
             nodeID: elementID,
             nodeIDs: admittedNodeIDs,
             basePresentationSnapshotID: content.presentation.snapshotID,
+            baseLayoutInputID: content.id,
             baseBounds: nodeBounds(for: admittedNodeIDs)
           )
         }
@@ -454,7 +459,8 @@ public struct FlowingGraphCanvas<
         defer { rejectedNodeDragID = nil }
         guard let drag = session.transientNodeDrag,
           drag.nodeID == elementID,
-          drag.basePresentationSnapshotID == content.presentation.snapshotID
+          drag.basePresentationSnapshotID == content.presentation.snapshotID,
+          drag.baseLayoutInputID == content.id
         else {
           return
         }
@@ -464,6 +470,7 @@ public struct FlowingGraphCanvas<
               nodeID: drag.nodeID,
               nodeIDs: drag.nodeIDs,
               basePresentationSnapshotID: drag.basePresentationSnapshotID,
+              baseLayoutInputID: drag.baseLayoutInputID,
               translation: drag.translation
             )
           )
@@ -654,7 +661,10 @@ public struct FlowingGraphCanvas<
     {
       session.hoveredElementID = nil
     }
-    if session.transientNodeDrag?.basePresentationSnapshotID != content.presentation.snapshotID {
+    if let drag = session.transientNodeDrag,
+      drag.basePresentationSnapshotID != content.presentation.snapshotID
+        || drag.baseLayoutInputID != content.id
+    {
       session.transientNodeDrag = nil
     }
   }
@@ -732,7 +742,11 @@ public struct FlowingGraphCanvas<
         )
       )
     case .arrange(let action):
-      guard configuration.allowsArrangementCommands else { return }
+      guard configuration.allowsArrangementCommands,
+        session.transientNodeDrag == nil
+      else {
+        return
+      }
       let nodes = content.presentation.nodes.compactMap {
         node -> FlowingGraphCanvasNodeGeometry<ElementID>? in
         guard session.selection.contains(node.id),
@@ -753,7 +767,8 @@ public struct FlowingGraphCanvas<
           FlowingGraphCanvasNodeArrangementIntent(
             action: action,
             translations: translations,
-            basePresentationSnapshotID: content.presentation.snapshotID
+            basePresentationSnapshotID: content.presentation.snapshotID,
+            baseLayoutInputID: content.id
           )
         )
       )
@@ -766,6 +781,14 @@ public struct FlowingGraphCanvas<
     }.reduce(nil) { bounds, frame in
       bounds?.union(frame) ?? frame
     }
+  }
+
+  private func nodeDragGestureMask(
+    capabilities: FlowingGraphCanvasNodeCapabilities
+  ) -> GestureMask {
+    configuration.nodeDraggingMode != .disabled && capabilities.contains(.draggable)
+      ? .gesture
+      : .none
   }
 
   private func snap(
