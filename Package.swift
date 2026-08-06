@@ -18,6 +18,10 @@ let package = Package(
       name: "FlowingDayPreferencesExample",
       targets: ["FlowingDayPreferencesExample"]
     ),
+    .executable(
+      name: "FlowingDayGraphCanvasExample",
+      targets: ["FlowingDayGraphCanvasExample"]
+    ),
   ],
   targets: [
     .target(name: "FlowingDayCanvas"),
@@ -45,13 +49,29 @@ let package = Package(
       dependencies: ["FlowingDayPreferences"],
       path: "Examples/FlowingDayPreferencesExample"
     ),
+    .executableTarget(
+      name: "FlowingDayGraphCanvasExample",
+      dependencies: [
+        "FlowingDayCanvas",
+        "FlowingDayGraphCanvas",
+        "FlowingDayGraphComposition",
+        "FlowingDayGraphCore",
+        "FlowingDayGraphLayout",
+        "FlowingDayPreferences",
+      ],
+      path: "Examples/FlowingDayGraphCanvasExample"
+    ),
     .testTarget(
       name: "FlowingDayCanvasTests",
       dependencies: ["FlowingDayCanvas"]
     ),
     .testTarget(
       name: "FlowingDayGraphCanvasTests",
-      dependencies: ["FlowingDayCanvas", "FlowingDayGraphCanvas"]
+      dependencies: [
+        "FlowingDayCanvas",
+        "FlowingDayGraphCanvas",
+        "FlowingDayGraphCanvasExample",
+      ]
     ),
     .testTarget(
       name: "FlowingDayGraphCompositionTests",
