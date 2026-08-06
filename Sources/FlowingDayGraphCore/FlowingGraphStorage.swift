@@ -158,6 +158,18 @@ public struct FlowingGraph<Schema: FlowingGraphSchema> {
     nodesByID.isEmpty && portsByKey.isEmpty && edgesByID.isEmpty
   }
 
+  public var nodeCount: Int {
+    nodesByID.count
+  }
+
+  public var portCount: Int {
+    portsByKey.count
+  }
+
+  public var edgeCount: Int {
+    edgesByID.count
+  }
+
   public func node(id: Schema.NodeID) -> FlowingGraphNode<Schema>? {
     nodesByID[id]
   }

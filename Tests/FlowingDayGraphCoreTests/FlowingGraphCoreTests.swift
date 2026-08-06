@@ -17,6 +17,31 @@ final class FlowingGraphCoreTests: XCTestCase {
     XCTAssertTrue(graph.isEmpty)
   }
 
+  func testElementCountsDoNotRequireMaterializingOrderedSnapshots() {
+    var graph = FlowingGraph<TestSchema>()
+    _ = graph.update { transaction in
+      transaction.insert(FlowingGraphNode(id: "source", value: ""))
+      transaction.insert(FlowingGraphNode(id: "target", value: ""))
+      transaction.insert(
+        FlowingGraphPort(
+          key: FlowingGraphPortKey(nodeID: "source", portID: 1),
+          value: ""
+        )
+      )
+      transaction.insert(
+        FlowingGraphEdge(
+          id: "edge",
+          endpoints: .directed(source: .node("source"), target: .node("target")),
+          value: ""
+        )
+      )
+    }
+
+    XCTAssertEqual(graph.nodeCount, 2)
+    XCTAssertEqual(graph.portCount, 1)
+    XCTAssertEqual(graph.edgeCount, 1)
+  }
+
   func testNodeAndPortEndpointsRemainDistinct() {
     let node = FlowingGraphEndpoint<TestSchema>.node("hub")
     let port = FlowingGraphEndpoint<TestSchema>.port(
