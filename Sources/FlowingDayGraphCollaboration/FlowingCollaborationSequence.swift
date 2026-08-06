@@ -17,7 +17,7 @@ public struct FlowingCollaborationSequenceDiscriminator: Hashable, Comparable, S
   }
 }
 
-public struct FlowingCollaborationSequencePosition: Hashable, Comparable, Sendable {
+public struct FlowingCollaborationSequenceSegment: Hashable, Comparable, Sendable {
   public let components: [UInt16]
   public let discriminator: FlowingCollaborationSequenceDiscriminator
 
@@ -48,11 +48,49 @@ public struct FlowingCollaborationSequencePosition: Hashable, Comparable, Sendab
   }
 }
 
+public struct FlowingCollaborationSequencePosition: Hashable, Comparable, Sendable {
+  public let segments: [FlowingCollaborationSequenceSegment]
+
+  public var components: [UInt16] {
+    segments.last!.components
+  }
+
+  public var discriminator: FlowingCollaborationSequenceDiscriminator {
+    segments.last!.discriminator
+  }
+
+  public var encodedByteCount: Int {
+    segments.reduce(0) { $0 + $1.encodedByteCount }
+  }
+
+  public init(
+    components: [UInt16],
+    discriminator: FlowingCollaborationSequenceDiscriminator
+  ) throws {
+    segments = [
+      try FlowingCollaborationSequenceSegment(
+        components: components,
+        discriminator: discriminator
+      )
+    ]
+  }
+
+  public init(segments: [FlowingCollaborationSequenceSegment]) throws {
+    guard !segments.isEmpty else {
+      throw FlowingCollaborationSequenceIssue.emptyPosition
+    }
+    self.segments = segments
+  }
+
+  public static func < (lhs: Self, rhs: Self) -> Bool {
+    lhs.segments.lexicographicallyPrecedes(rhs.segments)
+  }
+}
+
 public enum FlowingCollaborationSequenceIssue: Error, Equatable, Sendable {
   case emptyPosition
   case nonCanonicalPosition
   case invalidBounds
-  case discriminatorDoesNotFit
   case keyLimitExceeded(maximumBytes: Int, requiredBytes: Int)
 }
 
@@ -67,20 +105,12 @@ public enum FlowingCollaborationSequence {
       throw FlowingCollaborationSequenceIssue.invalidBounds
     }
 
-    let components: [UInt16]
-    if let lower, let upper, lower.components == upper.components {
-      guard lower.discriminator < discriminator, discriminator < upper.discriminator else {
-        throw FlowingCollaborationSequenceIssue.discriminatorDoesNotFit
-      }
-      components = lower.components
-    } else {
-      components = componentsBetween(lower?.components, upper?.components)
-    }
-
-    let position = try FlowingCollaborationSequencePosition(
-      components: components,
+    let segments = try segmentsBetween(
+      lower?.segments,
+      upper?.segments,
       discriminator: discriminator
     )
+    let position = try FlowingCollaborationSequencePosition(segments: segments)
     let requiredBytes = position.encodedByteCount
     guard requiredBytes <= maximumBytes else {
       throw FlowingCollaborationSequenceIssue.keyLimitExceeded(
@@ -89,6 +119,119 @@ public enum FlowingCollaborationSequence {
       )
     }
     return position
+  }
+
+  private static func segmentsBetween(
+    _ lower: [FlowingCollaborationSequenceSegment]?,
+    _ upper: [FlowingCollaborationSequenceSegment]?,
+    discriminator: FlowingCollaborationSequenceDiscriminator
+  ) throws -> [FlowingCollaborationSequenceSegment] {
+    var common: [FlowingCollaborationSequenceSegment] = []
+    var index = 0
+    while let lowerSegment = segment(at: index, in: lower),
+      let upperSegment = segment(at: index, in: upper),
+      lowerSegment == upperSegment
+    {
+      common.append(lowerSegment)
+      index += 1
+    }
+
+    let lowerSegment = segment(at: index, in: lower)
+    let upperSegment = segment(at: index, in: upper)
+    guard let lowerSegment else {
+      let components = uniqueComponents(
+        between: nil,
+        and: upperSegment?.components,
+        discriminator: discriminator
+      )
+      return common + [
+        try FlowingCollaborationSequenceSegment(
+          components: components,
+          discriminator: discriminator
+        )
+      ]
+    }
+    guard let upperSegment else {
+      let components = uniqueComponents(
+        between: lowerSegment.components,
+        and: nil,
+        discriminator: discriminator
+      )
+      return common + [
+        try FlowingCollaborationSequenceSegment(
+          components: components,
+          discriminator: discriminator
+        )
+      ]
+    }
+    if lowerSegment.components != upperSegment.components {
+      return common + [
+        try FlowingCollaborationSequenceSegment(
+          components: uniqueComponents(
+            between: lowerSegment.components,
+            and: upperSegment.components,
+            discriminator: discriminator
+          ),
+          discriminator: discriminator
+        )
+      ]
+    }
+    if lowerSegment.discriminator < discriminator,
+      discriminator < upperSegment.discriminator
+    {
+      return common + [
+        try FlowingCollaborationSequenceSegment(
+          components: lowerSegment.components,
+          discriminator: discriminator
+        )
+      ]
+    }
+    let nested = try FlowingCollaborationSequenceSegment(
+      components: uniqueComponents(
+        between: nil,
+        and: nil,
+        discriminator: discriminator
+      ),
+      discriminator: discriminator
+    )
+    return (lower ?? []) + [nested]
+  }
+
+  private static func uniqueComponents(
+    between lower: [UInt16]?,
+    and upper: [UInt16]?,
+    discriminator: FlowingCollaborationSequenceDiscriminator
+  ) -> [UInt16] {
+    componentsBetween(lower, upper) + encoded(discriminator)
+  }
+
+  private static func encoded(
+    _ discriminator: FlowingCollaborationSequenceDiscriminator
+  ) -> [UInt16] {
+    var uuid = discriminator.operationID.replicaID.rawValue.uuid
+    var result = withUnsafeBytes(of: &uuid) { bytes in
+      stride(from: 0, to: bytes.count, by: 2).map { index in
+        UInt16(bytes[index]) << 8 | UInt16(bytes[index + 1])
+      }
+    }
+    result.append(contentsOf: words(discriminator.operationID.counter))
+    result.append(contentsOf: words(discriminator.commandIndex))
+    result.append(1)
+    return result
+  }
+
+  private static func words<T: FixedWidthInteger>(_ value: T) -> [UInt16] {
+    stride(from: T.bitWidth - 16, through: 0, by: -16).map { shift in
+      UInt16(truncatingIfNeeded: value >> T(shift))
+    }
+  }
+
+  private static func segment(
+    at index: Int,
+    in segments: [FlowingCollaborationSequenceSegment]?
+  ) -> FlowingCollaborationSequenceSegment? {
+    guard let segments, index < segments.count else { return nil }
+    return segments[index]
   }
 
   private static func componentsBetween(

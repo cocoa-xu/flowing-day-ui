@@ -18,7 +18,7 @@ final class FlowingCollaborationSequenceTests: XCTestCase {
     let first = try position(between: lower, and: upper, operation: 3)
     let second = try position(between: lower, and: upper, operation: 4)
 
-    XCTAssertEqual(first.components, second.components)
+    XCTAssertNotEqual(first.components, second.components)
     XCTAssertNotEqual(first, second)
     XCTAssertEqual([second, upper, first, lower].sorted(), [lower, first, second, upper])
   }
@@ -28,10 +28,11 @@ final class FlowingCollaborationSequenceTests: XCTestCase {
     let upper = try position(between: lower, and: nil, operation: 2)
     let first = try position(between: lower, and: upper, operation: 3)
     let second = try position(between: lower, and: upper, operation: 5)
-    let inner = try position(between: first, and: second, operation: 4)
+    let inner = try position(between: first, and: second, operation: 6)
 
     XCTAssertTrue(first < inner)
     XCTAssertTrue(inner < second)
+    XCTAssertEqual(inner.segments.count, 1)
   }
 
   func testInvalidBoundsAndKeyBudgetAreRejected() throws {
@@ -47,7 +48,7 @@ final class FlowingCollaborationSequenceTests: XCTestCase {
     ) { error in
       XCTAssertEqual(
         error as? FlowingCollaborationSequenceIssue,
-        .keyLimitExceeded(maximumBytes: 1, requiredBytes: 30)
+        .keyLimitExceeded(maximumBytes: 1, requiredBytes: 60)
       )
     }
   }
@@ -72,6 +73,26 @@ final class FlowingCollaborationSequenceTests: XCTestCase {
       }
       lower = next
     }
+  }
+
+  func testSeededRandomInsertionMaintainsStrictTotalOrder() throws {
+    var positions: [FlowingCollaborationSequencePosition] = []
+    var state: UInt64 = 0x51E0_EACE
+    for operation in 1...1_000 {
+      state = state &* 6_364_136_223_846_793_005 &+ 1
+      let index = Int(state % UInt64(positions.count + 1))
+      let lower = index > 0 ? positions[index - 1] : nil
+      let upper = index < positions.count ? positions[index] : nil
+      let next = try position(
+        between: lower,
+        and: upper,
+        operation: operation
+      )
+      positions.insert(next, at: index)
+    }
+
+    XCTAssertEqual(Set(positions).count, positions.count)
+    XCTAssertEqual(positions, positions.sorted())
   }
 
   private func position(
