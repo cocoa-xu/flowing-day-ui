@@ -87,9 +87,8 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
   private let portByLocalID: [LocalElementID: FlowingGraphPresentationPort<Schema>]
   private let edgeByLocalID: [LocalElementID: FlowingGraphPresentationEdge<Schema>]
   private let edgeByID: [LocalElementID: FlowingGraphLayoutEdge<LayoutSchema>]
-  private let portAnchorByKey: [
-    FlowingGraphLayoutPortKey<LayoutSchema>: FlowingGraphResolvedPortAnchor<LayoutSchema>
-  ]
+  private let portAnchorByKey:
+    [FlowingGraphLayoutPortKey<LayoutSchema>: FlowingGraphResolvedPortAnchor<LayoutSchema>]
   private let nodeLocalIDByPortLocalID: [LocalElementID: LocalElementID]
   private let portLocalIDsByNodeLocalID: [LocalElementID: [LocalElementID]]
   private let incidentEdgeIDsByNodeID: [LocalElementID: [LocalElementID]]
@@ -241,7 +240,7 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
   ) -> FlowingGraphCanvasEdgeAnchors? {
     guard let edge = edgeByID[edgeLocalID] else { return nil }
     switch edge.endpoints {
-    case let .directed(source, target):
+    case .directed(let source, let target):
       guard let first = anchor(for: source), let second = anchor(for: target) else {
         return nil
       }
@@ -250,7 +249,7 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
         second: second,
         isDirected: true
       )
-    case let .undirected(firstEndpoint, secondEndpoint):
+    case .undirected(let firstEndpoint, let secondEndpoint):
       guard let first = anchor(for: firstEndpoint),
         let second = anchor(for: secondEndpoint)
       else {
@@ -269,12 +268,12 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
   ) -> (first: LocalElementID, second: LocalElementID)? {
     guard let edge = edgeByID[edgeLocalID] else { return nil }
     switch edge.endpoints {
-    case let .directed(source, target):
+    case .directed(let source, let target):
       return (
         layoutInput.topology.nodeID(for: source),
         layoutInput.topology.nodeID(for: target)
       )
-    case let .undirected(first, second):
+    case .undirected(let first, let second):
       return (
         layoutInput.topology.nodeID(for: first),
         layoutInput.topology.nodeID(for: second)
@@ -320,12 +319,12 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
     for endpoint: FlowingGraphLayoutEndpoint<LayoutSchema>
   ) -> FlowingGraphCanvasAnchor? {
     switch endpoint {
-    case let .node(nodeID):
+    case .node(let nodeID):
       guard let frame = layoutResult.frame(for: nodeID) else { return nil }
       return FlowingGraphCanvasAnchor(
         position: CGPoint(x: frame.midX, y: frame.midY)
       )
-    case let .port(key):
+    case .port(let key):
       guard let entry = portAnchorByKey[key] else { return nil }
       return FlowingGraphCanvasAnchor(position: entry.position, normal: entry.normal)
     }
@@ -335,10 +334,9 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
     _ first: FlowingGraphLayoutTopology<LayoutSchema>,
     _ second: FlowingGraphLayoutTopology<LayoutSchema>
   ) -> Bool {
-    first.snapshotID == second.snapshotID &&
-      first.nodeIDs == second.nodeIDs &&
-      first.ports.map(\.key) == second.ports.map(\.key) &&
-      first.edges == second.edges
+    first.snapshotID == second.snapshotID && first.nodeIDs == second.nodeIDs
+      && first.ports.map(\.key) == second.ports.map(\.key) && first.edges == second.edges
+      && first.containments == second.containments
   }
 
   private static func nodeIDs(
@@ -346,9 +344,9 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
     topology: FlowingGraphLayoutTopology<LayoutSchema>
   ) -> [LocalElementID] {
     switch edge.endpoints {
-    case let .directed(source, target):
+    case .directed(let source, let target):
       return [topology.nodeID(for: source), topology.nodeID(for: target)]
-    case let .undirected(first, second):
+    case .undirected(let first, let second):
       return [topology.nodeID(for: first), topology.nodeID(for: second)]
     }
   }
@@ -392,8 +390,8 @@ private struct FlowingGraphCanvasPresentationIndex<Schema: FlowingGraphCanvasSch
     for port in presentation.ports {
       try register(id: port.id, localID: port.localID)
       nextPortByLocalID[port.localID] = port
-      guard case let .source(instanceHandle, elementID, occurrenceID) = port.localID,
-        case let .port(key) = elementID
+      guard case .source(let instanceHandle, let elementID, let occurrenceID) = port.localID,
+        case .port(let key) = elementID
       else {
         throw FlowingGraphCanvasContentIssue.invalidPortOwnership
       }
@@ -426,7 +424,29 @@ private struct FlowingGraphCanvasPresentationIndex<Schema: FlowingGraphCanvasSch
   func makeTopology(
     snapshotID: FlowingGraphPresentationSnapshotID
   ) throws -> FlowingGraphLayoutTopology<LayoutSchema> {
-    try FlowingGraphLayoutTopology(
+    var nodeLocalIDsByInstanceHandle: [FlowingGraphInstanceHandle: [LocalElementID]] = [:]
+    for node in presentation.nodes {
+      guard case .source(let instanceHandle, _, _) = node.localID else { continue }
+      nodeLocalIDsByInstanceHandle[instanceHandle, default: []].append(node.localID)
+    }
+    let containments = presentation.contextEdges.compactMap {
+      context -> FlowingGraphLayoutContainment<LayoutSchema>? in
+      guard case .expanded = context.state,
+        let targetHandle = context.targetInstanceHandle
+      else {
+        return nil
+      }
+      let containerNodeID = LocalElementID.source(
+        instanceHandle: context.sourceInstanceHandle,
+        elementID: .node(context.site.nodeID),
+        occurrenceID: nil
+      )
+      return FlowingGraphLayoutContainment(
+        containerNodeID: containerNodeID,
+        memberNodeIDs: nodeLocalIDsByInstanceHandle[targetHandle, default: []]
+      )
+    }
+    return try FlowingGraphLayoutTopology(
       snapshotID: snapshotID,
       nodeIDs: presentation.nodes.map(\.localID),
       ports: try presentation.ports.map { port in
@@ -442,7 +462,8 @@ private struct FlowingGraphCanvasPresentationIndex<Schema: FlowingGraphCanvasSch
           id: edge.localID,
           endpoints: try layoutEndpoints(edge.endpoints)
         )
-      }
+      },
+      containments: containments
     )
   }
 
@@ -450,12 +471,12 @@ private struct FlowingGraphCanvasPresentationIndex<Schema: FlowingGraphCanvasSch
     _ endpoints: FlowingGraphPresentationEdgeEndpoints<Schema>
   ) throws -> FlowingGraphLayoutEdgeEndpoints<LayoutSchema> {
     switch endpoints {
-    case let .directed(source, target):
+    case .directed(let source, let target):
       return .directed(
         source: try layoutEndpoint(source),
         target: try layoutEndpoint(target)
       )
-    case let .undirected(first, second):
+    case .undirected(let first, let second):
       return .undirected(
         try layoutEndpoint(first),
         try layoutEndpoint(second)
@@ -467,12 +488,12 @@ private struct FlowingGraphCanvasPresentationIndex<Schema: FlowingGraphCanvasSch
     _ endpoint: FlowingGraphPresentationEndpoint<Schema>
   ) throws -> FlowingGraphLayoutEndpoint<LayoutSchema> {
     switch endpoint {
-    case let .node(id):
+    case .node(let id):
       guard let localID = localIDByCanonicalID[id], nodeByLocalID[localID] != nil else {
         throw FlowingGraphCanvasContentIssue.invalidPresentationEndpoint
       }
       return .node(localID)
-    case let .port(id):
+    case .port(let id):
       guard let localID = localIDByCanonicalID[id],
         portByLocalID[localID] != nil,
         let nodeID = nodeLocalIDByPortLocalID[localID]

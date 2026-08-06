@@ -151,6 +151,71 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
     )
   }
 
+  func testLayoutAdapterPreservesExpandedInstanceContainment() throws {
+    var root = FlowingGraph<CanvasGraphSchema>()
+    var child = FlowingGraph<CanvasGraphSchema>()
+    guard
+      case .committed = root.update({ transaction in
+        transaction.insert(FlowingGraphNode(id: "container", value: "Container"))
+      }),
+      case .committed = child.update({ transaction in
+        transaction.insert(FlowingGraphNode(id: "first", value: "First"))
+        transaction.insert(FlowingGraphNode(id: "second", value: "Second"))
+      })
+    else {
+      return XCTFail("Fixture graph mutation failed")
+    }
+    let document = FlowingGraphDocument<CanvasCompositionSchema>(
+      id: "document",
+      defaultEntryPointID: "main",
+      entryPoints: [
+        FlowingGraphEntryPoint(id: "main", name: "Main", graphID: "root")
+      ],
+      definitions: [
+        FlowingGraphDefinition(id: "root", graph: root),
+        FlowingGraphDefinition(id: "child", graph: child),
+      ],
+      subgraphLinks: [
+        FlowingSubgraphLink(
+          id: "child",
+          site: FlowingGraphDefinitionNodeAddress(
+            graphID: "root",
+            nodeID: "container"
+          ),
+          ownership: .reference,
+          targetGraphID: "child",
+          value: "Child"
+        )
+      ]
+    )
+    let rootInstance = FlowingGraphInstanceAddress<String, String>(
+      path: .root,
+      graphID: "root"
+    )
+    let presentation = try FlowingGraphProjector(document: document).project(
+      state: FlowingGraphProjectionState(
+        entryPointID: "main",
+        expandedSites: [
+          FlowingGraphInstanceNodeAddress(
+            instance: rootInstance,
+            nodeID: "container"
+          )
+        ]
+      )
+    )
+
+    let topology = try FlowingGraphCanvasLayoutAdapter.topology(for: presentation)
+    let containerNode = try XCTUnwrap(
+      presentation.nodes.first { $0.address.graphID == "root" }
+    )
+    let childNodeIDs = presentation.nodes.filter { $0.address.graphID == "child" }
+      .map(\.localID)
+
+    XCTAssertEqual(topology.containments.count, 1)
+    XCTAssertEqual(topology.containments[0].containerNodeID, containerNode.localID)
+    XCTAssertEqual(topology.containments[0].memberNodeIDs, childNodeIDs)
+  }
+
   func testContentIndexesTenThousandNodesWithoutMaterializingTheWorld() throws {
     let nodeCount = 10_001
     var graph = FlowingGraph<CanvasGraphSchema>()
