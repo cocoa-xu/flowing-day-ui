@@ -317,7 +317,7 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
   }
 
   public func nodeLocalIDs(intersecting rect: CGRect) -> [LocalElementID] {
-    renderIndex.elementIDs(intersecting: rect).nodeIDs
+    renderIndex.nodeIDs(intersecting: rect)
   }
 
   public func bounds(for elementIDs: Set<ElementID>) -> CGRect? {

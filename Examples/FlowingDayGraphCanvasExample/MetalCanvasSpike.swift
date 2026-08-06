@@ -1,6 +1,20 @@
 import AppKit
+import FlowingDayGraphLayout
 import MetalKit
 import SwiftUI
+
+private enum MetalCanvasSpikeMetrics {
+  static let nodeSize = CGSize(width: 126, height: 66)
+  static let cellSize = CGSize(width: 164, height: 106)
+  static let renderOverscan: CGFloat = 320
+  static let renderCoverageRetentionRatio: CGFloat = 0.5
+  static let overviewMaximumPixelHeight: CGFloat = 18
+  static let compactMaximumPixelHeight: CGFloat = 44
+  static let frameResourceCount = 3
+  static let minimumBufferLength = 256
+  static let interactionRenderTail: TimeInterval = 0.18
+  static let renderIndexCommitDelayNanoseconds: UInt64 = 80_000_000
+}
 
 enum MetalCanvasSpikeBenchmarkInteraction: Equatable {
   case none
@@ -15,10 +29,11 @@ struct MetalCanvasSpikeConfiguration: Equatable {
   let benchmarkInteraction: MetalCanvasSpikeBenchmarkInteraction
 
   init(arguments: [String]) {
-    nodeCount = Self.positiveInteger(
-      following: "--canvas-metal-node-count",
-      in: arguments
-    ) ?? Self.defaultNodeCount
+    nodeCount =
+      Self.positiveInteger(
+        following: "--canvas-metal-node-count",
+        in: arguments
+      ) ?? Self.defaultNodeCount
     if arguments.contains("--canvas-metal-zoom-benchmark") {
       benchmarkInteraction = .zoom
     } else if arguments.contains("--canvas-metal-pan-benchmark") {
@@ -55,6 +70,23 @@ struct MetalCanvasSpikeCamera: Equatable {
     CGPoint(
       x: (viewportPoint.x - offset.width) / zoom,
       y: (viewportPoint.y - offset.height) / zoom
+    )
+  }
+
+  func visibleWorldRect(viewportSize: CGSize, overscan: CGFloat = 0) -> CGRect {
+    let viewportRect = CGRect(origin: .zero, size: viewportSize).insetBy(
+      dx: -overscan,
+      dy: -overscan
+    )
+    let minimum = worldPoint(for: viewportRect.origin)
+    let maximum = worldPoint(
+      for: CGPoint(x: viewportRect.maxX, y: viewportRect.maxY)
+    )
+    return CGRect(
+      x: minimum.x,
+      y: minimum.y,
+      width: maximum.x - minimum.x,
+      height: maximum.y - minimum.y
     )
   }
 
@@ -95,66 +127,315 @@ struct MetalCanvasSpikeCamera: Equatable {
   }
 }
 
-struct MetalCanvasSpikeNode: Equatable {
+struct MetalCanvasSpikeNode: Equatable, Sendable {
   let id: Int
   var frame: CGRect
   let color: SIMD4<Float>
 }
 
-struct MetalCanvasSpikeEdge: Equatable {
+struct MetalCanvasSpikeEdge: Equatable, Sendable {
+  let id: Int
   let sourceID: Int
   let targetID: Int
+}
+
+enum MetalCanvasSpikeNodeLevelOfDetail: UInt32, Equatable {
+  case overview
+  case compact
+  case full
+
+  static func resolve(nodeHeight: CGFloat, zoom: CGFloat) -> Self {
+    let pixelHeight = nodeHeight * zoom
+    if pixelHeight < MetalCanvasSpikeMetrics.overviewMaximumPixelHeight {
+      return .overview
+    }
+    if pixelHeight < MetalCanvasSpikeMetrics.compactMaximumPixelHeight {
+      return .compact
+    }
+    return .full
+  }
+}
+
+struct MetalCanvasSpikeRenderSliceCoverage: Equatable {
+  let retainedWorldRect: CGRect
+  let levelOfDetail: MetalCanvasSpikeNodeLevelOfDetail
+
+  func covers(
+    viewportWorldRect: CGRect,
+    levelOfDetail: MetalCanvasSpikeNodeLevelOfDetail
+  ) -> Bool {
+    self.levelOfDetail == levelOfDetail && retainedWorldRect.contains(viewportWorldRect)
+  }
+}
+
+enum MetalCanvasSpikeLayoutSchema: FlowingGraphLayoutSchema {
+  typealias NodeID = Int
+  typealias PortID = Int
+  typealias EdgeID = Int
+}
+
+struct MetalCanvasSpikeRenderIndexUpdate: Sendable {
+  let revision: UInt64
+  let renderIndex: FlowingGraphRenderIndex<MetalCanvasSpikeLayoutSchema>
+}
+
+struct MetalCanvasSpikeRenderIndexSnapshot: Sendable {
+  let revision: UInt64
+  let nodes: [MetalCanvasSpikeNode]
+  let edges: [MetalCanvasSpikeEdge]
+
+  func build() -> MetalCanvasSpikeRenderIndexUpdate {
+    MetalCanvasSpikeRenderIndexUpdate(
+      revision: revision,
+      renderIndex: MetalCanvasSpikeScene.makeRenderIndex(nodes: nodes, edges: edges)
+    )
+  }
 }
 
 struct MetalCanvasSpikeScene {
   var nodes: [MetalCanvasSpikeNode]
   let edges: [MetalCanvasSpikeEdge]
 
+  private var renderIndex: FlowingGraphRenderIndex<MetalCanvasSpikeLayoutSchema>
+  private let nodeIndexByID: [Int: Int]
+  private let edgeIndexByID: [Int: Int]
+  private let edgeIndicesByNodeID: [Int: [Int]]
+  private var movedNodeIDs: Set<Int> = []
+  private var movedEdgeIDs: Set<Int> = []
+  private var geometryRevision: UInt64 = 0
+
   var contentBounds: CGRect {
     nodes.dropFirst().reduce(nodes.first?.frame ?? .zero) { $0.union($1.frame) }
   }
 
+  var hasPendingIndexChanges: Bool {
+    !movedNodeIDs.isEmpty
+  }
+
   func nodeID(at point: CGPoint) -> Int? {
-    nodes.last(where: { $0.frame.contains(point) })?.id
+    let queryRect = CGRect(x: point.x - 0.5, y: point.y - 0.5, width: 1, height: 1)
+    return candidates(
+      indexed: renderIndex.unorderedNodeIDs(intersecting: queryRect),
+      additional: movedNodeIDs
+    ).last { nodeID in
+      nodeIndexByID[nodeID].map { nodes[$0].frame.contains(point) } == true
+    }
   }
 
   func nodeIDs(intersecting rect: CGRect) -> Set<Int> {
-    Set(nodes.lazy.filter { $0.frame.intersects(rect) }.map(\.id))
+    Set(
+      candidates(
+        indexed: renderIndex.unorderedNodeIDs(intersecting: rect),
+        additional: movedNodeIDs
+      ).filter { nodeID in
+        nodeIndexByID[nodeID].map { nodes[$0].frame.intersects(rect) } == true
+      }
+    )
+  }
+
+  func node(for id: Int) -> MetalCanvasSpikeNode? {
+    nodeIndexByID[id].map { nodes[$0] }
+  }
+
+  func edgeEndpoints(for id: Int) -> (start: CGPoint, end: CGPoint)? {
+    guard let edgeIndex = edgeIndexByID[id] else { return nil }
+    let edge = edges[edgeIndex]
+    guard let sourceIndex = nodeIndexByID[edge.sourceID],
+      let targetIndex = nodeIndexByID[edge.targetID]
+    else { return nil }
+    return (nodes[sourceIndex].frame.center, nodes[targetIndex].frame.center)
+  }
+
+  func renderElementIDs(
+    intersecting rect: CGRect
+  ) -> (nodeIDs: [Int], edgeIDs: [Int]) {
+    let indexed = renderIndex.unorderedElementIDs(intersecting: rect)
+    let nodeIDs = candidates(indexed: indexed.nodeIDs, additional: movedNodeIDs).filter { nodeID in
+      nodeIndexByID[nodeID].map { nodeIndex in
+        nodes[nodeIndex].frame.intersects(rect)
+      } == true
+    }
+    let edgeIDs = candidates(indexed: indexed.edgeIDs, additional: movedEdgeIDs).filter {
+      edgeBounds(for: $0)?.intersectsIncludingBoundary(rect) == true
+    }
+    return (nodeIDs, edgeIDs)
   }
 
   mutating func moveNodes(
     from origins: [Int: CGPoint],
     by translation: CGSize
   ) {
-    for index in nodes.indices {
-      guard let origin = origins[nodes[index].id] else { continue }
+    var didMove = false
+    for (nodeID, origin) in origins {
+      guard let index = nodeIndexByID[nodeID] else { continue }
       nodes[index].frame.origin = CGPoint(
         x: origin.x + translation.width,
         y: origin.y + translation.height
       )
+      movedNodeIDs.insert(nodeID)
+      for edgeIndex in edgeIndicesByNodeID[nodeID, default: []] {
+        movedEdgeIDs.insert(edges[edgeIndex].id)
+      }
+      didMove = true
     }
+    if didMove {
+      geometryRevision &+= 1
+    }
+  }
+
+  mutating func commitMoves() {
+    guard !movedNodeIDs.isEmpty else { return }
+    install(renderIndexSnapshot().build())
+  }
+
+  func renderIndexSnapshot() -> MetalCanvasSpikeRenderIndexSnapshot {
+    MetalCanvasSpikeRenderIndexSnapshot(
+      revision: geometryRevision,
+      nodes: nodes,
+      edges: edges
+    )
+  }
+
+  @discardableResult
+  mutating func install(_ update: MetalCanvasSpikeRenderIndexUpdate) -> Bool {
+    guard update.revision == geometryRevision else { return false }
+    renderIndex = update.renderIndex
+    movedNodeIDs.removeAll(keepingCapacity: true)
+    movedEdgeIDs.removeAll(keepingCapacity: true)
+    return true
   }
 
   static func make(nodeCount: Int) -> MetalCanvasSpikeScene {
     let columnCount = max(Int(ceil(sqrt(Double(nodeCount)))), 1)
-    let nodeSize = CGSize(width: 126, height: 66)
-    let cellSize = CGSize(width: 164, height: 106)
     let nodes = (0..<nodeCount).map { id in
       MetalCanvasSpikeNode(
         id: id,
         frame: CGRect(
-          x: CGFloat(id % columnCount) * cellSize.width,
-          y: CGFloat(id / columnCount) * cellSize.height,
-          width: nodeSize.width,
-          height: nodeSize.height
+          x: CGFloat(id % columnCount) * MetalCanvasSpikeMetrics.cellSize.width,
+          y: CGFloat(id / columnCount) * MetalCanvasSpikeMetrics.cellSize.height,
+          width: MetalCanvasSpikeMetrics.nodeSize.width,
+          height: MetalCanvasSpikeMetrics.nodeSize.height
         ),
         color: Self.palette[id % Self.palette.count]
       )
     }
-    let edges = (1..<nodeCount).map { id in
-      MetalCanvasSpikeEdge(sourceID: (id - 1) / 3, targetID: id)
+    let edges = (1..<nodeCount).map { targetID in
+      MetalCanvasSpikeEdge(
+        id: targetID - 1,
+        sourceID: (targetID - 1) / 3,
+        targetID: targetID
+      )
     }
-    return MetalCanvasSpikeScene(nodes: nodes, edges: edges)
+    return MetalCanvasSpikeScene(
+      nodes: nodes,
+      edges: edges,
+      renderIndex: makeRenderIndex(nodes: nodes, edges: edges),
+      nodeIndexByID: Dictionary(
+        uniqueKeysWithValues: nodes.indices.map { (nodes[$0].id, $0) }
+      ),
+      edgeIndexByID: Dictionary(
+        uniqueKeysWithValues: edges.indices.map { (edges[$0].id, $0) }
+      ),
+      edgeIndicesByNodeID: edgeIndicesByNodeID(edges: edges)
+    )
+  }
+
+  private func candidates(indexed: [Int], additional: Set<Int>) -> [Int] {
+    guard !additional.isEmpty else { return indexed }
+    var seen = Set(indexed)
+    var result = indexed
+    result.reserveCapacity(indexed.count + additional.count)
+    for id in additional where seen.insert(id).inserted {
+      result.append(id)
+    }
+    return result
+  }
+
+  private func edgeBounds(for id: Int) -> CGRect? {
+    edgeEndpoints(for: id).map { start, end in
+      CGRect(
+        x: min(start.x, end.x),
+        y: min(start.y, end.y),
+        width: abs(end.x - start.x),
+        height: abs(end.y - start.y)
+      )
+    }
+  }
+
+  private static func edgeIndicesByNodeID(
+    edges: [MetalCanvasSpikeEdge]
+  ) -> [Int: [Int]] {
+    var result: [Int: [Int]] = [:]
+    for (index, edge) in edges.enumerated() {
+      result[edge.sourceID, default: []].append(index)
+      if edge.targetID != edge.sourceID {
+        result[edge.targetID, default: []].append(index)
+      }
+    }
+    return result
+  }
+
+  static func makeRenderIndex(
+    nodes: [MetalCanvasSpikeNode],
+    edges: [MetalCanvasSpikeEdge]
+  ) -> FlowingGraphRenderIndex<MetalCanvasSpikeLayoutSchema> {
+    do {
+      let topology = try FlowingGraphLayoutTopology<MetalCanvasSpikeLayoutSchema>(
+        nodeIDs: nodes.map(\.id),
+        ports: [],
+        edges: edges.map { edge in
+          FlowingGraphLayoutEdge(
+            id: edge.id,
+            endpoints: .directed(
+              source: .node(edge.sourceID),
+              target: .node(edge.targetID)
+            )
+          )
+        }
+      )
+      let componentIdentity = FlowingLayoutComponentIdentity()
+      let input = try FlowingGraphLayoutInput(
+        id: FlowingLayoutInputID(
+          presentationSnapshotID: topology.snapshotID,
+          pipelineIdentity: FlowingLayoutPipelineIdentity(component: componentIdentity),
+          nodeSizeRevision: componentIdentity,
+          portAnchorRevision: componentIdentity,
+          layoutStateRevision: FlowingLayoutRevision()
+        ),
+        topology: topology,
+        nodeSizes: nodes.map { FlowingGraphLayoutNodeSize(nodeID: $0.id, size: $0.frame.size) },
+        portAnchors: []
+      )
+      let placement = try FlowingGraphNodePlacement(
+        input: input,
+        nodeFrames: nodes.map { FlowingGraphNodeFrame(nodeID: $0.id, frame: $0.frame) },
+        contentBounds: nodes.dropFirst().reduce(nodes.first?.frame ?? .zero) {
+          $0.union($1.frame)
+        }
+      )
+      let frameByNodeID = Dictionary(
+        uniqueKeysWithValues: nodes.map { ($0.id, $0.frame) }
+      )
+      let result = try FlowingGraphLayoutResult(
+        input: input,
+        placement: placement,
+        edgeRoutes: edges.compactMap { edge in
+          guard let sourceFrame = frameByNodeID[edge.sourceID],
+            let targetFrame = frameByNodeID[edge.targetID]
+          else { return nil }
+          return FlowingGraphLayoutEdgeRoute(
+            edgeID: edge.id,
+            route: FlowingGraphEdgeRoute(
+              start: sourceFrame.center,
+              segments: [.line(end: targetFrame.center)]
+            )
+          )
+        }
+      )
+      return try FlowingGraphRenderIndex(input: input, result: result)
+    } catch {
+      preconditionFailure("Metal canvas render index construction failed: \(error)")
+    }
   }
 
   private static let palette: [SIMD4<Float>] = [
@@ -166,12 +447,24 @@ struct MetalCanvasSpikeScene {
   ]
 }
 
+extension CGRect {
+  fileprivate var center: CGPoint {
+    CGPoint(x: midX, y: midY)
+  }
+
+  fileprivate func intersectsIncludingBoundary(_ other: CGRect) -> Bool {
+    minX <= other.maxX && maxX >= other.minX && minY <= other.maxY && maxY >= other.minY
+  }
+}
+
 @MainActor
 final class MetalCanvasSpikeController: ObservableObject {
   @Published private(set) var tool = MetalCanvasSpikeTool.select
   @Published private(set) var selectionCount = 0
   @Published private(set) var framesPerSecond = 0
   @Published private(set) var gpuFrameTimeMilliseconds = 0.0
+  @Published private(set) var visibleNodeCount = 0
+  @Published private(set) var visibleEdgeCount = 0
 
   private weak var canvas: MetalCanvasSpikeMTKView?
 
@@ -206,6 +499,12 @@ final class MetalCanvasSpikeController: ObservableObject {
   func updateGPUFrameTime(_ value: Double) {
     gpuFrameTimeMilliseconds = value
   }
+
+  func updateVisibleElementCounts(nodes: Int, edges: Int) {
+    guard visibleNodeCount != nodes || visibleEdgeCount != edges else { return }
+    visibleNodeCount = nodes
+    visibleEdgeCount = edges
+  }
 }
 
 @MainActor
@@ -225,6 +524,8 @@ struct MetalCanvasSpikeView: View {
         Text("\(controller.framesPerSecond) FPS")
           .monospacedDigit()
         Text(String(format: "%.2f ms GPU", controller.gpuFrameTimeMilliseconds))
+          .monospacedDigit()
+        Text("\(controller.visibleNodeCount) Nodes · \(controller.visibleEdgeCount) Edges Visible")
           .monospacedDigit()
         if controller.selectionCount > 0 {
           Text("\(controller.selectionCount) Selected")
@@ -328,14 +629,30 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
   private let gridPipeline: any MTLRenderPipelineState
   private let edgePipeline: any MTLRenderPipelineState
   private let nodePipeline: any MTLRenderPipelineState
-  private let nodeBuffers: [any MTLBuffer]
-  private let edgeBuffers: [any MTLBuffer]
+  private let inFlightSemaphore = DispatchSemaphore(
+    value: MetalCanvasSpikeMetrics.frameResourceCount
+  )
   private let configuration: MetalCanvasSpikeConfiguration
   private var scene: MetalCanvasSpikeScene
-  private var camera = MetalCanvasSpikeCamera()
+  private var camera = MetalCanvasSpikeCamera() {
+    didSet {
+      guard camera != oldValue else { return }
+      requestContinuousRendering()
+    }
+  }
   private var selectedNodeIDs = Set<Int>()
-  private var hoveredNodeID: Int?
-  private var marqueeWorldRect: CGRect?
+  private var hoveredNodeID: Int? {
+    didSet {
+      guard hoveredNodeID != oldValue else { return }
+      invalidateRenderInstances()
+    }
+  }
+  private var marqueeWorldRect: CGRect? {
+    didSet {
+      guard marqueeWorldRect != oldValue else { return }
+      invalidateRenderInstances()
+    }
+  }
   private var mouseDownViewportPoint: CGPoint?
   private var mouseDownWorldPoint: CGPoint?
   private var mouseDownCameraOffset: CGSize?
@@ -346,6 +663,23 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
   private var frameIndex = 0
   private var frameCount = 0
   private var frameCountStart = CACurrentMediaTime()
+  private var continuousRenderingUntil = CACurrentMediaTime()
+  private var nodeBuffers: [any MTLBuffer] = []
+  private var edgeBuffers: [any MTLBuffer] = []
+  private var nodeBufferGenerations = Array(
+    repeating: UInt64.zero,
+    count: MetalCanvasSpikeMetrics.frameResourceCount
+  )
+  private var edgeBufferGenerations = Array(
+    repeating: UInt64.zero,
+    count: MetalCanvasSpikeMetrics.frameResourceCount
+  )
+  private var nodeInstances: [MetalCanvasNodeInstance] = []
+  private var edgeInstances: [MetalCanvasEdgeInstance] = []
+  private var renderSliceCoverage: MetalCanvasSpikeRenderSliceCoverage?
+  private var renderInstancesDirty = true
+  private var renderGeneration: UInt64 = 0
+  private var renderIndexTask: Task<Void, Never>?
   private let gpuFrameStats = MetalCanvasGPUFrameStats()
   private var trackingArea: NSTrackingArea?
   private var motionBenchmarkBaseCamera = MetalCanvasSpikeCamera()
@@ -391,17 +725,6 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
       preconditionFailure("Metal pipeline creation failed: \(error)")
     }
 
-    let nodeBufferLength = MemoryLayout<MetalCanvasNodeInstance>.stride
-      * (configuration.nodeCount + 1)
-    let edgeBufferLength = MemoryLayout<MetalCanvasEdgeInstance>.stride
-      * max(configuration.nodeCount - 1, 1)
-    nodeBuffers = (0..<3).map { _ in
-      device.makeBuffer(length: nodeBufferLength, options: .storageModeShared)!
-    }
-    edgeBuffers = (0..<3).map { _ in
-      device.makeBuffer(length: edgeBufferLength, options: .storageModeShared)!
-    }
-
     super.init(frame: .zero, device: device)
     delegate = self
     colorPixelFormat = .bgra8Unorm_srgb
@@ -423,12 +746,17 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
     fatalError()
   }
 
+  deinit {
+    renderIndexTask?.cancel()
+  }
+
   override var isFlipped: Bool { true }
   override var acceptsFirstResponder: Bool { true }
 
   override func viewDidMoveToWindow() {
     super.viewDidMoveToWindow()
     window?.acceptsMouseMovedEvents = true
+    requestContinuousRendering()
   }
 
   override func layout() {
@@ -462,6 +790,7 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
       return
     }
     let multiplier: CGFloat = event.hasPreciseScrollingDeltas ? 1 : 12
+    hoveredNodeID = nil
     camera.pan(
       by: CGSize(
         width: event.scrollingDeltaX * multiplier,
@@ -474,6 +803,7 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
   private func handleMagnification(_ gesture: NSMagnificationGestureRecognizer) {
     let magnification = gesture.magnification
     guard magnification != 0 else { return }
+    hoveredNodeID = nil
     camera.magnify(
       by: magnification,
       at: gesture.location(in: self)
@@ -494,6 +824,7 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
     addsToSelection = event.modifierFlags.contains(.command)
 
     if tool == .pan {
+      hoveredNodeID = nil
       mouseDownCameraOffset = camera.offset
       NSCursor.closedHand.set()
       return
@@ -508,9 +839,9 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
         selectedNodeIDs = [nodeID]
       }
       dragOrigins = Dictionary(
-        uniqueKeysWithValues: scene.nodes.lazy
-          .filter { self.selectedNodeIDs.contains($0.id) }
-          .map { ($0.id, $0.frame.origin) }
+        uniqueKeysWithValues: selectedNodeIDs.compactMap { nodeID in
+          scene.node(for: nodeID).map { (nodeID, $0.frame.origin) }
+        }
       )
       startsMarquee = false
       publishSelection()
@@ -546,6 +877,7 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
       marqueeWorldRect = Self.rect(from: startWorldPoint, to: worldPoint)
     } else {
       scene.moveNodes(from: dragOrigins, by: translation)
+      invalidateRenderInstances()
     }
   }
 
@@ -561,6 +893,7 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
       }
       publishSelection()
     }
+    scheduleRenderIndexCommit()
     mouseDownViewportPoint = nil
     mouseDownWorldPoint = nil
     mouseDownCameraOffset = nil
@@ -604,11 +937,13 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
       return
     }
     let origins = Dictionary(
-      uniqueKeysWithValues: scene.nodes.lazy
-        .filter { self.selectedNodeIDs.contains($0.id) }
-        .map { ($0.id, $0.frame.origin) }
+      uniqueKeysWithValues: selectedNodeIDs.compactMap { nodeID in
+        scene.node(for: nodeID).map { (nodeID, $0.frame.origin) }
+      }
     )
     scene.moveNodes(from: origins, by: translation)
+    scheduleRenderIndexCommit()
+    invalidateRenderInstances()
   }
 
   func fitContent() {
@@ -618,7 +953,10 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
   }
 
   func resetScene() {
+    renderIndexTask?.cancel()
+    renderIndexTask = nil
     scene = .make(nodeCount: configuration.nodeCount)
+    invalidateRenderInstances()
     selectedNodeIDs.removeAll()
     hoveredNodeID = nil
     marqueeWorldRect = nil
@@ -626,22 +964,38 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
     fitContent()
   }
 
-  func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
+  func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+    requestContinuousRendering()
+  }
 
   func draw(in view: MTKView) {
-    guard bounds.width > 0, bounds.height > 0,
-      let descriptor = currentRenderPassDescriptor,
-      let drawable = currentDrawable,
-      let commandBuffer = commandQueue.makeCommandBuffer(),
-      let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor)
-    else { return }
+    guard bounds.width > 0, bounds.height > 0 else { return }
 
     updateMotionBenchmarkCamera()
-    frameIndex = (frameIndex + 1) % nodeBuffers.count
-    let nodeInstances = makeNodeInstances()
-    let edgeInstances = makeEdgeInstances()
-    copy(nodeInstances, to: nodeBuffers[frameIndex])
-    copy(edgeInstances, to: edgeBuffers[frameIndex])
+    rebuildRenderInstancesIfNeeded()
+    inFlightSemaphore.wait()
+    guard let descriptor = currentRenderPassDescriptor,
+      let drawable = currentDrawable,
+      let commandBuffer = commandQueue.makeCommandBuffer()
+    else {
+      inFlightSemaphore.signal()
+      return
+    }
+    frameIndex = (frameIndex + 1) % MetalCanvasSpikeMetrics.frameResourceCount
+    let nodeBuffer = updateBuffer(
+      values: nodeInstances,
+      buffers: &nodeBuffers,
+      bufferGenerations: &nodeBufferGenerations
+    )
+    let edgeBuffer = updateBuffer(
+      values: edgeInstances,
+      buffers: &edgeBuffers,
+      bufferGenerations: &edgeBufferGenerations
+    )
+    guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
+      inFlightSemaphore.signal()
+      return
+    }
 
     var uniforms = MetalCanvasUniforms(
       viewportSize: SIMD2(Float(bounds.width), Float(bounds.height)),
@@ -665,7 +1019,7 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
         length: MemoryLayout<MetalCanvasUniforms>.stride,
         index: 0
       )
-      encoder.setVertexBuffer(edgeBuffers[frameIndex], offset: 0, index: 1)
+      encoder.setVertexBuffer(edgeBuffer, offset: 0, index: 1)
       encoder.drawPrimitives(
         type: .triangle,
         vertexStart: 0,
@@ -674,47 +1028,78 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
       )
     }
 
-    encoder.setRenderPipelineState(nodePipeline)
-    encoder.setVertexBytes(
-      &uniforms,
-      length: MemoryLayout<MetalCanvasUniforms>.stride,
-      index: 0
-    )
-    encoder.setVertexBuffer(nodeBuffers[frameIndex], offset: 0, index: 1)
-    encoder.drawPrimitives(
-      type: .triangle,
-      vertexStart: 0,
-      vertexCount: 6,
-      instanceCount: nodeInstances.count
-    )
+    if !nodeInstances.isEmpty {
+      encoder.setRenderPipelineState(nodePipeline)
+      encoder.setVertexBytes(
+        &uniforms,
+        length: MemoryLayout<MetalCanvasUniforms>.stride,
+        index: 0
+      )
+      encoder.setVertexBuffer(nodeBuffer, offset: 0, index: 1)
+      encoder.drawPrimitives(
+        type: .triangle,
+        vertexStart: 0,
+        vertexCount: 6,
+        instanceCount: nodeInstances.count
+      )
+    }
 
     encoder.endEncoding()
     let gpuFrameStats = gpuFrameStats
+    let inFlightSemaphore = inFlightSemaphore
     commandBuffer.addCompletedHandler { commandBuffer in
       let duration = commandBuffer.gpuEndTime - commandBuffer.gpuStartTime
       if duration > 0 {
         gpuFrameStats.record(duration: duration)
       }
+      inFlightSemaphore.signal()
     }
     commandBuffer.present(drawable)
     commandBuffer.commit()
     recordFrame()
+    pauseRenderingWhenIdle()
   }
 
-  private func makeNodeInstances() -> [MetalCanvasNodeInstance] {
-    var instances = scene.nodes.map { node in
-      MetalCanvasNodeInstance(
-        origin: SIMD2(Float(node.frame.minX), Float(node.frame.minY)),
-        size: SIMD2(Float(node.frame.width), Float(node.frame.height)),
-        fillColor: node.color,
-        borderColor: SIMD4(0.22, 0.28, 0.29, 0.22),
-        selected: selectedNodeIDs.contains(node.id) ? 1 : 0,
-        hovered: hoveredNodeID == node.id ? 1 : 0,
-        padding: .zero
+  private func rebuildRenderInstancesIfNeeded() {
+    let levelOfDetail = MetalCanvasSpikeNodeLevelOfDetail.resolve(
+      nodeHeight: MetalCanvasSpikeMetrics.nodeSize.height,
+      zoom: camera.zoom
+    )
+    let viewportWorldRect = camera.visibleWorldRect(viewportSize: bounds.size)
+    if !renderInstancesDirty,
+      renderSliceCoverage?.covers(
+        viewportWorldRect: viewportWorldRect,
+        levelOfDetail: levelOfDetail
+      ) == true
+    {
+      return
+    }
+
+    let visibleWorldRect = camera.visibleWorldRect(
+      viewportSize: bounds.size,
+      overscan: MetalCanvasSpikeMetrics.renderOverscan
+    )
+    let visibleElements = scene.renderElementIDs(intersecting: visibleWorldRect)
+
+    nodeInstances.removeAll(keepingCapacity: true)
+    nodeInstances.reserveCapacity(visibleElements.nodeIDs.count + (marqueeWorldRect == nil ? 0 : 1))
+    for nodeID in visibleElements.nodeIDs {
+      guard let node = scene.node(for: nodeID) else { continue }
+      nodeInstances.append(
+        MetalCanvasNodeInstance(
+          origin: SIMD2(Float(node.frame.minX), Float(node.frame.minY)),
+          size: SIMD2(Float(node.frame.width), Float(node.frame.height)),
+          fillColor: node.color,
+          borderColor: SIMD4(0.22, 0.28, 0.29, 0.22),
+          selected: selectedNodeIDs.contains(node.id) ? 1 : 0,
+          hovered: hoveredNodeID == node.id ? 1 : 0,
+          levelOfDetail: levelOfDetail.rawValue,
+          padding: 0
+        )
       )
     }
     if let marqueeWorldRect {
-      instances.append(
+      nodeInstances.append(
         MetalCanvasNodeInstance(
           origin: SIMD2(Float(marqueeWorldRect.minX), Float(marqueeWorldRect.minY)),
           size: SIMD2(Float(marqueeWorldRect.width), Float(marqueeWorldRect.height)),
@@ -722,42 +1107,159 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
           borderColor: SIMD4(0.22, 0.55, 0.72, 0.90),
           selected: 1,
           hovered: 0,
+          levelOfDetail: MetalCanvasSpikeNodeLevelOfDetail.full.rawValue,
+          padding: 0
+        )
+      )
+    }
+
+    edgeInstances.removeAll(keepingCapacity: true)
+    edgeInstances.reserveCapacity(visibleElements.edgeIDs.count)
+    for edgeID in visibleElements.edgeIDs {
+      guard let endpoints = scene.edgeEndpoints(for: edgeID) else { continue }
+      edgeInstances.append(
+        MetalCanvasEdgeInstance(
+          start: SIMD2(Float(endpoints.start.x), Float(endpoints.start.y)),
+          end: SIMD2(Float(endpoints.end.x), Float(endpoints.end.y)),
+          color: SIMD4(0.35, 0.41, 0.42, 0.35),
+          width: 1.25,
           padding: .zero
         )
       )
     }
-    return instances
-  }
 
-  private func makeEdgeInstances() -> [MetalCanvasEdgeInstance] {
-    let centers = Dictionary(
-      uniqueKeysWithValues: scene.nodes.map {
-        ($0.id, SIMD2(Float($0.frame.midX), Float($0.frame.midY)))
-      }
+    controller.updateVisibleElementCounts(
+      nodes: nodeInstances.count - (marqueeWorldRect == nil ? 0 : 1),
+      edges: edgeInstances.count
     )
-    return scene.edges.compactMap { edge in
-      guard let start = centers[edge.sourceID], let end = centers[edge.targetID] else {
-        return nil
-      }
-      return MetalCanvasEdgeInstance(
-        start: start,
-        end: end,
-        color: SIMD4(0.35, 0.41, 0.42, 0.35),
-        width: 1.25,
-        padding: .zero
+    let retainedMargin =
+      MetalCanvasSpikeMetrics.renderOverscan / camera.zoom
+      * MetalCanvasSpikeMetrics.renderCoverageRetentionRatio
+    renderSliceCoverage = MetalCanvasSpikeRenderSliceCoverage(
+      retainedWorldRect: visibleWorldRect.insetBy(
+        dx: retainedMargin,
+        dy: retainedMargin
+      ),
+      levelOfDetail: levelOfDetail
+    )
+    renderInstancesDirty = false
+    renderGeneration &+= 1
+    if renderGeneration == 0 {
+      renderGeneration = 1
+      nodeBufferGenerations = Array(
+        repeating: 0,
+        count: MetalCanvasSpikeMetrics.frameResourceCount
+      )
+      edgeBufferGenerations = Array(
+        repeating: 0,
+        count: MetalCanvasSpikeMetrics.frameResourceCount
       )
     }
   }
 
-  private func copy<T>(_ values: [T], to buffer: any MTLBuffer) {
-    guard !values.isEmpty else { return }
-    values.withUnsafeBytes { bytes in
-      buffer.contents().copyMemory(from: bytes.baseAddress!, byteCount: bytes.count)
+  private func updateBuffer<T>(
+    values: [T],
+    buffers: inout [any MTLBuffer],
+    bufferGenerations: inout [UInt64]
+  ) -> any MTLBuffer {
+    let (valueBytes, overflow) = values.count.multipliedReportingOverflow(
+      by: MemoryLayout<T>.stride
+    )
+    precondition(!overflow, "Metal buffer size overflow")
+    let requiredLength = max(valueBytes, 1)
+    if buffers.count != MetalCanvasSpikeMetrics.frameResourceCount
+      || buffers.contains(where: { $0.length < requiredLength })
+    {
+      guard let device else { preconditionFailure("Metal device is unavailable") }
+      let bufferLength = Self.bufferLength(for: requiredLength)
+      buffers = (0..<MetalCanvasSpikeMetrics.frameResourceCount).map { _ in
+        guard
+          let buffer = device.makeBuffer(
+            length: bufferLength,
+            options: .storageModeShared
+          )
+        else {
+          preconditionFailure("Metal buffer allocation failed")
+        }
+        return buffer
+      }
+      bufferGenerations = Array(
+        repeating: 0,
+        count: MetalCanvasSpikeMetrics.frameResourceCount
+      )
     }
+    let buffer = buffers[frameIndex]
+    if bufferGenerations[frameIndex] != renderGeneration, !values.isEmpty {
+      values.withUnsafeBytes { bytes in
+        buffer.contents().copyMemory(from: bytes.baseAddress!, byteCount: bytes.count)
+      }
+    }
+    bufferGenerations[frameIndex] = renderGeneration
+    return buffer
+  }
+
+  private static func bufferLength(for requiredLength: Int) -> Int {
+    var length = MetalCanvasSpikeMetrics.minimumBufferLength
+    while length < requiredLength {
+      let (next, overflow) = length.multipliedReportingOverflow(by: 2)
+      if overflow { return requiredLength }
+      length = next
+    }
+    return length
   }
 
   private func publishSelection() {
     controller.updateSelectionCount(selectedNodeIDs.count)
+    invalidateRenderInstances()
+  }
+
+  private func invalidateRenderInstances() {
+    renderInstancesDirty = true
+    requestContinuousRendering()
+  }
+
+  private func scheduleRenderIndexCommit() {
+    guard scene.hasPendingIndexChanges else { return }
+    let snapshot = scene.renderIndexSnapshot()
+    renderIndexTask?.cancel()
+    renderIndexTask = Task { [weak self] in
+      do {
+        try await Task.sleep(
+          nanoseconds: MetalCanvasSpikeMetrics.renderIndexCommitDelayNanoseconds
+        )
+      } catch {
+        return
+      }
+      let buildTask = Task.detached(priority: .utility) {
+        snapshot.build()
+      }
+      let update = await withTaskCancellationHandler {
+        await buildTask.value
+      } onCancel: {
+        buildTask.cancel()
+      }
+      guard !Task.isCancelled, let self else { return }
+      if self.scene.install(update) {
+        self.renderIndexTask = nil
+      }
+    }
+  }
+
+  private func requestContinuousRendering() {
+    continuousRenderingUntil = max(
+      continuousRenderingUntil,
+      CACurrentMediaTime() + MetalCanvasSpikeMetrics.interactionRenderTail
+    )
+    if isPaused {
+      isPaused = false
+    }
+  }
+
+  private func pauseRenderingWhenIdle() {
+    guard configuration.benchmarkInteraction == .none,
+      CACurrentMediaTime() >= continuousRenderingUntil
+    else { return }
+    isPaused = true
   }
 
   private func updateMotionBenchmarkCamera() {
@@ -767,16 +1269,22 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
       let viewportAnchor = CGPoint(x: bounds.midX, y: bounds.midY)
       let worldAnchor = motionBenchmarkBaseCamera.worldPoint(for: viewportAnchor)
       let zoomFactor = 1.625 + sin(elapsed * 1.2) * 0.625
-      camera.zoom = min(motionBenchmarkBaseCamera.zoom * zoomFactor, 3)
-      camera.offset = CGSize(
-        width: viewportAnchor.x - worldAnchor.x * camera.zoom,
-        height: viewportAnchor.y - worldAnchor.y * camera.zoom
+      let zoom = min(motionBenchmarkBaseCamera.zoom * zoomFactor, 3)
+      camera = MetalCanvasSpikeCamera(
+        zoom: zoom,
+        offset: CGSize(
+          width: viewportAnchor.x - worldAnchor.x * zoom,
+          height: viewportAnchor.y - worldAnchor.y * zoom
+        )
       )
       return
     }
-    camera.offset = CGSize(
-      width: motionBenchmarkBaseCamera.offset.width + sin(elapsed * 1.7) * 72,
-      height: motionBenchmarkBaseCamera.offset.height + cos(elapsed * 1.3) * 48
+    camera = MetalCanvasSpikeCamera(
+      zoom: motionBenchmarkBaseCamera.zoom,
+      offset: CGSize(
+        width: motionBenchmarkBaseCamera.offset.width + sin(elapsed * 1.7) * 72,
+        height: motionBenchmarkBaseCamera.offset.height + cos(elapsed * 1.3) * 48
+      )
     )
   }
 
@@ -840,7 +1348,8 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
       float4 borderColor;
       uint selected;
       uint hovered;
-      uint2 padding;
+      uint levelOfDetail;
+      uint padding;
     };
 
     struct EdgeInstance {
@@ -864,6 +1373,7 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
       float4 borderColor [[flat]];
       uint selected [[flat]];
       uint hovered [[flat]];
+      uint levelOfDetail [[flat]];
     };
 
     struct EdgeOutput {
@@ -958,17 +1468,29 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
       output.borderColor = instance.borderColor;
       output.selected = instance.selected;
       output.hovered = instance.hovered;
+      output.levelOfDetail = instance.levelOfDetail;
       return output;
     }
 
     fragment float4 nodeFragment(NodeOutput input [[stage_in]]) {
-      float radius = min(12.0, min(input.pixelSize.x, input.pixelSize.y) * 0.22);
+      float maximumRadius = input.levelOfDetail == 0
+        ? 4.0
+        : (input.levelOfDetail == 1 ? 6.0 : 12.0);
+      float radius = min(maximumRadius, min(input.pixelSize.x, input.pixelSize.y) * 0.22);
       float2 point = (input.uv - 0.5) * input.pixelSize;
       float2 bounds = input.pixelSize * 0.5 - radius;
       float2 delta = abs(point) - bounds;
       float distance = length(max(delta, 0.0)) + min(max(delta.x, delta.y), 0.0) - radius;
       float alpha = 1.0 - smoothstep(-0.5, 0.8, distance);
-      float borderWidth = input.selected != 0 ? 2.4 : (input.hovered != 0 ? 1.8 : 1.0);
+      if (input.levelOfDetail == 0 && input.selected == 0 && input.hovered == 0) {
+        float4 color = input.fillColor;
+        color.a *= alpha;
+        return color;
+      }
+      float defaultBorderWidth = input.levelOfDetail == 1 ? 0.75 : 1.0;
+      float borderWidth = input.selected != 0
+        ? 2.4
+        : (input.hovered != 0 ? 1.8 : defaultBorderWidth);
       float border = smoothstep(-borderWidth - 0.8, -borderWidth + 0.4, distance);
       float4 borderColor = input.selected != 0
         ? float4(0.16, 0.48, 0.64, 1)
@@ -994,7 +1516,8 @@ private struct MetalCanvasNodeInstance {
   var borderColor: SIMD4<Float>
   var selected: UInt32
   var hovered: UInt32
-  var padding: SIMD2<UInt32>
+  var levelOfDetail: UInt32
+  var padding: UInt32
 }
 
 private struct MetalCanvasEdgeInstance {

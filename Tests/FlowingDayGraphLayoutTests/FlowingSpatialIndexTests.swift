@@ -203,6 +203,20 @@ final class FlowingSpatialIndexTests: XCTestCase {
     XCTAssertEqual(elementIDs.inputID, input.id)
     XCTAssertEqual(elementIDs.nodeIDs, [])
     XCTAssertEqual(elementIDs.edgeIDs, ["edge"])
+    XCTAssertEqual(
+      Set(
+        index.unorderedNodeIDs(
+          intersecting: CGRect(x: -10, y: -10, width: 120, height: 80)
+        )
+      ),
+      ["first"]
+    )
+    XCTAssertEqual(
+      index.nodeIDs(
+        intersecting: CGRect(x: -10, y: -10, width: 1_120, height: 80)
+      ),
+      ["first", "second"]
+    )
 
     let zeroMarginIndex = try FlowingGraphRenderIndex(
       input: input,
