@@ -1,6 +1,8 @@
 import AppKit
 import SwiftUI
 
+public protocol FlowingCanvasTrackpadEventTarget: AnyObject {}
+
 struct FlowingCanvasTrackpadGestureView: NSViewRepresentable {
   let discreteScrollMultiplier: CGFloat
   let onPan: (CGSize, CGPoint) -> Bool
@@ -60,6 +62,7 @@ struct FlowingCanvasTrackpadGestureView: NSViewRepresentable {
         matching: [.scrollWheel, .magnify, .smartMagnify]
       ) { [weak self] event in
         guard let self, event.window === window else { return event }
+        guard !isClaimedByOverlay(event) else { return event }
         let location = convert(event.locationInWindow, from: nil)
 
         switch event.type {
@@ -98,6 +101,19 @@ struct FlowingCanvasTrackpadGestureView: NSViewRepresentable {
           return event
         }
       }
+    }
+
+    private func isClaimedByOverlay(_ event: NSEvent) -> Bool {
+      guard let contentView = window?.contentView else { return false }
+      let location = contentView.convert(event.locationInWindow, from: nil)
+      var candidate = contentView.hitTest(location)
+      while let view = candidate {
+        if view is FlowingCanvasTrackpadEventTarget {
+          return true
+        }
+        candidate = view.superview
+      }
+      return false
     }
 
     func stopMonitoring() {

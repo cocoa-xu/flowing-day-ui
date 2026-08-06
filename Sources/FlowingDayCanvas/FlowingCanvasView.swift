@@ -40,18 +40,23 @@ public struct FlowingCanvasRenderContext: Equatable, Sendable {
 
 public struct FlowingCanvasProxy {
   public let context: FlowingCanvasRenderContext
-  private let setZoomAction: (CGFloat, Bool) -> Void
+  private let setZoomAction: (CGFloat, FlowingCanvasViewportChangePhase, Bool) -> Void
+  private let anchorAction:
+    (CGPoint, CGPoint, CGFloat, FlowingCanvasViewportChangePhase, Bool) -> Void
   private let focusAction: (CGRect, CGFloat?, Bool) -> Void
   private let fitAction: (CGRect, CGFloat, CGFloat?, Bool) -> Void
 
   init(
     context: FlowingCanvasRenderContext,
-    setZoom: @escaping (CGFloat, Bool) -> Void,
+    setZoom: @escaping (CGFloat, FlowingCanvasViewportChangePhase, Bool) -> Void,
+    anchor:
+      @escaping (CGPoint, CGPoint, CGFloat, FlowingCanvasViewportChangePhase, Bool) -> Void,
     focus: @escaping (CGRect, CGFloat?, Bool) -> Void,
     fit: @escaping (CGRect, CGFloat, CGFloat?, Bool) -> Void
   ) {
     self.context = context
     setZoomAction = setZoom
+    anchorAction = anchor
     focusAction = focus
     fitAction = fit
   }
@@ -65,7 +70,40 @@ public struct FlowingCanvasProxy {
   }
 
   public func setZoom(_ zoom: CGFloat, animated: Bool = false) {
-    setZoomAction(zoom, animated)
+    setZoomAction(zoom, .ended, animated)
+  }
+
+  public func setZoom(
+    _ zoom: CGFloat,
+    phase: FlowingCanvasViewportChangePhase,
+    animated: Bool = false
+  ) {
+    setZoomAction(zoom, phase, animated)
+  }
+
+  public func anchor(
+    worldPoint: CGPoint,
+    at viewportPoint: CGPoint,
+    zoom: CGFloat? = nil,
+    phase: FlowingCanvasViewportChangePhase = .ended,
+    animated: Bool = false
+  ) {
+    anchorAction(worldPoint, viewportPoint, zoom ?? self.zoom, phase, animated)
+  }
+
+  public func center(
+    on worldPoint: CGPoint,
+    zoom: CGFloat? = nil,
+    phase: FlowingCanvasViewportChangePhase = .ended,
+    animated: Bool = false
+  ) {
+    anchor(
+      worldPoint: worldPoint,
+      at: CGPoint(x: viewport.contentBounds.midX, y: viewport.contentBounds.midY),
+      zoom: zoom,
+      phase: phase,
+      animated: animated
+    )
   }
 
   public func focus(
@@ -298,8 +336,26 @@ public struct FlowingCanvas<
   private func makeProxy(context: FlowingCanvasRenderContext) -> FlowingCanvasProxy {
     FlowingCanvasProxy(
       context: context,
-      setZoom: { zoom, animated in
-        setZoom(zoom, animated: animated, viewportSize: context.viewport.size)
+      setZoom: { zoom, phase, animated in
+        setZoom(
+          zoom,
+          phase: phase,
+          animated: animated,
+          viewportSize: context.viewport.size
+        )
+      },
+      anchor: { worldPoint, viewportPoint, zoom, phase, animated in
+        restoreTransform = nil
+        updateViewport(
+          transform: FlowingCanvasTransform.anchoring(
+            worldPoint: worldPoint,
+            at: viewportPoint,
+            zoom: configuration.clampedZoom(zoom)
+          ),
+          phase: phase,
+          animated: animated,
+          forceRenderRefresh: phase == .ended
+        )
       },
       focus: { rect, zoom, animated in
         restoreTransform = nil
@@ -589,7 +645,12 @@ public struct FlowingCanvas<
     return true
   }
 
-  private func setZoom(_ zoom: CGFloat, animated: Bool, viewportSize: CGSize) {
+  private func setZoom(
+    _ zoom: CGFloat,
+    phase: FlowingCanvasViewportChangePhase = .ended,
+    animated: Bool,
+    viewportSize: CGSize
+  ) {
     guard viewportSize.width > 0, viewportSize.height > 0 else { return }
     restoreTransform = nil
     let nextZoom = configuration.clampedZoom(zoom)
@@ -602,8 +663,9 @@ public struct FlowingCanvas<
         at: center,
         zoom: nextZoom
       ),
-      phase: .ended,
-      animated: animated
+      phase: phase,
+      animated: animated,
+      forceRenderRefresh: phase == .ended
     )
   }
 

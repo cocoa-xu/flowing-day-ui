@@ -179,6 +179,41 @@ final class FlowingCanvasTests: XCTestCase {
     XCTAssertEqual(first.animationDuration, 0.18)
   }
 
+  func testProxyPreservesContinuousNavigationPhaseForOverlays() {
+    let viewport = FlowingCanvasViewport(
+      transform: .identity,
+      size: CGSize(width: 800, height: 600),
+      contentBounds: CGRect(x: 100, y: 50, width: 700, height: 500)
+    )
+    let context = FlowingCanvasRenderContext(
+      viewport: viewport,
+      renderWorldRect: CGRect(x: 0, y: 0, width: 800, height: 600)
+    )
+    var zoomPhase: FlowingCanvasViewportChangePhase?
+    var anchorPhase: FlowingCanvasViewportChangePhase?
+    var anchorPoint: CGPoint?
+    var anchorViewportPoint: CGPoint?
+    let proxy = FlowingCanvasProxy(
+      context: context,
+      setZoom: { _, phase, _ in zoomPhase = phase },
+      anchor: { point, viewportPoint, _, phase, _ in
+        anchorPoint = point
+        anchorViewportPoint = viewportPoint
+        anchorPhase = phase
+      },
+      focus: { _, _, _ in },
+      fit: { _, _, _, _ in }
+    )
+
+    proxy.setZoom(1.5, phase: .continuous)
+    proxy.center(on: CGPoint(x: 400, y: 300), phase: .continuous)
+
+    XCTAssertEqual(zoomPhase, .continuous)
+    XCTAssertEqual(anchorPhase, .continuous)
+    XCTAssertEqual(anchorPoint, CGPoint(x: 400, y: 300))
+    XCTAssertEqual(anchorViewportPoint, CGPoint(x: 450, y: 300))
+  }
+
   @MainActor
   func testPublicCanvasCompositionBuildsFromIndependentViews() {
     let canvas = FlowingCanvas(
