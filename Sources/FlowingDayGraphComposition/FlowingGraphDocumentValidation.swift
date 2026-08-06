@@ -22,6 +22,26 @@ public enum FlowingGraphDocumentValidationIssue<
   case unknownLinkSourceDefinition(linkID: Schema.LinkID, graphID: Schema.GraphID)
   case unknownLinkSourceNode(linkID: Schema.LinkID, site: Site)
   case unknownLinkTargetDefinition(linkID: Schema.LinkID, graphID: Schema.GraphID)
+  case interfaceExternalPortOutsideSite(
+    linkID: Schema.LinkID,
+    port: FlowingGraphPortKey<Schema.GraphSchema>
+  )
+  case unknownInterfaceExternalPort(
+    linkID: Schema.LinkID,
+    port: FlowingGraphPortKey<Schema.GraphSchema>
+  )
+  case duplicateInterfaceExternalPort(
+    linkID: Schema.LinkID,
+    port: FlowingGraphPortKey<Schema.GraphSchema>
+  )
+  case unknownInterfaceInternalNode(
+    linkID: Schema.LinkID,
+    nodeID: Schema.GraphSchema.NodeID
+  )
+  case unknownInterfaceInternalPort(
+    linkID: Schema.LinkID,
+    port: FlowingGraphPortKey<Schema.GraphSchema>
+  )
   case multipleOwners(
     graphID: Schema.GraphID,
     firstLinkID: Schema.LinkID,
@@ -43,7 +63,8 @@ where
   Schema.GraphID: Sendable,
   Schema.EntryPointID: Sendable,
   Schema.LinkID: Sendable,
-  Schema.GraphSchema.NodeID: Sendable
+  Schema.GraphSchema.NodeID: Sendable,
+  Schema.GraphSchema.PortID: Sendable
 {}
 
 public struct FlowingGraphDocumentValidationError<
@@ -62,7 +83,8 @@ where
   Schema.GraphID: Sendable,
   Schema.EntryPointID: Sendable,
   Schema.LinkID: Sendable,
-  Schema.GraphSchema.NodeID: Sendable
+  Schema.GraphSchema.NodeID: Sendable,
+  Schema.GraphSchema.PortID: Sendable
 {}
 
 public enum FlowingGraphDocumentValidator {
@@ -79,9 +101,11 @@ public enum FlowingGraphDocumentValidator {
     guard analysis.issues.isEmpty else {
       throw FlowingGraphDocumentValidationError(issues: analysis.issues)
     }
-    guard let defaultEntryPoint = analysis.index.entryPointsByID[
-      document.defaultEntryPointID
-    ] else {
+    guard
+      let defaultEntryPoint = analysis.index.entryPointsByID[
+        document.defaultEntryPointID
+      ]
+    else {
       throw FlowingGraphDocumentValidationError<Schema>(
         issues: [.unknownDefaultEntryPoint(document.defaultEntryPointID)]
       )
@@ -130,9 +154,7 @@ public enum FlowingGraphDocumentValidator {
     }
 
     var linksByID: [Schema.LinkID: FlowingSubgraphLink<Schema>] = [:]
-    var linksBySite: [
-      FlowingSubgraphLink<Schema>.Site: FlowingSubgraphLink<Schema>
-    ] = [:]
+    var linksBySite: [FlowingSubgraphLink<Schema>.Site: FlowingSubgraphLink<Schema>] = [:]
     var linksBySourceGraphID: [Schema.GraphID: [FlowingSubgraphLink<Schema>]] = [:]
     var validLinks: [FlowingSubgraphLink<Schema>] = []
     for link in document.subgraphLinks {
@@ -167,12 +189,19 @@ public enum FlowingGraphDocumentValidator {
         }
         continue
       }
-      guard definitionsByID[link.targetGraphID] != nil else {
+      guard let targetDefinition = definitionsByID[link.targetGraphID] else {
         issues.append(
           .unknownLinkTargetDefinition(linkID: link.id, graphID: link.targetGraphID)
         )
         continue
       }
+      issues.append(
+        contentsOf: interfaceIssues(
+          link: link,
+          sourceDefinition: sourceDefinition,
+          targetDefinition: targetDefinition
+        )
+      )
       validLinks.append(link)
       linksBySourceGraphID[link.site.graphID, default: []].append(link)
     }
@@ -219,11 +248,13 @@ public enum FlowingGraphDocumentValidator {
 
     for link in validLinks where link.ownership == .reference {
       guard ownedParentByGraphID[link.targetGraphID] != nil else { continue }
-      guard isInOwnedSubtree(
-        link.site.graphID,
-        rootedAt: link.targetGraphID,
-        parentByGraphID: ownedParentByGraphID
-      ) else {
+      guard
+        isInOwnedSubtree(
+          link.site.graphID,
+          rootedAt: link.targetGraphID,
+          parentByGraphID: ownedParentByGraphID
+        )
+      else {
         issues.append(
           .ownedDefinitionExternallyReferenced(
             linkID: link.id,
@@ -237,10 +268,49 @@ public enum FlowingGraphDocumentValidator {
     let index = FlowingGraphDocumentIndex(
       definitionsByID: definitionsByID,
       entryPointsByID: entryPointsByID,
+      linksByID: linksByID,
       linksBySite: linksBySite,
       linksBySourceGraphID: linksBySourceGraphID
     )
     return FlowingGraphDocumentAnalysis(issues: issues, index: index)
+  }
+
+  private static func interfaceIssues<Schema: FlowingGraphCompositionSchema>(
+    link: FlowingSubgraphLink<Schema>,
+    sourceDefinition: FlowingGraphDefinition<Schema>,
+    targetDefinition: FlowingGraphDefinition<Schema>
+  ) -> [FlowingGraphDocumentValidationIssue<Schema>] {
+    var issues: [FlowingGraphDocumentValidationIssue<Schema>] = []
+    var boundExternalPorts: Set<FlowingGraphPortKey<Schema.GraphSchema>> = []
+    for binding in link.interface.bindings {
+      let externalPort = binding.externalPort
+      if !boundExternalPorts.insert(externalPort).inserted {
+        issues.append(
+          .duplicateInterfaceExternalPort(linkID: link.id, port: externalPort)
+        )
+      }
+      if externalPort.nodeID != link.site.nodeID {
+        issues.append(
+          .interfaceExternalPortOutsideSite(linkID: link.id, port: externalPort)
+        )
+      }
+      if sourceDefinition.graph.port(key: externalPort) == nil {
+        issues.append(
+          .unknownInterfaceExternalPort(linkID: link.id, port: externalPort)
+        )
+      }
+      switch binding.internalEndpoint {
+      case .node(let nodeID):
+        if targetDefinition.graph.node(id: nodeID) == nil {
+          issues.append(.unknownInterfaceInternalNode(linkID: link.id, nodeID: nodeID))
+        }
+      case .port(let port):
+        if targetDefinition.graph.port(key: port) == nil {
+          issues.append(.unknownInterfaceInternalPort(linkID: link.id, port: port))
+        }
+      }
+    }
+    return issues
   }
 
   private static func containmentCycleIssues<Schema: FlowingGraphCompositionSchema>(
@@ -331,6 +401,10 @@ public struct FlowingValidatedGraphDocument<Schema: FlowingGraphCompositionSchem
   ) -> FlowingSubgraphLink<Schema>? {
     index.linksBySite[site]
   }
+
+  public func subgraphLink(id: Schema.LinkID) -> FlowingSubgraphLink<Schema>? {
+    index.linksByID[id]
+  }
 }
 
 extension FlowingValidatedGraphDocument: Sendable
@@ -351,6 +425,7 @@ where
 struct FlowingGraphDocumentIndex<Schema: FlowingGraphCompositionSchema> {
   let definitionsByID: [Schema.GraphID: FlowingGraphDefinition<Schema>]
   let entryPointsByID: [Schema.EntryPointID: FlowingGraphEntryPoint<Schema>]
+  let linksByID: [Schema.LinkID: FlowingSubgraphLink<Schema>]
   let linksBySite: [FlowingSubgraphLink<Schema>.Site: FlowingSubgraphLink<Schema>]
   let linksBySourceGraphID: [Schema.GraphID: [FlowingSubgraphLink<Schema>]]
 }

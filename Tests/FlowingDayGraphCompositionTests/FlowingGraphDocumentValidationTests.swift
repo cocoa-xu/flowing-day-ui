@@ -283,6 +283,166 @@ final class FlowingGraphDocumentValidationTests: XCTestCase {
     )
   }
 
+  func testSubgraphInterfacePreservesOrderedBindingsAndUnboundPorts() throws {
+    let externalInput = portKey(nodeID: "composite", portID: "input")
+    let externalOutput = portKey(nodeID: "composite", portID: "output")
+    let externalUnused = portKey(nodeID: "composite", portID: "unused")
+    let internalOutput = portKey(nodeID: "internal", portID: "output")
+    let interface = FlowingSubgraphInterface<TestCompositionSchema>(
+      bindings: [
+        FlowingSubgraphInterfaceBinding(
+          externalPort: externalOutput,
+          internalEndpoint: .port(internalOutput)
+        ),
+        FlowingSubgraphInterfaceBinding(
+          externalPort: externalInput,
+          internalEndpoint: .node("internal")
+        ),
+      ]
+    )
+    let document = makeDocument(
+      definitions: [
+        FlowingGraphDefinition(
+          id: "root",
+          graph: makeGraph(
+            nodes: ["composite"],
+            ports: [
+              port(externalInput),
+              port(externalOutput),
+              port(externalUnused),
+            ]
+          )
+        ),
+        FlowingGraphDefinition(
+          id: "child",
+          graph: makeGraph(nodes: ["internal"], ports: [port(internalOutput)])
+        ),
+      ],
+      links: [
+        makeLink(
+          "child",
+          from: "root",
+          nodeID: "composite",
+          to: "child",
+          interface: interface
+        )
+      ]
+    )
+
+    let validated = try FlowingGraphDocumentValidator.validate(document)
+    let link = try XCTUnwrap(validated.subgraphLink(id: "child"))
+
+    XCTAssertEqual(link.interface.bindings.map(\.externalPort), [externalOutput, externalInput])
+    XCTAssertNotNil(validated.definition(id: "root")?.graph.port(key: externalUnused))
+  }
+
+  func testSubgraphInterfaceRejectsExternalPortsOutsideTheCompositeSite() {
+    let externalPort = portKey(nodeID: "other", portID: "port")
+    let document = makeDocument(
+      definitions: [
+        FlowingGraphDefinition(
+          id: "root",
+          graph: makeGraph(nodes: ["composite", "other"], ports: [port(externalPort)])
+        ),
+        makeDefinition("child", nodes: ["internal"]),
+      ],
+      links: [
+        makeLink(
+          "child",
+          from: "root",
+          nodeID: "composite",
+          to: "child",
+          interface: interface(externalPort: externalPort, internalEndpoint: .node("internal"))
+        )
+      ]
+    )
+
+    XCTAssertTrue(
+      FlowingGraphDocumentValidator.issues(in: document).contains(
+        .interfaceExternalPortOutsideSite(linkID: "child", port: externalPort)
+      )
+    )
+  }
+
+  func testSubgraphInterfaceRejectsUnknownAndDuplicateExternalPorts() {
+    let externalPort = portKey(nodeID: "composite", portID: "missing")
+    let binding = FlowingSubgraphInterfaceBinding<TestCompositionSchema>(
+      externalPort: externalPort,
+      internalEndpoint: .node("internal")
+    )
+    let document = makeDocument(
+      definitions: [
+        makeDefinition("root", nodes: ["composite"]),
+        makeDefinition("child", nodes: ["internal"]),
+      ],
+      links: [
+        makeLink(
+          "child",
+          from: "root",
+          nodeID: "composite",
+          to: "child",
+          interface: FlowingSubgraphInterface(bindings: [binding, binding])
+        )
+      ]
+    )
+    let issues = FlowingGraphDocumentValidator.issues(in: document)
+
+    XCTAssertTrue(
+      issues.contains(.unknownInterfaceExternalPort(linkID: "child", port: externalPort))
+    )
+    XCTAssertTrue(
+      issues.contains(.duplicateInterfaceExternalPort(linkID: "child", port: externalPort))
+    )
+  }
+
+  func testSubgraphInterfaceRejectsUnknownInternalEndpoints() {
+    let externalNode = portKey(nodeID: "composite", portID: "node-binding")
+    let externalPort = portKey(nodeID: "composite", portID: "port-binding")
+    let missingInternalPort = portKey(nodeID: "internal", portID: "missing")
+    let document = makeDocument(
+      definitions: [
+        FlowingGraphDefinition(
+          id: "root",
+          graph: makeGraph(
+            nodes: ["composite"],
+            ports: [port(externalNode), port(externalPort)]
+          )
+        ),
+        makeDefinition("child", nodes: ["internal"]),
+      ],
+      links: [
+        makeLink(
+          "child",
+          from: "root",
+          nodeID: "composite",
+          to: "child",
+          interface: FlowingSubgraphInterface(
+            bindings: [
+              FlowingSubgraphInterfaceBinding(
+                externalPort: externalNode,
+                internalEndpoint: .node("missing")
+              ),
+              FlowingSubgraphInterfaceBinding(
+                externalPort: externalPort,
+                internalEndpoint: .port(missingInternalPort)
+              ),
+            ]
+          )
+        )
+      ]
+    )
+    let issues = FlowingGraphDocumentValidator.issues(in: document)
+
+    XCTAssertTrue(
+      issues.contains(.unknownInterfaceInternalNode(linkID: "child", nodeID: "missing"))
+    )
+    XCTAssertTrue(
+      issues.contains(
+        .unknownInterfaceInternalPort(linkID: "child", port: missingInternalPort)
+      )
+    )
+  }
+
   func testValidatedDocumentIsConditionallySendable() throws {
     let validated = try FlowingGraphDocumentValidator.validate(
       makeDocument(definitions: [makeDefinition("root", nodes: ["value"])])
@@ -292,4 +452,31 @@ final class FlowingGraphDocumentValidationTests: XCTestCase {
   }
 
   private func requireSendable<Value: Sendable>(_: Value) {}
+
+  private func portKey(
+    nodeID: String,
+    portID: String
+  ) -> FlowingGraphPortKey<TestGraphSchema> {
+    FlowingGraphPortKey(nodeID: nodeID, portID: portID)
+  }
+
+  private func port(
+    _ key: FlowingGraphPortKey<TestGraphSchema>
+  ) -> FlowingGraphPort<TestGraphSchema> {
+    FlowingGraphPort(key: key, value: key.portID)
+  }
+
+  private func interface(
+    externalPort: FlowingGraphPortKey<TestGraphSchema>,
+    internalEndpoint: FlowingGraphEndpoint<TestGraphSchema>
+  ) -> FlowingSubgraphInterface<TestCompositionSchema> {
+    FlowingSubgraphInterface(
+      bindings: [
+        FlowingSubgraphInterfaceBinding(
+          externalPort: externalPort,
+          internalEndpoint: internalEndpoint
+        )
+      ]
+    )
+  }
 }

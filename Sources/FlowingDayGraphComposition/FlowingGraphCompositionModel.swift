@@ -59,6 +59,35 @@ public enum FlowingSubgraphOwnership: Hashable, Sendable {
   case reference
 }
 
+public struct FlowingSubgraphInterfaceBinding<Schema: FlowingGraphCompositionSchema> {
+  public let externalPort: FlowingGraphPortKey<Schema.GraphSchema>
+  public let internalEndpoint: FlowingGraphEndpoint<Schema.GraphSchema>
+
+  public init(
+    externalPort: FlowingGraphPortKey<Schema.GraphSchema>,
+    internalEndpoint: FlowingGraphEndpoint<Schema.GraphSchema>
+  ) {
+    self.externalPort = externalPort
+    self.internalEndpoint = internalEndpoint
+  }
+}
+
+extension FlowingSubgraphInterfaceBinding: Equatable {}
+extension FlowingSubgraphInterfaceBinding: Sendable
+where Schema.GraphSchema.NodeID: Sendable, Schema.GraphSchema.PortID: Sendable {}
+
+public struct FlowingSubgraphInterface<Schema: FlowingGraphCompositionSchema> {
+  public let bindings: [FlowingSubgraphInterfaceBinding<Schema>]
+
+  public init(bindings: [FlowingSubgraphInterfaceBinding<Schema>] = []) {
+    self.bindings = bindings
+  }
+}
+
+extension FlowingSubgraphInterface: Equatable {}
+extension FlowingSubgraphInterface: Sendable
+where Schema.GraphSchema.NodeID: Sendable, Schema.GraphSchema.PortID: Sendable {}
+
 public struct FlowingSubgraphLink<Schema: FlowingGraphCompositionSchema> {
   public typealias Site = FlowingGraphDefinitionNodeAddress<
     Schema.GraphID,
@@ -69,6 +98,7 @@ public struct FlowingSubgraphLink<Schema: FlowingGraphCompositionSchema> {
   public let site: Site
   public let ownership: FlowingSubgraphOwnership
   public let targetGraphID: Schema.GraphID
+  public let interface: FlowingSubgraphInterface<Schema>
   public let value: Schema.LinkValue
 
   public init(
@@ -76,12 +106,14 @@ public struct FlowingSubgraphLink<Schema: FlowingGraphCompositionSchema> {
     site: Site,
     ownership: FlowingSubgraphOwnership,
     targetGraphID: Schema.GraphID,
+    interface: FlowingSubgraphInterface<Schema> = .init(),
     value: Schema.LinkValue
   ) {
     self.id = id
     self.site = site
     self.ownership = ownership
     self.targetGraphID = targetGraphID
+    self.interface = interface
     self.value = value
   }
 }
@@ -92,6 +124,7 @@ where
   Schema.LinkID: Sendable,
   Schema.GraphID: Sendable,
   Schema.GraphSchema.NodeID: Sendable,
+  Schema.GraphSchema.PortID: Sendable,
   Schema.LinkValue: Sendable
 {}
 
@@ -388,11 +421,11 @@ public enum FlowingGraphPresentationEdgeEndpoints<
     rhs: FlowingGraphPresentationEdgeEndpoints
   ) -> Bool {
     switch (lhs, rhs) {
-    case let (.directed(leftSource, leftTarget), .directed(rightSource, rightTarget)):
+    case (.directed(let leftSource, let leftTarget), .directed(let rightSource, let rightTarget)):
       leftSource == rightSource && leftTarget == rightTarget
-    case let (.undirected(leftFirst, leftSecond), .undirected(rightFirst, rightSecond)):
-      (leftFirst == rightFirst && leftSecond == rightSecond) ||
-        (leftFirst == rightSecond && leftSecond == rightFirst)
+    case (.undirected(let leftFirst, let leftSecond), .undirected(let rightFirst, let rightSecond)):
+      (leftFirst == rightFirst && leftSecond == rightSecond)
+        || (leftFirst == rightSecond && leftSecond == rightFirst)
     default:
       false
     }

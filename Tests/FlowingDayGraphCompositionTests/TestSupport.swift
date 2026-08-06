@@ -70,13 +70,15 @@ func makeLink(
   from graphID: String,
   nodeID: String,
   to targetGraphID: String,
-  ownership: FlowingSubgraphOwnership = .reference
+  ownership: FlowingSubgraphOwnership = .reference,
+  interface: FlowingSubgraphInterface<TestCompositionSchema> = .init()
 ) -> TestLink {
   FlowingSubgraphLink(
     id: id,
     site: FlowingGraphDefinitionNodeAddress(graphID: graphID, nodeID: nodeID),
     ownership: ownership,
     targetGraphID: targetGraphID,
+    interface: interface,
     value: id
   )
 }
