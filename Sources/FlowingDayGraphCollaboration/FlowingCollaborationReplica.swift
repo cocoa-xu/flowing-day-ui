@@ -156,12 +156,11 @@ public struct FlowingCollaborationReplica<
 
   private var baseState: Reducer.State
   private var baseVersion: FlowingCausalVersion
-  private var envelopesByID: [
-    FlowingCollaborationOperationID: FlowingCollaborationOperationEnvelope<Schema>
-  ] = [:]
-  private var operationIDByTransactionID: [
-    FlowingCollaborationTransactionID: FlowingCollaborationOperationID
-  ] = [:]
+  private var envelopesByID:
+    [FlowingCollaborationOperationID: FlowingCollaborationOperationEnvelope<Schema>] = [:]
+  private var operationIDByTransactionID:
+    [FlowingCollaborationTransactionID: FlowingCollaborationOperationID] = [:]
+  private var causalOrderCache: FlowingCollaborationCausalOrder?
 
   public init(
     documentID: Schema.DocumentID,
@@ -199,12 +198,14 @@ public struct FlowingCollaborationReplica<
       }
     }
 
-    let originalEnvelopes = envelopesByID
-    let originalTransactionIndex = operationIDByTransactionID
-    let authorizationVersion = causalOrder().version
+    if causalOrderCache == nil {
+      causalOrderCache = causalOrder()
+    }
+    let authorizationVersion = causalOrderCache!.version
     var receipts: [FlowingCollaborationAdmissionReceipt<Schema.DocumentID>] = []
-    var admittedReceiptIndices: [Int] = []
+    var admittedEnvelopes: [FlowingCollaborationOperationEnvelope<Schema>] = []
     receipts.reserveCapacity(envelopes.count)
+    admittedEnvelopes.reserveCapacity(envelopes.count)
 
     for envelope in envelopes {
       let status = admissionStatus(
@@ -215,7 +216,7 @@ public struct FlowingCollaborationReplica<
       if status == .admitted {
         envelopesByID[envelope.operationID] = envelope
         operationIDByTransactionID[envelope.transactionID] = envelope.operationID
-        admittedReceiptIndices.append(receipts.count)
+        admittedEnvelopes.append(envelope)
       }
       receipts.append(
         FlowingCollaborationAdmissionReceipt(
@@ -225,15 +226,23 @@ public struct FlowingCollaborationReplica<
       )
     }
 
-    let pendingCount = causalOrder().pending.count
+    if !admittedEnvelopes.isEmpty {
+      updateCausalOrderCache(afterAdmitting: admittedEnvelopes)
+    }
+    let pendingCount = causalOrderCache!.pending.count
     guard pendingCount <= limits.maximumPendingOperations else {
-      envelopesByID = originalEnvelopes
-      operationIDByTransactionID = originalTransactionIndex
+      let newlyAdmittedOperationIDs = Set(admittedEnvelopes.map(\.operationID))
+      for envelope in admittedEnvelopes {
+        envelopesByID.removeValue(forKey: envelope.operationID)
+        operationIDByTransactionID.removeValue(forKey: envelope.transactionID)
+      }
+      causalOrderCache = causalOrder()
       let issue = FlowingCollaborationAdmissionIssue<Schema.DocumentID>.pendingLimitExceeded(
         maximum: limits.maximumPendingOperations,
         actual: pendingCount
       )
-      for index in admittedReceiptIndices {
+      for index in receipts.indices
+      where newlyAdmittedOperationIDs.contains(receipts[index].operationID) {
         receipts[index] = FlowingCollaborationAdmissionReceipt(
           operationID: receipts[index].operationID,
           status: .rejected(issue)
@@ -256,7 +265,7 @@ public struct FlowingCollaborationReplica<
     Reducer.State,
     Reducer.Failure
   > {
-    let order = causalOrder()
+    let order = causalOrderCache ?? causalOrder()
     var state = baseState
     var audit: [FlowingCollaborationAuditEntry<Reducer.Failure>] = []
     audit.reserveCapacity(order.operationIDs.count)
@@ -330,6 +339,26 @@ public struct FlowingCollaborationReplica<
     operationIDByTransactionID = Dictionary(
       uniqueKeysWithValues: envelopesByID.values.map { ($0.transactionID, $0.operationID) }
     )
+    causalOrderCache = nil
+  }
+
+  private mutating func updateCausalOrderCache(
+    afterAdmitting envelopes: [FlowingCollaborationOperationEnvelope<Schema>]
+  ) {
+    guard var order = causalOrderCache, order.pending.isEmpty else {
+      causalOrderCache = causalOrder()
+      return
+    }
+    causalOrderCache = nil
+    for envelope in envelopes {
+      guard envelope.dependencies == order.version else {
+        causalOrderCache = causalOrder()
+        return
+      }
+      order.operationIDs.append(envelope.operationID)
+      order.version.record(envelope.operationID)
+    }
+    causalOrderCache = order
   }
 
   private func admissionStatus<Authorizer: FlowingCollaborationAuthorizer<Schema>>(
@@ -406,12 +435,9 @@ public struct FlowingCollaborationReplica<
     var indegree = Dictionary(
       uniqueKeysWithValues: envelopesByID.keys.map { ($0, 0) }
     )
-    var dependents: [
-      FlowingCollaborationOperationID: [FlowingCollaborationOperationID]
-    ] = [:]
-    var missingByOperation: [
-      FlowingCollaborationOperationID: [FlowingCollaborationOperationID]
-    ] = [:]
+    var dependents: [FlowingCollaborationOperationID: [FlowingCollaborationOperationID]] = [:]
+    var missingByOperation: [FlowingCollaborationOperationID: [FlowingCollaborationOperationID]] =
+      [:]
 
     for envelope in envelopesByID.values {
       for entry in envelope.dependencies.entries {
@@ -467,8 +493,8 @@ public struct FlowingCollaborationReplica<
 }
 
 private struct FlowingCollaborationCausalOrder {
-  let operationIDs: [FlowingCollaborationOperationID]
-  let version: FlowingCausalVersion
+  var operationIDs: [FlowingCollaborationOperationID]
+  var version: FlowingCausalVersion
   let pending: [FlowingCollaborationPendingOperation]
 }
 
