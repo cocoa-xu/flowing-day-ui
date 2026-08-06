@@ -60,12 +60,16 @@ public struct FlowingGraphLayoutEdgeRoute<Schema: FlowingGraphLayoutSchema>: Sen
 extension FlowingGraphLayoutEdgeRoute: Equatable {}
 
 public struct FlowingGraphResolvedPortAnchor<Schema: FlowingGraphLayoutSchema>: Sendable {
-  public let portID: Schema.PortID
+  public let key: FlowingGraphLayoutPortKey<Schema>
   public let position: CGPoint
   public let normal: CGVector
 
-  public init(portID: Schema.PortID, position: CGPoint, normal: CGVector) {
-    self.portID = portID
+  public init(
+    key: FlowingGraphLayoutPortKey<Schema>,
+    position: CGPoint,
+    normal: CGVector
+  ) {
+    self.key = key
     self.position = position
     self.normal = normal
   }
@@ -186,10 +190,10 @@ public struct FlowingGraphLayoutResult<Schema: FlowingGraphLayoutSchema>: Sendab
       FlowingGraphLayoutEdgeRoute(edgeID: $0.id, route: nextRouteByEdgeID[$0.id]!)
     }
     resolvedPortAnchors = input.topology.ports.map { port in
-      let anchor = input.anchor(for: port.id)
+      let anchor = input.anchor(for: port.key)
       let origin = frames[port.nodeID]!.origin
       return FlowingGraphResolvedPortAnchor(
-        portID: port.id,
+        key: port.key,
         position: CGPoint(
           x: origin.x + anchor.position.x,
           y: origin.y + anchor.position.y

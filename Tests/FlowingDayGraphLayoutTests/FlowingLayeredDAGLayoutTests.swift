@@ -140,7 +140,12 @@ final class FlowingLayeredDAGLayoutTests: XCTestCase {
       edges: [
         FlowingGraphLayoutEdge(
           id: "edge",
-          endpoints: .directed(source: .port("output"), target: .node("second"))
+          endpoints: .directed(
+            source: .port(
+              FlowingGraphLayoutPortKey(nodeID: "first", portID: "output")
+            ),
+            target: .node("second")
+          )
         )
       ]
     )
@@ -155,6 +160,46 @@ final class FlowingLayeredDAGLayoutTests: XCTestCase {
     let result = try strategy.layout(input)
 
     XCTAssertEqual(result.route(for: "edge")?.start, CGPoint(x: 100, y: 15))
+  }
+
+  func testPortIdentityIsScopedToItsNode() throws {
+    let firstKey = FlowingGraphLayoutPortKey<LayoutSchema>(
+      nodeID: "first",
+      portID: "output"
+    )
+    let secondKey = FlowingGraphLayoutPortKey<LayoutSchema>(
+      nodeID: "second",
+      portID: "output"
+    )
+    let strategy = FlowingGraphLayoutPipeline<LayoutSchema>(
+      placement: LinearPlacement(),
+      edgeRouter: FlowingCubicEdgeRouter()
+    )
+    let topology = try FlowingGraphLayoutTopology<LayoutSchema>(
+      nodeIDs: ["first", "second"],
+      ports: [
+        FlowingGraphLayoutPort(key: firstKey),
+        FlowingGraphLayoutPort(key: secondKey),
+      ],
+      edges: [
+        FlowingGraphLayoutEdge(
+          id: "edge",
+          endpoints: .directed(source: .port(firstKey), target: .port(secondKey))
+        )
+      ]
+    )
+    let input = try FlowingGraphLayoutResolution.input(
+      topology: topology,
+      nodeSizeResolver: FlowingFixedNodeSizeResolver(
+        size: CGSize(width: 100, height: 60)
+      ),
+      portAnchorResolver: FlowingCenteredPortAnchorResolver(),
+      pipelineIdentity: strategy.identity
+    )
+
+    let result = try strategy.layout(input)
+
+    XCTAssertEqual(result.resolvedPortAnchors.map(\.key), [firstKey, secondKey])
   }
 
   func testResultBoundsIncludeCustomEdgeGeometry() throws {
@@ -395,7 +440,7 @@ private struct OutputAnchorResolver: FlowingGraphPortAnchorResolver {
     nodeSize: CGSize
   ) throws -> FlowingGraphPortAnchor<LayoutSchema> {
     FlowingGraphPortAnchor(
-      portID: port.id,
+      key: port.key,
       position: CGPoint(x: nodeSize.width, y: 15),
       normal: CGVector(dx: 1, dy: 0)
     )

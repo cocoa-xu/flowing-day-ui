@@ -63,13 +63,33 @@ public struct FlowingLayoutInputID: Hashable, Sendable {
   }
 }
 
-public struct FlowingGraphLayoutPort<Schema: FlowingGraphLayoutSchema>: Sendable {
-  public let id: Schema.PortID
+public struct FlowingGraphLayoutPortKey<Schema: FlowingGraphLayoutSchema>: Hashable, Sendable {
   public let nodeID: Schema.NodeID
+  public let portID: Schema.PortID
+
+  public init(nodeID: Schema.NodeID, portID: Schema.PortID) {
+    self.nodeID = nodeID
+    self.portID = portID
+  }
+}
+
+public struct FlowingGraphLayoutPort<Schema: FlowingGraphLayoutSchema>: Sendable {
+  public let key: FlowingGraphLayoutPortKey<Schema>
+
+  public var id: Schema.PortID {
+    key.portID
+  }
+
+  public var nodeID: Schema.NodeID {
+    key.nodeID
+  }
 
   public init(id: Schema.PortID, nodeID: Schema.NodeID) {
-    self.id = id
-    self.nodeID = nodeID
+    key = FlowingGraphLayoutPortKey(nodeID: nodeID, portID: id)
+  }
+
+  public init(key: FlowingGraphLayoutPortKey<Schema>) {
+    self.key = key
   }
 }
 
@@ -77,7 +97,7 @@ extension FlowingGraphLayoutPort: Equatable {}
 
 public enum FlowingGraphLayoutEndpoint<Schema: FlowingGraphLayoutSchema>: Sendable {
   case node(Schema.NodeID)
-  case port(Schema.PortID)
+  case port(FlowingGraphLayoutPortKey<Schema>)
 }
 
 extension FlowingGraphLayoutEndpoint: Equatable {}
@@ -128,11 +148,11 @@ extension FlowingGraphLayoutEdge: Equatable {}
 
 public enum FlowingGraphLayoutTopologyIssue<Schema: FlowingGraphLayoutSchema>: Error {
   case duplicateNodeID(Schema.NodeID)
-  case duplicatePortID(Schema.PortID)
+  case duplicatePortKey(FlowingGraphLayoutPortKey<Schema>)
   case duplicateEdgeID(Schema.EdgeID)
   case unknownPortNode(portID: Schema.PortID, nodeID: Schema.NodeID)
   case unknownNodeEndpoint(Schema.NodeID)
-  case unknownPortEndpoint(Schema.PortID)
+  case unknownPortEndpoint(FlowingGraphLayoutPortKey<Schema>)
 }
 
 extension FlowingGraphLayoutTopologyIssue: Equatable {}
@@ -143,7 +163,7 @@ public struct FlowingGraphLayoutTopology<Schema: FlowingGraphLayoutSchema>: Send
   public let ports: [FlowingGraphLayoutPort<Schema>]
   public let edges: [FlowingGraphLayoutEdge<Schema>]
 
-  private let portByID: [Schema.PortID: FlowingGraphLayoutPort<Schema>]
+  private let portByKey: [FlowingGraphLayoutPortKey<Schema>: FlowingGraphLayoutPort<Schema>]
   private let successorsByNodeID: [Schema.NodeID: [Schema.NodeID]]
   private let predecessorsByNodeID: [Schema.NodeID: [Schema.NodeID]]
   private let adjacentNodeIDsByNodeID: [Schema.NodeID: [Schema.NodeID]]
@@ -159,7 +179,9 @@ public struct FlowingGraphLayoutTopology<Schema: FlowingGraphLayoutSchema>: Send
       throw FlowingGraphLayoutTopologyIssue<Schema>.duplicateNodeID(nodeID)
     }
 
-    var nextPortByID: [Schema.PortID: FlowingGraphLayoutPort<Schema>] = [:]
+    var nextPortByKey: [
+      FlowingGraphLayoutPortKey<Schema>: FlowingGraphLayoutPort<Schema>
+    ] = [:]
     for port in ports {
       guard knownNodeIDs.contains(port.nodeID) else {
         throw FlowingGraphLayoutTopologyIssue<Schema>.unknownPortNode(
@@ -167,8 +189,8 @@ public struct FlowingGraphLayoutTopology<Schema: FlowingGraphLayoutSchema>: Send
           nodeID: port.nodeID
         )
       }
-      guard nextPortByID.updateValue(port, forKey: port.id) == nil else {
-        throw FlowingGraphLayoutTopologyIssue<Schema>.duplicatePortID(port.id)
+      guard nextPortByKey.updateValue(port, forKey: port.key) == nil else {
+        throw FlowingGraphLayoutTopologyIssue<Schema>.duplicatePortKey(port.key)
       }
     }
 
@@ -184,8 +206,8 @@ public struct FlowingGraphLayoutTopology<Schema: FlowingGraphLayoutSchema>: Send
         switch endpoint {
         case let .node(nodeID) where !knownNodeIDs.contains(nodeID):
           throw FlowingGraphLayoutTopologyIssue<Schema>.unknownNodeEndpoint(nodeID)
-        case let .port(portID) where nextPortByID[portID] == nil:
-          throw FlowingGraphLayoutTopologyIssue<Schema>.unknownPortEndpoint(portID)
+        case let .port(key) where nextPortByKey[key] == nil:
+          throw FlowingGraphLayoutTopologyIssue<Schema>.unknownPortEndpoint(key)
         default:
           break
         }
@@ -194,8 +216,8 @@ public struct FlowingGraphLayoutTopology<Schema: FlowingGraphLayoutSchema>: Send
         switch endpoint {
         case let .node(nodeID):
           nodeID
-        case let .port(portID):
-          nextPortByID[portID]!.nodeID
+        case let .port(key):
+          nextPortByKey[key]!.nodeID
         }
       }
       let first = endpointNodeIDs[0]
@@ -214,7 +236,7 @@ public struct FlowingGraphLayoutTopology<Schema: FlowingGraphLayoutSchema>: Send
     self.nodeIDs = nodeIDs
     self.ports = ports
     self.edges = edges
-    portByID = nextPortByID
+    portByKey = nextPortByKey
     successorsByNodeID = nextSuccessorsByNodeID
     predecessorsByNodeID = nextPredecessorsByNodeID
     adjacentNodeIDsByNodeID = nextAdjacentNodeIDsByNodeID
@@ -226,8 +248,8 @@ public struct FlowingGraphLayoutTopology<Schema: FlowingGraphLayoutSchema>: Send
     switch endpoint {
     case let .node(nodeID):
       nodeID
-    case let .port(portID):
-      portByID[portID]!.nodeID
+    case let .port(key):
+      portByKey[key]!.nodeID
     }
   }
 
@@ -275,12 +297,16 @@ public struct FlowingGraphLayoutNodeSize<Schema: FlowingGraphLayoutSchema>: Send
 extension FlowingGraphLayoutNodeSize: Equatable {}
 
 public struct FlowingGraphPortAnchor<Schema: FlowingGraphLayoutSchema>: Sendable {
-  public let portID: Schema.PortID
+  public let key: FlowingGraphLayoutPortKey<Schema>
   public let position: CGPoint
   public let normal: CGVector
 
-  public init(portID: Schema.PortID, position: CGPoint, normal: CGVector) {
-    self.portID = portID
+  public init(
+    key: FlowingGraphLayoutPortKey<Schema>,
+    position: CGPoint,
+    normal: CGVector
+  ) {
+    self.key = key
     self.position = position
     self.normal = normal
   }
@@ -305,10 +331,10 @@ public enum FlowingGraphLayoutInputIssue<Schema: FlowingGraphLayoutSchema>: Erro
   case missingNodeSize(Schema.NodeID)
   case unknownNodeSize(Schema.NodeID)
   case invalidNodeSize(Schema.NodeID)
-  case duplicatePortAnchor(Schema.PortID)
-  case missingPortAnchor(Schema.PortID)
-  case unknownPortAnchor(Schema.PortID)
-  case invalidPortAnchor(Schema.PortID)
+  case duplicatePortAnchor(FlowingGraphLayoutPortKey<Schema>)
+  case missingPortAnchor(FlowingGraphLayoutPortKey<Schema>)
+  case unknownPortAnchor(FlowingGraphLayoutPortKey<Schema>)
+  case invalidPortAnchor(FlowingGraphLayoutPortKey<Schema>)
   case duplicatePlacementState(Schema.NodeID)
   case unknownPlacementState(Schema.NodeID)
   case invalidPlacementState(Schema.NodeID)
@@ -324,7 +350,9 @@ public struct FlowingGraphLayoutInput<Schema: FlowingGraphLayoutSchema>: Sendabl
   public let placementState: [FlowingGraphNodePlacementState<Schema>]
 
   private let nodeSizeByID: [Schema.NodeID: CGSize]
-  private let portAnchorByID: [Schema.PortID: FlowingGraphPortAnchor<Schema>]
+  private let portAnchorByKey: [
+    FlowingGraphLayoutPortKey<Schema>: FlowingGraphPortAnchor<Schema>
+  ]
   private let placementOffsetByID: [Schema.NodeID: CGSize]
 
   public init(
@@ -335,7 +363,7 @@ public struct FlowingGraphLayoutInput<Schema: FlowingGraphLayoutSchema>: Sendabl
     placementState: [FlowingGraphNodePlacementState<Schema>] = []
   ) throws {
     let knownNodeIDs = Set(topology.nodeIDs)
-    let knownPortIDs = Set(topology.ports.map(\.id))
+    let knownPortKeys = Set(topology.ports.map(\.key))
     var nextNodeSizeByID: [Schema.NodeID: CGSize] = [:]
     for entry in nodeSizes {
       guard knownNodeIDs.contains(entry.nodeID) else {
@@ -352,20 +380,22 @@ public struct FlowingGraphLayoutInput<Schema: FlowingGraphLayoutSchema>: Sendabl
       throw FlowingGraphLayoutInputIssue<Schema>.missingNodeSize(nodeID)
     }
 
-    var nextPortAnchorByID: [Schema.PortID: FlowingGraphPortAnchor<Schema>] = [:]
+    var nextPortAnchorByKey: [
+      FlowingGraphLayoutPortKey<Schema>: FlowingGraphPortAnchor<Schema>
+    ] = [:]
     for anchor in portAnchors {
-      guard knownPortIDs.contains(anchor.portID) else {
-        throw FlowingGraphLayoutInputIssue<Schema>.unknownPortAnchor(anchor.portID)
+      guard knownPortKeys.contains(anchor.key) else {
+        throw FlowingGraphLayoutInputIssue<Schema>.unknownPortAnchor(anchor.key)
       }
       guard anchor.position.isFinite, anchor.normal.isFinite else {
-        throw FlowingGraphLayoutInputIssue<Schema>.invalidPortAnchor(anchor.portID)
+        throw FlowingGraphLayoutInputIssue<Schema>.invalidPortAnchor(anchor.key)
       }
-      guard nextPortAnchorByID.updateValue(anchor, forKey: anchor.portID) == nil else {
-        throw FlowingGraphLayoutInputIssue<Schema>.duplicatePortAnchor(anchor.portID)
+      guard nextPortAnchorByKey.updateValue(anchor, forKey: anchor.key) == nil else {
+        throw FlowingGraphLayoutInputIssue<Schema>.duplicatePortAnchor(anchor.key)
       }
     }
-    for port in topology.ports where nextPortAnchorByID[port.id] == nil {
-      throw FlowingGraphLayoutInputIssue<Schema>.missingPortAnchor(port.id)
+    for port in topology.ports where nextPortAnchorByKey[port.key] == nil {
+      throw FlowingGraphLayoutInputIssue<Schema>.missingPortAnchor(port.key)
     }
 
     var nextPlacementOffsetByID: [Schema.NodeID: CGSize] = [:]
@@ -386,14 +416,14 @@ public struct FlowingGraphLayoutInput<Schema: FlowingGraphLayoutSchema>: Sendabl
     self.nodeSizes = topology.nodeIDs.map {
       FlowingGraphLayoutNodeSize(nodeID: $0, size: nextNodeSizeByID[$0]!)
     }
-    self.portAnchors = topology.ports.map { nextPortAnchorByID[$0.id]! }
+    self.portAnchors = topology.ports.map { nextPortAnchorByKey[$0.key]! }
     self.placementState = topology.nodeIDs.compactMap { nodeID in
       nextPlacementOffsetByID[nodeID].map {
         FlowingGraphNodePlacementState(nodeID: nodeID, offset: $0)
       }
     }
     nodeSizeByID = nextNodeSizeByID
-    portAnchorByID = nextPortAnchorByID
+    portAnchorByKey = nextPortAnchorByKey
     placementOffsetByID = nextPlacementOffsetByID
   }
 
@@ -401,8 +431,10 @@ public struct FlowingGraphLayoutInput<Schema: FlowingGraphLayoutSchema>: Sendabl
     nodeSizeByID[nodeID]!
   }
 
-  public func anchor(for portID: Schema.PortID) -> FlowingGraphPortAnchor<Schema> {
-    portAnchorByID[portID]!
+  public func anchor(
+    for key: FlowingGraphLayoutPortKey<Schema>
+  ) -> FlowingGraphPortAnchor<Schema> {
+    portAnchorByKey[key]!
   }
 
   public func placementOffset(for nodeID: Schema.NodeID) -> CGSize {

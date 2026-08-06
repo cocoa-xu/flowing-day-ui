@@ -53,7 +53,7 @@ extension FlowingCenteredPortAnchorResolver: FlowingGraphPortAnchorResolver {
     nodeSize: CGSize
   ) throws -> FlowingGraphPortAnchor<Schema> {
     FlowingGraphPortAnchor(
-      portID: port.id,
+      key: port.key,
       position: CGPoint(x: nodeSize.width / 2, y: nodeSize.height / 2),
       normal: .zero
     )

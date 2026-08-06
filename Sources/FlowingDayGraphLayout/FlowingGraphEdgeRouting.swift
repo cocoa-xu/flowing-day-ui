@@ -182,8 +182,8 @@ extension FlowingCubicEdgeRouter: FlowingGraphEdgeRoutingStrategy {
     switch endpoint {
     case .node:
       return frameBoundaryEndpoint(frame: frame, toward: target)
-    case let .port(portID):
-      let anchor = input.anchor(for: portID)
+    case let .port(key):
+      let anchor = input.anchor(for: key)
       let point = CGPoint(
         x: frame.minX + anchor.position.x,
         y: frame.minY + anchor.position.y

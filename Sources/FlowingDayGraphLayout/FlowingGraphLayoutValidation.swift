@@ -117,11 +117,11 @@ private extension FlowingGraphLayoutEndpoint {
     switch self {
     case let .node(nodeID):
       .node(nodeID)
-    case let .port(portID):
+    case let .port(key):
       .port(
         FlowingGraphPortKey(
-          nodeID: topology.nodeID(for: self),
-          portID: portID
+          nodeID: key.nodeID,
+          portID: key.portID
         )
       )
     }
