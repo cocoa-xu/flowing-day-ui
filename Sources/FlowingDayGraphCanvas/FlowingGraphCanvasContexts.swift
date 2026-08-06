@@ -13,12 +13,16 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
   public let edgeRenderPadding: CGFloat
   public let marqueeMinimumDistance: CGFloat
   public let nodeDraggingMode: FlowingGraphCanvasNodeDraggingMode
+  public let snapping: FlowingGraphCanvasSnappingConfiguration
+  public let allowsArrangementCommands: Bool
 
   public init(
     canvas: FlowingCanvasConfiguration = .init(),
     edgeRenderPadding: CGFloat = 12,
     marqueeMinimumDistance: CGFloat = 2,
-    nodeDraggingMode: FlowingGraphCanvasNodeDraggingMode = .single
+    nodeDraggingMode: FlowingGraphCanvasNodeDraggingMode = .single,
+    snapping: FlowingGraphCanvasSnappingConfiguration = .disabled,
+    allowsArrangementCommands: Bool = true
   ) {
     precondition(edgeRenderPadding >= 0 && edgeRenderPadding.isFinite)
     precondition(marqueeMinimumDistance >= 0 && marqueeMinimumDistance.isFinite)
@@ -26,6 +30,8 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
     self.edgeRenderPadding = edgeRenderPadding
     self.marqueeMinimumDistance = marqueeMinimumDistance
     self.nodeDraggingMode = nodeDraggingMode
+    self.snapping = snapping
+    self.allowsArrangementCommands = allowsArrangementCommands
   }
 }
 

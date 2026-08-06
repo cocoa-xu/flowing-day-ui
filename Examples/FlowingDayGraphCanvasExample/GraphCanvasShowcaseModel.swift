@@ -185,6 +185,18 @@ final class GraphCanvasShowcaseModel: ObservableObject {
       layoutStateRevision = FlowingLayoutRevision()
       refreshLayout()
       lastEvent = "Applied node placement intent"
+    case .nodeArrangementRequested(let arrangement):
+      guard arrangement.basePresentationSnapshotID == presentation?.snapshotID else { return }
+      for (nodeID, translation) in arrangement.translations {
+        let current = placementOffsets[nodeID, default: .zero]
+        placementOffsets[nodeID] = CGSize(
+          width: current.width + translation.width,
+          height: current.height + translation.height
+        )
+      }
+      layoutStateRevision = FlowingLayoutRevision()
+      refreshLayout()
+      lastEvent = "Applied node arrangement intent"
     case .elementAction(let elementIntent):
       guard elementIntent.basePresentationSnapshotID == presentation?.snapshotID else { return }
       handleElementAction(elementIntent)

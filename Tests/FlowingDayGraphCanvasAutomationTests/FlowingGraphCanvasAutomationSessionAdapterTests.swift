@@ -1,5 +1,5 @@
-import FlowingDayGraphCanvasAutomation
 import FlowingDayGraphCanvas
+import FlowingDayGraphCanvasAutomation
 import FlowingDayGraphComposition
 import FlowingDayGraphCore
 import XCTest
@@ -67,6 +67,13 @@ final class FlowingGraphCanvasAutomationSessionAdapterTests: XCTestCase {
     XCTAssertTrue(fit.readRequirement.includesSessionState)
     XCTAssertTrue(fit.readRequirement.includesPresentation)
     XCTAssertTrue(fit.readRequirement.elementIDs.isEmpty)
+
+    let arrangement = FlowingGraphCanvasAutomationCommand<AutomationCanvasSchema>(
+      action: .arrange(.align(.leading))
+    )
+    XCTAssertTrue(arrangement.readRequirement.includesSessionState)
+    XCTAssertTrue(arrangement.readRequirement.includesPresentation)
+    XCTAssertTrue(arrangement.readRequirement.elementIDs.isEmpty)
   }
 }
 

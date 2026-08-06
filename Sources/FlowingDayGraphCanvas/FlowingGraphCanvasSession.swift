@@ -50,20 +50,26 @@ public struct FlowingGraphCanvasTransientNodeDrag<
   public let nodeID: ElementID
   public let nodeIDs: Set<ElementID>
   public let basePresentationSnapshotID: FlowingGraphPresentationSnapshotID
+  public let baseBounds: CGRect?
   public var translation: CGSize
+  public var guides: [FlowingGraphCanvasGuide]
 
   public init(
     nodeID: ElementID,
     nodeIDs: Set<ElementID>? = nil,
     basePresentationSnapshotID: FlowingGraphPresentationSnapshotID,
-    translation: CGSize = .zero
+    baseBounds: CGRect? = nil,
+    translation: CGSize = .zero,
+    guides: [FlowingGraphCanvasGuide] = []
   ) {
     let resolvedNodeIDs = nodeIDs ?? [nodeID]
     precondition(resolvedNodeIDs.contains(nodeID))
     self.nodeID = nodeID
     self.nodeIDs = resolvedNodeIDs
     self.basePresentationSnapshotID = basePresentationSnapshotID
+    self.baseBounds = baseBounds
     self.translation = translation
+    self.guides = guides
   }
 }
 
@@ -140,6 +146,7 @@ public enum FlowingGraphCanvasSessionCommandAction<
     maximumZoom: CGFloat? = nil
   )
   case inspect(ElementID)
+  case arrange(FlowingGraphCanvasArrangementAction)
 }
 
 public struct FlowingGraphCanvasSessionCommand<
@@ -223,6 +230,7 @@ public enum FlowingGraphCanvasInteractionIntent<
   Schema: FlowingGraphCanvasSchema
 >: Equatable, Sendable {
   case nodeDragCompleted(FlowingGraphCanvasNodeDragIntent<Schema>)
+  case nodeArrangementRequested(FlowingGraphCanvasNodeArrangementIntent<Schema>)
   case elementAction(FlowingGraphCanvasElementActionIntent<Schema>)
 }
 

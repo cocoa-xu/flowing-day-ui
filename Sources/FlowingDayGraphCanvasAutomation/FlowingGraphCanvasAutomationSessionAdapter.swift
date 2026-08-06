@@ -35,6 +35,11 @@ public struct FlowingGraphCanvasAutomationCommand<Schema: FlowingGraphCanvasSche
       return selectionReadRequirement(selection)
     case .fit(let scope, _, _):
       return fitReadRequirement(scope)
+    case .arrange:
+      return FlowingAutomationSessionReadRequirement(
+        includesSessionState: true,
+        includesPresentation: true
+      )
     }
   }
 
