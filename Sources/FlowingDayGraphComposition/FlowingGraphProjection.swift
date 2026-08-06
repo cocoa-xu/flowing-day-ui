@@ -60,15 +60,25 @@ public struct FlowingGraphProjector<Schema: FlowingGraphCompositionSchema> {
     budget: FlowingGraphProjectionBudget = .standard
   ) throws -> FlowingGraphPresentation<Schema> {
     try validate(budget)
-    guard let entryPoint = validatedDocument.index.entryPointsByID[state.entryPointID]
-    else {
-      throw FlowingGraphProjectionError<Schema>.unknownEntryPoint(state.entryPointID)
+    let focus: FlowingResolvedGraphNavigation<Schema>
+    do {
+      focus = try validatedDocument.resolveNavigation(
+        entryPointID: state.entryPointID,
+        focusPath: state.focusPath
+      )
+    } catch let error as FlowingGraphNavigationError<Schema> {
+      switch error {
+      case .unknownEntryPoint(let entryPointID):
+        throw FlowingGraphProjectionError<Schema>.unknownEntryPoint(entryPointID)
+      case .invalidFocusPath(let componentIndex, let site):
+        throw FlowingGraphProjectionError<Schema>.invalidFocusPath(
+          componentIndex: componentIndex,
+          site: site
+        )
+      case .siteOutsideFocus:
+        throw FlowingGraphProjectionError<Schema>.inconsistentValidatedDocument
+      }
     }
-
-    let focus = try resolveFocus(
-      entryGraphID: entryPoint.graphID,
-      path: state.focusPath
-    )
     guard let rootDefinition = validatedDocument.index.definitionsByID[focus.graphID]
     else {
       throw FlowingGraphProjectionError<Schema>.inconsistentValidatedDocument
@@ -262,28 +272,6 @@ public struct FlowingGraphProjector<Schema: FlowingGraphCompositionSchema> {
     }
   }
 
-  private func resolveFocus(
-    entryGraphID: Schema.GraphID,
-    path: FlowingGraphInstancePath<Schema.GraphID, Schema.GraphSchema.NodeID>
-  ) throws -> FlowingGraphResolvedFocus<Schema> {
-    var graphID = entryGraphID
-    var ancestors: [Schema.GraphID] = []
-    ancestors.reserveCapacity(path.components.count)
-    for (index, component) in path.components.enumerated() {
-      guard component.graphID == graphID,
-        let link = validatedDocument.index.linksBySite[component]
-      else {
-        throw FlowingGraphProjectionError<Schema>.invalidFocusPath(
-          componentIndex: index,
-          site: component
-        )
-      }
-      ancestors.append(graphID)
-      graphID = link.targetGraphID
-    }
-    return FlowingGraphResolvedFocus(graphID: graphID, ancestorGraphIDs: ancestors)
-  }
-
   private func parentSite(
     for instance: FlowingGraphInstanceAddress<Schema.GraphID, Schema.GraphSchema.NodeID>
   ) -> FlowingGraphInstanceNodeAddress<Schema.GraphID, Schema.GraphSchema.NodeID>? {
@@ -353,11 +341,6 @@ where
   Schema.GraphSchema.EdgeID: Sendable,
   Schema.GraphSchema.EdgeValue: Sendable
 {}
-
-private struct FlowingGraphResolvedFocus<Schema: FlowingGraphCompositionSchema> {
-  let graphID: Schema.GraphID
-  let ancestorGraphIDs: [Schema.GraphID]
-}
 
 private struct FlowingGraphPendingInstance<Schema: FlowingGraphCompositionSchema> {
   typealias Address = FlowingGraphInstanceAddress<
