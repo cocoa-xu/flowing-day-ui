@@ -85,6 +85,36 @@ final class FlowingCollaborationPresenceTests: XCTestCase {
     )
   }
 
+  func testInvalidPresenceMetadataIsRejected() {
+    var store = makeStore()
+    let key = presenceKey(participant: 1, session: 1)
+    let wrongDocument = FlowingCollaborationPresenceUpdate<String, String>(
+      documentID: "other",
+      key: key,
+      sequence: 1,
+      event: .update("value")
+    )
+    let invalidSequence = FlowingCollaborationPresenceUpdate<String, String>(
+      documentID: "document",
+      key: key,
+      sequence: 0,
+      event: .update("value")
+    )
+
+    XCTAssertEqual(
+      store.ingest(wrongDocument, expiresAt: 20, receivedAt: 10),
+      .rejected(.wrongDocument(expected: "document", actual: "other"))
+    )
+    XCTAssertEqual(
+      store.ingest(invalidSequence, expiresAt: 20, receivedAt: 10),
+      .rejected(.invalidSequence)
+    )
+    XCTAssertEqual(
+      store.ingest(update(key: key, sequence: 1, value: "value"), expiresAt: 10, receivedAt: 10),
+      .rejected(.invalidExpiration)
+    )
+  }
+
   private func leave(
     key: FlowingCollaborationPresenceKey,
     sequence: UInt64

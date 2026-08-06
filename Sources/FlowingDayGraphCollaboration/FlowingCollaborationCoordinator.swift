@@ -5,6 +5,15 @@ public struct FlowingCollaborationSubmission<
   public let receipt: FlowingCollaborationAdmissionReceipt<Schema.DocumentID>
 }
 
+public struct FlowingCollaborationIngestResult<
+  Schema: FlowingCollaborationSchema,
+  State: Sendable,
+  Failure: Error & Equatable & Sendable
+>: Sendable {
+  public let receipts: [FlowingCollaborationAdmissionReceipt<Schema.DocumentID>]
+  public let snapshot: FlowingCollaborationSnapshot<Schema.DocumentID, State, Failure>
+}
+
 public enum FlowingCollaborationCoordinatorIssue: Error, Equatable, Sendable {
   case operationCounterExhausted
 }
@@ -47,18 +56,24 @@ public actor FlowingCollaborationCoordinator<
   public func ingest<Authorizer: FlowingCollaborationAuthorizer<Schema>>(
     _ envelopes: [FlowingCollaborationOperationEnvelope<Schema>],
     authorizer: Authorizer
-  ) -> FlowingCollaborationSnapshot<Schema.DocumentID, Reducer.State, Reducer.Failure> {
-    _ = replica.ingest(envelopes, authorizer: authorizer)
+  ) -> FlowingCollaborationIngestResult<Schema, Reducer.State, Reducer.Failure> {
+    let receipts = replica.ingest(envelopes, authorizer: authorizer)
     replaceCache(with: replica.materialize())
-    return makeSnapshot()
+    return FlowingCollaborationIngestResult(
+      receipts: receipts,
+      snapshot: makeSnapshot()
+    )
   }
 
   public func ingest(
     _ envelopes: [FlowingCollaborationOperationEnvelope<Schema>]
-  ) -> FlowingCollaborationSnapshot<Schema.DocumentID, Reducer.State, Reducer.Failure> {
-    _ = replica.ingest(envelopes)
+  ) -> FlowingCollaborationIngestResult<Schema, Reducer.State, Reducer.Failure> {
+    let receipts = replica.ingest(envelopes)
     replaceCache(with: replica.materialize())
-    return makeSnapshot()
+    return FlowingCollaborationIngestResult(
+      receipts: receipts,
+      snapshot: makeSnapshot()
+    )
   }
 
   public func submit<Authorizer: FlowingCollaborationAuthorizer<Schema>>(

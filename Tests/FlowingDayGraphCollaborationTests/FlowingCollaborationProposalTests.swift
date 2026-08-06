@@ -89,6 +89,62 @@ final class FlowingCollaborationProposalTests: XCTestCase {
     XCTAssertEqual(snapshot.operationOrder.map(\.counter), Array(1...100))
   }
 
+  func testProposalRejectsWrongDocumentEmptyCommandsAndUnknownBase() {
+    let replicaID = FlowingReplicaID(uuid(1))
+    let unknownBase = FlowingCausalVersion([replicaID: 2])
+    let current = FlowingCausalVersion([replicaID: 1])
+    let proposal = FlowingCollaborationProposal<TestSchema>(
+      participantID: FlowingParticipantID(uuid(2)),
+      sessionID: FlowingCollaborationSessionID(uuid(3)),
+      documentID: "document",
+      baseVersion: unknownBase,
+      provenance: .unspecified,
+      commands: []
+    )
+
+    XCTAssertEqual(
+      proposal.validate(for: "other", at: current, currentTick: 0),
+      .wrongDocument(expected: "other", actual: "document")
+    )
+    XCTAssertEqual(
+      proposal.validate(for: "document", at: current, currentTick: 0),
+      .emptyProposal
+    )
+    let nonempty = FlowingCollaborationProposal<TestSchema>(
+      participantID: proposal.participantID,
+      sessionID: proposal.sessionID,
+      documentID: proposal.documentID,
+      baseVersion: proposal.baseVersion,
+      provenance: proposal.provenance,
+      commands: [.append("value")]
+    )
+    XCTAssertEqual(
+      nonempty.validate(
+        for: "document",
+        at: current,
+        currentTick: 0,
+        requiresExactBase: false
+      ),
+      .unknownBase
+    )
+  }
+
+  func testCoordinatorReturnsAdmissionReceiptsForRemoteDelivery() async throws {
+    let coordinator = FlowingCollaborationCoordinator(
+      replicaID: FlowingReplicaID(uuid(1)),
+      replica: makeReplica()
+    )
+    let submission = try await coordinator.submit(
+      participantID: FlowingParticipantID(uuid(2)),
+      sessionID: FlowingCollaborationSessionID(uuid(3))
+    ) { _ in [.append("value")] }
+
+    let echo = await coordinator.ingest([submission.envelope])
+
+    XCTAssertEqual(echo.receipts.map(\.status), [.duplicate])
+    XCTAssertEqual(echo.snapshot.state, ["value"])
+  }
+
   private func makeProposal(
     expiresAt: UInt64? = nil,
     commands: [TestCommand]
