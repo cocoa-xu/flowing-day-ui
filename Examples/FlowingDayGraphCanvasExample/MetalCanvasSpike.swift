@@ -348,6 +348,12 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
     preferredFramesPerSecond = 120
     isPaused = false
     enableSetNeedsDisplay = false
+    addGestureRecognizer(
+      NSMagnificationGestureRecognizer(
+        target: self,
+        action: #selector(handleMagnification(_:))
+      )
+    )
   }
 
   @available(*, unavailable)
@@ -402,11 +408,15 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
     )
   }
 
-  override func magnify(with event: NSEvent) {
+  @objc
+  private func handleMagnification(_ gesture: NSMagnificationGestureRecognizer) {
+    let magnification = gesture.magnification
+    guard magnification != 0 else { return }
     camera.magnify(
-      by: event.magnification,
-      at: convert(event.locationInWindow, from: nil)
+      by: magnification,
+      at: gesture.location(in: self)
     )
+    gesture.magnification = 0
   }
 
   override func smartMagnify(with event: NSEvent) {
