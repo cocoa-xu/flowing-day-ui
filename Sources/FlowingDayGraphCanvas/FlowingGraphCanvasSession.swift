@@ -48,15 +48,20 @@ public struct FlowingGraphCanvasTransientNodeDrag<
   public typealias ElementID = FlowingGraphCompositionElementID<Schema>
 
   public let nodeID: ElementID
+  public let nodeIDs: Set<ElementID>
   public let basePresentationSnapshotID: FlowingGraphPresentationSnapshotID
   public var translation: CGSize
 
   public init(
     nodeID: ElementID,
+    nodeIDs: Set<ElementID>? = nil,
     basePresentationSnapshotID: FlowingGraphPresentationSnapshotID,
     translation: CGSize = .zero
   ) {
+    let resolvedNodeIDs = nodeIDs ?? [nodeID]
+    precondition(resolvedNodeIDs.contains(nodeID))
     self.nodeID = nodeID
+    self.nodeIDs = resolvedNodeIDs
     self.basePresentationSnapshotID = basePresentationSnapshotID
     self.translation = translation
   }
@@ -175,15 +180,20 @@ public struct FlowingGraphCanvasNodeDragIntent<
   public typealias ElementID = FlowingGraphCompositionElementID<Schema>
 
   public let nodeID: ElementID
+  public let nodeIDs: Set<ElementID>
   public let basePresentationSnapshotID: FlowingGraphPresentationSnapshotID
   public let translation: CGSize
 
   public init(
     nodeID: ElementID,
+    nodeIDs: Set<ElementID>? = nil,
     basePresentationSnapshotID: FlowingGraphPresentationSnapshotID,
     translation: CGSize
   ) {
+    let resolvedNodeIDs = nodeIDs ?? [nodeID]
+    precondition(resolvedNodeIDs.contains(nodeID))
     self.nodeID = nodeID
+    self.nodeIDs = resolvedNodeIDs
     self.basePresentationSnapshotID = basePresentationSnapshotID
     self.translation = translation
   }

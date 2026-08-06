@@ -178,7 +178,8 @@ struct GraphCanvasShowcaseView: View {
             initialZoom: 0.9,
             focusedZoom: 1.15,
             zoomRange: 0.2...4
-          )
+          ),
+          nodeDraggingMode: .multiple
         ),
         command: command,
         onViewportChange: { viewport, phase in

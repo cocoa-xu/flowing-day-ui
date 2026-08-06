@@ -22,6 +22,10 @@ public struct FlowingGraphCanvas<
   private let contentInsets: EdgeInsets
   private let contentChangeBehavior: FlowingCanvasContentChangeBehavior
   private let command: FlowingGraphCanvasSessionCommand<Schema>?
+  private let nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema>
+  private let admitNodeDrag:
+    @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
+    FlowingGraphCanvasNodeDragAdmission<Schema>
   private let isAdditiveSelectionActive: @MainActor () -> Bool
   private let onSmartMagnify:
     (FlowingGraphCanvasSmartMagnifyContext<Schema>) -> FlowingCanvasViewportAction
@@ -39,6 +43,7 @@ public struct FlowingGraphCanvas<
 
   @State private var canvasRequest: FlowingCanvasRequest?
   @State private var handledCommandID: UUID?
+  @State private var rejectedNodeDragID: ElementID?
 
   public init(
     content: FlowingGraphCanvasContent<Schema>,
@@ -48,6 +53,10 @@ public struct FlowingGraphCanvas<
     contentInsets: EdgeInsets = .init(),
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
+    nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
+    admitNodeDrag:
+      @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
+      FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
     isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
       FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
     },
@@ -89,6 +98,8 @@ public struct FlowingGraphCanvas<
     self.contentInsets = contentInsets
     self.contentChangeBehavior = contentChangeBehavior
     self.command = command
+    self.nodeCapabilities = nodeCapabilities
+    self.admitNodeDrag = admitNodeDrag
     self.isAdditiveSelectionActive = isAdditiveSelectionActive
     self.onSmartMagnify = onSmartMagnify
     self.onViewportChange = onViewportChange
@@ -145,6 +156,7 @@ public struct FlowingGraphCanvas<
     .onChange(of: session.tool) { _ in
       session.marquee = nil
       session.transientNodeDrag = nil
+      rejectedNodeDragID = nil
     }
   }
 
@@ -186,6 +198,7 @@ public struct FlowingGraphCanvas<
       let delta = translation(for: localID)
       let frame = baseFrame.offsetBy(dx: delta.width, dy: delta.height)
       let renderedFrame = surface.localTransform.applying(to: frame)
+      let capabilities = nodeCapabilities.capabilities(for: elementID)
       let nodeContext = FlowingGraphCanvasNodeContext(
         elementID: elementID,
         localID: localID,
@@ -195,7 +208,8 @@ public struct FlowingGraphCanvas<
         renderScale: context.zoom,
         isSelected: session.selection.contains(elementID),
         isHovered: session.hoveredElementID == elementID,
-        isBeingDragged: session.transientNodeDrag?.nodeID == elementID,
+        isBeingDragged: session.transientNodeDrag?.nodeIDs.contains(elementID) == true,
+        capabilities: capabilities,
         actions: actions(for: elementID)
       )
       nodeContent(node, nodeContext)
@@ -326,15 +340,22 @@ public struct FlowingGraphCanvas<
     let slice = content.renderSlice(intersecting: rect)
     var nodeIDs = slice.nodeIDs
     var edgeIDs = slice.edgeIDs
-    if let draggedNodeID = transientNodeLocalID {
+    if let drag = activeNodeDrag, drag.translation != .zero {
       var knownNodeIDs = Set(nodeIDs)
-      if knownNodeIDs.insert(draggedNodeID).inserted {
-        nodeIDs.append(draggedNodeID)
-      }
       var knownEdgeIDs = Set(edgeIDs)
-      for edgeID in content.incidentEdgeLocalIDs(of: draggedNodeID) {
-        if knownEdgeIDs.insert(edgeID).inserted {
-          edgeIDs.append(edgeID)
+      let sourceRect = rect.offsetBy(
+        dx: -drag.translation.width,
+        dy: -drag.translation.height
+      )
+      let translatedSlice = content.renderSlice(intersecting: sourceRect)
+      for nodeID in translatedSlice.nodeIDs where isBeingDragged(nodeID) {
+        if knownNodeIDs.insert(nodeID).inserted {
+          nodeIDs.append(nodeID)
+        }
+        for edgeID in content.incidentEdgeLocalIDs(of: nodeID) {
+          if knownEdgeIDs.insert(edgeID).inserted {
+            edgeIDs.append(edgeID)
+          }
         }
       }
     }
@@ -342,32 +363,57 @@ public struct FlowingGraphCanvas<
     return (nodeIDs, edgeIDs, portIDs)
   }
 
-  private var transientNodeLocalID: LocalElementID? {
+  private var activeNodeDrag: FlowingGraphCanvasTransientNodeDrag<Schema>? {
     guard let drag = session.transientNodeDrag,
       drag.basePresentationSnapshotID == content.presentation.snapshotID
     else {
       return nil
     }
-    return content.localID(for: drag.nodeID)
+    return drag
+  }
+
+  private func isBeingDragged(_ nodeLocalID: LocalElementID) -> Bool {
+    guard let elementID = content.elementID(for: nodeLocalID) else { return false }
+    return activeNodeDrag?.nodeIDs.contains(elementID) == true
   }
 
   private func translation(for nodeLocalID: LocalElementID) -> CGSize {
-    transientNodeLocalID == nodeLocalID
-      ? session.transientNodeDrag?.translation ?? .zero
-      : .zero
+    isBeingDragged(nodeLocalID) ? activeNodeDrag?.translation ?? .zero : .zero
   }
 
   private func nodeDragGesture(elementID: ElementID) -> some Gesture {
     DragGesture(minimumDistance: configuration.canvas.dragMinimumDistance)
       .onChanged { value in
         guard session.tool == .select else { return }
-        if session.transientNodeDrag?.nodeID != elementID {
+        guard rejectedNodeDragID != elementID else { return }
+        if activeNodeDrag?.nodeID != elementID {
+          guard
+            let request = FlowingGraphCanvasNodeDragResolver.request(
+              anchorNodeID: elementID,
+              selection: session.selection,
+              presentation: content.presentation,
+              mode: configuration.nodeDraggingMode,
+              capabilities: nodeCapabilities
+            )
+          else {
+            rejectedNodeDragID = elementID
+            return
+          }
+          let admittedNodeIDs = FlowingGraphCanvasNodeDragResolver.admittedNodeIDs(
+            for: request,
+            admission: admitNodeDrag(request)
+          )
+          guard !admittedNodeIDs.isEmpty else {
+            rejectedNodeDragID = elementID
+            return
+          }
           if !session.selection.contains(elementID) {
             session.selection = [elementID]
           }
           session.focusedElementID = elementID
           session.transientNodeDrag = FlowingGraphCanvasTransientNodeDrag(
             nodeID: elementID,
+            nodeIDs: admittedNodeIDs,
             basePresentationSnapshotID: content.presentation.snapshotID
           )
         }
@@ -377,6 +423,7 @@ public struct FlowingGraphCanvas<
         )
       }
       .onEnded { _ in
+        defer { rejectedNodeDragID = nil }
         guard let drag = session.transientNodeDrag,
           drag.nodeID == elementID,
           drag.basePresentationSnapshotID == content.presentation.snapshotID
@@ -387,6 +434,7 @@ public struct FlowingGraphCanvas<
           .nodeDragCompleted(
             FlowingGraphCanvasNodeDragIntent(
               nodeID: drag.nodeID,
+              nodeIDs: drag.nodeIDs,
               basePresentationSnapshotID: drag.basePresentationSnapshotID,
               translation: drag.translation
             )
@@ -660,14 +708,27 @@ public struct FlowingGraphCanvas<
   }
 
   private func nearestNodeLocalID(to point: CGPoint) -> LocalElementID? {
-    guard let draggedNodeID = transientNodeLocalID,
-      let draggedFrame = resolvedNodeFrame(draggedNodeID)
-    else {
+    let draggedNodeIDs = Set(
+      activeNodeDrag?.nodeIDs.compactMap(content.localID) ?? []
+    )
+    guard !draggedNodeIDs.isEmpty else {
       return content.nearestNodeLocalID(to: point)
+    }
+    let draggedNodeID = draggedNodeIDs.min { first, second in
+      let firstDistance = resolvedNodeFrame(first).map {
+        squaredDistance(from: point, to: $0)
+      } ?? .greatestFiniteMagnitude
+      let secondDistance = resolvedNodeFrame(second).map {
+        squaredDistance(from: point, to: $0)
+      } ?? .greatestFiniteMagnitude
+      return firstDistance < secondDistance
+    }
+    guard let draggedNodeID, let draggedFrame = resolvedNodeFrame(draggedNodeID) else {
+      return content.nearestNodeLocalID(to: point, excluding: draggedNodeIDs)
     }
     let indexedNodeID = content.nearestNodeLocalID(
       to: point,
-      excluding: [draggedNodeID]
+      excluding: draggedNodeIDs
     )
     guard let indexedNodeID,
       let indexedFrame = content.frame(for: indexedNodeID)
@@ -715,6 +776,10 @@ extension FlowingGraphCanvas where PortContent == EmptyView {
     contentInsets: EdgeInsets = .init(),
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
+    nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
+    admitNodeDrag:
+      @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
+      FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
     isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
       FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
     },
@@ -752,6 +817,8 @@ extension FlowingGraphCanvas where PortContent == EmptyView {
       contentInsets: contentInsets,
       contentChangeBehavior: contentChangeBehavior,
       command: command,
+      nodeCapabilities: nodeCapabilities,
+      admitNodeDrag: admitNodeDrag,
       isAdditiveSelectionActive: isAdditiveSelectionActive,
       onSmartMagnify: onSmartMagnify,
       onViewportChange: onViewportChange,
@@ -776,6 +843,10 @@ where PortContent == EmptyView, Decorations == EmptyView, Overlays == EmptyView 
     contentInsets: EdgeInsets = .init(),
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
+    nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
+    admitNodeDrag:
+      @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
+      FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
     isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
       FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
     },
@@ -809,6 +880,8 @@ where PortContent == EmptyView, Decorations == EmptyView, Overlays == EmptyView 
       contentInsets: contentInsets,
       contentChangeBehavior: contentChangeBehavior,
       command: command,
+      nodeCapabilities: nodeCapabilities,
+      admitNodeDrag: admitNodeDrag,
       isAdditiveSelectionActive: isAdditiveSelectionActive,
       onSmartMagnify: onSmartMagnify,
       onViewportChange: onViewportChange,
@@ -832,6 +905,10 @@ where PortContent == EmptyView, Decorations == EmptyView {
     contentInsets: EdgeInsets = .init(),
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
+    nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
+    admitNodeDrag:
+      @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
+      FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
     isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
       FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
     },
@@ -867,6 +944,8 @@ where PortContent == EmptyView, Decorations == EmptyView {
       contentInsets: contentInsets,
       contentChangeBehavior: contentChangeBehavior,
       command: command,
+      nodeCapabilities: nodeCapabilities,
+      admitNodeDrag: admitNodeDrag,
       isAdditiveSelectionActive: isAdditiveSelectionActive,
       onSmartMagnify: onSmartMagnify,
       onViewportChange: onViewportChange,

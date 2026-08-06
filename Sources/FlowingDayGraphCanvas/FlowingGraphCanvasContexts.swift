@@ -12,17 +12,20 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
   public let canvas: FlowingCanvasConfiguration
   public let edgeRenderPadding: CGFloat
   public let marqueeMinimumDistance: CGFloat
+  public let nodeDraggingMode: FlowingGraphCanvasNodeDraggingMode
 
   public init(
     canvas: FlowingCanvasConfiguration = .init(),
     edgeRenderPadding: CGFloat = 12,
-    marqueeMinimumDistance: CGFloat = 2
+    marqueeMinimumDistance: CGFloat = 2,
+    nodeDraggingMode: FlowingGraphCanvasNodeDraggingMode = .single
   ) {
     precondition(edgeRenderPadding >= 0 && edgeRenderPadding.isFinite)
     precondition(marqueeMinimumDistance >= 0 && marqueeMinimumDistance.isFinite)
     self.canvas = canvas
     self.edgeRenderPadding = edgeRenderPadding
     self.marqueeMinimumDistance = marqueeMinimumDistance
+    self.nodeDraggingMode = nodeDraggingMode
   }
 }
 
@@ -80,6 +83,7 @@ public struct FlowingGraphCanvasNodeContext<Schema: FlowingGraphCanvasSchema> {
   public let isSelected: Bool
   public let isHovered: Bool
   public let isBeingDragged: Bool
+  public let capabilities: FlowingGraphCanvasNodeCapabilities
   public let actions: FlowingGraphCanvasElementActions<Schema>
 
   public init(
@@ -92,6 +96,7 @@ public struct FlowingGraphCanvasNodeContext<Schema: FlowingGraphCanvasSchema> {
     isSelected: Bool,
     isHovered: Bool,
     isBeingDragged: Bool,
+    capabilities: FlowingGraphCanvasNodeCapabilities = .standard,
     actions: FlowingGraphCanvasElementActions<Schema>
   ) {
     self.elementID = elementID
@@ -103,6 +108,7 @@ public struct FlowingGraphCanvasNodeContext<Schema: FlowingGraphCanvasSchema> {
     self.isSelected = isSelected
     self.isHovered = isHovered
     self.isBeingDragged = isBeingDragged
+    self.capabilities = capabilities
     self.actions = actions
   }
 }

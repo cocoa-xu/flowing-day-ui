@@ -175,11 +175,13 @@ final class GraphCanvasShowcaseModel: ObservableObject {
     switch intent {
     case .nodeDragCompleted(let drag):
       guard drag.basePresentationSnapshotID == presentation?.snapshotID else { return }
-      let current = placementOffsets[drag.nodeID, default: .zero]
-      placementOffsets[drag.nodeID] = CGSize(
-        width: current.width + drag.translation.width,
-        height: current.height + drag.translation.height
-      )
+      for nodeID in drag.nodeIDs {
+        let current = placementOffsets[nodeID, default: .zero]
+        placementOffsets[nodeID] = CGSize(
+          width: current.width + drag.translation.width,
+          height: current.height + drag.translation.height
+        )
+      }
       layoutStateRevision = FlowingLayoutRevision()
       refreshLayout()
       lastEvent = "Applied node placement intent"

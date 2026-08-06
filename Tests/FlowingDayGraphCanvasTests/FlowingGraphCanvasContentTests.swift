@@ -275,6 +275,72 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
     XCTAssertTrue(selection.isEmpty)
   }
 
+  func testMultiNodeDragRequestUsesStableNodeOrderAndCapabilities() throws {
+    let presentation = try makeFixture().presentation
+    let nodeIDs = presentation.nodes.map(\.id)
+    let portID = try XCTUnwrap(presentation.ports.first?.id)
+    let capabilities = FlowingGraphCanvasNodeCapabilityMap<CanvasCompositionSchema>(
+      overrides: [nodeIDs[1]: []]
+    )
+
+    let request = try XCTUnwrap(
+      FlowingGraphCanvasNodeDragResolver.request(
+        anchorNodeID: nodeIDs[0],
+        selection: Set(nodeIDs + [portID]),
+        presentation: presentation,
+        mode: .multiple,
+        capabilities: capabilities
+      )
+    )
+
+    XCTAssertEqual(request.selectedNodeIDs, nodeIDs)
+    XCTAssertEqual(request.candidateNodeIDs, [nodeIDs[0]])
+  }
+
+  func testDragAdmissionCannotMoveNodesOutsideCandidatesOrExcludeAnchor() throws {
+    let presentation = try makeFixture().presentation
+    let nodeIDs = presentation.nodes.map(\.id)
+    let request = try XCTUnwrap(
+      FlowingGraphCanvasNodeDragResolver.request(
+        anchorNodeID: nodeIDs[0],
+        selection: Set(nodeIDs),
+        presentation: presentation,
+        mode: .multiple,
+        capabilities: .init()
+      )
+    )
+
+    XCTAssertEqual(
+      FlowingGraphCanvasNodeDragResolver.admittedNodeIDs(
+        for: request,
+        admission: .allowAll
+      ),
+      Set(nodeIDs)
+    )
+    XCTAssertTrue(
+      FlowingGraphCanvasNodeDragResolver.admittedNodeIDs(
+        for: request,
+        admission: .allowOnly([nodeIDs[1]])
+      ).isEmpty
+    )
+  }
+
+  func testSingleNodeModeIgnoresTheRestOfTheSelection() throws {
+    let presentation = try makeFixture().presentation
+    let nodeIDs = presentation.nodes.map(\.id)
+    let request = try XCTUnwrap(
+      FlowingGraphCanvasNodeDragResolver.request(
+        anchorNodeID: nodeIDs[1],
+        selection: Set(nodeIDs),
+        presentation: presentation,
+        mode: .single,
+        capabilities: .init()
+      )
+    )
+
+    XCTAssertEqual(request.candidateNodeIDs, [nodeIDs[1]])
+  }
+
   func testTransientGeometryMovesEndpointsWithoutRecomputingLayout() {
     let route = FlowingGraphEdgeRoute(
       start: CGPoint(x: 0, y: 0),
