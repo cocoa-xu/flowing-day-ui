@@ -297,6 +297,12 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
     renderIndex.slice(intersecting: rect)
   }
 
+  public func renderElementIDs(
+    intersecting rect: CGRect
+  ) -> FlowingGraphRenderElementIDs<LayoutSchema> {
+    renderIndex.elementIDs(intersecting: rect)
+  }
+
   public func nearestNodeLocalID(
     to point: CGPoint,
     excluding excludedIDs: Set<LocalElementID> = []
@@ -305,7 +311,7 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
   }
 
   public func nodeLocalIDs(intersecting rect: CGRect) -> [LocalElementID] {
-    renderIndex.slice(intersecting: rect).nodeIDs
+    renderIndex.elementIDs(intersecting: rect).nodeIDs
   }
 
   public func bounds(for elementIDs: Set<ElementID>) -> CGRect? {

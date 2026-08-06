@@ -218,7 +218,7 @@ public struct FlowingGraphCanvas<
         baseFrame: baseFrame,
         frame: frame,
         renderedFrame: renderedFrame,
-        renderScale: context.zoom,
+        renderScale: surface.localTransform.zoom,
         isSelected: session.selection.contains(elementID),
         isFocused: session.focusedElementID == elementID,
         isHovered: session.hoveredElementID == elementID,
@@ -226,11 +226,27 @@ public struct FlowingGraphCanvas<
         capabilities: capabilities,
         actions: actions(for: elementID)
       )
-      nodeContent(node, nodeContext)
-        .frame(width: renderedFrame.width, height: renderedFrame.height)
-        .position(x: renderedFrame.midX, y: renderedFrame.midY)
+      renderedNode(
+        nodeContent(node, nodeContext)
+          .frame(width: renderedFrame.width, height: renderedFrame.height)
+          .position(x: renderedFrame.midX, y: renderedFrame.midY),
+        elementID: elementID,
+        localID: localID,
+        capabilities: capabilities
+      )
+    }
+  }
+
+  @ViewBuilder
+  private func renderedNode<Node: View>(
+    _ node: Node,
+    elementID: ElementID,
+    localID: LocalElementID,
+    capabilities: FlowingGraphCanvasNodeCapabilities
+  ) -> some View {
+    if session.tool == .select {
+      node
         .contentShape(Rectangle())
-        .allowsHitTesting(session.tool == .select)
         .gesture(
           nodeDragGesture(elementID: elementID),
           including: nodeDragGestureMask(capabilities: capabilities)
@@ -255,6 +271,10 @@ public struct FlowingGraphCanvas<
             content.presentation.nodes.count - (content.nodePresentationOrder(for: localID) ?? 0)
           )
         )
+    } else {
+      node
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
   }
 
@@ -281,7 +301,7 @@ public struct FlowingGraphCanvas<
         nodeLocalID: nodeLocalID,
         anchor: anchor,
         renderedPosition: renderedPosition,
-        renderScale: context.zoom,
+        renderScale: surface.localTransform.zoom,
         isSelected: session.selection.contains(elementID),
         isHovered: session.hoveredElementID == elementID,
         actions: actions(for: elementID)
@@ -344,7 +364,7 @@ public struct FlowingGraphCanvas<
         anchors: resolvedAnchors,
         worldFrame: worldFrame,
         renderedFrame: renderedFrame,
-        renderScale: context.zoom,
+        renderScale: surface.localTransform.zoom,
         isSelected: session.selection.contains(edge.id),
         isHovered: session.hoveredElementID == edge.id,
         isTransient: isTransient,
@@ -362,7 +382,7 @@ public struct FlowingGraphCanvas<
     edgeIDs: [LocalElementID],
     portIDs: [LocalElementID]
   ) {
-    let slice = content.renderSlice(intersecting: rect)
+    let slice = content.renderElementIDs(intersecting: rect)
     var nodeIDs = slice.nodeIDs
     var edgeIDs = slice.edgeIDs
     if let drag = activeNodeDrag, drag.translation != .zero {
@@ -372,7 +392,7 @@ public struct FlowingGraphCanvas<
         dx: -drag.translation.width,
         dy: -drag.translation.height
       )
-      let translatedSlice = content.renderSlice(intersecting: sourceRect)
+      let translatedSlice = content.renderElementIDs(intersecting: sourceRect)
       for nodeID in translatedSlice.nodeIDs where isBeingDragged(nodeID) {
         if knownNodeIDs.insert(nodeID).inserted {
           nodeIDs.append(nodeID)

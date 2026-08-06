@@ -41,6 +41,22 @@ public struct FlowingGraphRenderSlice<Schema: FlowingGraphLayoutSchema>: Sendabl
   }
 }
 
+public struct FlowingGraphRenderElementIDs<Schema: FlowingGraphLayoutSchema>: Sendable {
+  public let inputID: FlowingLayoutInputID
+  public let nodeIDs: [Schema.NodeID]
+  public let edgeIDs: [Schema.EdgeID]
+
+  public init(
+    inputID: FlowingLayoutInputID,
+    nodeIDs: [Schema.NodeID],
+    edgeIDs: [Schema.EdgeID]
+  ) {
+    self.inputID = inputID
+    self.nodeIDs = nodeIDs
+    self.edgeIDs = edgeIDs
+  }
+}
+
 public enum FlowingGraphRenderIndexIssue: Error, Equatable {
   case inputIdentityMismatch
 }
@@ -85,22 +101,31 @@ public struct FlowingGraphRenderIndex<Schema: FlowingGraphLayoutSchema>: Sendabl
   }
 
   public func slice(intersecting rect: CGRect) -> FlowingGraphRenderSlice<Schema> {
-    let nodeIDs = nodeIndex.itemIDs(intersecting: rect)
-    let edgeIDs = edgeIndex.itemIDs(intersecting: rect)
+    let elementIDs = elementIDs(intersecting: rect)
     return FlowingGraphRenderSlice(
       inputID: inputID,
-      nodeIDs: nodeIDs,
-      edgeIDs: edgeIDs,
-      nodeFrames: nodeIDs.compactMap { nodeID in
+      nodeIDs: elementIDs.nodeIDs,
+      edgeIDs: elementIDs.edgeIDs,
+      nodeFrames: elementIDs.nodeIDs.compactMap { nodeID in
         result.frame(for: nodeID).map {
           FlowingGraphNodeFrame(nodeID: nodeID, frame: $0)
         }
       },
-      edgeRoutes: edgeIDs.compactMap { edgeID in
+      edgeRoutes: elementIDs.edgeIDs.compactMap { edgeID in
         result.route(for: edgeID).map {
           FlowingGraphLayoutEdgeRoute(edgeID: edgeID, route: $0)
         }
       }
+    )
+  }
+
+  public func elementIDs(
+    intersecting rect: CGRect
+  ) -> FlowingGraphRenderElementIDs<Schema> {
+    FlowingGraphRenderElementIDs(
+      inputID: inputID,
+      nodeIDs: nodeIndex.itemIDs(intersecting: rect),
+      edgeIDs: edgeIndex.itemIDs(intersecting: rect)
     )
   }
 

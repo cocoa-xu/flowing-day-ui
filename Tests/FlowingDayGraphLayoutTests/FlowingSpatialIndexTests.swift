@@ -176,6 +176,13 @@ final class FlowingSpatialIndexTests: XCTestCase {
     XCTAssertEqual(slice.edgeIDs, ["edge"])
     XCTAssertEqual(slice.edgeRoutes.map(\.edgeID), ["edge"])
 
+    let elementIDs = index.elementIDs(
+      intersecting: CGRect(x: 450, y: 0, width: 100, height: 60)
+    )
+    XCTAssertEqual(elementIDs.inputID, input.id)
+    XCTAssertEqual(elementIDs.nodeIDs, [])
+    XCTAssertEqual(elementIDs.edgeIDs, ["edge"])
+
     let zeroMarginIndex = try FlowingGraphRenderIndex(
       input: input,
       result: result,
