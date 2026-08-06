@@ -128,7 +128,7 @@ final class FlowingSpatialIndexTests: XCTestCase {
       ]
     )
     let pipelineIdentity = FlowingLayoutPipelineIdentity(
-      components: [FlowingLayoutComponentIdentity()]
+      component: FlowingLayoutComponentIdentity()
     )
     let input = try FlowingGraphLayoutResolution.input(
       topology: topology,

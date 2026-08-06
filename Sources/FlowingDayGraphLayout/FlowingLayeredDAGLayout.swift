@@ -36,7 +36,11 @@ public struct FlowingLayerAssignment<Schema: FlowingGraphLayoutSchema>: Sendable
     self.ranks = nextRanks
   }
 
-  public func rank(for nodeID: Schema.NodeID) -> Int {
+  public func rank(for nodeID: Schema.NodeID) -> Int? {
+    ranks[nodeID]
+  }
+
+  func resolvedRank(for nodeID: Schema.NodeID) -> Int {
     ranks[nodeID]!
   }
 }
@@ -100,6 +104,8 @@ public struct FlowingLayeredComponent<Schema: FlowingGraphLayoutSchema>: Sendabl
 }
 
 public enum FlowingLayerOrderingIssue<Schema: FlowingGraphLayoutSchema>: Error {
+  case emptyComponent
+  case emptyLayer(Int)
   case duplicateNode(Schema.NodeID)
   case missingNode(Schema.NodeID)
   case unknownNode(Schema.NodeID)
@@ -123,8 +129,14 @@ public struct FlowingLayerOrdering<Schema: FlowingGraphLayoutSchema>: Sendable {
     normalizedComponents.reserveCapacity(components.count)
 
     for component in components {
+      guard !component.layers.isEmpty else {
+        throw FlowingLayerOrderingIssue<Schema>.emptyComponent
+      }
       var ranks: Set<Int> = []
       for layer in component.layers {
+        guard !layer.nodeIDs.isEmpty else {
+          throw FlowingLayerOrderingIssue<Schema>.emptyLayer(layer.rank)
+        }
         guard ranks.insert(layer.rank).inserted else {
           throw FlowingLayerOrderingIssue<Schema>.duplicateRankInComponent(layer.rank)
         }
@@ -132,7 +144,7 @@ public struct FlowingLayerOrdering<Schema: FlowingGraphLayoutSchema>: Sendable {
           guard knownNodeIDs.contains(nodeID) else {
             throw FlowingLayerOrderingIssue<Schema>.unknownNode(nodeID)
           }
-          guard assignment.rank(for: nodeID) == layer.rank else {
+          guard assignment.resolvedRank(for: nodeID) == layer.rank else {
             throw FlowingLayerOrderingIssue<Schema>.rankMismatch(nodeID)
           }
           guard includedNodeIDs.insert(nodeID).inserted else {
@@ -187,7 +199,7 @@ extension FlowingStableLayerOrdering: FlowingLayerOrderingStrategy {
       }
     )
     let components = view.input.topology.weaklyConnectedComponents().map { nodeIDs in
-      let layers = Dictionary(grouping: nodeIDs) { assignment.rank(for: $0) }
+      let layers = Dictionary(grouping: nodeIDs) { assignment.resolvedRank(for: $0) }
       return FlowingLayeredComponent<Schema>(
         layers: layers.keys.sorted().map { rank in
           let nodeIDs = layers[rank, default: []].sorted { left, right in
@@ -215,6 +227,10 @@ public struct FlowingLayoutInsets: Sendable, Equatable {
   public let trailing: CGFloat
 
   public init(top: CGFloat, leading: CGFloat, bottom: CGFloat, trailing: CGFloat) {
+    precondition(top.isFinite && top >= 0)
+    precondition(leading.isFinite && leading >= 0)
+    precondition(bottom.isFinite && bottom >= 0)
+    precondition(trailing.isFinite && trailing >= 0)
     self.top = top
     self.leading = leading
     self.bottom = bottom
@@ -245,6 +261,13 @@ public struct FlowingLayeredLayoutConfiguration: Sendable, Equatable {
     canvasInsets: FlowingLayoutInsets,
     minimumCanvasSize: CGSize
   ) {
+    precondition(horizontalNodeSpacing.isFinite && horizontalNodeSpacing >= 0)
+    precondition(verticalNodeSpacing.isFinite && verticalNodeSpacing >= 0)
+    precondition(componentSpacing.isFinite && componentSpacing >= 0)
+    precondition(
+      minimumCanvasSize.width.isFinite && minimumCanvasSize.width >= 0 &&
+        minimumCanvasSize.height.isFinite && minimumCanvasSize.height >= 0
+    )
     self.horizontalNodeSpacing = horizontalNodeSpacing
     self.verticalNodeSpacing = verticalNodeSpacing
     self.componentSpacing = componentSpacing
@@ -295,19 +318,21 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
       )
     }
 
-    let maximumRank = assignment.ranks.values.max() ?? 0
-    var rankHeights = Array(repeating: CGFloat.zero, count: maximumRank + 1)
+    var rankHeights: [Int: CGFloat] = [:]
     for nodeID in input.topology.nodeIDs {
-      let rank = assignment.rank(for: nodeID)
-      rankHeights[rank] = max(rankHeights[rank], input.size(for: nodeID).height)
+      let rank = assignment.resolvedRank(for: nodeID)
+      rankHeights[rank] = max(
+        rankHeights[rank, default: 0],
+        input.resolvedSize(for: nodeID).height
+      )
     }
-    var rankOrigins = Array(repeating: CGFloat.zero, count: maximumRank + 1)
-    rankOrigins[0] = configuration.canvasInsets.top
-    if maximumRank > 0 {
-      for rank in 1...maximumRank {
-        rankOrigins[rank] = rankOrigins[rank - 1] + rankHeights[rank - 1] +
-          configuration.verticalNodeSpacing
-      }
+    let occupiedRanks = rankHeights.keys.sorted()
+    var rankOrigins: [Int: CGFloat] = [:]
+    var precedingHeights: CGFloat = 0
+    for rank in occupiedRanks {
+      rankOrigins[rank] = configuration.canvasInsets.top +
+        CGFloat(rank) * configuration.verticalNodeSpacing + precedingHeights
+      precedingHeights += rankHeights[rank, default: 0]
     }
 
     var frameByNodeID: [Schema.NodeID: CGRect] = [:]
@@ -329,12 +354,12 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
           frames: frameByNodeID
         )
         for (nodeID, center) in zip(layer.nodeIDs, centers) {
-          let size = input.size(for: nodeID)
-          let offset = input.placementOffset(for: nodeID)
+          let size = input.resolvedSize(for: nodeID)
+          let offset = input.resolvedPlacementOffset(for: nodeID)
           frameByNodeID[nodeID] = CGRect(
             x: center - size.width / 2 + offset.width,
-            y: rankOrigins[layer.rank] +
-              (rankHeights[layer.rank] - size.height) / 2 + offset.height,
+            y: rankOrigins[layer.rank, default: configuration.canvasInsets.top] +
+              (rankHeights[layer.rank, default: 0] - size.height) / 2 + offset.height,
             width: size.width,
             height: size.height
           )
@@ -345,8 +370,9 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
 
     let measuredWidth = componentX - configuration.componentSpacing +
       configuration.canvasInsets.trailing
-    let measuredHeight = rankOrigins[maximumRank] + rankHeights[maximumRank] +
-      configuration.canvasInsets.bottom
+    let lastRank = occupiedRanks.last ?? 0
+    let measuredHeight = rankOrigins[lastRank, default: configuration.canvasInsets.top] +
+      rankHeights[lastRank, default: 0] + configuration.canvasInsets.bottom
     let minimumBounds = CGRect(
       origin: .zero,
       size: CGSize(
@@ -371,7 +397,7 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
     input: FlowingGraphLayoutInput<Schema>
   ) -> CGFloat {
     guard !nodeIDs.isEmpty else { return 0 }
-    return nodeIDs.reduce(0) { $0 + input.size(for: $1).width } +
+    return nodeIDs.reduce(0) { $0 + input.resolvedSize(for: $1).width } +
       CGFloat(nodeIDs.count - 1) * configuration.horizontalNodeSpacing
   }
 
@@ -388,7 +414,7 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
     var defaultCenters: [CGFloat] = []
     defaultCenters.reserveCapacity(nodeIDs.count)
     for nodeID in nodeIDs {
-      let width = input.size(for: nodeID).width
+      let width = input.resolvedSize(for: nodeID).width
       defaultCenters.append(cursor + width / 2)
       cursor += width + configuration.horizontalNodeSpacing
     }
@@ -401,16 +427,16 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
 
     if centers.count > 1 {
       for index in 1..<centers.count {
-        let previousWidth = input.size(for: nodeIDs[index - 1]).width
-        let width = input.size(for: nodeIDs[index]).width
+        let previousWidth = input.resolvedSize(for: nodeIDs[index - 1]).width
+        let width = input.resolvedSize(for: nodeIDs[index]).width
         let minimum = centers[index - 1] + (previousWidth + width) / 2 +
           configuration.horizontalNodeSpacing
         centers[index] = max(centers[index], minimum)
       }
     }
 
-    let firstWidth = input.size(for: nodeIDs[0]).width
-    let lastWidth = input.size(for: nodeIDs[nodeIDs.count - 1]).width
+    let firstWidth = input.resolvedSize(for: nodeIDs[0]).width
+    let lastWidth = input.resolvedSize(for: nodeIDs[nodeIDs.count - 1]).width
     let minimumCenter = componentX + firstWidth / 2
     let maximumCenter = componentX + componentWidth - lastWidth / 2
     if centers[0] < minimumCenter {
@@ -421,6 +447,7 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
       let adjustment = centers[centers.count - 1] - maximumCenter
       centers = centers.map { $0 - adjustment }
     }
+    guard centers[0] >= minimumCenter else { return defaultCenters }
     return centers
   }
 }
@@ -446,10 +473,10 @@ public struct FlowingLayeredDAGPlacement<
 extension FlowingLayeredDAGPlacement: FlowingGraphNodePlacementStrategy {
   public var identity: FlowingLayoutPipelineIdentity {
     FlowingLayoutPipelineIdentity(
-      components: [
-        layerAssignment.identity,
-        layerOrdering.identity,
-        coordinateAssignment.identity,
+      stages: [
+        .component(role: .layerAssignment, identity: layerAssignment.identity),
+        .component(role: .layerOrdering, identity: layerOrdering.identity),
+        .component(role: .coordinateAssignment, identity: coordinateAssignment.identity),
       ]
     )
   }

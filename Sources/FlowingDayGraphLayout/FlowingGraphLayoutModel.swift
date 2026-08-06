@@ -33,11 +33,47 @@ public struct FlowingLayoutComponentIdentity: Hashable, Sendable {
   }
 }
 
-public struct FlowingLayoutPipelineIdentity: Hashable, Sendable {
-  public let components: [FlowingLayoutComponentIdentity]
+public struct FlowingLayoutPipelineStageRole: RawRepresentable, Hashable, Sendable {
+  public let rawValue: String
 
-  public init(components: [FlowingLayoutComponentIdentity]) {
-    self.components = components
+  public init(rawValue: String) {
+    precondition(!rawValue.isEmpty)
+    self.rawValue = rawValue
+  }
+
+  public static let strategy = Self(rawValue: "strategy")
+  public static let placement = Self(rawValue: "placement")
+  public static let layerAssignment = Self(rawValue: "layer-assignment")
+  public static let layerOrdering = Self(rawValue: "layer-ordering")
+  public static let coordinateAssignment = Self(rawValue: "coordinate-assignment")
+  public static let postprocessing = Self(rawValue: "postprocessing")
+  public static let postprocessor = Self(rawValue: "postprocessor")
+  public static let edgeRouting = Self(rawValue: "edge-routing")
+}
+
+public indirect enum FlowingLayoutPipelineStageIdentity: Hashable, Sendable {
+  case component(
+    role: FlowingLayoutPipelineStageRole,
+    identity: FlowingLayoutComponentIdentity
+  )
+  case group(
+    role: FlowingLayoutPipelineStageRole,
+    stages: [FlowingLayoutPipelineStageIdentity]
+  )
+}
+
+public struct FlowingLayoutPipelineIdentity: Hashable, Sendable {
+  public let stages: [FlowingLayoutPipelineStageIdentity]
+
+  public init(stages: [FlowingLayoutPipelineStageIdentity]) {
+    self.stages = stages
+  }
+
+  public init(
+    role: FlowingLayoutPipelineStageRole = .strategy,
+    component: FlowingLayoutComponentIdentity
+  ) {
+    stages = [.component(role: role, identity: component)]
   }
 }
 
@@ -163,7 +199,6 @@ public struct FlowingGraphLayoutTopology<Schema: FlowingGraphLayoutSchema>: Send
   public let ports: [FlowingGraphLayoutPort<Schema>]
   public let edges: [FlowingGraphLayoutEdge<Schema>]
 
-  private let portByKey: [FlowingGraphLayoutPortKey<Schema>: FlowingGraphLayoutPort<Schema>]
   private let successorsByNodeID: [Schema.NodeID: [Schema.NodeID]]
   private let predecessorsByNodeID: [Schema.NodeID: [Schema.NodeID]]
   private let adjacentNodeIDsByNodeID: [Schema.NodeID: [Schema.NodeID]]
@@ -236,7 +271,6 @@ public struct FlowingGraphLayoutTopology<Schema: FlowingGraphLayoutSchema>: Send
     self.nodeIDs = nodeIDs
     self.ports = ports
     self.edges = edges
-    portByKey = nextPortByKey
     successorsByNodeID = nextSuccessorsByNodeID
     predecessorsByNodeID = nextPredecessorsByNodeID
     adjacentNodeIDsByNodeID = nextAdjacentNodeIDsByNodeID
@@ -249,7 +283,7 @@ public struct FlowingGraphLayoutTopology<Schema: FlowingGraphLayoutSchema>: Send
     case let .node(nodeID):
       nodeID
     case let .port(key):
-      portByKey[key]!.nodeID
+      key.nodeID
     }
   }
 
@@ -327,6 +361,7 @@ public struct FlowingGraphNodePlacementState<Schema: FlowingGraphLayoutSchema>: 
 extension FlowingGraphNodePlacementState: Equatable {}
 
 public enum FlowingGraphLayoutInputIssue<Schema: FlowingGraphLayoutSchema>: Error {
+  case presentationSnapshotIdentityMismatch
   case duplicateNodeSize(Schema.NodeID)
   case missingNodeSize(Schema.NodeID)
   case unknownNodeSize(Schema.NodeID)
@@ -362,6 +397,9 @@ public struct FlowingGraphLayoutInput<Schema: FlowingGraphLayoutSchema>: Sendabl
     portAnchors: [FlowingGraphPortAnchor<Schema>],
     placementState: [FlowingGraphNodePlacementState<Schema>] = []
   ) throws {
+    guard id.presentationSnapshotID == topology.snapshotID else {
+      throw FlowingGraphLayoutInputIssue<Schema>.presentationSnapshotIdentityMismatch
+    }
     let knownNodeIDs = Set(topology.nodeIDs)
     let knownPortKeys = Set(topology.ports.map(\.key))
     var nextNodeSizeByID: [Schema.NodeID: CGSize] = [:]
@@ -427,17 +465,32 @@ public struct FlowingGraphLayoutInput<Schema: FlowingGraphLayoutSchema>: Sendabl
     placementOffsetByID = nextPlacementOffsetByID
   }
 
-  public func size(for nodeID: Schema.NodeID) -> CGSize {
-    nodeSizeByID[nodeID]!
+  public func size(for nodeID: Schema.NodeID) -> CGSize? {
+    nodeSizeByID[nodeID]
   }
 
   public func anchor(
+    for key: FlowingGraphLayoutPortKey<Schema>
+  ) -> FlowingGraphPortAnchor<Schema>? {
+    portAnchorByKey[key]
+  }
+
+  public func placementOffset(for nodeID: Schema.NodeID) -> CGSize? {
+    guard nodeSizeByID[nodeID] != nil else { return nil }
+    return placementOffsetByID[nodeID] ?? .zero
+  }
+
+  func resolvedSize(for nodeID: Schema.NodeID) -> CGSize {
+    nodeSizeByID[nodeID]!
+  }
+
+  func resolvedAnchor(
     for key: FlowingGraphLayoutPortKey<Schema>
   ) -> FlowingGraphPortAnchor<Schema> {
     portAnchorByKey[key]!
   }
 
-  public func placementOffset(for nodeID: Schema.NodeID) -> CGSize {
+  func resolvedPlacementOffset(for nodeID: Schema.NodeID) -> CGSize {
     placementOffsetByID[nodeID] ?? .zero
   }
 }

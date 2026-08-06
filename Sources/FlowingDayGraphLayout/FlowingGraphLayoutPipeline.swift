@@ -109,7 +109,7 @@ public struct FlowingGraphNodePlacement<Schema: FlowingGraphLayoutSchema>: Senda
       guard entry.frame.isUsable else {
         throw FlowingGraphNodePlacementIssue<Schema>.invalidNodeFrame(entry.nodeID)
       }
-      guard entry.frame.size == input.size(for: entry.nodeID) else {
+      guard entry.frame.size == input.resolvedSize(for: entry.nodeID) else {
         throw FlowingGraphNodePlacementIssue<Schema>.nodeFrameSizeMismatch(entry.nodeID)
       }
       guard nextFrameByNodeID.updateValue(entry.frame, forKey: entry.nodeID) == nil else {
@@ -135,7 +135,11 @@ public struct FlowingGraphNodePlacement<Schema: FlowingGraphLayoutSchema>: Senda
     frameByNodeID = nextFrameByNodeID
   }
 
-  public func frame(for nodeID: Schema.NodeID) -> CGRect {
+  public func frame(for nodeID: Schema.NodeID) -> CGRect? {
+    frameByNodeID[nodeID]
+  }
+
+  func resolvedFrame(for nodeID: Schema.NodeID) -> CGRect {
     frameByNodeID[nodeID]!
   }
 }
@@ -145,6 +149,7 @@ public enum FlowingGraphLayoutResultIssue<Schema: FlowingGraphLayoutSchema>: Err
   case missingEdgeRoute(Schema.EdgeID)
   case unknownEdgeRoute(Schema.EdgeID)
   case invalidEdgeRoute(Schema.EdgeID)
+  case invalidContentBounds
 }
 
 extension FlowingGraphLayoutResultIssue: Equatable {}
@@ -170,7 +175,7 @@ public struct FlowingGraphLayoutResult<Schema: FlowingGraphLayoutSchema>: Sendab
       guard knownEdgeIDs.contains(entry.edgeID) else {
         throw FlowingGraphLayoutResultIssue<Schema>.unknownEdgeRoute(entry.edgeID)
       }
-      guard entry.route.isFinite else {
+      guard entry.route.isFinite, entry.route.conservativeBounds.isUsable else {
         throw FlowingGraphLayoutResultIssue<Schema>.invalidEdgeRoute(entry.edgeID)
       }
       guard nextRouteByEdgeID.updateValue(entry.route, forKey: entry.edgeID) == nil else {
@@ -190,7 +195,7 @@ public struct FlowingGraphLayoutResult<Schema: FlowingGraphLayoutSchema>: Sendab
       FlowingGraphLayoutEdgeRoute(edgeID: $0.id, route: nextRouteByEdgeID[$0.id]!)
     }
     resolvedPortAnchors = input.topology.ports.map { port in
-      let anchor = input.anchor(for: port.key)
+      let anchor = input.resolvedAnchor(for: port.key)
       let origin = frames[port.nodeID]!.origin
       return FlowingGraphResolvedPortAnchor(
         key: port.key,
@@ -201,9 +206,13 @@ public struct FlowingGraphLayoutResult<Schema: FlowingGraphLayoutSchema>: Sendab
         normal: anchor.normal
       )
     }
-    contentBounds = nextRouteByEdgeID.values.reduce(placement.contentBounds) {
+    let nextContentBounds = nextRouteByEdgeID.values.reduce(placement.contentBounds) {
       $0.union($1.conservativeBounds)
     }
+    guard nextContentBounds.isUsable else {
+      throw FlowingGraphLayoutResultIssue<Schema>.invalidContentBounds
+    }
+    contentBounds = nextContentBounds
     frameByNodeID = frames
     routeByEdgeID = nextRouteByEdgeID
   }
@@ -282,8 +291,16 @@ public struct FlowingGraphLayoutPipeline<Schema: FlowingGraphLayoutSchema>: Send
 extension FlowingGraphLayoutPipeline: FlowingGraphLayoutStrategy {
   public var identity: FlowingLayoutPipelineIdentity {
     FlowingLayoutPipelineIdentity(
-      components: placement.identity.components +
-        postprocessors.map(\.identity) + [edgeRouter.identity]
+      stages: [
+        .group(role: .placement, stages: placement.identity.stages),
+        .group(
+          role: .postprocessing,
+          stages: postprocessors.map {
+            .component(role: .postprocessor, identity: $0.identity)
+          }
+        ),
+        .component(role: .edgeRouting, identity: edgeRouter.identity),
+      ]
     )
   }
 

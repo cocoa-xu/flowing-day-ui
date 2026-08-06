@@ -101,7 +101,8 @@ public struct FlowingSpatialIndex<ItemID: Hashable & Sendable>: Sendable {
     }
     var matches: Set<ItemID> = []
     for cell in queryCells {
-      for itemID in buckets[cell, default: []]
+      guard let itemIDs = buckets[cell] else { continue }
+      for itemID in itemIDs
       where frameByID[itemID]?.intersects(rect) == true {
         matches.insert(itemID)
       }
@@ -138,7 +139,8 @@ public struct FlowingSpatialIndex<ItemID: Hashable & Sendable>: Sendable {
         return nearestItemIDByScanning(to: point, excluding: excludedIDs)
       }
       for cell in perimeter(around: origin, radius: radius) {
-        for itemID in buckets[cell, default: []] where visited.insert(itemID).inserted {
+        guard let itemIDs = buckets[cell] else { continue }
+        for itemID in itemIDs where visited.insert(itemID).inserted {
           guard !excludedIDs.contains(itemID), let frame = frameByID[itemID] else { continue }
           let distance = Self.distanceSquared(from: point, to: frame)
           if distance < nearestDistance ||

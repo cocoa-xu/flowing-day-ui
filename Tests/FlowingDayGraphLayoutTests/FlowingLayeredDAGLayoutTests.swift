@@ -77,6 +77,28 @@ final class FlowingLayeredDAGLayoutTests: XCTestCase {
     XCTAssertEqual(result.frame(for: "child")?.minY, 180)
   }
 
+  func testSparseLayerRanksDoNotRequireDenseStorage() throws {
+    let coordinateAssignment = FlowingCenteredLayerCoordinates<LayoutSchema>(
+      configuration: configuration
+    )
+    let strategy = FlowingLayeredDAGLayout<LayoutSchema>(
+      layerAssignment: SparseLayerAssignment(),
+      layerOrdering: FlowingStableLayerOrdering(),
+      coordinateAssignment: coordinateAssignment,
+      edgeRouter: FlowingCubicEdgeRouter()
+    )
+    let input = try makeInput(
+      nodeIDs: ["root", "child"],
+      edges: [edge("root", "child")],
+      strategy: strategy
+    )
+
+    let result = try strategy.layout(input)
+
+    XCTAssertEqual(result.frame(for: "root")?.minY, 20)
+    XCTAssertEqual(result.frame(for: "child")?.minY, 50_000_000_080)
+  }
+
   func testGenericPipelineAcceptsACyclicGraph() throws {
     let strategy = FlowingGraphLayoutPipeline<LayoutSchema>(
       placement: LinearPlacement(),
@@ -231,6 +253,89 @@ final class FlowingLayeredDAGLayoutTests: XCTestCase {
     XCTAssertEqual(result.resolvedPortAnchors.map(\.key), [firstKey, secondKey])
   }
 
+  func testValidatedLookupsReturnNilForUnknownIdentifiers() throws {
+    let key = FlowingGraphLayoutPortKey<LayoutSchema>(
+      nodeID: "node",
+      portID: "output"
+    )
+    let strategy = FlowingGraphLayoutPipeline<LayoutSchema>(
+      placement: LinearPlacement(),
+      edgeRouter: FlowingCubicEdgeRouter()
+    )
+    let topology = try FlowingGraphLayoutTopology<LayoutSchema>(
+      nodeIDs: ["node"],
+      ports: [FlowingGraphLayoutPort(key: key)],
+      edges: []
+    )
+    let input = try FlowingGraphLayoutResolution.input(
+      topology: topology,
+      nodeSizeResolver: FlowingFixedNodeSizeResolver(
+        size: CGSize(width: 100, height: 60)
+      ),
+      portAnchorResolver: FlowingCenteredPortAnchorResolver(),
+      pipelineIdentity: strategy.identity
+    )
+    let placement = try LinearPlacement().place(input)
+    let assignment = try FlowingLayerAssignment(
+      input: input,
+      ranks: [("node", 0)]
+    )
+
+    XCTAssertNil(input.size(for: "missing"))
+    XCTAssertNil(input.placementOffset(for: "missing"))
+    XCTAssertNil(
+      input.anchor(
+        for: FlowingGraphLayoutPortKey(nodeID: "node", portID: "missing")
+      )
+    )
+    XCTAssertNil(placement.frame(for: "missing"))
+    XCTAssertNil(assignment.rank(for: "missing"))
+  }
+
+  func testSelfLoopConnectsBothPortAnchors() throws {
+    let output = FlowingGraphLayoutPortKey<LayoutSchema>(
+      nodeID: "node",
+      portID: "output"
+    )
+    let inputPort = FlowingGraphLayoutPortKey<LayoutSchema>(
+      nodeID: "node",
+      portID: "input"
+    )
+    let strategy = FlowingGraphLayoutPipeline<LayoutSchema>(
+      placement: LinearPlacement(),
+      edgeRouter: FlowingCubicEdgeRouter()
+    )
+    let topology = try FlowingGraphLayoutTopology<LayoutSchema>(
+      nodeIDs: ["node"],
+      ports: [
+        FlowingGraphLayoutPort(key: output),
+        FlowingGraphLayoutPort(key: inputPort),
+      ],
+      edges: [
+        FlowingGraphLayoutEdge(
+          id: "loop",
+          endpoints: .directed(source: .port(output), target: .port(inputPort))
+        )
+      ]
+    )
+    let input = try FlowingGraphLayoutResolution.input(
+      topology: topology,
+      nodeSizeResolver: FlowingFixedNodeSizeResolver(
+        size: CGSize(width: 100, height: 60)
+      ),
+      portAnchorResolver: LoopAnchorResolver(),
+      pipelineIdentity: strategy.identity
+    )
+
+    let route = try XCTUnwrap(try strategy.layout(input).route(for: "loop"))
+
+    XCTAssertEqual(route.start, CGPoint(x: 100, y: 15))
+    guard case let .cubic(_, _, end)? = route.segments.last else {
+      return XCTFail("Expected a cubic loop segment")
+    }
+    XCTAssertEqual(end, CGPoint(x: 0, y: 45))
+  }
+
   func testResultBoundsIncludeCustomEdgeGeometry() throws {
     let strategy = FlowingGraphLayoutPipeline<LayoutSchema>(
       placement: LinearPlacement(),
@@ -244,6 +349,25 @@ final class FlowingLayeredDAGLayoutTests: XCTestCase {
     let result = try strategy.layout(input)
 
     XCTAssertGreaterThanOrEqual(result.contentBounds.maxY, 500)
+  }
+
+  func testResultRejectsEdgeGeometryWithOverflowingBounds() throws {
+    let strategy = FlowingGraphLayoutPipeline<LayoutSchema>(
+      placement: LinearPlacement(),
+      edgeRouter: OverflowingEdgeRouter()
+    )
+    let input = try makeInput(
+      nodeIDs: ["first", "second"],
+      edges: [edge("first", "second")],
+      strategy: strategy
+    )
+
+    XCTAssertThrowsError(try strategy.layout(input)) { error in
+      XCTAssertEqual(
+        error as? FlowingGraphLayoutResultIssue<LayoutSchema>,
+        .invalidEdgeRoute("first-second")
+      )
+    }
   }
 
   func testInputNormalizesResolvedTablesToTopologyOrder() throws {
@@ -279,6 +403,39 @@ final class FlowingLayeredDAGLayoutTests: XCTestCase {
     )
 
     XCTAssertEqual(input.nodeSizes.map(\.nodeID), ["first", "second"])
+  }
+
+  func testInputRejectsAMismatchedPresentationSnapshotIdentity() throws {
+    let topology = try FlowingGraphLayoutTopology<LayoutSchema>(
+      nodeIDs: ["node"],
+      ports: [],
+      edges: []
+    )
+
+    XCTAssertThrowsError(
+      try FlowingGraphLayoutInput(
+        id: FlowingLayoutInputID(
+          presentationSnapshotID: .init(),
+          pipelineIdentity: FlowingLayoutPipelineIdentity(stages: []),
+          nodeSizeRevision: .init(),
+          portAnchorRevision: .init(),
+          layoutStateRevision: .init()
+        ),
+        topology: topology,
+        nodeSizes: [
+          FlowingGraphLayoutNodeSize(
+            nodeID: "node",
+            size: CGSize(width: 100, height: 60)
+          )
+        ],
+        portAnchors: []
+      )
+    ) { error in
+      XCTAssertEqual(
+        error as? FlowingGraphLayoutInputIssue<LayoutSchema>,
+        .presentationSnapshotIdentityMismatch
+      )
+    }
   }
 
   func testComponentRevisionParticipatesInInputIdentity() throws {
@@ -430,24 +587,40 @@ private struct GapLayerAssignment: FlowingLayerAssignmentStrategy {
   }
 }
 
+private struct SparseLayerAssignment: FlowingLayerAssignmentStrategy {
+  typealias Schema = LayoutSchema
+
+  let identity = FlowingLayoutComponentIdentity()
+
+  func assignLayers(
+    to view: FlowingGraphLayoutDAGView<LayoutSchema>
+  ) throws -> FlowingLayerAssignment<LayoutSchema> {
+    try FlowingLayerAssignment(
+      input: view.input,
+      ranks: [("root", 0), ("child", 1_000_000_000)]
+    )
+  }
+}
+
 private struct LinearPlacement: FlowingGraphNodePlacementStrategy {
   typealias Schema = LayoutSchema
 
   let identity = FlowingLayoutPipelineIdentity(
-    components: [FlowingLayoutComponentIdentity()]
+    component: FlowingLayoutComponentIdentity()
   )
 
   func place(
     _ input: FlowingGraphLayoutInput<LayoutSchema>
   ) throws -> FlowingGraphNodePlacement<LayoutSchema> {
     let frames = input.topology.nodeIDs.enumerated().map { index, nodeID in
-      FlowingGraphNodeFrame<LayoutSchema>(
+      let size = input.nodeSizes[index].size
+      return FlowingGraphNodeFrame<LayoutSchema>(
         nodeID: nodeID,
         frame: CGRect(
           x: CGFloat(index) * 160,
           y: 0,
-          width: input.size(for: nodeID).width,
-          height: input.size(for: nodeID).height
+          width: size.width,
+          height: size.height
         )
       )
     }
@@ -476,6 +649,26 @@ private struct OutputAnchorResolver: FlowingGraphPortAnchorResolver {
   }
 }
 
+private struct LoopAnchorResolver: FlowingGraphPortAnchorResolver {
+  typealias Schema = LayoutSchema
+
+  let identity = FlowingLayoutComponentIdentity()
+
+  func anchor(
+    for port: FlowingGraphLayoutPort<LayoutSchema>,
+    nodeSize: CGSize
+  ) throws -> FlowingGraphPortAnchor<LayoutSchema> {
+    let position = port.id == "output"
+      ? CGPoint(x: nodeSize.width, y: 15)
+      : CGPoint(x: 0, y: 45)
+    return FlowingGraphPortAnchor(
+      key: port.key,
+      position: position,
+      normal: .zero
+    )
+  }
+}
+
 private struct EscapingEdgeRouter: FlowingGraphEdgeRoutingStrategy {
   typealias Schema = LayoutSchema
 
@@ -491,6 +684,29 @@ private struct EscapingEdgeRouter: FlowingGraphEdgeRoutingStrategy {
         route: FlowingGraphEdgeRoute(
           start: .zero,
           segments: [.line(end: CGPoint(x: 200, y: 500))]
+        )
+      )
+    ]
+  }
+}
+
+private struct OverflowingEdgeRouter: FlowingGraphEdgeRoutingStrategy {
+  typealias Schema = LayoutSchema
+
+  let identity = FlowingLayoutComponentIdentity()
+
+  func routes(
+    for input: FlowingGraphLayoutInput<LayoutSchema>,
+    placement: FlowingGraphNodePlacement<LayoutSchema>
+  ) throws -> [FlowingGraphLayoutEdgeRoute<LayoutSchema>] {
+    [
+      FlowingGraphLayoutEdgeRoute(
+        edgeID: input.topology.edges[0].id,
+        route: FlowingGraphEdgeRoute(
+          start: CGPoint(x: -CGFloat.greatestFiniteMagnitude, y: 0),
+          segments: [
+            .line(end: CGPoint(x: CGFloat.greatestFiniteMagnitude, y: 0))
+          ]
         )
       )
     ]

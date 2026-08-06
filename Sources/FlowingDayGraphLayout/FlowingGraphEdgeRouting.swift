@@ -15,6 +15,13 @@ public struct FlowingCubicEdgeRouterConfiguration: Sendable, Equatable {
     parallelEdgeSpacing: CGFloat,
     selfLoopRadius: CGFloat
   ) {
+    precondition(minimumControlDistance.isFinite && minimumControlDistance >= 0)
+    precondition(
+      maximumControlDistance.isFinite && maximumControlDistance >= minimumControlDistance
+    )
+    precondition(controlDistanceRatio.isFinite && controlDistanceRatio >= 0)
+    precondition(parallelEdgeSpacing.isFinite && parallelEdgeSpacing >= 0)
+    precondition(selfLoopRadius.isFinite && selfLoopRadius >= 0)
     self.minimumControlDistance = minimumControlDistance
     self.maximumControlDistance = maximumControlDistance
     self.controlDistanceRatio = controlDistanceRatio
@@ -87,11 +94,12 @@ extension FlowingCubicEdgeRouter: FlowingGraphEdgeRoutingStrategy {
     let endpoints = edge.endpoints.elements
     let firstNodeID = input.topology.nodeID(for: endpoints[0])
     let secondNodeID = input.topology.nodeID(for: endpoints[1])
-    let firstFrame = placement.frame(for: firstNodeID)
-    let secondFrame = placement.frame(for: secondNodeID)
+    let firstFrame = placement.resolvedFrame(for: firstNodeID)
+    let secondFrame = placement.resolvedFrame(for: secondNodeID)
     if firstNodeID == secondNodeID {
       return selfLoop(
-        endpoint: endpoints[0],
+        firstEndpoint: endpoints[0],
+        secondEndpoint: endpoints[1],
         frame: firstFrame,
         input: input,
         loopIndex: loopIndex
@@ -142,32 +150,39 @@ extension FlowingCubicEdgeRouter: FlowingGraphEdgeRoutingStrategy {
   }
 
   private func selfLoop(
-    endpoint: FlowingGraphLayoutEndpoint<Schema>,
+    firstEndpoint: FlowingGraphLayoutEndpoint<Schema>,
+    secondEndpoint: FlowingGraphLayoutEndpoint<Schema>,
     frame: CGRect,
     input: FlowingGraphLayoutInput<Schema>,
     loopIndex: Int
   ) -> FlowingGraphEdgeRoute {
     let radius = configuration.selfLoopRadius +
       CGFloat(loopIndex) * configuration.parallelEdgeSpacing
-    let resolved = resolvedEndpoint(
-      endpoint,
+    let start = resolvedEndpoint(
+      firstEndpoint,
       frame: frame,
       toward: CGPoint(x: frame.maxX + radius, y: frame.minY - radius),
       input: input
     )
-    let end = CGPoint(x: frame.midX, y: frame.minY)
+    let end = resolvedEndpoint(
+      secondEndpoint,
+      frame: frame,
+      toward: CGPoint(x: frame.minX - radius, y: frame.minY - radius),
+      input: input
+    )
+    let apex = CGPoint(x: frame.midX, y: frame.minY - radius)
     return FlowingGraphEdgeRoute(
-      start: resolved.point,
+      start: start.point,
       segments: [
         .cubic(
-          control1: CGPoint(x: frame.maxX + radius, y: resolved.point.y),
+          control1: CGPoint(x: frame.maxX + radius, y: start.point.y),
           control2: CGPoint(x: frame.maxX + radius, y: frame.minY - radius),
-          end: CGPoint(x: frame.midX, y: frame.minY - radius)
+          end: apex
         ),
         .cubic(
-          control1: CGPoint(x: frame.minX, y: frame.minY - radius),
-          control2: CGPoint(x: end.x, y: frame.minY - radius),
-          end: end
+          control1: CGPoint(x: frame.minX - radius, y: frame.minY - radius),
+          control2: CGPoint(x: frame.minX - radius, y: end.point.y),
+          end: end.point
         ),
       ]
     )
@@ -183,7 +198,7 @@ extension FlowingCubicEdgeRouter: FlowingGraphEdgeRoutingStrategy {
     case .node:
       return frameBoundaryEndpoint(frame: frame, toward: target)
     case let .port(key):
-      let anchor = input.anchor(for: key)
+      let anchor = input.resolvedAnchor(for: key)
       let point = CGPoint(
         x: frame.minX + anchor.position.x,
         y: frame.minY + anchor.position.y

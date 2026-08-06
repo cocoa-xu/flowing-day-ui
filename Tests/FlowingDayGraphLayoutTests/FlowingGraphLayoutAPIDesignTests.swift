@@ -57,6 +57,37 @@ final class FlowingGraphLayoutAPIDesignTests: XCTestCase {
     XCTAssertEqual(result.nodeFrames.map(\.nodeID), ["source", "target"])
   }
 
+  func testPipelineIdentityPreservesSemanticStageBoundaries() {
+    let first = FlowingLayoutComponentIdentity()
+    let second = FlowingLayoutComponentIdentity()
+    let groupedPlacement = FlowingLayoutPipelineIdentity(
+      stages: [
+        .group(
+          role: .placement,
+          stages: [
+            .component(role: .strategy, identity: first),
+            .component(role: .strategy, identity: second),
+          ]
+        ),
+        .group(role: .postprocessing, stages: []),
+      ]
+    )
+    let placementAndPostprocessor = FlowingLayoutPipelineIdentity(
+      stages: [
+        .group(
+          role: .placement,
+          stages: [.component(role: .strategy, identity: first)]
+        ),
+        .group(
+          role: .postprocessing,
+          stages: [.component(role: .postprocessor, identity: second)]
+        ),
+      ]
+    )
+
+    XCTAssertNotEqual(groupedPlacement, placementAndPostprocessor)
+  }
+
   private func pipeline() -> FlowingGraphLayoutPipeline<TestLayoutSchema> {
     FlowingGraphLayoutPipeline(
       placement: TestPlacement(),
@@ -88,24 +119,26 @@ private struct TestPlacement: FlowingGraphNodePlacementStrategy {
   typealias Schema = TestLayoutSchema
 
   let identity = FlowingLayoutPipelineIdentity(
-    components: [FlowingLayoutComponentIdentity()]
+    component: FlowingLayoutComponentIdentity()
   )
 
   func place(
     _ input: FlowingGraphLayoutInput<TestLayoutSchema>
   ) throws -> FlowingGraphNodePlacement<TestLayoutSchema> {
-    try FlowingGraphNodePlacement(
+    let sourceSize = try XCTUnwrap(input.size(for: "source"))
+    let targetSize = try XCTUnwrap(input.size(for: "target"))
+    return try FlowingGraphNodePlacement(
       input: input,
       nodeFrames: [
         FlowingGraphNodeFrame(
           nodeID: "source",
-          frame: CGRect(origin: .zero, size: input.size(for: "source"))
+          frame: CGRect(origin: .zero, size: sourceSize)
         ),
         FlowingGraphNodeFrame(
           nodeID: "target",
           frame: CGRect(
             origin: CGPoint(x: 160, y: 0),
-            size: input.size(for: "target")
+            size: targetSize
           )
         ),
       ],
@@ -149,19 +182,21 @@ private struct TestEdgeRouter: FlowingGraphEdgeRoutingStrategy {
     for input: FlowingGraphLayoutInput<TestLayoutSchema>,
     placement: FlowingGraphNodePlacement<TestLayoutSchema>
   ) throws -> [FlowingGraphLayoutEdgeRoute<TestLayoutSchema>] {
-    input.topology.edges.map { edge in
+    let sourceFrame = try XCTUnwrap(placement.frame(for: "source"))
+    let targetFrame = try XCTUnwrap(placement.frame(for: "target"))
+    return input.topology.edges.map { edge in
       FlowingGraphLayoutEdgeRoute(
         edgeID: edge.id,
         route: FlowingGraphEdgeRoute(
           start: CGPoint(
-            x: placement.frame(for: "source").maxX,
-            y: placement.frame(for: "source").midY
+            x: sourceFrame.maxX,
+            y: sourceFrame.midY
           ),
           segments: [
             .line(
               end: CGPoint(
-                x: placement.frame(for: "target").minX,
-                y: placement.frame(for: "target").midY
+                x: targetFrame.minX,
+                y: targetFrame.midY
               )
             )
           ]
@@ -175,7 +210,7 @@ private struct TestCustomStrategy: FlowingGraphLayoutStrategy {
   typealias Schema = TestLayoutSchema
 
   let identity = FlowingLayoutPipelineIdentity(
-    components: [FlowingLayoutComponentIdentity()]
+    component: FlowingLayoutComponentIdentity()
   )
 
   func layout(

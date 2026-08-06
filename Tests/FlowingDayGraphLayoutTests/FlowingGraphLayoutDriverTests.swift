@@ -89,7 +89,7 @@ final class FlowingGraphLayoutDriverTests: XCTestCase {
 
   func testDriverRejectsAResultProducedForAnotherInput() async throws {
     let strategyIdentity = FlowingLayoutPipelineIdentity(
-      components: [FlowingLayoutComponentIdentity()]
+      component: FlowingLayoutComponentIdentity()
     )
     let foreignInput = try FlowingGraphLayoutResolution.input(
       topology: try topology(snapshotID: .init()),
@@ -146,7 +146,7 @@ private struct ImmediateLayoutStrategy: FlowingGraphLayoutStrategy {
   typealias Schema = DriverSchema
 
   let identity = FlowingLayoutPipelineIdentity(
-    components: [FlowingLayoutComponentIdentity()]
+    component: FlowingLayoutComponentIdentity()
   )
 
   func layout(
@@ -160,7 +160,7 @@ private struct GatedLayoutStrategy: FlowingGraphLayoutStrategy {
   typealias Schema = DriverSchema
 
   let identity = FlowingLayoutPipelineIdentity(
-    components: [FlowingLayoutComponentIdentity()]
+    component: FlowingLayoutComponentIdentity()
   )
   let gate: TestLayoutGate
 
@@ -223,7 +223,10 @@ private final class TestLayoutGate: @unchecked Sendable {
 private func makeResult(
   input: FlowingGraphLayoutInput<DriverSchema>
 ) throws -> FlowingGraphLayoutResult<DriverSchema> {
-  let frame = CGRect(origin: .zero, size: input.size(for: "node"))
+  let frame = CGRect(
+    origin: .zero,
+    size: try XCTUnwrap(input.size(for: "node"))
+  )
   let placement = try FlowingGraphNodePlacement(
     input: input,
     nodeFrames: [FlowingGraphNodeFrame(nodeID: "node", frame: frame)],
