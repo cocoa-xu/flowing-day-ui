@@ -156,28 +156,41 @@ public enum FlowingGraphExportSliceResolver {
     }
 
     let topology = content.layoutInput.topology
+    let traversalRoots = Array(topology.nodeIDs.filter(rootNodeIDs.contains).reversed())
+    func closure(
+      neighbors: (LocalElementID) -> [LocalElementID]
+    ) -> Set<LocalElementID> {
+      var visited = rootNodeIDs
+      var stack = traversalRoots
+      while let nodeID = stack.popLast() {
+        for relatedNodeID in neighbors(nodeID).reversed()
+        where visited.insert(relatedNodeID).inserted {
+          stack.append(relatedNodeID)
+        }
+      }
+      return visited
+    }
+
     var visitedNodeIDs = rootNodeIDs
-    var stack = Array(topology.nodeIDs.filter(rootNodeIDs.contains).reversed())
-    while let nodeID = stack.popLast() {
-      var relatedNodeIDs: [LocalElementID] = []
-      if inclusion.contains(.directedAncestors) {
-        relatedNodeIDs.append(contentsOf: topology.directedPredecessorNodeIDs(of: nodeID))
-      }
-      if inclusion.contains(.directedDescendants) {
-        relatedNodeIDs.append(contentsOf: topology.directedSuccessorNodeIDs(of: nodeID))
-      }
-      if inclusion.contains(.containingAncestors),
-        let containerID = topology.containerNodeID(of: nodeID)
-      {
-        relatedNodeIDs.append(containerID)
-      }
-      if inclusion.contains(.containedDescendants) {
-        relatedNodeIDs.append(contentsOf: topology.memberNodeIDs(of: nodeID))
-      }
-      for relatedNodeID in relatedNodeIDs.reversed()
-      where visitedNodeIDs.insert(relatedNodeID).inserted {
-        stack.append(relatedNodeID)
-      }
+    if inclusion.contains(.directedAncestors) {
+      visitedNodeIDs.formUnion(
+        closure(neighbors: topology.directedPredecessorNodeIDs)
+      )
+    }
+    if inclusion.contains(.directedDescendants) {
+      visitedNodeIDs.formUnion(
+        closure(neighbors: topology.directedSuccessorNodeIDs)
+      )
+    }
+    if inclusion.contains(.containingAncestors) {
+      visitedNodeIDs.formUnion(
+        closure { topology.containerNodeID(of: $0).map { [$0] } ?? [] }
+      )
+    }
+    if inclusion.contains(.containedDescendants) {
+      visitedNodeIDs.formUnion(
+        closure(neighbors: topology.memberNodeIDs)
+      )
     }
 
     var includedNodeIDs = visitedNodeIDs

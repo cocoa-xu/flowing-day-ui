@@ -86,6 +86,27 @@ final class FlowingGraphExportSliceTests: XCTestCase {
     XCTAssertTrue(slice.edgeLocalIDs.isEmpty)
   }
 
+  func testAncestorAndDescendantClosuresDoNotIncludeSiblingBranches() throws {
+    let content = try makeFlatContent()
+    let leafID = try nodeElementID("leaf", in: content)
+
+    let slice = try FlowingGraphExportSliceResolver.resolve(
+      content: content,
+      scope: .selection(
+        [leafID],
+        inclusion: [
+          .selectedElements,
+          .directedAncestors,
+          .directedDescendants,
+          .connectingEdges,
+        ]
+      )
+    )
+
+    XCTAssertEqual(nodeValues(in: slice, content: content), ["root", "branch", "leaf"])
+    XCTAssertEqual(edgeValues(in: slice, content: content), ["root-branch", "branch-leaf"])
+  }
+
   func testUndirectedEdgesDoNotInventDirectedAncestors() throws {
     let content = try makeFlatContent()
     let detachedID = try nodeElementID("detached", in: content)
