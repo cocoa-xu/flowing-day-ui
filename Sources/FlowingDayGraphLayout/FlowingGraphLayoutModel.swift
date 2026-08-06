@@ -42,6 +42,8 @@ public struct FlowingLayoutPipelineStageRole: RawRepresentable, Hashable, Sendab
   public static let layerAssignment = Self(rawValue: "layer-assignment")
   public static let layerOrdering = Self(rawValue: "layer-ordering")
   public static let coordinateAssignment = Self(rawValue: "coordinate-assignment")
+  public static let levelLayout = Self(rawValue: "level-layout")
+  public static let containerGeometry = Self(rawValue: "container-geometry")
   public static let postprocessing = Self(rawValue: "postprocessing")
   public static let postprocessor = Self(rawValue: "postprocessor")
   public static let edgeRouting = Self(rawValue: "edge-routing")
