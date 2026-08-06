@@ -3,6 +3,38 @@ import XCTest
 @testable import FlowingDayGraphCanvasExample
 
 final class MetalCanvasSpikeTests: XCTestCase {
+  func testConfigurationUsesRequestedNodeCountAndPanBenchmark() {
+    let configuration = MetalCanvasSpikeConfiguration(
+      arguments: [
+        "example",
+        "--canvas-metal-node-count", "10000",
+        "--canvas-metal-pan-benchmark",
+      ]
+    )
+
+    XCTAssertEqual(configuration.nodeCount, 10_000)
+    XCTAssertEqual(configuration.benchmarkInteraction, .pan)
+  }
+
+  func testConfigurationEnablesZoomBenchmark() {
+    let configuration = MetalCanvasSpikeConfiguration(
+      arguments: ["example", "--canvas-metal-zoom-benchmark"]
+    )
+
+    XCTAssertEqual(configuration.benchmarkInteraction, .zoom)
+  }
+
+  func testConfigurationRejectsInvalidNodeCounts() {
+    for value in ["0", "-1", "not-a-number"] {
+      let configuration = MetalCanvasSpikeConfiguration(
+        arguments: ["example", "--canvas-metal-node-count", value]
+      )
+
+      XCTAssertEqual(configuration.nodeCount, MetalCanvasSpikeConfiguration.defaultNodeCount)
+      XCTAssertEqual(configuration.benchmarkInteraction, .none)
+    }
+  }
+
   func testCameraPanPreservesFractionalInput() {
     var camera = MetalCanvasSpikeCamera(
       zoom: 1.25,

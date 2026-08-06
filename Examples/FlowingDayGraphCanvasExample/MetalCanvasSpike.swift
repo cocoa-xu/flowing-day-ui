@@ -2,6 +2,46 @@ import AppKit
 import MetalKit
 import SwiftUI
 
+enum MetalCanvasSpikeBenchmarkInteraction: Equatable {
+  case none
+  case pan
+  case zoom
+}
+
+struct MetalCanvasSpikeConfiguration: Equatable {
+  static let defaultNodeCount = 500
+
+  let nodeCount: Int
+  let benchmarkInteraction: MetalCanvasSpikeBenchmarkInteraction
+
+  init(arguments: [String]) {
+    nodeCount = Self.positiveInteger(
+      following: "--canvas-metal-node-count",
+      in: arguments
+    ) ?? Self.defaultNodeCount
+    if arguments.contains("--canvas-metal-zoom-benchmark") {
+      benchmarkInteraction = .zoom
+    } else if arguments.contains("--canvas-metal-pan-benchmark") {
+      benchmarkInteraction = .pan
+    } else {
+      benchmarkInteraction = .none
+    }
+  }
+
+  private static func positiveInteger(
+    following option: String,
+    in arguments: [String]
+  ) -> Int? {
+    guard let optionIndex = arguments.firstIndex(of: option) else { return nil }
+    let valueIndex = arguments.index(after: optionIndex)
+    guard valueIndex < arguments.endIndex,
+      let value = Int(arguments[valueIndex]),
+      value > 0
+    else { return nil }
+    return value
+  }
+}
+
 enum MetalCanvasSpikeTool: Equatable {
   case select
   case pan
@@ -171,13 +211,17 @@ final class MetalCanvasSpikeController: ObservableObject {
 @MainActor
 struct MetalCanvasSpikeView: View {
   @StateObject private var controller = MetalCanvasSpikeController()
+  let configuration: MetalCanvasSpikeConfiguration
 
   var body: some View {
     ZStack(alignment: .topLeading) {
-      MetalCanvasSpikeRepresentable(controller: controller)
+      MetalCanvasSpikeRepresentable(
+        controller: controller,
+        configuration: configuration
+      )
 
       HStack(spacing: 10) {
-        Label("500 GPU Nodes", systemImage: "cpu")
+        Label("\(configuration.nodeCount) GPU Nodes", systemImage: "cpu")
         Text("\(controller.framesPerSecond) FPS")
           .monospacedDigit()
         Text(String(format: "%.2f ms GPU", controller.gpuFrameTimeMilliseconds))
@@ -220,7 +264,11 @@ struct MetalCanvasSpikeView: View {
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
       .padding(20)
     }
-    .background(MetalCanvasSpikeWindowAttachment())
+    .background(
+      MetalCanvasSpikeWindowAttachment(
+        prefersBuiltInDisplay: configuration.benchmarkInteraction != .none
+      )
+    )
   }
 
   @ViewBuilder
@@ -250,9 +298,13 @@ struct MetalCanvasSpikeView: View {
 @MainActor
 private struct MetalCanvasSpikeRepresentable: NSViewRepresentable {
   let controller: MetalCanvasSpikeController
+  let configuration: MetalCanvasSpikeConfiguration
 
   func makeNSView(context: Context) -> MetalCanvasSpikeMTKView {
-    let view = MetalCanvasSpikeMTKView(controller: controller)
+    let view = MetalCanvasSpikeMTKView(
+      controller: controller,
+      configuration: configuration
+    )
     controller.attach(view)
     return view
   }
@@ -278,7 +330,8 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
   private let nodePipeline: any MTLRenderPipelineState
   private let nodeBuffers: [any MTLBuffer]
   private let edgeBuffers: [any MTLBuffer]
-  private var scene = MetalCanvasSpikeScene.make(nodeCount: 500)
+  private let configuration: MetalCanvasSpikeConfiguration
+  private var scene: MetalCanvasSpikeScene
   private var camera = MetalCanvasSpikeCamera()
   private var selectedNodeIDs = Set<Int>()
   private var hoveredNodeID: Int?
@@ -295,14 +348,21 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
   private var frameCountStart = CACurrentMediaTime()
   private let gpuFrameStats = MetalCanvasGPUFrameStats()
   private var trackingArea: NSTrackingArea?
+  private var motionBenchmarkBaseCamera = MetalCanvasSpikeCamera()
+  private let motionBenchmarkStartTime = CACurrentMediaTime()
 
-  init(controller: MetalCanvasSpikeController) {
+  init(
+    controller: MetalCanvasSpikeController,
+    configuration: MetalCanvasSpikeConfiguration
+  ) {
     guard let device = MTLCreateSystemDefaultDevice(),
       let commandQueue = device.makeCommandQueue()
     else {
       preconditionFailure("Metal is unavailable")
     }
     self.controller = controller
+    self.configuration = configuration
+    scene = .make(nodeCount: configuration.nodeCount)
     self.commandQueue = commandQueue
 
     do {
@@ -331,8 +391,10 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
       preconditionFailure("Metal pipeline creation failed: \(error)")
     }
 
-    let nodeBufferLength = MemoryLayout<MetalCanvasNodeInstance>.stride * 501
-    let edgeBufferLength = MemoryLayout<MetalCanvasEdgeInstance>.stride * 499
+    let nodeBufferLength = MemoryLayout<MetalCanvasNodeInstance>.stride
+      * (configuration.nodeCount + 1)
+    let edgeBufferLength = MemoryLayout<MetalCanvasEdgeInstance>.stride
+      * max(configuration.nodeCount - 1, 1)
     nodeBuffers = (0..<3).map { _ in
       device.makeBuffer(length: nodeBufferLength, options: .storageModeShared)!
     }
@@ -552,10 +614,11 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
   func fitContent() {
     guard bounds.width > 0, bounds.height > 0 else { return }
     camera.fit(scene.contentBounds, in: bounds.size)
+    motionBenchmarkBaseCamera = camera
   }
 
   func resetScene() {
-    scene = .make(nodeCount: 500)
+    scene = .make(nodeCount: configuration.nodeCount)
     selectedNodeIDs.removeAll()
     hoveredNodeID = nil
     marqueeWorldRect = nil
@@ -573,6 +636,7 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
       let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor)
     else { return }
 
+    updateMotionBenchmarkCamera()
     frameIndex = (frameIndex + 1) % nodeBuffers.count
     let nodeInstances = makeNodeInstances()
     let edgeInstances = makeEdgeInstances()
@@ -694,6 +758,26 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
 
   private func publishSelection() {
     controller.updateSelectionCount(selectedNodeIDs.count)
+  }
+
+  private func updateMotionBenchmarkCamera() {
+    guard configuration.benchmarkInteraction != .none else { return }
+    let elapsed = CACurrentMediaTime() - motionBenchmarkStartTime
+    if configuration.benchmarkInteraction == .zoom {
+      let viewportAnchor = CGPoint(x: bounds.midX, y: bounds.midY)
+      let worldAnchor = motionBenchmarkBaseCamera.worldPoint(for: viewportAnchor)
+      let zoomFactor = 1.625 + sin(elapsed * 1.2) * 0.625
+      camera.zoom = min(motionBenchmarkBaseCamera.zoom * zoomFactor, 3)
+      camera.offset = CGSize(
+        width: viewportAnchor.x - worldAnchor.x * camera.zoom,
+        height: viewportAnchor.y - worldAnchor.y * camera.zoom
+      )
+      return
+    }
+    camera.offset = CGSize(
+      width: motionBenchmarkBaseCamera.offset.width + sin(elapsed * 1.7) * 72,
+      height: motionBenchmarkBaseCamera.offset.height + cos(elapsed * 1.3) * 48
+    )
   }
 
   private func recordFrame() {
@@ -944,16 +1028,34 @@ private final class MetalCanvasGPUFrameStats: @unchecked Sendable {
 }
 
 private struct MetalCanvasSpikeWindowAttachment: NSViewRepresentable {
+  let prefersBuiltInDisplay: Bool
+
   func makeNSView(context: Context) -> NSView {
-    WindowView()
+    WindowView(prefersBuiltInDisplay: prefersBuiltInDisplay)
   }
 
   func updateNSView(_ nsView: NSView, context: Context) {}
 
   private final class WindowView: NSView {
+    private let prefersBuiltInDisplay: Bool
+
+    init(prefersBuiltInDisplay: Bool) {
+      self.prefersBuiltInDisplay = prefersBuiltInDisplay
+      super.init(frame: .zero)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+      fatalError()
+    }
+
     override func viewDidMoveToWindow() {
       super.viewDidMoveToWindow()
-      guard let window, let screen = NSScreen.screens.first else { return }
+      guard let window,
+        let screen = prefersBuiltInDisplay
+          ? Self.builtInScreen ?? NSScreen.main
+          : window.screen ?? NSScreen.main
+      else { return }
       window.title = "Metal Canvas Spike"
       let visibleFrame = screen.visibleFrame
       window.setFrameOrigin(
@@ -964,6 +1066,14 @@ private struct MetalCanvasSpikeWindowAttachment: NSViewRepresentable {
       )
       window.makeKeyAndOrderFront(nil)
       NSApplication.shared.activate(ignoringOtherApps: true)
+    }
+
+    private static var builtInScreen: NSScreen? {
+      NSScreen.screens.first { screen in
+        guard let screenNumber = screen.deviceDescription[.init("NSScreenNumber")] as? NSNumber
+        else { return false }
+        return CGDisplayIsBuiltin(screenNumber.uint32Value) != 0
+      }
     }
   }
 }

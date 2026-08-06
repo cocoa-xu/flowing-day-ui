@@ -3,6 +3,9 @@ import SwiftUI
 
 @main
 struct FlowingDayGraphCanvasExampleApp: App {
+  private let metalSpikeConfiguration = MetalCanvasSpikeConfiguration(
+    arguments: ProcessInfo.processInfo.arguments
+  )
   private let runsPerformanceBenchmark = ProcessInfo.processInfo.arguments.contains(
     "--canvas-performance-benchmark"
   )
@@ -16,7 +19,7 @@ struct FlowingDayGraphCanvasExampleApp: App {
   var body: some Scene {
     WindowGroup("Graph Canvas") {
       if runsMetalSpike {
-        MetalCanvasSpikeView()
+        MetalCanvasSpikeView(configuration: metalSpikeConfiguration)
           .frame(minWidth: 960, minHeight: 640)
           .preferredColorScheme(.light)
       } else if runsPerformancePreview {
