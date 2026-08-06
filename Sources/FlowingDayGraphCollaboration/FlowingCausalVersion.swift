@@ -5,7 +5,7 @@ public enum FlowingCausalRelation: Hashable, Sendable {
   case concurrent
 }
 
-public struct FlowingCausalVersionEntry: Equatable, Sendable {
+public struct FlowingCausalVersionEntry: Hashable, Sendable {
   public let replicaID: FlowingReplicaID
   public let counter: UInt64
 
@@ -15,7 +15,7 @@ public struct FlowingCausalVersionEntry: Equatable, Sendable {
   }
 }
 
-public struct FlowingCausalVersion: Equatable, Sendable {
+public struct FlowingCausalVersion: Hashable, Sendable {
   private var counters: [FlowingReplicaID: UInt64]
 
   public init(_ counters: [FlowingReplicaID: UInt64] = [:]) {
@@ -61,6 +61,13 @@ public struct FlowingCausalVersion: Equatable, Sendable {
       result.record(replicaID: entry.replicaID, counter: entry.counter)
     }
     return result
+  }
+
+  public func hash(into hasher: inout Hasher) {
+    hasher.combine(counters.count)
+    for entry in entries {
+      hasher.combine(entry)
+    }
   }
 
   mutating func record(_ operationID: FlowingCollaborationOperationID) {

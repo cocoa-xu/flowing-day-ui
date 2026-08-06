@@ -226,6 +226,45 @@ public struct FlowingGraphCollaborationState<Schema: FlowingGraphCollaborationSc
     }
   }
 
+  public func definitionPosition(
+    id: Schema.GraphID
+  ) -> FlowingCollaborationSequencePosition? {
+    definitionPositions[id]
+  }
+
+  public func entryPointPosition(
+    id: Schema.EntryPointID
+  ) -> FlowingCollaborationSequencePosition? {
+    entryPointPositions[id]
+  }
+
+  public func subgraphLinkPosition(
+    id: Schema.LinkID
+  ) -> FlowingCollaborationSequencePosition? {
+    subgraphLinkPositions[id]
+  }
+
+  public func nodePosition(
+    graphID: Schema.GraphID,
+    nodeID: Schema.GraphSchema.NodeID
+  ) -> FlowingCollaborationSequencePosition? {
+    nodePositions[graphID]?[nodeID]
+  }
+
+  public func portPosition(
+    graphID: Schema.GraphID,
+    key: FlowingGraphPortKey<Schema.GraphSchema>
+  ) -> FlowingCollaborationSequencePosition? {
+    portPositions[graphID]?[key]
+  }
+
+  public func edgePosition(
+    graphID: Schema.GraphID,
+    edgeID: Schema.GraphSchema.EdgeID
+  ) -> FlowingCollaborationSequencePosition? {
+    edgePositions[graphID]?[edgeID]
+  }
+
   private static func initialPositions<ID: Hashable & Sendable>(
     _ ids: [ID]
   ) throws -> [ID: FlowingCollaborationSequencePosition] {
@@ -234,20 +273,31 @@ public struct FlowingGraphCollaborationState<Schema: FlowingGraphCollaborationSc
     )
     var result: [ID: FlowingCollaborationSequencePosition] = [:]
     result.reserveCapacity(ids.count)
-    var lower: FlowingCollaborationSequencePosition?
     for (index, id) in ids.enumerated() {
       let counter = UInt64(index) + 1
-      let position = try FlowingCollaborationSequence.position(
-        between: lower,
-        and: nil,
+      let position = try FlowingCollaborationSequencePosition(
+        components: initialPositionComponents(rank: counter),
         discriminator: .init(
           operationID: .init(replicaID: replicaID, counter: counter),
           commandIndex: 0
         )
       )
       result[id] = position
-      lower = position
     }
     return result
+  }
+
+  private static func initialPositionComponents(rank: UInt64) -> [UInt16] {
+    let wordWidth = UInt16.bitWidth
+    var components = stride(
+      from: UInt64.bitWidth - wordWidth,
+      through: 0,
+      by: -wordWidth
+    ).map { shift in
+      UInt16(truncatingIfNeeded: rank >> UInt64(shift))
+    }
+    let canonicalTerminator: UInt16 = 1
+    components.append(canonicalTerminator)
+    return components
   }
 }

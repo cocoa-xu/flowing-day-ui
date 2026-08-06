@@ -10,6 +10,11 @@ let package = Package(
   products: [
     .library(name: "FlowingDayCanvas", targets: ["FlowingDayCanvas"]),
     .library(name: "FlowingDayCanvasExport", targets: ["FlowingDayCanvasExport"]),
+    .library(name: "FlowingDayGraphAutomation", targets: ["FlowingDayGraphAutomation"]),
+    .library(
+      name: "FlowingDayGraphCanvasAutomation",
+      targets: ["FlowingDayGraphCanvasAutomation"]
+    ),
     .library(name: "FlowingDayGraphCanvas", targets: ["FlowingDayGraphCanvas"]),
     .library(
       name: "FlowingDayGraphCollaboration",
@@ -40,12 +45,29 @@ let package = Package(
       ]
     ),
     .target(
+      name: "FlowingDayGraphAutomation",
+      dependencies: [
+        "FlowingDayGraphCollaboration",
+        "FlowingDayGraphComposition",
+        "FlowingDayGraphCore",
+      ]
+    ),
+    .target(
       name: "FlowingDayGraphCanvas",
       dependencies: [
         "FlowingDayCanvas",
         "FlowingDayGraphComposition",
         "FlowingDayGraphCore",
         "FlowingDayGraphLayout",
+      ]
+    ),
+    .target(
+      name: "FlowingDayGraphCanvasAutomation",
+      dependencies: [
+        "FlowingDayGraphAutomation",
+        "FlowingDayGraphCanvas",
+        "FlowingDayGraphComposition",
+        "FlowingDayGraphCore",
       ]
     ),
     .target(
@@ -96,11 +118,29 @@ let package = Package(
       ]
     ),
     .testTarget(
+      name: "FlowingDayGraphAutomationTests",
+      dependencies: [
+        "FlowingDayGraphAutomation",
+        "FlowingDayGraphCollaboration",
+        "FlowingDayGraphComposition",
+        "FlowingDayGraphCore",
+      ]
+    ),
+    .testTarget(
       name: "FlowingDayGraphCanvasTests",
       dependencies: [
         "FlowingDayCanvas",
         "FlowingDayGraphCanvas",
         "FlowingDayGraphCanvasExample",
+      ]
+    ),
+    .testTarget(
+      name: "FlowingDayGraphCanvasAutomationTests",
+      dependencies: [
+        "FlowingDayGraphCanvasAutomation",
+        "FlowingDayGraphCanvas",
+        "FlowingDayGraphComposition",
+        "FlowingDayGraphCore",
       ]
     ),
     .testTarget(

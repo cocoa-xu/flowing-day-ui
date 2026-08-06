@@ -32,7 +32,7 @@ public enum FlowingCollaborationOrigin: Hashable, Sendable {
   case unspecified
 }
 
-public struct FlowingCollaborationProvenance: Equatable, Sendable {
+public struct FlowingCollaborationProvenance: Hashable, Sendable {
   public let origin: FlowingCollaborationOrigin
   public let originLabel: String?
   public let correlationID: UUID?
