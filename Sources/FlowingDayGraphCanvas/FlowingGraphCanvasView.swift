@@ -44,6 +44,8 @@ public struct FlowingGraphCanvas<
   @State private var canvasRequest: FlowingCanvasRequest?
   @State private var handledCommandID: UUID?
   @State private var rejectedNodeDragID: ElementID?
+  @FocusState private var hasKeyboardFocus: Bool
+  @AccessibilityFocusState private var accessibilityFocusedNodeID: ElementID?
 
   public init(
     content: FlowingGraphCanvasContent<Schema>,
@@ -158,6 +160,13 @@ public struct FlowingGraphCanvas<
       session.transientNodeDrag = nil
       rejectedNodeDragID = nil
     }
+    .onChange(of: accessibilityFocusedNodeID) { nodeID in
+      guard configuration.accessibility.isEnabled, let nodeID else { return }
+      session.focusedElementID = nodeID
+    }
+    .focusable(configuration.keyboardNavigation.isEnabled)
+    .focused($hasKeyboardFocus)
+    .onMoveCommand(perform: moveKeyboardFocus)
   }
 
   private func graphLayer(context: FlowingCanvasRenderContext) -> some View {
@@ -211,6 +220,7 @@ public struct FlowingGraphCanvas<
         renderedFrame: renderedFrame,
         renderScale: context.zoom,
         isSelected: session.selection.contains(elementID),
+        isFocused: session.focusedElementID == elementID,
         isHovered: session.hoveredElementID == elementID,
         isBeingDragged: session.transientNodeDrag?.nodeIDs.contains(elementID) == true,
         capabilities: capabilities,
@@ -228,7 +238,15 @@ public struct FlowingGraphCanvas<
         .onHover { isHovering in
           setHovered(elementID, isHovering: isHovering)
         }
-        .accessibilityElement(children: .contain)
+        .modifier(
+          FlowingGraphCanvasNodeAccessibility(
+            isEnabled: configuration.accessibility.isEnabled,
+            isSelected: session.selection.contains(elementID),
+            providesSelectionAction: configuration.accessibility.providesSelectionAction,
+            select: { select(elementID, mode: .replace) }
+          )
+        )
+        .accessibilityFocused($accessibilityFocusedNodeID, equals: elementID)
         .accessibilitySortPriority(
           Double(
             content.presentation.nodes.count - (content.nodePresentationOrder(for: localID) ?? 0)
@@ -415,6 +433,7 @@ public struct FlowingGraphCanvas<
             session.selection = [elementID]
           }
           session.focusedElementID = elementID
+          hasKeyboardFocus = true
           session.transientNodeDrag = FlowingGraphCanvasTransientNodeDrag(
             nodeID: elementID,
             nodeIDs: admittedNodeIDs,
@@ -463,6 +482,7 @@ public struct FlowingGraphCanvas<
   }
 
   private func commitMarquee(_ context: FlowingCanvasDragContext) {
+    hasKeyboardFocus = true
     defer { session.marquee = nil }
     let distance = hypot(context.translation.width, context.translation.height)
     guard distance >= configuration.marqueeMinimumDistance else { return }
@@ -538,7 +558,80 @@ public struct FlowingGraphCanvas<
       command = .toggle([elementID])
     }
     FlowingGraphCanvasSessionReducer.apply(command, to: &session.selection)
+    hasKeyboardFocus = true
     session.focusedElementID = elementID
+  }
+
+  private func moveKeyboardFocus(_ direction: MoveCommandDirection) {
+    guard configuration.keyboardNavigation.isEnabled, session.tool == .select else {
+      return
+    }
+    let candidates = content.presentation.nodes.compactMap {
+      node -> FlowingGraphCanvasNavigationCandidate<ElementID>? in
+      guard nodeCapabilities.capabilities(for: node.id).contains(.keyboardNavigable),
+        let frame = resolvedNodeFrame(node.localID),
+        let order = content.nodePresentationOrder(for: node.localID)
+      else {
+        return nil
+      }
+      return FlowingGraphCanvasNavigationCandidate(
+        id: node.id,
+        frame: frame,
+        presentationOrder: order
+      )
+    }
+    guard !candidates.isEmpty else { return }
+    let current =
+      candidates.first { $0.id == session.focusedElementID }
+      ?? candidates.first { session.selection.contains($0.id) }
+    guard let current else {
+      focusNode(candidates[0])
+      return
+    }
+    let navigationDirection: FlowingGraphCanvasNavigationDirection
+    switch direction {
+    case .up:
+      navigationDirection = .up
+    case .down:
+      navigationDirection = .down
+    case .left:
+      navigationDirection = .left
+    case .right:
+      navigationDirection = .right
+    @unknown default:
+      return
+    }
+    guard
+      let nodeID = FlowingGraphCanvasKeyboardNavigator.nextNodeID(
+        from: current,
+        direction: navigationDirection,
+        candidates: candidates
+      ), let candidate = candidates.first(where: { $0.id == nodeID })
+    else {
+      return
+    }
+    focusNode(candidate)
+  }
+
+  private func focusNode(
+    _ candidate: FlowingGraphCanvasNavigationCandidate<ElementID>
+  ) {
+    session.focusedElementID = candidate.id
+    accessibilityFocusedNodeID = candidate.id
+    if configuration.keyboardNavigation.selectionBehavior == .replace {
+      session.selection = [candidate.id]
+    }
+    guard configuration.keyboardNavigation.keepsFocusedNodeVisible,
+      !session.viewport.visibleWorldRect.contains(candidate.frame)
+    else {
+      return
+    }
+    canvasRequest = FlowingCanvasRequest(
+      action: .focus(
+        rect: candidate.frame,
+        zoom: session.viewport.transform.zoom
+      )
+    )
   }
 
   private func setHovered(_ elementID: ElementID, isHovering: Bool) {
@@ -874,6 +967,34 @@ private func squaredDistance(from point: CGPoint, to rect: CGRect) -> CGFloat {
   let dx = max(rect.minX - point.x, 0, point.x - rect.maxX)
   let dy = max(rect.minY - point.y, 0, point.y - rect.maxY)
   return dx * dx + dy * dy
+}
+
+private struct FlowingGraphCanvasNodeAccessibility: ViewModifier {
+  let isEnabled: Bool
+  let isSelected: Bool
+  let providesSelectionAction: Bool
+  let select: () -> Void
+
+  @ViewBuilder
+  func body(content: Content) -> some View {
+    if isEnabled {
+      if providesSelectionAction {
+        content
+          .accessibilityElement(children: .contain)
+          .accessibilityAddTraits(isSelected ? .isSelected : [])
+          .accessibilityAction {
+            select()
+          }
+      } else {
+        content
+          .accessibilityElement(children: .contain)
+          .accessibilityAddTraits(isSelected ? .isSelected : [])
+      }
+    } else {
+      content
+        .accessibilityHidden(true)
+    }
+  }
 }
 
 extension FlowingGraphCanvas where PortContent == EmptyView {

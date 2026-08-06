@@ -15,6 +15,8 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
   public let nodeDraggingMode: FlowingGraphCanvasNodeDraggingMode
   public let snapping: FlowingGraphCanvasSnappingConfiguration
   public let allowsArrangementCommands: Bool
+  public let keyboardNavigation: FlowingGraphCanvasKeyboardNavigationConfiguration
+  public let accessibility: FlowingGraphCanvasAccessibilityConfiguration
 
   public init(
     canvas: FlowingCanvasConfiguration = .init(),
@@ -22,7 +24,9 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
     marqueeMinimumDistance: CGFloat = 2,
     nodeDraggingMode: FlowingGraphCanvasNodeDraggingMode = .single,
     snapping: FlowingGraphCanvasSnappingConfiguration = .disabled,
-    allowsArrangementCommands: Bool = true
+    allowsArrangementCommands: Bool = true,
+    keyboardNavigation: FlowingGraphCanvasKeyboardNavigationConfiguration = .standard,
+    accessibility: FlowingGraphCanvasAccessibilityConfiguration = .standard
   ) {
     precondition(edgeRenderPadding >= 0 && edgeRenderPadding.isFinite)
     precondition(marqueeMinimumDistance >= 0 && marqueeMinimumDistance.isFinite)
@@ -32,6 +36,8 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
     self.nodeDraggingMode = nodeDraggingMode
     self.snapping = snapping
     self.allowsArrangementCommands = allowsArrangementCommands
+    self.keyboardNavigation = keyboardNavigation
+    self.accessibility = accessibility
   }
 }
 
@@ -87,6 +93,7 @@ public struct FlowingGraphCanvasNodeContext<Schema: FlowingGraphCanvasSchema> {
   public let renderedFrame: CGRect
   public let renderScale: CGFloat
   public let isSelected: Bool
+  public let isFocused: Bool
   public let isHovered: Bool
   public let isBeingDragged: Bool
   public let capabilities: FlowingGraphCanvasNodeCapabilities
@@ -100,6 +107,7 @@ public struct FlowingGraphCanvasNodeContext<Schema: FlowingGraphCanvasSchema> {
     renderedFrame: CGRect,
     renderScale: CGFloat,
     isSelected: Bool,
+    isFocused: Bool = false,
     isHovered: Bool,
     isBeingDragged: Bool,
     capabilities: FlowingGraphCanvasNodeCapabilities = .standard,
@@ -112,6 +120,7 @@ public struct FlowingGraphCanvasNodeContext<Schema: FlowingGraphCanvasSchema> {
     self.renderedFrame = renderedFrame
     self.renderScale = renderScale
     self.isSelected = isSelected
+    self.isFocused = isFocused
     self.isHovered = isHovered
     self.isBeingDragged = isBeingDragged
     self.capabilities = capabilities
