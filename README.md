@@ -152,6 +152,38 @@ FlowingCanvas(
 World content, floating panels, and viewport tools remain independent view builders.
 The canvas does not own graph layout, selection semantics, node design, or export.
 
+## Graph canvas interaction
+
+`FlowingGraphCanvas` combines a graph presentation, an exact layout result, and
+session-owned interaction state without mutating the application document. Node drag
+and arrangement results are emitted as intents pinned to both presentation and layout
+identity; the consumer validates and commits them.
+
+Node movement has three independent policy layers:
+
+- `FlowingGraphCanvasNodeDraggingMode` controls whether dragging is disabled, single-node,
+  or multi-node.
+- `FlowingGraphCanvasNodeCapabilityMap` supplies defaults plus sparse per-node overrides.
+- `admitNodeDrag` receives one stable batch at gesture start and can allow all candidates,
+  deny the gesture, or admit a subset.
+
+The callback is not evaluated from `body` or on each drag frame. Snapping queries the
+spatial index around the moving bounds and has an explicit candidate budget.
+
+```swift
+let configuration = FlowingGraphCanvasConfiguration(
+    nodeDraggingMode: .multiple,
+    snapping: .standard,
+    keyboardNavigation: .standard,
+    accessibility: .standard
+)
+```
+
+Snapping is disabled by default so adopting the graph canvas does not change placement
+behavior. Keyboard navigation and node accessibility are enabled by default and can be
+disabled independently. Align and distribute operations arrive through the session
+command channel and emit translations through the same intent boundary.
+
 Section footers align with the title and caption text inside their rows by default.
 
 Pages can use distinct navigation and header artwork when the larger page heading needs more visual identity:
