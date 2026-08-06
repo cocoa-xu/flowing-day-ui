@@ -477,7 +477,11 @@ private struct FlowingGraphPresentationBuilder<Schema: FlowingGraphCompositionSc
       nodes.append(
         FlowingGraphPresentationNode(
           id: .source(address: address, occurrenceID: nil),
-          localID: .source(instanceHandle: instance.handle, elementID: .node(node.id)),
+          localID: .source(
+            instanceHandle: instance.handle,
+            elementID: .node(node.id),
+            occurrenceID: nil
+          ),
           address: address,
           value: node.value
         )
@@ -491,7 +495,11 @@ private struct FlowingGraphPresentationBuilder<Schema: FlowingGraphCompositionSc
       ports.append(
         FlowingGraphPresentationPort(
           id: .source(address: address, occurrenceID: nil),
-          localID: .source(instanceHandle: instance.handle, elementID: .port(port.key)),
+          localID: .source(
+            instanceHandle: instance.handle,
+            elementID: .port(port.key),
+            occurrenceID: nil
+          ),
           address: address,
           value: port.value
         )
@@ -505,7 +513,11 @@ private struct FlowingGraphPresentationBuilder<Schema: FlowingGraphCompositionSc
       edges.append(
         FlowingGraphPresentationEdge(
           id: .source(address: address, occurrenceID: nil),
-          localID: .source(instanceHandle: instance.handle, elementID: .edge(edge.id)),
+          localID: .source(
+            instanceHandle: instance.handle,
+            elementID: .edge(edge.id),
+            occurrenceID: nil
+          ),
           address: address,
           endpoints: presentationEndpoints(
             edge.endpoints,

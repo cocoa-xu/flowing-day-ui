@@ -7,6 +7,7 @@ public protocol FlowingGraphCompositionSchema {
   associatedtype EntryPointID: Hashable
   associatedtype LinkID: Hashable
   associatedtype LinkValue
+  associatedtype OccurrenceID: Hashable = Never
   associatedtype GraphSchema: FlowingGraphSchema
 }
 
@@ -184,7 +185,7 @@ public typealias FlowingGraphCompositionElementID<Schema: FlowingGraphCompositio
   FlowingPresentationElementID<
     Schema.GraphID,
     Schema.GraphSchema,
-    Never,
+    Schema.OccurrenceID,
     FlowingGraphCompositionSyntheticRole<Schema.LinkID>
   >
 
@@ -193,7 +194,8 @@ public enum FlowingGraphPresentationLocalElementID<
 >: Hashable {
   case source(
     instanceHandle: FlowingGraphInstanceHandle,
-    elementID: FlowingGraphLocalElementID<Schema.GraphSchema>
+    elementID: FlowingGraphLocalElementID<Schema.GraphSchema>,
+    occurrenceID: Schema.OccurrenceID?
   )
   case subgraphContext(
     instanceHandle: FlowingGraphInstanceHandle,
@@ -204,6 +206,7 @@ public enum FlowingGraphPresentationLocalElementID<
 extension FlowingGraphPresentationLocalElementID: Sendable
 where
   Schema.LinkID: Sendable,
+  Schema.OccurrenceID: Sendable,
   Schema.GraphSchema.NodeID: Sendable,
   Schema.GraphSchema.PortID: Sendable,
   Schema.GraphSchema.EdgeID: Sendable
@@ -323,6 +326,7 @@ extension FlowingGraphPresentationNode: Sendable
 where
   Schema.GraphID: Sendable,
   Schema.LinkID: Sendable,
+  Schema.OccurrenceID: Sendable,
   Schema.GraphSchema.NodeID: Sendable,
   Schema.GraphSchema.PortID: Sendable,
   Schema.GraphSchema.EdgeID: Sendable,
@@ -345,6 +349,7 @@ extension FlowingGraphPresentationPort: Sendable
 where
   Schema.GraphID: Sendable,
   Schema.LinkID: Sendable,
+  Schema.OccurrenceID: Sendable,
   Schema.GraphSchema.NodeID: Sendable,
   Schema.GraphSchema.PortID: Sendable,
   Schema.GraphSchema.EdgeID: Sendable,
@@ -360,6 +365,7 @@ extension FlowingGraphPresentationEndpoint: Sendable
 where
   Schema.GraphID: Sendable,
   Schema.LinkID: Sendable,
+  Schema.OccurrenceID: Sendable,
   Schema.GraphSchema.NodeID: Sendable,
   Schema.GraphSchema.PortID: Sendable,
   Schema.GraphSchema.EdgeID: Sendable
@@ -397,6 +403,7 @@ extension FlowingGraphPresentationEdgeEndpoints: Sendable
 where
   Schema.GraphID: Sendable,
   Schema.LinkID: Sendable,
+  Schema.OccurrenceID: Sendable,
   Schema.GraphSchema.NodeID: Sendable,
   Schema.GraphSchema.PortID: Sendable,
   Schema.GraphSchema.EdgeID: Sendable
@@ -419,6 +426,7 @@ extension FlowingGraphPresentationEdge: Sendable
 where
   Schema.GraphID: Sendable,
   Schema.LinkID: Sendable,
+  Schema.OccurrenceID: Sendable,
   Schema.GraphSchema.NodeID: Sendable,
   Schema.GraphSchema.PortID: Sendable,
   Schema.GraphSchema.EdgeID: Sendable,
@@ -469,6 +477,7 @@ extension FlowingGraphPresentationContextEdge: Sendable
 where
   Schema.GraphID: Sendable,
   Schema.LinkID: Sendable,
+  Schema.OccurrenceID: Sendable,
   Schema.GraphSchema.NodeID: Sendable,
   Schema.GraphSchema.PortID: Sendable,
   Schema.GraphSchema.EdgeID: Sendable
@@ -515,6 +524,7 @@ where
   Schema.EntryPointID: Sendable,
   Schema.GraphID: Sendable,
   Schema.LinkID: Sendable,
+  Schema.OccurrenceID: Sendable,
   Schema.GraphSchema.NodeID: Sendable,
   Schema.GraphSchema.NodeValue: Sendable,
   Schema.GraphSchema.PortID: Sendable,

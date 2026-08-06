@@ -29,4 +29,33 @@ final class FlowingGraphCompositionModelTests: XCTestCase {
 
     XCTAssertEqual(Set([state, state]).count, 1)
   }
+
+  func testCompositionIdentityCanCarryARuntimeOccurrence() {
+    let address = FlowingGraphElementAddress<String, TestGraphSchema>(
+      instancePath: .root,
+      graphID: "root",
+      elementID: .node("node")
+    )
+    let first = FlowingGraphCompositionElementID<RuntimeOccurrenceCompositionSchema>
+      .source(address: address, occurrenceID: "first")
+    let second = FlowingGraphCompositionElementID<RuntimeOccurrenceCompositionSchema>
+      .source(address: address, occurrenceID: "second")
+    let localFirst = FlowingGraphPresentationLocalElementID<
+      RuntimeOccurrenceCompositionSchema
+    >.source(
+      instanceHandle: .init(rawValue: 0),
+      elementID: .node("node"),
+      occurrenceID: "first"
+    )
+    let localSecond = FlowingGraphPresentationLocalElementID<
+      RuntimeOccurrenceCompositionSchema
+    >.source(
+      instanceHandle: .init(rawValue: 0),
+      elementID: .node("node"),
+      occurrenceID: "second"
+    )
+
+    XCTAssertNotEqual(first, second)
+    XCTAssertNotEqual(localFirst, localSecond)
+  }
 }

@@ -19,6 +19,16 @@ enum TestCompositionSchema: FlowingGraphCompositionSchema {
   typealias GraphSchema = TestGraphSchema
 }
 
+enum RuntimeOccurrenceCompositionSchema: FlowingGraphCompositionSchema {
+  typealias DocumentID = String
+  typealias GraphID = String
+  typealias EntryPointID = String
+  typealias LinkID = String
+  typealias LinkValue = String
+  typealias OccurrenceID = String
+  typealias GraphSchema = TestGraphSchema
+}
+
 typealias TestGraph = FlowingGraph<TestGraphSchema>
 typealias TestDocument = FlowingGraphDocument<TestCompositionSchema>
 typealias TestLink = FlowingSubgraphLink<TestCompositionSchema>
