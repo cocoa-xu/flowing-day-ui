@@ -298,7 +298,7 @@ final class FlowingGraphProjectionTests: XCTestCase {
     )
 
     XCTAssertEqual(presentation.ports.count, 1)
-    guard case let .directed(source, target) = presentation.edges[0].endpoints else {
+    guard case .directed(let source, let target) = presentation.edges[0].endpoints else {
       return XCTFail("Expected a directed edge")
     }
     XCTAssertEqual(source, .port(presentation.ports[0].id))
@@ -306,6 +306,275 @@ final class FlowingGraphProjectionTests: XCTestCase {
       presentation.nodes.first { $0.address.elementID == .node("target") }
     )
     XCTAssertEqual(target, .node(targetNode.id))
+  }
+
+  func testInlineExpansionRedirectsBoundPortsAcrossTheInstanceBoundary() throws {
+    let boundExternal = FlowingGraphPortKey<TestGraphSchema>(
+      nodeID: "composite",
+      portID: "bound"
+    )
+    let unboundExternal = FlowingGraphPortKey<TestGraphSchema>(
+      nodeID: "composite",
+      portID: "unbound"
+    )
+    let internalPort = FlowingGraphPortKey<TestGraphSchema>(
+      nodeID: "internal",
+      portID: "input"
+    )
+    let root = makeGraph(
+      nodes: ["source", "composite"],
+      ports: [
+        FlowingGraphPort(key: boundExternal, value: "bound"),
+        FlowingGraphPort(key: unboundExternal, value: "unbound"),
+      ],
+      edges: [
+        FlowingGraphEdge(
+          id: "bound-edge",
+          endpoints: .directed(source: .node("source"), target: .port(boundExternal)),
+          value: "bound-edge"
+        ),
+        FlowingGraphEdge(
+          id: "unbound-edge",
+          endpoints: .directed(source: .node("source"), target: .port(unboundExternal)),
+          value: "unbound-edge"
+        ),
+      ]
+    )
+    let child = makeGraph(
+      nodes: ["internal"],
+      ports: [FlowingGraphPort(key: internalPort, value: "input")]
+    )
+    let interface = FlowingSubgraphInterface<TestCompositionSchema>(
+      bindings: [
+        FlowingSubgraphInterfaceBinding(
+          externalPort: boundExternal,
+          internalEndpoint: .port(internalPort)
+        )
+      ]
+    )
+    let document = makeDocument(
+      definitions: [
+        FlowingGraphDefinition(id: "root", graph: root),
+        FlowingGraphDefinition(id: "child", graph: child),
+      ],
+      links: [
+        makeLink(
+          "child",
+          from: "root",
+          nodeID: "composite",
+          to: "child",
+          interface: interface
+        )
+      ]
+    )
+    let projector = try FlowingGraphProjector(document: document)
+
+    let collapsed = try projector.project(
+      state: FlowingGraphProjectionState(entryPointID: "main")
+    )
+    let expanded = try projector.project(
+      state: FlowingGraphProjectionState(
+        entryPointID: "main",
+        expandedSites: [site(graphID: "root", nodeID: "composite")]
+      )
+    )
+
+    let collapsedBound = try XCTUnwrap(
+      collapsed.edges.first { $0.address.elementID == .edge("bound-edge") }
+    )
+    let collapsedExternalPort = try XCTUnwrap(
+      collapsed.ports.first { $0.address.elementID == .port(boundExternal) }
+    )
+    guard case .directed(_, let collapsedTarget) = collapsedBound.endpoints else {
+      return XCTFail("Expected a directed edge")
+    }
+    XCTAssertEqual(collapsedTarget, .port(collapsedExternalPort.id))
+
+    let expandedBound = try XCTUnwrap(
+      expanded.edges.first { $0.address.elementID == .edge("bound-edge") }
+    )
+    let expandedInternalPort = try XCTUnwrap(
+      expanded.ports.first {
+        $0.address.graphID == "child" && $0.address.elementID == .port(internalPort)
+      }
+    )
+    guard case .directed(let expandedSource, let expandedTarget) = expandedBound.endpoints else {
+      return XCTFail("Expected a directed edge")
+    }
+    let rootSource = try XCTUnwrap(
+      expanded.nodes.first {
+        $0.address.graphID == "root" && $0.address.elementID == .node("source")
+      }
+    )
+    XCTAssertEqual(expandedSource, .node(rootSource.id))
+    XCTAssertEqual(expandedTarget, .port(expandedInternalPort.id))
+
+    let expandedUnbound = try XCTUnwrap(
+      expanded.edges.first { $0.address.elementID == .edge("unbound-edge") }
+    )
+    let expandedExternalPort = try XCTUnwrap(
+      expanded.ports.first { $0.address.elementID == .port(unboundExternal) }
+    )
+    guard case .directed(_, let unboundTarget) = expandedUnbound.endpoints else {
+      return XCTFail("Expected a directed edge")
+    }
+    XCTAssertEqual(unboundTarget, .port(expandedExternalPort.id))
+  }
+
+  func testTwoExpandedInterfacesCanRedirectBothEndsOfOneEdge() throws {
+    let firstExternal = FlowingGraphPortKey<TestGraphSchema>(
+      nodeID: "first-site",
+      portID: "port"
+    )
+    let secondExternal = FlowingGraphPortKey<TestGraphSchema>(
+      nodeID: "second-site",
+      portID: "port"
+    )
+    let root = makeGraph(
+      nodes: ["first-site", "second-site"],
+      ports: [
+        FlowingGraphPort(key: firstExternal, value: "first"),
+        FlowingGraphPort(key: secondExternal, value: "second"),
+      ],
+      edges: [
+        FlowingGraphEdge(
+          id: "between",
+          endpoints: .directed(source: .port(firstExternal), target: .port(secondExternal)),
+          value: "between"
+        )
+      ]
+    )
+    let interface = { (externalPort: FlowingGraphPortKey<TestGraphSchema>) in
+      FlowingSubgraphInterface<TestCompositionSchema>(
+        bindings: [
+          FlowingSubgraphInterfaceBinding(
+            externalPort: externalPort,
+            internalEndpoint: .node("internal")
+          )
+        ]
+      )
+    }
+    let document = makeDocument(
+      definitions: [
+        FlowingGraphDefinition(id: "root", graph: root),
+        makeDefinition("child", nodes: ["internal"]),
+      ],
+      links: [
+        makeLink(
+          "first",
+          from: "root",
+          nodeID: "first-site",
+          to: "child",
+          interface: interface(firstExternal)
+        ),
+        makeLink(
+          "second",
+          from: "root",
+          nodeID: "second-site",
+          to: "child",
+          interface: interface(secondExternal)
+        ),
+      ]
+    )
+
+    let presentation = try FlowingGraphProjector(document: document).project(
+      state: FlowingGraphProjectionState(
+        entryPointID: "main",
+        expandedSites: [
+          site(graphID: "root", nodeID: "first-site"),
+          site(graphID: "root", nodeID: "second-site"),
+        ]
+      )
+    )
+    let firstInternal = try XCTUnwrap(
+      presentation.nodes.first {
+        $0.address.graphID == "child"
+          && $0.address.instancePath.components.last?.nodeID == "first-site"
+      }
+    )
+    let secondInternal = try XCTUnwrap(
+      presentation.nodes.first {
+        $0.address.graphID == "child"
+          && $0.address.instancePath.components.last?.nodeID == "second-site"
+      }
+    )
+    let edge = try XCTUnwrap(
+      presentation.edges.first { $0.address.elementID == .edge("between") }
+    )
+    guard case .directed(let source, let target) = edge.endpoints else {
+      return XCTFail("Expected a directed edge")
+    }
+
+    XCTAssertEqual(source, .node(firstInternal.id))
+    XCTAssertEqual(target, .node(secondInternal.id))
+  }
+
+  func testInterfaceRedirectionScalesWithTwentyThousandIncidentEdges() throws {
+    let edgeCount = 20_000
+    let externalPort = FlowingGraphPortKey<TestGraphSchema>(
+      nodeID: "composite",
+      portID: "external"
+    )
+    let sourceNodeIDs = (0..<edgeCount).map { "source-\($0)" }
+    let root = makeGraph(
+      nodes: ["composite"] + sourceNodeIDs,
+      ports: [FlowingGraphPort(key: externalPort, value: "external")],
+      edges: sourceNodeIDs.enumerated().map { index, nodeID in
+        FlowingGraphEdge(
+          id: "edge-\(index)",
+          endpoints: .directed(source: .node(nodeID), target: .port(externalPort)),
+          value: "edge"
+        )
+      }
+    )
+    let document = makeDocument(
+      definitions: [
+        FlowingGraphDefinition(id: "root", graph: root),
+        makeDefinition("child", nodes: ["internal"]),
+      ],
+      links: [
+        makeLink(
+          "child",
+          from: "root",
+          nodeID: "composite",
+          to: "child",
+          interface: FlowingSubgraphInterface(
+            bindings: [
+              FlowingSubgraphInterfaceBinding(
+                externalPort: externalPort,
+                internalEndpoint: .node("internal")
+              )
+            ]
+          )
+        )
+      ]
+    )
+
+    let presentation = try FlowingGraphProjector(document: document).project(
+      state: FlowingGraphProjectionState(
+        entryPointID: "main",
+        expandedSites: [site(graphID: "root", nodeID: "composite")]
+      ),
+      budget: FlowingGraphProjectionBudget(
+        maxInstances: 2,
+        maxDepth: 1,
+        maxNodes: edgeCount + 2,
+        maxPorts: 1,
+        maxEdges: edgeCount + 1,
+        maxExpansionWork: edgeCount * 3 + 10
+      )
+    )
+    let internalNode = try XCTUnwrap(
+      presentation.nodes.first { $0.address.graphID == "child" }
+    )
+
+    XCTAssertEqual(presentation.edges.count, edgeCount)
+    XCTAssertTrue(
+      presentation.edges.allSatisfy { edge in
+        guard case .directed(_, let target) = edge.endpoints else { return false }
+        return target == .node(internalNode.id)
+      }
+    )
   }
 
   func testChildExpansionReportsTheFirstExceededBudgetDimension() throws {

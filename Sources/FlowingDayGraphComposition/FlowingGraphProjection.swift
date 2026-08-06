@@ -113,10 +113,12 @@ public struct FlowingGraphProjector<Schema: FlowingGraphCompositionSchema> {
 
     while let item = work.popLast() {
       switch item {
-      case let .enter(instance):
-        guard let definition = validatedDocument.index.definitionsByID[
-          instance.address.graphID
-        ] else {
+      case .enter(let instance):
+        guard
+          let definition = validatedDocument.index.definitionsByID[
+            instance.address.graphID
+          ]
+        else {
           throw FlowingGraphProjectionError<Schema>.inconsistentValidatedDocument
         }
         activeDefinitionCounts[instance.address.graphID, default: 0] += 1
@@ -150,7 +152,7 @@ public struct FlowingGraphProjector<Schema: FlowingGraphCompositionSchema> {
           work.append(.expand(expansion))
         }
 
-      case let .expand(expansion):
+      case .expand(let expansion):
         let site = FlowingGraphInstanceNodeAddress(
           instance: expansion.parentInstance,
           nodeID: expansion.link.site.nodeID
@@ -164,9 +166,11 @@ public struct FlowingGraphProjector<Schema: FlowingGraphCompositionSchema> {
           )
           continue
         }
-        guard let definition = validatedDocument.index.definitionsByID[
-          expansion.link.targetGraphID
-        ] else {
+        guard
+          let definition = validatedDocument.index.definitionsByID[
+            expansion.link.targetGraphID
+          ]
+        else {
           throw FlowingGraphProjectionError<Schema>.inconsistentValidatedDocument
         }
 
@@ -197,10 +201,20 @@ public struct FlowingGraphProjector<Schema: FlowingGraphCompositionSchema> {
           path: childPath,
           graphID: expansion.link.targetGraphID
         )
+        guard
+          let parentDefinition = validatedDocument.index.definitionsByID[
+            expansion.parentInstance.graphID
+          ]
+        else {
+          throw FlowingGraphProjectionError<Schema>.inconsistentValidatedDocument
+        }
         let childHandle = builder.allocateInstanceHandle()
         builder.reserve(childCost)
         builder.setExpanded(
           at: expansion.contextIndex,
+          link: expansion.link,
+          parentDefinition: parentDefinition,
+          parentInstance: expansion.parentInstance,
           child: childAddress,
           childHandle: childHandle
         )
@@ -216,7 +230,7 @@ public struct FlowingGraphProjector<Schema: FlowingGraphCompositionSchema> {
           )
         )
 
-      case let .exit(graphID):
+      case .exit(let graphID):
         guard let count = activeDefinitionCounts[graphID] else {
           throw FlowingGraphProjectionError<Schema>.inconsistentValidatedDocument
         }
@@ -440,6 +454,7 @@ private struct FlowingGraphPresentationBuilder<Schema: FlowingGraphCompositionSc
   var ports: [FlowingGraphPresentationPort<Schema>] = []
   var edges: [FlowingGraphPresentationEdge<Schema>] = []
   var contextEdges: [FlowingGraphPresentationContextEdge<Schema>] = []
+  var edgeIndexByLocalID: [FlowingGraphPresentationLocalElementID<Schema>: Int] = [:]
   var nextInstanceHandleRawValue = 0
 
   mutating func allocateInstanceHandle() -> FlowingGraphInstanceHandle {
@@ -510,14 +525,15 @@ private struct FlowingGraphPresentationBuilder<Schema: FlowingGraphCompositionSc
         instance: instance.address,
         elementID: .edge(edge.id)
       )
+      let localID = FlowingGraphPresentationLocalElementID<Schema>.source(
+        instanceHandle: instance.handle,
+        elementID: .edge(edge.id),
+        occurrenceID: nil
+      )
       edges.append(
         FlowingGraphPresentationEdge(
           id: .source(address: address, occurrenceID: nil),
-          localID: .source(
-            instanceHandle: instance.handle,
-            elementID: .edge(edge.id),
-            occurrenceID: nil
-          ),
+          localID: localID,
           address: address,
           endpoints: presentationEndpoints(
             edge.endpoints,
@@ -526,6 +542,7 @@ private struct FlowingGraphPresentationBuilder<Schema: FlowingGraphCompositionSc
           value: edge.value
         )
       )
+      edgeIndexByLocalID[localID] = edges.count - 1
     }
   }
 
@@ -577,11 +594,51 @@ private struct FlowingGraphPresentationBuilder<Schema: FlowingGraphCompositionSc
 
   mutating func setExpanded(
     at index: Int,
+    link: FlowingSubgraphLink<Schema>,
+    parentDefinition: FlowingGraphDefinition<Schema>,
+    parentInstance: FlowingGraphInstanceAddress<
+      Schema.GraphID,
+      Schema.GraphSchema.NodeID
+    >,
     child: FlowingGraphInstanceAddress<Schema.GraphID, Schema.GraphSchema.NodeID>,
     childHandle: FlowingGraphInstanceHandle
   ) {
     contextEdges[index].targetInstanceHandle = childHandle
     contextEdges[index].state = .expanded(child)
+    for binding in link.interface.bindings {
+      let sourceEndpoint = FlowingGraphEndpoint<Schema.GraphSchema>.port(
+        binding.externalPort
+      )
+      let externalEndpoint = presentationEndpoint(
+        sourceEndpoint,
+        instance: parentInstance
+      )
+      let internalEndpoint = presentationEndpoint(
+        binding.internalEndpoint,
+        instance: child
+      )
+      for edgeID in parentDefinition.graph.incidentEdgeIDs(endpoint: sourceEndpoint) {
+        let localID = FlowingGraphPresentationLocalElementID<Schema>.source(
+          instanceHandle: contextEdges[index].sourceInstanceHandle,
+          elementID: .edge(edgeID),
+          occurrenceID: nil
+        )
+        guard let edgeIndex = edgeIndexByLocalID[localID] else {
+          preconditionFailure("Presentation edge index is inconsistent")
+        }
+        let edge = edges[edgeIndex]
+        edges[edgeIndex] = FlowingGraphPresentationEdge(
+          id: edge.id,
+          localID: edge.localID,
+          address: edge.address,
+          endpoints: edge.endpoints.replacing(
+            externalEndpoint,
+            with: internalEndpoint
+          ),
+          value: edge.value
+        )
+      }
+    }
   }
 
   func presentation() -> FlowingGraphPresentation<Schema> {
@@ -613,10 +670,10 @@ private struct FlowingGraphPresentationBuilder<Schema: FlowingGraphCompositionSc
     instance: FlowingGraphInstanceAddress<Schema.GraphID, Schema.GraphSchema.NodeID>
   ) -> FlowingGraphPresentationEndpoint<Schema> {
     switch endpoint {
-    case let .node(nodeID):
+    case .node(let nodeID):
       let address = elementAddress(instance: instance, elementID: .node(nodeID))
       return .node(.source(address: address, occurrenceID: nil))
-    case let .port(key):
+    case .port(let key):
       let address = elementAddress(instance: instance, elementID: .port(key))
       return .port(.source(address: address, occurrenceID: nil))
     }
@@ -627,15 +684,35 @@ private struct FlowingGraphPresentationBuilder<Schema: FlowingGraphCompositionSc
     instance: FlowingGraphInstanceAddress<Schema.GraphID, Schema.GraphSchema.NodeID>
   ) -> FlowingGraphPresentationEdgeEndpoints<Schema> {
     switch endpoints {
-    case let .directed(source, target):
+    case .directed(let source, let target):
       .directed(
         source: presentationEndpoint(source, instance: instance),
         target: presentationEndpoint(target, instance: instance)
       )
-    case let .undirected(first, second):
+    case .undirected(let first, let second):
       .undirected(
         presentationEndpoint(first, instance: instance),
         presentationEndpoint(second, instance: instance)
+      )
+    }
+  }
+}
+
+extension FlowingGraphPresentationEdgeEndpoints {
+  fileprivate func replacing(
+    _ source: FlowingGraphPresentationEndpoint<Schema>,
+    with replacement: FlowingGraphPresentationEndpoint<Schema>
+  ) -> Self {
+    switch self {
+    case .directed(let edgeSource, let edgeTarget):
+      .directed(
+        source: edgeSource == source ? replacement : edgeSource,
+        target: edgeTarget == source ? replacement : edgeTarget
+      )
+    case .undirected(let first, let second):
+      .undirected(
+        first == source ? replacement : first,
+        second == source ? replacement : second
       )
     }
   }
