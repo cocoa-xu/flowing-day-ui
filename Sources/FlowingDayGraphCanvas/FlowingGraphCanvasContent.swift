@@ -303,6 +303,12 @@ public struct FlowingGraphCanvasContent<Schema: FlowingGraphCanvasSchema> {
     renderIndex.elementIDs(intersecting: rect)
   }
 
+  public func unorderedRenderElementIDs(
+    intersecting rect: CGRect
+  ) -> FlowingGraphRenderElementIDs<LayoutSchema> {
+    renderIndex.unorderedElementIDs(intersecting: rect)
+  }
+
   public func nearestNodeLocalID(
     to point: CGPoint,
     excluding excludedIDs: Set<LocalElementID> = []

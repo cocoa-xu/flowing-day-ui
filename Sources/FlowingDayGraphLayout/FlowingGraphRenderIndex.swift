@@ -129,6 +129,16 @@ public struct FlowingGraphRenderIndex<Schema: FlowingGraphLayoutSchema>: Sendabl
     )
   }
 
+  public func unorderedElementIDs(
+    intersecting rect: CGRect
+  ) -> FlowingGraphRenderElementIDs<Schema> {
+    FlowingGraphRenderElementIDs(
+      inputID: inputID,
+      nodeIDs: nodeIndex.itemIDsUnordered(intersecting: rect),
+      edgeIDs: edgeIndex.itemIDsUnordered(intersecting: rect).map(\.id)
+    )
+  }
+
   public func nearestNodeID(
     to point: CGPoint,
     excluding excludedIDs: Set<Schema.NodeID> = []

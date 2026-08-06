@@ -116,6 +116,27 @@ final class FlowingSpatialIndexTests: XCTestCase {
     XCTAssertTrue(visible.contains(50_250))
   }
 
+  func testUnorderedQueryReturnsTheSameItemsWithoutPromisingOrder() throws {
+    let entries = (0..<100).map { index in
+      FlowingSpatialIndexEntry(
+        id: index,
+        frame: CGRect(
+          x: CGFloat(index % 10) * 140,
+          y: CGFloat(index / 10) * 100,
+          width: 100,
+          height: 60
+        )
+      )
+    }
+    let index = try FlowingSpatialIndex(entries: entries)
+    let viewport = CGRect(x: 250, y: 150, width: 650, height: 550)
+
+    XCTAssertEqual(
+      Set(index.itemIDsUnordered(intersecting: viewport)),
+      Set(index.itemIDs(intersecting: viewport))
+    )
+  }
+
   func testRenderSliceDoesNotMaterializeOffscreenEdgeEndpoints() throws {
     let topology = try FlowingGraphLayoutTopology<RenderSchema>(
       nodeIDs: ["first", "second"],

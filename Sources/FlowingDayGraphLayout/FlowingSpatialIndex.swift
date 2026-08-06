@@ -95,6 +95,10 @@ public struct FlowingSpatialIndex<ItemID: Hashable & Sendable>: Sendable {
   }
 
   public func itemIDs(intersecting rect: CGRect) -> [ItemID] {
+    itemIDsUnordered(intersecting: rect).sorted { orderByID[$0]! < orderByID[$1]! }
+  }
+
+  public func itemIDsUnordered(intersecting rect: CGRect) -> [ItemID] {
     guard rect.isUsable, !rect.isEmpty, !buckets.isEmpty else { return [] }
     guard let queryCells = queryCells(for: rect) else {
       return orderedItemIDs.filter { frameByID[$0]?.intersects(rect) == true }
@@ -107,7 +111,7 @@ public struct FlowingSpatialIndex<ItemID: Hashable & Sendable>: Sendable {
         matches.insert(itemID)
       }
     }
-    return matches.sorted { orderByID[$0]! < orderByID[$1]! }
+    return Array(matches)
   }
 
   public func nearestItemID(

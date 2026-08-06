@@ -52,6 +52,10 @@ struct FlowingBoundsIndex<ItemID: Hashable & Sendable>: Sendable {
   }
 
   func itemIDs(intersecting rect: CGRect) -> [ItemID] {
+    itemIDsUnordered(intersecting: rect).sorted { $0.order < $1.order }.map(\.id)
+  }
+
+  func itemIDsUnordered(intersecting rect: CGRect) -> [(order: Int, id: ItemID)] {
     guard rect.isFlowingBoundsIndexUsable, !rect.isEmpty, let rootIndex else {
       return []
     }
@@ -74,8 +78,7 @@ struct FlowingBoundsIndex<ItemID: Hashable & Sendable>: Sendable {
         }
       }
     }
-    matches.sort { $0.order < $1.order }
-    return matches.map(\.id)
+    return matches
   }
 
   private static func build(
