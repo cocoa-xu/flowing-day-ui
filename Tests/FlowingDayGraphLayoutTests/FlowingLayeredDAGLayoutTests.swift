@@ -27,6 +27,35 @@ final class FlowingLayeredDAGLayoutTests: XCTestCase {
     XCTAssertEqual(narrow.size, CGSize(width: 80, height: 40))
   }
 
+  func testLayeredLayoutIsStackSafeForTenThousandNodePath() throws {
+    let nodeCount = 10_000
+    let nodeIDs = (0..<nodeCount).map(String.init)
+    let edges = (1..<nodeCount).map { index in
+      FlowingGraphLayoutEdge<LayoutSchema>(
+        id: "edge-\(index)",
+        endpoints: .directed(
+          source: .node(String(index - 1)),
+          target: .node(String(index))
+        )
+      )
+    }
+    let strategy = FlowingLayeredDAGLayout<LayoutSchema>(configuration: configuration)
+    let input = try makeInput(
+      nodeIDs: nodeIDs,
+      edges: edges,
+      strategy: strategy
+    )
+
+    let result = try strategy.layout(input)
+
+    XCTAssertEqual(result.nodeFrames.count, nodeCount)
+    XCTAssertEqual(result.edgeRoutes.count, nodeCount - 1)
+    XCTAssertLessThan(
+      try XCTUnwrap(result.frame(for: "0")?.minY),
+      try XCTUnwrap(result.frame(for: String(nodeCount - 1))?.minY)
+    )
+  }
+
   func testLayerAssignmentCanBeReplacedWithoutReplacingThePipeline() throws {
     let coordinateAssignment = FlowingCenteredLayerCoordinates<LayoutSchema>(
       configuration: configuration
