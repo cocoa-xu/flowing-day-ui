@@ -9,6 +9,7 @@ let package = Package(
   ],
   products: [
     .library(name: "FlowingDayCanvas", targets: ["FlowingDayCanvas"]),
+    .library(name: "FlowingDayGraphComposition", targets: ["FlowingDayGraphComposition"]),
     .library(name: "FlowingDayGraphCore", targets: ["FlowingDayGraphCore"]),
     .library(name: "FlowingDayGraphLayout", targets: ["FlowingDayGraphLayout"]),
     .library(name: "FlowingDayPreferences", targets: ["FlowingDayPreferences"]),
@@ -19,6 +20,10 @@ let package = Package(
   ],
   targets: [
     .target(name: "FlowingDayCanvas"),
+    .target(
+      name: "FlowingDayGraphComposition",
+      dependencies: ["FlowingDayGraphCore"]
+    ),
     .target(name: "FlowingDayGraphCore"),
     .target(
       name: "FlowingDayGraphLayout",
@@ -33,6 +38,10 @@ let package = Package(
     .testTarget(
       name: "FlowingDayCanvasTests",
       dependencies: ["FlowingDayCanvas"]
+    ),
+    .testTarget(
+      name: "FlowingDayGraphCompositionTests",
+      dependencies: ["FlowingDayGraphComposition"]
     ),
     .testTarget(
       name: "FlowingDayGraphCoreTests",

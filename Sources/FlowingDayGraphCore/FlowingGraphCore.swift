@@ -13,6 +13,12 @@ public struct FlowingGraphSnapshotID: Hashable, Sendable {
   private let rawValue = UUID()
 }
 
+public struct FlowingGraphPresentationSnapshotID: Hashable, Sendable {
+  private let rawValue = UUID()
+
+  public init() {}
+}
+
 public struct FlowingGraphPortKey<Schema: FlowingGraphSchema>: Hashable {
   public let nodeID: Schema.NodeID
   public let portID: Schema.PortID

@@ -1,18 +1,14 @@
 import CoreGraphics
+import FlowingDayGraphCore
 import Foundation
+
+public typealias FlowingGraphPresentationSnapshotID =
+  FlowingDayGraphCore.FlowingGraphPresentationSnapshotID
 
 public protocol FlowingGraphLayoutSchema: Sendable {
   associatedtype NodeID: Hashable & Sendable
   associatedtype PortID: Hashable & Sendable
   associatedtype EdgeID: Hashable & Sendable
-}
-
-public struct FlowingGraphPresentationSnapshotID: Hashable, Sendable {
-  private let rawValue: UUID
-
-  public init() {
-    rawValue = UUID()
-  }
 }
 
 public struct FlowingLayoutRevision: Hashable, Sendable {
