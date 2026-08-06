@@ -8,6 +8,7 @@ let package = Package(
     .macOS(.v13)
   ],
   products: [
+    .library(name: "FlowingDayCanvas", targets: ["FlowingDayCanvas"]),
     .library(name: "FlowingDayPreferences", targets: ["FlowingDayPreferences"]),
     .executable(
       name: "FlowingDayPreferencesExample",
@@ -15,11 +16,16 @@ let package = Package(
     ),
   ],
   targets: [
+    .target(name: "FlowingDayCanvas"),
     .target(name: "FlowingDayPreferences"),
     .executableTarget(
       name: "FlowingDayPreferencesExample",
       dependencies: ["FlowingDayPreferences"],
       path: "Examples/FlowingDayPreferencesExample"
+    ),
+    .testTarget(
+      name: "FlowingDayCanvasTests",
+      dependencies: ["FlowingDayCanvas"]
     ),
     .testTarget(
       name: "FlowingDayPreferencesTests",

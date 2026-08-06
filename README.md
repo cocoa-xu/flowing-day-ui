@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/ci.yml)
 
-FlowingDayUI is a personal SwiftUI design toolkit for macOS applications. Its first module, `FlowingDayPreferences`, provides an integrated preferences window, sidebar navigation, adaptive themes, and a focused set of preferences controls.
+FlowingDayUI is a personal SwiftUI design toolkit for macOS applications. `FlowingDayPreferences` provides an integrated preferences window, and `FlowingDayCanvas` provides a composable, virtualized infinite viewport.
 
 The package requires macOS 13 or later.
 
@@ -17,10 +17,11 @@ Add FlowingDayUI to your package dependencies:
 )
 ```
 
-Then add `FlowingDayPreferences` to the application target and import it:
+Add the products needed by the application target and import their modules:
 
 ```swift
 import FlowingDayPreferences
+import FlowingDayCanvas
 ```
 
 ## Local development
@@ -116,6 +117,40 @@ let windowConfiguration = PreferencesWindowConfiguration(
 ```
 
 Applications own their preferences, persistence, localization, and business logic. The package owns presentation, navigation, interaction behavior, accessibility, and visual consistency.
+
+## Infinite canvas
+
+`FlowingCanvas` owns viewport transforms, mouse and trackpad input, focus requests,
+and retained render coverage. The application owns its world model and draws only the
+content intersecting `renderWorldRect`:
+
+```swift
+@State private var viewport = FlowingCanvasViewport()
+
+FlowingCanvas(
+    viewport: $viewport,
+    contentRect: worldBounds,
+    contentID: worldRevision
+) { _ in
+    Color.white
+} world: { context in
+    FlowingCanvasWorldLayer(context: context) { surface in
+        DiagramNodes(
+            worldRect: context.renderWorldRect,
+            transform: surface.localTransform
+        )
+    }
+} overlays: { proxy in
+    FlowingCanvasViewportOverlay(alignment: .bottomTrailing) {
+        Button("Fit") {
+            proxy.fit(worldBounds, padding: 40)
+        }
+    }
+}
+```
+
+World content, floating panels, and viewport tools remain independent view builders.
+The canvas does not own graph layout, selection semantics, node design, or export.
 
 Section footers align with the title and caption text inside their rows by default.
 
