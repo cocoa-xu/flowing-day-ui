@@ -79,7 +79,18 @@ public enum FlowingGraphDocumentValidator {
     guard analysis.issues.isEmpty else {
       throw FlowingGraphDocumentValidationError(issues: analysis.issues)
     }
-    return FlowingValidatedGraphDocument(document: document, index: analysis.index)
+    guard let defaultEntryPoint = analysis.index.entryPointsByID[
+      document.defaultEntryPointID
+    ] else {
+      throw FlowingGraphDocumentValidationError<Schema>(
+        issues: [.unknownDefaultEntryPoint(document.defaultEntryPointID)]
+      )
+    }
+    return FlowingValidatedGraphDocument(
+      document: document,
+      defaultEntryPoint: defaultEntryPoint,
+      index: analysis.index
+    )
   }
 
   private static func analyze<Schema: FlowingGraphCompositionSchema>(
@@ -290,17 +301,16 @@ public enum FlowingGraphDocumentValidator {
 
 public struct FlowingValidatedGraphDocument<Schema: FlowingGraphCompositionSchema> {
   public let document: FlowingGraphDocument<Schema>
+  public let defaultEntryPoint: FlowingGraphEntryPoint<Schema>
   let index: FlowingGraphDocumentIndex<Schema>
-
-  public var defaultEntryPoint: FlowingGraphEntryPoint<Schema> {
-    index.entryPointsByID[document.defaultEntryPointID]!
-  }
 
   init(
     document: FlowingGraphDocument<Schema>,
+    defaultEntryPoint: FlowingGraphEntryPoint<Schema>,
     index: FlowingGraphDocumentIndex<Schema>
   ) {
     self.document = document
+    self.defaultEntryPoint = defaultEntryPoint
     self.index = index
   }
 

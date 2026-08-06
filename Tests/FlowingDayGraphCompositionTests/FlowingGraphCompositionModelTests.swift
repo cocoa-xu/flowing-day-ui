@@ -20,4 +20,13 @@ final class FlowingGraphCompositionModelTests: XCTestCase {
 
     XCTAssertEqual(document.entryPoints.map(\.id), ["primary", "secondary"])
   }
+
+  func testProjectionStateSupportsValueEqualityAndHashing() {
+    let state = FlowingGraphProjectionState<TestCompositionSchema>(
+      entryPointID: "main",
+      expandedSites: [site(graphID: "root", nodeID: "child")]
+    )
+
+    XCTAssertEqual(Set([state, state]).count, 1)
+  }
 }

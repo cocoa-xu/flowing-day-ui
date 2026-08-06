@@ -209,7 +209,9 @@ where
   Schema.GraphSchema.EdgeID: Sendable
 {}
 
-public struct FlowingGraphProjectionState<Schema: FlowingGraphCompositionSchema> {
+public struct FlowingGraphProjectionState<
+  Schema: FlowingGraphCompositionSchema
+>: Hashable {
   public typealias InstancePath = FlowingGraphInstancePath<
     Schema.GraphID,
     Schema.GraphSchema.NodeID

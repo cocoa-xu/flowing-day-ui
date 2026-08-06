@@ -104,6 +104,7 @@ final class FlowingGraphProjectionTests: XCTestCase {
 
     XCTAssertEqual(sharedNodes.count, 2)
     XCTAssertNotEqual(sharedNodes[0].id, sharedNodes[1].id)
+    XCTAssertNotEqual(sharedNodes[0].localID, sharedNodes[1].localID)
     XCTAssertNotEqual(
       sharedNodes[0].address.instancePath,
       sharedNodes[1].address.instancePath
@@ -301,10 +302,10 @@ final class FlowingGraphProjectionTests: XCTestCase {
       return XCTFail("Expected a directed edge")
     }
     XCTAssertEqual(source, .port(presentation.ports[0].id))
-    XCTAssertEqual(
-      target,
-      .node(presentation.nodes.first { $0.address.elementID == .node("target") }!.id)
+    let targetNode = try XCTUnwrap(
+      presentation.nodes.first { $0.address.elementID == .node("target") }
     )
+    XCTAssertEqual(target, .node(targetNode.id))
   }
 
   func testChildExpansionReportsTheFirstExceededBudgetDimension() throws {
