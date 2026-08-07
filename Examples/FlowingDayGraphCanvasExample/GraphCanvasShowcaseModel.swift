@@ -193,31 +193,44 @@ final class GraphCanvasShowcaseModel: ObservableObject {
     case .nodeResizeCompleted(let resize):
       guard resize.basePresentationSnapshotID == presentation?.snapshotID,
         resize.baseLayoutInputID == content?.id,
-        let localID = presentation?.nodes.first(where: { $0.id == resize.nodeID })?.localID,
-        let baseFrame = content?.frame(for: localID)
+        let presentation,
+        let content
       else {
         return
       }
-      let requestedFrame = CGRect(
-        x: baseFrame.minX + resize.originTranslation.width,
-        y: baseFrame.minY + resize.originTranslation.height,
-        width: baseFrame.width + resize.sizeDelta.width,
-        height: baseFrame.height + resize.sizeDelta.height
-      )
-      guard requestedFrame.width > 0, requestedFrame.height > 0 else { return }
-      nodeSizes[resize.nodeID] = requestedFrame.size
+      var requestedFrames: [ElementID: CGRect] = [:]
+      for change in resize.changes {
+        guard let localID = presentation.nodes.first(where: { $0.id == change.nodeID })?.localID,
+          let baseFrame = content.frame(for: localID)
+        else {
+          return
+        }
+        let requestedFrame = CGRect(
+          x: baseFrame.minX + change.originTranslation.width,
+          y: baseFrame.minY + change.originTranslation.height,
+          width: baseFrame.width + change.sizeDelta.width,
+          height: baseFrame.height + change.sizeDelta.height
+        )
+        guard requestedFrame.width > 0, requestedFrame.height > 0 else { return }
+        requestedFrames[change.nodeID] = requestedFrame
+      }
+      for (nodeID, frame) in requestedFrames {
+        nodeSizes[nodeID] = frame.size
+      }
       layoutStateRevision = FlowingLayoutRevision()
       refreshLayout()
-      guard let resolvedFrame = content?.frame(for: localID) else { return }
-      let correction = CGSize(
-        width: requestedFrame.minX - resolvedFrame.minX,
-        height: requestedFrame.minY - resolvedFrame.minY
-      )
-      let current = placementOffsets[resize.nodeID, default: .zero]
-      placementOffsets[resize.nodeID] = CGSize(
-        width: current.width + correction.width,
-        height: current.height + correction.height
-      )
+      for (nodeID, requestedFrame) in requestedFrames {
+        guard let localID = presentation.nodes.first(where: { $0.id == nodeID })?.localID,
+          let resolvedFrame = self.content?.frame(for: localID)
+        else {
+          return
+        }
+        let current = placementOffsets[nodeID, default: .zero]
+        placementOffsets[nodeID] = CGSize(
+          width: current.width + requestedFrame.minX - resolvedFrame.minX,
+          height: current.height + requestedFrame.minY - resolvedFrame.minY
+        )
+      }
       layoutStateRevision = FlowingLayoutRevision()
       refreshLayout()
       lastEvent = "Applied node resize intent"

@@ -94,38 +94,6 @@ struct ShowcaseNode: View {
         }
       }
     }
-    .overlay(alignment: .topLeading) {
-      resizeHandle(edges: [.leading, .top], x: -0.5, y: -0.5)
-    }
-    .overlay(alignment: .topTrailing) {
-      resizeHandle(edges: [.trailing, .top], x: 0.5, y: -0.5)
-    }
-    .overlay(alignment: .bottomLeading) {
-      resizeHandle(edges: [.leading, .bottom], x: -0.5, y: 0.5)
-    }
-    .overlay(alignment: .bottomTrailing) {
-      resizeHandle(edges: [.trailing, .bottom], x: 0.5, y: 0.5)
-    }
-  }
-
-  @ViewBuilder
-  private func resizeHandle(
-    edges: FlowingGraphCanvasResizeEdges,
-    x: CGFloat,
-    y: CGFloat
-  ) -> some View {
-    if context.isSelected && context.resizeActions.isEnabled {
-      let diameter = 10 * context.renderScale
-      FlowingGraphCanvasResizeHandle(edges: edges, actions: context.resizeActions) {
-        Circle()
-          .fill(PreferencesPalette.control)
-          .overlay {
-            Circle().strokeBorder(PreferencesAccent.celadon.fill, lineWidth: 1.5)
-          }
-          .frame(width: diameter, height: diameter)
-      }
-      .offset(x: diameter * x, y: diameter * y)
-    }
   }
 }
 
@@ -152,17 +120,44 @@ struct ShowcaseWorldDecoration: View {
   let context: FlowingGraphCanvasWorldContext<ShowcaseCanvasSchema>
 
   var body: some View {
-    let point = context.surface.localTransform.applying(
-      to: CGPoint(
-        x: context.content.contentBounds.minX + 10,
-        y: context.content.contentBounds.minY + 10
+    ZStack(alignment: .topLeading) {
+      let point = context.surface.localTransform.applying(
+        to: CGPoint(
+          x: context.content.contentBounds.minX + 10,
+          y: context.content.contentBounds.minY + 10
+        )
       )
-    )
-    Text("World Decoration")
-      .font(.system(size: 9 * context.renderContext.zoom, weight: .medium))
-      .foregroundStyle(PreferencesPalette.faint)
-      .position(point)
-      .allowsHitTesting(false)
+      Text("World Decoration")
+        .font(.system(size: 9 * context.renderContext.zoom, weight: .medium))
+        .foregroundStyle(PreferencesPalette.faint)
+        .position(point)
+        .allowsHitTesting(false)
+      if let resize = context.selectionResize {
+        selectionResizeOverlay(resize)
+      }
+    }
+  }
+
+  private func selectionResizeOverlay(
+    _ resize: FlowingGraphCanvasSelectionResizeContext<ShowcaseCanvasSchema>
+  ) -> some View {
+    ZStack {
+      Rectangle()
+        .strokeBorder(PreferencesAccent.celadon.fill, lineWidth: 1.5)
+        .allowsHitTesting(false)
+      FlowingGraphCanvasResizeHandles(actions: resize.actions) { edges in
+        let isCorner = edges.rawValue.nonzeroBitCount == 2
+        RoundedRectangle(cornerRadius: isCorner ? 3 : 2, style: .continuous)
+          .fill(PreferencesPalette.control)
+          .overlay {
+            RoundedRectangle(cornerRadius: isCorner ? 3 : 2, style: .continuous)
+              .strokeBorder(PreferencesAccent.celadon.fill, lineWidth: 1.5)
+          }
+          .frame(width: isCorner ? 10 : 9, height: isCorner ? 10 : 9)
+      }
+    }
+    .frame(width: resize.renderedFrame.width, height: resize.renderedFrame.height)
+    .position(x: resize.renderedFrame.midX, y: resize.renderedFrame.midY)
   }
 }
 
