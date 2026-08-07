@@ -132,6 +132,19 @@ struct ShowcaseWorldDecoration: View {
         .foregroundStyle(PreferencesPalette.faint)
         .position(point)
         .allowsHitTesting(false)
+      FlowingGraphCanvasGuideLayer(
+        guides: context.guides,
+        transform: context.surface.localTransform
+      ) { guideContext in
+        FlowingGraphCanvasDefaultGuide(
+          context: guideContext,
+          style: FlowingGraphCanvasDefaultGuideStyle(
+            lineColor: PreferencesAccent.celadon.fill.opacity(0.84),
+            labelBackgroundColor: PreferencesAccent.celadon.fill
+          ),
+          measurementText: { "\(Int($0.rounded())) pt" }
+        )
+      }
       if let resize = context.selectionResize {
         selectionResizeOverlay(resize)
       }

@@ -16,6 +16,7 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
   public let nodeDraggingMode: FlowingGraphCanvasNodeDraggingMode
   public let nodeResizing: FlowingGraphCanvasNodeResizingConfiguration
   public let snapping: FlowingGraphCanvasSnappingConfiguration
+  public let rendersDefaultGuides: Bool
   public let allowsArrangementCommands: Bool
   public let keyboardNavigation: FlowingGraphCanvasKeyboardNavigationConfiguration
   public let keyboardNudging: FlowingGraphCanvasKeyboardNudgingConfiguration
@@ -29,6 +30,7 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
     nodeDraggingMode: FlowingGraphCanvasNodeDraggingMode = .single,
     nodeResizing: FlowingGraphCanvasNodeResizingConfiguration = .disabled,
     snapping: FlowingGraphCanvasSnappingConfiguration = .disabled,
+    rendersDefaultGuides: Bool = true,
     allowsArrangementCommands: Bool = true,
     keyboardNavigation: FlowingGraphCanvasKeyboardNavigationConfiguration = .standard,
     keyboardNudging: FlowingGraphCanvasKeyboardNudgingConfiguration = .standard,
@@ -43,6 +45,7 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
     self.nodeDraggingMode = nodeDraggingMode
     self.nodeResizing = nodeResizing
     self.snapping = snapping
+    self.rendersDefaultGuides = rendersDefaultGuides
     self.allowsArrangementCommands = allowsArrangementCommands
     self.keyboardNavigation = keyboardNavigation
     self.keyboardNudging = keyboardNudging
@@ -331,6 +334,7 @@ public struct FlowingGraphCanvasWorldContext<Schema: FlowingGraphCanvasSchema> {
   public let session: FlowingGraphCanvasSessionState<Schema>
   public let renderContext: FlowingCanvasRenderContext
   public let surface: FlowingCanvasRenderSurface
+  public let guides: [FlowingGraphCanvasGuide]
   public let selectionResize: FlowingGraphCanvasSelectionResizeContext<Schema>?
 }
 

@@ -250,9 +250,13 @@ public struct FlowingGraphCanvas<
         ForEach(slice.portIDs, id: \.self) { portID in
           portView(portID, context: context, surface: surface)
         }
-        ForEach(Array(activeGuides.enumerated()), id: \.offset) {
-          _, guide in
-          guideView(guide, surface: surface)
+        if configuration.rendersDefaultGuides {
+          FlowingGraphCanvasGuideLayer(
+            guides: activeGuides,
+            transform: surface.localTransform
+          ) {
+            FlowingGraphCanvasDefaultGuide(context: $0)
+          }
         }
         decorations(
           FlowingGraphCanvasWorldContext(
@@ -260,6 +264,7 @@ public struct FlowingGraphCanvas<
             session: session,
             renderContext: context,
             surface: surface,
+            guides: activeGuides,
             selectionResize: selectionResizeContext(surface: surface)
           )
         )
@@ -1648,77 +1653,6 @@ public struct FlowingGraphCanvas<
       .allowsHitTesting(false)
   }
 
-  private func guideView(
-    _ guide: FlowingGraphCanvasGuide,
-    surface: FlowingCanvasRenderSurface
-  ) -> some View {
-    let start: CGPoint
-    let end: CGPoint
-    switch guide.axis {
-    case .horizontal:
-      start = CGPoint(x: guide.lowerBound, y: guide.position)
-      end = CGPoint(x: guide.upperBound, y: guide.position)
-    case .vertical:
-      start = CGPoint(x: guide.position, y: guide.lowerBound)
-      end = CGPoint(x: guide.position, y: guide.upperBound)
-    }
-    let renderedStart = surface.localTransform.applying(to: start)
-    let renderedEnd = surface.localTransform.applying(to: end)
-    let renderedLength = hypot(
-      renderedEnd.x - renderedStart.x,
-      renderedEnd.y - renderedStart.y
-    )
-    let usesTicks =
-      guide.kind == .equalSpacing || guide.kind == .equalSize
-      || guide.kind == .resize
-    return ZStack(alignment: .topLeading) {
-      Path { path in
-        path.move(to: renderedStart)
-        path.addLine(to: renderedEnd)
-        guard usesTicks else { return }
-        addGuideTick(to: &path, at: renderedStart, axis: guide.axis)
-        addGuideTick(to: &path, at: renderedEnd, axis: guide.axis)
-      }
-      .stroke(
-        Color.accentColor.opacity(FlowingGraphCanvasGuideMetrics.lineOpacity),
-        style: StrokeStyle(
-          lineWidth: FlowingGraphCanvasGuideMetrics.lineWidth,
-          dash: guide.kind == .grid ? FlowingGraphCanvasGuideMetrics.gridDash : []
-        )
-      )
-      if let measurement = guide.measurement,
-        renderedLength >= FlowingGraphCanvasGuideMetrics.minimumLabelLength
-      {
-        Text("\(measurement.rounded(), specifier: "%.0f")")
-          .font(.system(size: FlowingGraphCanvasGuideMetrics.labelSize, weight: .medium))
-          .foregroundStyle(.white)
-          .padding(.horizontal, FlowingGraphCanvasGuideMetrics.labelHorizontalPadding)
-          .padding(.vertical, FlowingGraphCanvasGuideMetrics.labelVerticalPadding)
-          .background(Color.accentColor, in: Capsule())
-          .position(
-            x: (renderedStart.x + renderedEnd.x) / 2,
-            y: (renderedStart.y + renderedEnd.y) / 2
-          )
-      }
-    }
-    .allowsHitTesting(false)
-  }
-
-  private func addGuideTick(
-    to path: inout Path,
-    at point: CGPoint,
-    axis: FlowingGraphCanvasGuideAxis
-  ) {
-    let radius = FlowingGraphCanvasGuideMetrics.tickLength / 2
-    switch axis {
-    case .horizontal:
-      path.move(to: CGPoint(x: point.x, y: point.y - radius))
-      path.addLine(to: CGPoint(x: point.x, y: point.y + radius))
-    case .vertical:
-      path.move(to: CGPoint(x: point.x - radius, y: point.y))
-      path.addLine(to: CGPoint(x: point.x + radius, y: point.y))
-    }
-  }
 }
 
 private func translated(_ point: CGPoint, by delta: CGSize) -> CGPoint {
@@ -1733,17 +1667,6 @@ private func squaredDistance(from point: CGPoint, to rect: CGRect) -> CGFloat {
   let dx = max(rect.minX - point.x, 0, point.x - rect.maxX)
   let dy = max(rect.minY - point.y, 0, point.y - rect.maxY)
   return dx * dx + dy * dy
-}
-
-private enum FlowingGraphCanvasGuideMetrics {
-  static let lineWidth: CGFloat = 1
-  static let lineOpacity = 0.84
-  static let tickLength: CGFloat = 7
-  static let gridDash: [CGFloat] = [3, 3]
-  static let minimumLabelLength: CGFloat = 24
-  static let labelSize: CGFloat = 9
-  static let labelHorizontalPadding: CGFloat = 5
-  static let labelVerticalPadding: CGFloat = 2
 }
 
 private struct FlowingGraphCanvasNodeAccessibility: ViewModifier {

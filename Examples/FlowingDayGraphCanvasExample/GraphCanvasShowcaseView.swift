@@ -198,7 +198,8 @@ struct GraphCanvasShowcaseView: View {
                 majorCellSize: CGSize(width: 24, height: 24)
               )
               : nil
-          )
+          ),
+          rendersDefaultGuides: false
         ),
         accessibilitySnapshot: model.accessibilitySnapshot,
         command: command,
