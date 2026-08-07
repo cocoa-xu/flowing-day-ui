@@ -31,6 +31,54 @@ public struct FlowingGraphCanvasKeyboardNavigationConfiguration: Equatable, Send
   public static let standard = Self()
 }
 
+public struct FlowingGraphCanvasKeyboardNudgingConfiguration: Equatable, Sendable {
+  public static let standardStep: CGFloat = 1
+  public static let standardLargeStep: CGFloat = 10
+
+  public let isEnabled: Bool
+  public let step: CGFloat
+  public let largeStep: CGFloat
+
+  public init(
+    isEnabled: Bool = true,
+    step: CGFloat = standardStep,
+    largeStep: CGFloat = standardLargeStep
+  ) {
+    precondition(step > 0 && step.isFinite)
+    precondition(largeStep >= step && largeStep.isFinite)
+    self.isEnabled = isEnabled
+    self.step = step
+    self.largeStep = largeStep
+  }
+
+  public static let disabled = Self(isEnabled: false)
+  public static let standard = Self()
+}
+
+public enum FlowingGraphCanvasKeyboardNudger {
+  public static func translation(
+    direction: FlowingGraphCanvasNavigationDirection,
+    configuration: FlowingGraphCanvasKeyboardNudgingConfiguration,
+    modifiers: FlowingGraphCanvasInteractionModifiers = []
+  ) -> CGSize? {
+    guard configuration.isEnabled else { return nil }
+    let distance =
+      modifiers.contains(.largeKeyboardNudge)
+      ? configuration.largeStep
+      : configuration.step
+    switch direction {
+    case .up:
+      return CGSize(width: 0, height: -distance)
+    case .down:
+      return CGSize(width: 0, height: distance)
+    case .left:
+      return CGSize(width: -distance, height: 0)
+    case .right:
+      return CGSize(width: distance, height: 0)
+    }
+  }
+}
+
 public struct FlowingGraphCanvasAccessibilityConfiguration: Equatable, Sendable {
   public let isEnabled: Bool
   public let providesSelectionAction: Bool

@@ -110,6 +110,40 @@ final class FlowingGraphCanvasKeyboardNavigationTests: XCTestCase {
     )
     XCTAssertFalse(FlowingGraphCanvasNodeResizingConfiguration.disabled.isEnabled)
     XCTAssertTrue(FlowingGraphCanvasNodeCapabilities.standard.contains(.resizable))
+
+    XCTAssertTrue(FlowingGraphCanvasKeyboardNudgingConfiguration.standard.isEnabled)
+    XCTAssertEqual(FlowingGraphCanvasKeyboardNudgingConfiguration.standard.step, 1)
+    XCTAssertEqual(FlowingGraphCanvasKeyboardNudgingConfiguration.standard.largeStep, 10)
+    XCTAssertFalse(FlowingGraphCanvasKeyboardNudgingConfiguration.disabled.isEnabled)
+  }
+
+  func testKeyboardNudgerUsesStandardAndLargeIncrements() {
+    let configuration = FlowingGraphCanvasKeyboardNudgingConfiguration(
+      step: 2,
+      largeStep: 16
+    )
+
+    XCTAssertEqual(
+      FlowingGraphCanvasKeyboardNudger.translation(
+        direction: .left,
+        configuration: configuration
+      ),
+      CGSize(width: -2, height: 0)
+    )
+    XCTAssertEqual(
+      FlowingGraphCanvasKeyboardNudger.translation(
+        direction: .down,
+        configuration: configuration,
+        modifiers: [.largeKeyboardNudge]
+      ),
+      CGSize(width: 0, height: 16)
+    )
+    XCTAssertNil(
+      FlowingGraphCanvasKeyboardNudger.translation(
+        direction: .right,
+        configuration: .disabled
+      )
+    )
   }
 
   private func candidate(

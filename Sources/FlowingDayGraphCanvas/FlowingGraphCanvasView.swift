@@ -27,6 +27,7 @@ public struct FlowingGraphCanvas<
     @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
       FlowingGraphCanvasNodeDragAdmission<Schema>
   private let isAdditiveSelectionActive: @MainActor () -> Bool
+  private let interactionModifiers: @MainActor () -> FlowingGraphCanvasInteractionModifiers
   private let onSmartMagnify:
     (FlowingGraphCanvasSmartMagnifyContext<Schema>) -> FlowingCanvasViewportAction
   private let onViewportChange: (FlowingCanvasViewport, FlowingCanvasViewportChangePhase) -> Void
@@ -61,6 +62,9 @@ public struct FlowingGraphCanvas<
       FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
     isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
       FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
+    },
+    interactionModifiers: @escaping @MainActor () -> FlowingGraphCanvasInteractionModifiers = {
+      FlowingGraphCanvasPlatformInput.interactionModifiers
     },
     onSmartMagnify:
       @escaping (FlowingGraphCanvasSmartMagnifyContext<Schema>) ->
@@ -103,6 +107,7 @@ public struct FlowingGraphCanvas<
     self.nodeCapabilities = nodeCapabilities
     self.admitNodeDrag = admitNodeDrag
     self.isAdditiveSelectionActive = isAdditiveSelectionActive
+    self.interactionModifiers = interactionModifiers
     self.onSmartMagnify = onSmartMagnify
     self.onViewportChange = onViewportChange
     self.onIntent = onIntent
@@ -493,12 +498,21 @@ public struct FlowingGraphCanvas<
             baseBounds: nodeBounds(for: admittedNodeIDs)
           )
         }
-        let proposedTranslation = CGSize(
+        let modifiers = interactionModifiers()
+        var proposedTranslation = CGSize(
           width: value.translation.width / session.viewport.transform.zoom,
           height: value.translation.height / session.viewport.transform.zoom
         )
+        if modifiers.contains(.constrainDragAxis) {
+          proposedTranslation = FlowingGraphCanvasTransientGeometry
+            .constrainingToDominantAxis(proposedTranslation)
+        }
         guard let drag = session.transientNodeDrag else { return }
-        let result = snap(drag: drag, proposedTranslation: proposedTranslation)
+        let result = snap(
+          drag: drag,
+          proposedTranslation: proposedTranslation,
+          allowsSnapping: !modifiers.contains(.disableSnapping)
+        )
         session.transientNodeDrag?.translation = result.translation
         session.transientNodeDrag?.guides = result.guides
         session.transientNodeDrag?.snapState = result.snapState
@@ -651,15 +665,23 @@ public struct FlowingGraphCanvas<
       hasKeyboardFocus = true
     }
     guard let resize = activeNodeResize else { return }
+    let modifiers = interactionModifiers()
     let zoom = session.viewport.transform.zoom
     let worldTranslation = CGSize(
       width: renderedTranslation.width / zoom,
       height: renderedTranslation.height / zoom
     )
+    let behavior = resizeBehavior(
+      baseFrame: resize.baseFrame,
+      edges: resize.edges,
+      translation: worldTranslation,
+      modifiers: modifiers
+    )
     let proposedFrame = FlowingGraphCanvasTransientGeometry.resizing(
       resize.baseFrame,
       edges: resize.edges,
-      translation: worldTranslation
+      translation: worldTranslation,
+      modifiers: modifiers
     )
     let searchRadius = configuration.snapping.searchRadius / zoom
     let searchRect = proposedFrame.standardized.insetBy(
@@ -678,11 +700,43 @@ public struct FlowingGraphCanvas<
       configuration: configuration.snapping,
       minimumSize: configuration.nodeResizing.minimumSize,
       zoom: zoom,
-      snapState: resize.snapState
+      snapState: resize.snapState,
+      allowsSnapping: !modifiers.contains(.disableSnapping),
+      behavior: behavior
     )
     session.transientNodeResize?.frame = result.frame
     session.transientNodeResize?.guides = result.guides
     session.transientNodeResize?.snapState = result.snapState
+  }
+
+  private func resizeBehavior(
+    baseFrame: CGRect,
+    edges: FlowingGraphCanvasResizeEdges,
+    translation: CGSize,
+    modifiers: FlowingGraphCanvasInteractionModifiers
+  ) -> FlowingGraphCanvasResizeBehavior {
+    let preservesAspectRatio = modifiers.contains(.preserveResizeAspectRatio)
+    let horizontal = edges.intersection([.leading, .trailing]).isEmpty == false
+    let vertical = edges.intersection([.top, .bottom]).isEmpty == false
+    let drivingAxis: FlowingGraphCanvasGeometryAxis?
+    if !preservesAspectRatio {
+      drivingAxis = nil
+    } else if horizontal && vertical {
+      let horizontalChange = normalizedChange(translation.width, length: baseFrame.width)
+      let verticalChange = normalizedChange(translation.height, length: baseFrame.height)
+      drivingAxis = horizontalChange >= verticalChange ? .horizontal : .vertical
+    } else {
+      drivingAxis = horizontal ? .horizontal : .vertical
+    }
+    return FlowingGraphCanvasResizeBehavior(
+      preservesAspectRatio: preservesAspectRatio,
+      resizesFromCenter: modifiers.contains(.resizeFromCenter),
+      aspectRatioDrivingAxis: drivingAxis
+    )
+  }
+
+  private func normalizedChange(_ delta: CGFloat, length: CGFloat) -> CGFloat {
+    length == 0 ? abs(delta) : abs(delta / length)
   }
 
   private func endNodeResize(elementID: ElementID) {
@@ -732,9 +786,12 @@ public struct FlowingGraphCanvas<
   }
 
   private func moveKeyboardFocus(_ direction: MoveCommandDirection) {
-    guard configuration.keyboardNavigation.isEnabled, session.tool == .select else {
+    guard session.tool == .select, let direction = navigationDirection(from: direction) else { return }
+    let modifiers = interactionModifiers()
+    if nudgeSelection(direction: direction, modifiers: modifiers) {
       return
     }
+    guard configuration.keyboardNavigation.isEnabled else { return }
     let candidates = content.presentation.nodes.compactMap {
       node -> FlowingGraphCanvasNavigationCandidate<ElementID>? in
       guard nodeCapabilities.capabilities(for: node.id).contains(.keyboardNavigable),
@@ -757,29 +814,77 @@ public struct FlowingGraphCanvas<
       focusNode(candidates[0])
       return
     }
-    let navigationDirection: FlowingGraphCanvasNavigationDirection
-    switch direction {
-    case .up:
-      navigationDirection = .up
-    case .down:
-      navigationDirection = .down
-    case .left:
-      navigationDirection = .left
-    case .right:
-      navigationDirection = .right
-    @unknown default:
-      return
-    }
     guard
       let nodeID = FlowingGraphCanvasKeyboardNavigator.nextNodeID(
         from: current,
-        direction: navigationDirection,
+        direction: direction,
         candidates: candidates
       ), let candidate = candidates.first(where: { $0.id == nodeID })
     else {
       return
     }
     focusNode(candidate)
+  }
+
+  private func nudgeSelection(
+    direction: FlowingGraphCanvasNavigationDirection,
+    modifiers: FlowingGraphCanvasInteractionModifiers
+  ) -> Bool {
+    guard let translation = FlowingGraphCanvasKeyboardNudger.translation(
+      direction: direction,
+      configuration: configuration.keyboardNudging,
+      modifiers: modifiers
+    ) else {
+      return false
+    }
+    let anchorNodeID =
+      session.focusedElementID.flatMap { session.selection.contains($0) ? $0 : nil }
+      ?? content.presentation.nodes.first(where: { session.selection.contains($0.id) })?.id
+    guard let anchorNodeID,
+      let request = FlowingGraphCanvasNodeDragResolver.request(
+        anchorNodeID: anchorNodeID,
+        selection: session.selection,
+        presentation: content.presentation,
+        mode: configuration.nodeDraggingMode,
+        capabilities: nodeCapabilities
+      )
+    else {
+      return false
+    }
+    let nodeIDs = FlowingGraphCanvasNodeDragResolver.admittedNodeIDs(
+      for: request,
+      admission: admitNodeDrag(request)
+    )
+    guard !nodeIDs.isEmpty else { return false }
+    onIntent(
+      .nodeDragCompleted(
+        FlowingGraphCanvasNodeDragIntent(
+          nodeID: anchorNodeID,
+          nodeIDs: nodeIDs,
+          basePresentationSnapshotID: content.presentation.snapshotID,
+          baseLayoutInputID: content.id,
+          translation: translation
+        )
+      )
+    )
+    return true
+  }
+
+  private func navigationDirection(
+    from direction: MoveCommandDirection
+  ) -> FlowingGraphCanvasNavigationDirection? {
+    switch direction {
+    case .up:
+      return .up
+    case .down:
+      return .down
+    case .left:
+      return .left
+    case .right:
+      return .right
+    @unknown default:
+      return nil
+    }
   }
 
   private func focusNode(
@@ -962,9 +1067,10 @@ public struct FlowingGraphCanvas<
 
   private func snap(
     drag: FlowingGraphCanvasTransientNodeDrag<Schema>,
-    proposedTranslation: CGSize
+    proposedTranslation: CGSize,
+    allowsSnapping: Bool
   ) -> FlowingGraphCanvasSnapResult {
-    guard configuration.snapping.isEnabled, let baseBounds = drag.baseBounds else {
+    guard configuration.snapping.isEnabled, allowsSnapping, let baseBounds = drag.baseBounds else {
       return FlowingGraphCanvasSnapResult(
         translation: proposedTranslation,
         guides: []
@@ -983,7 +1089,8 @@ public struct FlowingGraphCanvas<
       candidates: candidates,
       configuration: configuration.snapping,
       zoom: session.viewport.transform.zoom,
-      snapState: drag.snapState
+      snapState: drag.snapState,
+      allowsSnapping: allowsSnapping
     )
   }
 
@@ -1308,6 +1415,9 @@ extension FlowingGraphCanvas where PortContent == EmptyView {
     isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
       FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
     },
+    interactionModifiers: @escaping @MainActor () -> FlowingGraphCanvasInteractionModifiers = {
+      FlowingGraphCanvasPlatformInput.interactionModifiers
+    },
     onSmartMagnify:
       @escaping (FlowingGraphCanvasSmartMagnifyContext<Schema>) ->
       FlowingCanvasViewportAction = { context in
@@ -1345,6 +1455,7 @@ extension FlowingGraphCanvas where PortContent == EmptyView {
       nodeCapabilities: nodeCapabilities,
       admitNodeDrag: admitNodeDrag,
       isAdditiveSelectionActive: isAdditiveSelectionActive,
+      interactionModifiers: interactionModifiers,
       onSmartMagnify: onSmartMagnify,
       onViewportChange: onViewportChange,
       onIntent: onIntent,
@@ -1374,6 +1485,9 @@ where PortContent == EmptyView, Decorations == EmptyView, Overlays == EmptyView 
       FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
     isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
       FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
+    },
+    interactionModifiers: @escaping @MainActor () -> FlowingGraphCanvasInteractionModifiers = {
+      FlowingGraphCanvasPlatformInput.interactionModifiers
     },
     onSmartMagnify:
       @escaping (FlowingGraphCanvasSmartMagnifyContext<Schema>) ->
@@ -1408,6 +1522,7 @@ where PortContent == EmptyView, Decorations == EmptyView, Overlays == EmptyView 
       nodeCapabilities: nodeCapabilities,
       admitNodeDrag: admitNodeDrag,
       isAdditiveSelectionActive: isAdditiveSelectionActive,
+      interactionModifiers: interactionModifiers,
       onSmartMagnify: onSmartMagnify,
       onViewportChange: onViewportChange,
       onIntent: onIntent,
@@ -1436,6 +1551,9 @@ where PortContent == EmptyView, Decorations == EmptyView {
       FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
     isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
       FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
+    },
+    interactionModifiers: @escaping @MainActor () -> FlowingGraphCanvasInteractionModifiers = {
+      FlowingGraphCanvasPlatformInput.interactionModifiers
     },
     onSmartMagnify:
       @escaping (FlowingGraphCanvasSmartMagnifyContext<Schema>) ->
@@ -1472,6 +1590,7 @@ where PortContent == EmptyView, Decorations == EmptyView {
       nodeCapabilities: nodeCapabilities,
       admitNodeDrag: admitNodeDrag,
       isAdditiveSelectionActive: isAdditiveSelectionActive,
+      interactionModifiers: interactionModifiers,
       onSmartMagnify: onSmartMagnify,
       onViewportChange: onViewportChange,
       onIntent: onIntent,

@@ -461,6 +461,54 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
     )
   }
 
+  func testTransientGeometryConstrainsDragToTheDominantAxis() {
+    XCTAssertEqual(
+      FlowingGraphCanvasTransientGeometry.constrainingToDominantAxis(
+        CGSize(width: 18, height: 7)
+      ),
+      CGSize(width: 18, height: 0)
+    )
+    XCTAssertEqual(
+      FlowingGraphCanvasTransientGeometry.constrainingToDominantAxis(
+        CGSize(width: 4, height: -12)
+      ),
+      CGSize(width: 0, height: -12)
+    )
+  }
+
+  func testTransientResizePreservesAspectRatioFromOppositeCorner() {
+    let result = FlowingGraphCanvasTransientGeometry.resizing(
+      CGRect(x: 10, y: 20, width: 100, height: 50),
+      edges: [.leading, .top],
+      translation: CGSize(width: -20, height: -4),
+      modifiers: [.preserveResizeAspectRatio]
+    )
+
+    XCTAssertEqual(result, CGRect(x: -10, y: 10, width: 120, height: 60))
+  }
+
+  func testTransientResizeCanScaleFromCenter() {
+    let result = FlowingGraphCanvasTransientGeometry.resizing(
+      CGRect(x: 10, y: 20, width: 100, height: 50),
+      edges: [.trailing],
+      translation: CGSize(width: 10, height: 0),
+      modifiers: [.resizeFromCenter]
+    )
+
+    XCTAssertEqual(result, CGRect(x: 0, y: 20, width: 120, height: 50))
+  }
+
+  func testSideResizePreservesAspectRatioAroundTheOtherAxisCenter() {
+    let result = FlowingGraphCanvasTransientGeometry.resizing(
+      CGRect(x: 10, y: 20, width: 100, height: 50),
+      edges: [.trailing],
+      translation: CGSize(width: 20, height: 0),
+      modifiers: [.preserveResizeAspectRatio]
+    )
+
+    XCTAssertEqual(result, CGRect(x: 10, y: 15, width: 120, height: 60))
+  }
+
   @MainActor
   func testPublicViewSupportsAnOptionalPortBuilder() throws {
     let fixture = try makeFixture()

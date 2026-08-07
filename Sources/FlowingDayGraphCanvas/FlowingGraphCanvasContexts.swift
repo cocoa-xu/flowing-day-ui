@@ -17,6 +17,7 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
   public let snapping: FlowingGraphCanvasSnappingConfiguration
   public let allowsArrangementCommands: Bool
   public let keyboardNavigation: FlowingGraphCanvasKeyboardNavigationConfiguration
+  public let keyboardNudging: FlowingGraphCanvasKeyboardNudgingConfiguration
   public let accessibility: FlowingGraphCanvasAccessibilityConfiguration
 
   public init(
@@ -28,6 +29,7 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
     snapping: FlowingGraphCanvasSnappingConfiguration = .disabled,
     allowsArrangementCommands: Bool = true,
     keyboardNavigation: FlowingGraphCanvasKeyboardNavigationConfiguration = .standard,
+    keyboardNudging: FlowingGraphCanvasKeyboardNudgingConfiguration = .standard,
     accessibility: FlowingGraphCanvasAccessibilityConfiguration = .standard
   ) {
     precondition(edgeRenderPadding >= 0 && edgeRenderPadding.isFinite)
@@ -40,6 +42,7 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
     self.snapping = snapping
     self.allowsArrangementCommands = allowsArrangementCommands
     self.keyboardNavigation = keyboardNavigation
+    self.keyboardNudging = keyboardNudging
     self.accessibility = accessibility
   }
 }
@@ -94,6 +97,29 @@ public enum FlowingGraphCanvasPlatformInput {
       return flags.contains(.command) || flags.contains(.shift)
     #else
       return false
+    #endif
+  }
+
+  public static var interactionModifiers: FlowingGraphCanvasInteractionModifiers {
+    #if canImport(AppKit)
+      let flags = NSEvent.modifierFlags
+      var modifiers: FlowingGraphCanvasInteractionModifiers = []
+      if flags.contains(.shift) {
+        modifiers.formUnion([
+          .constrainDragAxis,
+          .preserveResizeAspectRatio,
+          .largeKeyboardNudge,
+        ])
+      }
+      if flags.contains(.option) {
+        modifiers.insert(.resizeFromCenter)
+      }
+      if flags.contains(.command) {
+        modifiers.insert(.disableSnapping)
+      }
+      return modifiers
+    #else
+      return []
     #endif
   }
 }

@@ -32,6 +32,33 @@ final class FlowingGraphCanvasArrangementTests: XCTestCase {
     XCTAssertTrue(result.guides.isEmpty)
   }
 
+  func testTemporarySnappingBypassClearsAnExistingLock() {
+    let candidate = FlowingGraphCanvasSnapCandidate(
+      id: "candidate",
+      frame: CGRect(x: 105, y: 200, width: 80, height: 40)
+    )
+    let configuration = FlowingGraphCanvasSnappingConfiguration(isEnabled: true)
+    let acquired = FlowingGraphCanvasArrangement.snap(
+      movingBounds: CGRect(x: 0, y: 0, width: 100, height: 60),
+      proposedTranslation: CGSize(width: 5, height: 0),
+      candidates: [candidate],
+      configuration: configuration,
+      zoom: 1
+    )
+    let bypassed = FlowingGraphCanvasArrangement.snap(
+      movingBounds: CGRect(x: 0, y: 0, width: 100, height: 60),
+      proposedTranslation: CGSize(width: 8, height: 0),
+      candidates: [candidate],
+      configuration: configuration,
+      zoom: 1,
+      snapState: acquired.snapState,
+      allowsSnapping: false
+    )
+
+    XCTAssertEqual(bypassed.translation.width, 8)
+    XCTAssertEqual(bypassed.snapState, FlowingGraphCanvasSnapState())
+  }
+
   func testAlignmentSnapWinsWhenItRequiresLessCorrectionThanTheGrid() {
     let result = FlowingGraphCanvasArrangement.snap(
       movingBounds: CGRect(x: 0, y: 0, width: 100, height: 60),
@@ -379,6 +406,74 @@ final class FlowingGraphCanvasArrangementTests: XCTestCase {
 
     XCTAssertEqual(retained.frame, CGRect(x: 0, y: 0, width: 150, height: 60))
     XCTAssertEqual(retained.snapState, acquired.snapState)
+  }
+
+  func testCenteredResizeSnappingKeepsTheOriginalCenter() {
+    let result = FlowingGraphCanvasArrangement.resize(
+      baseFrame: CGRect(x: 0, y: 0, width: 100, height: 60),
+      proposedFrame: CGRect(x: -23, y: 0, width: 146, height: 60),
+      edges: [.trailing],
+      candidates: [
+        FlowingGraphCanvasSnapCandidate(
+          id: "candidate",
+          frame: CGRect(x: 125, y: 100, width: 80, height: 40)
+        )
+      ],
+      configuration: FlowingGraphCanvasSnappingConfiguration(
+        isEnabled: true,
+        targets: [.alignment]
+      ),
+      minimumSize: CGSize(width: 40, height: 30),
+      zoom: 1,
+      behavior: FlowingGraphCanvasResizeBehavior(resizesFromCenter: true)
+    )
+
+    XCTAssertEqual(result.frame, CGRect(x: -25, y: 0, width: 150, height: 60))
+    XCTAssertEqual(result.frame.midX, 50)
+  }
+
+  func testAspectLockedResizeSnappingPreservesTheRatio() {
+    let result = FlowingGraphCanvasArrangement.resize(
+      baseFrame: CGRect(x: 0, y: 0, width: 100, height: 50),
+      proposedFrame: CGRect(x: 0, y: -11.5, width: 146, height: 73),
+      edges: [.trailing],
+      candidates: [
+        FlowingGraphCanvasSnapCandidate(
+          id: "candidate",
+          frame: CGRect(x: 150, y: 100, width: 80, height: 40)
+        )
+      ],
+      configuration: FlowingGraphCanvasSnappingConfiguration(
+        isEnabled: true,
+        targets: [.alignment]
+      ),
+      minimumSize: CGSize(width: 40, height: 30),
+      zoom: 1,
+      behavior: FlowingGraphCanvasResizeBehavior(
+        preservesAspectRatio: true,
+        aspectRatioDrivingAxis: .horizontal
+      )
+    )
+
+    XCTAssertEqual(result.frame, CGRect(x: 0, y: -12.5, width: 150, height: 75))
+  }
+
+  func testAspectLockedResizeEnforcesBothMinimumDimensions() {
+    let result = FlowingGraphCanvasArrangement.resize(
+      baseFrame: CGRect(x: 0, y: 0, width: 100, height: 50),
+      proposedFrame: CGRect(x: 0, y: 20, width: 20, height: 10),
+      edges: [.trailing],
+      candidates: [FlowingGraphCanvasSnapCandidate<String>](),
+      configuration: .disabled,
+      minimumSize: CGSize(width: 40, height: 30),
+      zoom: 1,
+      behavior: FlowingGraphCanvasResizeBehavior(
+        preservesAspectRatio: true,
+        aspectRatioDrivingAxis: .horizontal
+      )
+    )
+
+    XCTAssertEqual(result.frame, CGRect(x: 0, y: 10, width: 60, height: 30))
   }
 
   func testResizeEnforcesMinimumSizeFromTheStationaryEdge() {

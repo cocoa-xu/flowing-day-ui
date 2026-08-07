@@ -8,6 +8,20 @@ public enum FlowingGraphCanvasNodeDraggingMode: Hashable, Sendable {
   case multiple
 }
 
+public struct FlowingGraphCanvasInteractionModifiers: OptionSet, Hashable, Sendable {
+  public let rawValue: UInt8
+
+  public init(rawValue: UInt8) {
+    self.rawValue = rawValue
+  }
+
+  public static let constrainDragAxis = Self(rawValue: 1 << 0)
+  public static let preserveResizeAspectRatio = Self(rawValue: 1 << 1)
+  public static let resizeFromCenter = Self(rawValue: 1 << 2)
+  public static let disableSnapping = Self(rawValue: 1 << 3)
+  public static let largeKeyboardNudge = Self(rawValue: 1 << 4)
+}
+
 public struct FlowingGraphCanvasNodeResizingConfiguration: Equatable, Sendable {
   public static let standardMinimumSize = CGSize(width: 44, height: 32)
 

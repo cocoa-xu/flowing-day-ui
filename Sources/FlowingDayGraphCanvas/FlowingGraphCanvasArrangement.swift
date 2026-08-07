@@ -111,7 +111,7 @@ public struct FlowingGraphCanvasGuide: Equatable, Sendable {
   }
 }
 
-private enum GeometryAxis: Hashable, Sendable {
+public enum FlowingGraphCanvasGeometryAxis: Hashable, Sendable {
   case horizontal
   case vertical
 
@@ -135,6 +135,8 @@ private enum GeometryAxis: Hashable, Sendable {
     self == .horizontal ? frame.maxY : frame.maxX
   }
 }
+
+private typealias GeometryAxis = FlowingGraphCanvasGeometryAxis
 
 private struct SnapLock: Equatable, Sendable {
   let axis: GeometryAxis
@@ -202,6 +204,25 @@ public struct FlowingGraphCanvasResizeEdges: OptionSet, Hashable, Sendable {
       && !(contains(.leading) && contains(.trailing))
       && !(contains(.top) && contains(.bottom))
   }
+}
+
+public struct FlowingGraphCanvasResizeBehavior: Equatable, Sendable {
+  public let preservesAspectRatio: Bool
+  public let resizesFromCenter: Bool
+  public let aspectRatioDrivingAxis: FlowingGraphCanvasGeometryAxis?
+
+  public init(
+    preservesAspectRatio: Bool = false,
+    resizesFromCenter: Bool = false,
+    aspectRatioDrivingAxis: FlowingGraphCanvasGeometryAxis? = nil
+  ) {
+    precondition(!preservesAspectRatio || aspectRatioDrivingAxis != nil)
+    self.preservesAspectRatio = preservesAspectRatio
+    self.resizesFromCenter = resizesFromCenter
+    self.aspectRatioDrivingAxis = aspectRatioDrivingAxis
+  }
+
+  public static let standard = Self()
 }
 
 public struct FlowingGraphCanvasSnapCandidate<ID: Hashable & Sendable>: Sendable {
@@ -286,9 +307,10 @@ public enum FlowingGraphCanvasArrangement {
     candidates: [FlowingGraphCanvasSnapCandidate<ID>],
     configuration: FlowingGraphCanvasSnappingConfiguration,
     zoom: CGFloat,
-    snapState: FlowingGraphCanvasSnapState = .init()
+    snapState: FlowingGraphCanvasSnapState = .init(),
+    allowsSnapping: Bool = true
   ) -> FlowingGraphCanvasSnapResult {
-    guard configuration.isEnabled, zoom > 0, zoom.isFinite else {
+    guard configuration.isEnabled, allowsSnapping, zoom > 0, zoom.isFinite else {
       return FlowingGraphCanvasSnapResult(
         translation: proposedTranslation,
         guides: []
@@ -387,7 +409,9 @@ public enum FlowingGraphCanvasArrangement {
     configuration: FlowingGraphCanvasSnappingConfiguration,
     minimumSize: CGSize,
     zoom: CGFloat,
-    snapState: FlowingGraphCanvasSnapState = .init()
+    snapState: FlowingGraphCanvasSnapState = .init(),
+    allowsSnapping: Bool = true,
+    behavior: FlowingGraphCanvasResizeBehavior = .standard
   ) -> FlowingGraphCanvasResizeResult {
     precondition(edges.isValid)
     precondition(minimumSize.width >= 0 && minimumSize.width.isFinite)
@@ -402,13 +426,15 @@ public enum FlowingGraphCanvasArrangement {
       proposedFrame,
       relativeTo: baseFrame,
       edges: edges,
-      minimumSize: minimumSize
+      minimumSize: minimumSize,
+      behavior: behavior
     )
     var frame = proposedConstrainedFrame
     var resolved: [(GeometryAxis, Snap)] = []
-    if configuration.isEnabled {
+    if configuration.isEnabled && allowsSnapping {
       let proposedHorizontalValue = resizeValue(frame, edges: edges, axis: .horizontal)
-      if let snap = proposedHorizontalValue.flatMap({ value in
+      if shouldResolve(axis: .horizontal, behavior: behavior),
+        let snap = proposedHorizontalValue.flatMap({ value in
         retainedSnap(
           snapState.horizontal,
           proposedValue: value,
@@ -419,14 +445,23 @@ public enum FlowingGraphCanvasArrangement {
           candidates: effectiveCandidates,
           axis: .horizontal,
           configuration: configuration,
-          tolerance: tolerance
+          tolerance: tolerance,
+          behavior: behavior
         )
       }) {
-        frame = applying(snap, to: frame, edges: edges, axis: .horizontal)
+        frame = applying(
+          snap,
+          to: frame,
+          baseFrame: baseFrame,
+          edges: edges,
+          axis: .horizontal,
+          behavior: behavior
+        )
         resolved.append((.horizontal, snap))
       }
       let proposedVerticalValue = resizeValue(frame, edges: edges, axis: .vertical)
-      if let snap = proposedVerticalValue.flatMap({ value in
+      if shouldResolve(axis: .vertical, behavior: behavior),
+        let snap = proposedVerticalValue.flatMap({ value in
         retainedSnap(
           snapState.vertical,
           proposedValue: value,
@@ -437,17 +472,26 @@ public enum FlowingGraphCanvasArrangement {
           candidates: effectiveCandidates,
           axis: .vertical,
           configuration: configuration,
-          tolerance: tolerance
+          tolerance: tolerance,
+          behavior: behavior
         )
       }) {
-        frame = applying(snap, to: frame, edges: edges, axis: .vertical)
+        frame = applying(
+          snap,
+          to: frame,
+          baseFrame: baseFrame,
+          edges: edges,
+          axis: .vertical,
+          behavior: behavior
+        )
         resolved.append((.vertical, snap))
       }
       frame = constrained(
         frame,
         relativeTo: baseFrame,
         edges: edges,
-        minimumSize: minimumSize
+        minimumSize: minimumSize,
+        behavior: behavior
       )
     }
     let resolvedState = FlowingGraphCanvasSnapState(
@@ -823,7 +867,8 @@ public enum FlowingGraphCanvasArrangement {
     candidates: [FlowingGraphCanvasSnapCandidate<ID>],
     axis: GeometryAxis,
     configuration: FlowingGraphCanvasSnappingConfiguration,
-    tolerance: CGFloat
+    tolerance: CGFloat,
+    behavior: FlowingGraphCanvasResizeBehavior
   ) -> Snap? {
     let usesLower = axis == .horizontal ? edges.contains(.leading) : edges.contains(.top)
     let usesUpper = axis == .horizontal ? edges.contains(.trailing) : edges.contains(.bottom)
@@ -843,10 +888,17 @@ public enum FlowingGraphCanvasArrangement {
     if configuration.targets.contains(.equalSize) {
       var best: Snap?
       for candidate in candidates {
-        let target =
-          usesLower
-          ? axis.upper(frame) - axis.length(candidate.frame)
-          : axis.lower(frame) + axis.length(candidate.frame)
+        let target: CGFloat
+        if behavior.resizesFromCenter {
+          target =
+            axis.middle(frame)
+            + (usesLower ? -1 : 1) * axis.length(candidate.frame) / 2
+        } else {
+          target =
+            usesLower
+            ? axis.upper(frame) - axis.length(candidate.frame)
+            : axis.lower(frame) + axis.length(candidate.frame)
+        }
         let delta = target - movingValue
         guard abs(delta) <= tolerance else { continue }
         let snap = Snap(
@@ -874,48 +926,158 @@ public enum FlowingGraphCanvasArrangement {
   private static func applying(
     _ snap: Snap,
     to frame: CGRect,
+    baseFrame: CGRect,
     edges: FlowingGraphCanvasResizeEdges,
-    axis: GeometryAxis
+    axis: GeometryAxis,
+    behavior: FlowingGraphCanvasResizeBehavior
   ) -> CGRect {
     var result = frame
     if axis == .horizontal {
       if edges.contains(.leading) {
         result.origin.x += snap.delta
-        result.size.width -= snap.delta
+        result.size.width -= snap.delta * (behavior.resizesFromCenter ? 2 : 1)
       } else if edges.contains(.trailing) {
-        result.size.width += snap.delta
+        if behavior.resizesFromCenter {
+          result.origin.x -= snap.delta
+        }
+        result.size.width += snap.delta * (behavior.resizesFromCenter ? 2 : 1)
       }
     } else if edges.contains(.top) {
       result.origin.y += snap.delta
-      result.size.height -= snap.delta
+      result.size.height -= snap.delta * (behavior.resizesFromCenter ? 2 : 1)
     } else if edges.contains(.bottom) {
-      result.size.height += snap.delta
+      if behavior.resizesFromCenter {
+        result.origin.y -= snap.delta
+      }
+      result.size.height += snap.delta * (behavior.resizesFromCenter ? 2 : 1)
     }
-    return result
+    return behavior.preservesAspectRatio
+      ? preservingAspectRatio(
+        result,
+        relativeTo: baseFrame,
+        edges: edges,
+        behavior: behavior
+      )
+      : result
   }
 
   private static func constrained(
     _ frame: CGRect,
     relativeTo baseFrame: CGRect,
     edges: FlowingGraphCanvasResizeEdges,
-    minimumSize: CGSize
+    minimumSize: CGSize,
+    behavior: FlowingGraphCanvasResizeBehavior
   ) -> CGRect {
+    if behavior.preservesAspectRatio,
+      baseFrame.width > 0,
+      baseFrame.height > 0,
+      let drivingAxis = behavior.aspectRatioDrivingAxis
+    {
+      let proposedScale =
+        drivingAxis == .horizontal
+        ? frame.width / baseFrame.width
+        : frame.height / baseFrame.height
+      let minimumScale = max(
+        minimumSize.width / baseFrame.width,
+        minimumSize.height / baseFrame.height
+      )
+      return scaled(
+        baseFrame,
+        scale: max(proposedScale, minimumScale),
+        edges: edges,
+        fromCenter: behavior.resizesFromCenter
+      )
+    }
     var result = frame
     if result.width < minimumSize.width {
       result.size.width = minimumSize.width
-      result.origin.x =
-        edges.contains(.leading)
-        ? baseFrame.maxX - minimumSize.width
-        : baseFrame.minX
+      if behavior.resizesFromCenter {
+        result.origin.x = baseFrame.midX - minimumSize.width / 2
+      } else {
+        result.origin.x =
+          edges.contains(.leading)
+          ? baseFrame.maxX - minimumSize.width
+          : baseFrame.minX
+      }
     }
     if result.height < minimumSize.height {
       result.size.height = minimumSize.height
-      result.origin.y =
-        edges.contains(.top)
-        ? baseFrame.maxY - minimumSize.height
-        : baseFrame.minY
+      if behavior.resizesFromCenter {
+        result.origin.y = baseFrame.midY - minimumSize.height / 2
+      } else {
+        result.origin.y =
+          edges.contains(.top)
+          ? baseFrame.maxY - minimumSize.height
+          : baseFrame.minY
+      }
     }
     return result
+  }
+
+  private static func shouldResolve(
+    axis: GeometryAxis,
+    behavior: FlowingGraphCanvasResizeBehavior
+  ) -> Bool {
+    !behavior.preservesAspectRatio || behavior.aspectRatioDrivingAxis == axis
+  }
+
+  private static func preservingAspectRatio(
+    _ frame: CGRect,
+    relativeTo baseFrame: CGRect,
+    edges: FlowingGraphCanvasResizeEdges,
+    behavior: FlowingGraphCanvasResizeBehavior
+  ) -> CGRect {
+    guard let drivingAxis = behavior.aspectRatioDrivingAxis else { return frame }
+    let scale =
+      drivingAxis == .horizontal
+      ? frame.width / baseFrame.width
+      : frame.height / baseFrame.height
+    return scaled(
+      baseFrame,
+      scale: scale,
+      edges: edges,
+      fromCenter: behavior.resizesFromCenter
+    )
+  }
+
+  private static func scaled(
+    _ frame: CGRect,
+    scale: CGFloat,
+    edges: FlowingGraphCanvasResizeEdges,
+    fromCenter: Bool
+  ) -> CGRect {
+    let horizontalAnchor = anchor(
+      lower: edges.contains(.leading),
+      upper: edges.contains(.trailing),
+      fromCenter: fromCenter
+    )
+    let verticalAnchor = anchor(
+      lower: edges.contains(.top),
+      upper: edges.contains(.bottom),
+      fromCenter: fromCenter
+    )
+    let anchorPoint = CGPoint(
+      x: frame.minX + frame.width * horizontalAnchor,
+      y: frame.minY + frame.height * verticalAnchor
+    )
+    let size = CGSize(width: frame.width * scale, height: frame.height * scale)
+    return CGRect(
+      x: anchorPoint.x - size.width * horizontalAnchor,
+      y: anchorPoint.y - size.height * verticalAnchor,
+      width: size.width,
+      height: size.height
+    )
+  }
+
+  private static func anchor(
+    lower: Bool,
+    upper: Bool,
+    fromCenter: Bool
+  ) -> CGFloat {
+    if fromCenter || lower == upper {
+      return 0.5
+    }
+    return lower ? 1 : 0
   }
 
   private static func resolvedGuides(
