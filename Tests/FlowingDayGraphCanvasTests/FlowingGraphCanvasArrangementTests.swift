@@ -111,6 +111,145 @@ final class FlowingGraphCanvasArrangementTests: XCTestCase {
     XCTAssertTrue(result.guides.isEmpty)
   }
 
+  func testSnapTargetsCanEnableGridWithoutAlignment() {
+    let result = FlowingGraphCanvasArrangement.snap(
+      movingBounds: CGRect(x: 0, y: 0, width: 100, height: 60),
+      proposedTranslation: CGSize(width: 17, height: 0),
+      candidates: [
+        FlowingGraphCanvasSnapCandidate(
+          id: "candidate",
+          frame: CGRect(x: 16, y: 200, width: 80, height: 40)
+        )
+      ],
+      configuration: FlowingGraphCanvasSnappingConfiguration(
+        isEnabled: true,
+        targets: [.grid],
+        gridCellSize: CGSize(width: 20, height: 20)
+      ),
+      zoom: 1
+    )
+
+    XCTAssertEqual(result.translation.width, 20)
+    XCTAssertEqual(result.guides.first?.kind, .grid)
+  }
+
+  func testEqualSpacingSnapsBetweenTwoNodesAndEmitsMeasuredGuides() {
+    let result = FlowingGraphCanvasArrangement.snap(
+      movingBounds: CGRect(x: 0, y: 10, width: 20, height: 20),
+      proposedTranslation: CGSize(width: 46, height: 0),
+      candidates: [
+        FlowingGraphCanvasSnapCandidate(
+          id: "left",
+          frame: CGRect(x: 0, y: 0, width: 20, height: 20)
+        ),
+        FlowingGraphCanvasSnapCandidate(
+          id: "right",
+          frame: CGRect(x: 100, y: 0, width: 20, height: 20)
+        ),
+      ],
+      configuration: FlowingGraphCanvasSnappingConfiguration(
+        isEnabled: true,
+        targets: [.equalSpacing]
+      ),
+      zoom: 1
+    )
+
+    XCTAssertEqual(result.translation.width, 50)
+    XCTAssertEqual(result.guides.map(\.kind), [.equalSpacing, .equalSpacing])
+    XCTAssertEqual(result.guides.compactMap(\.measurement), [30, 30])
+  }
+
+  func testEqualSpacingSnapsAfterAnExistingPair() {
+    let result = FlowingGraphCanvasArrangement.snap(
+      movingBounds: CGRect(x: 0, y: 0, width: 20, height: 20),
+      proposedTranslation: CGSize(width: 97, height: 0),
+      candidates: [
+        FlowingGraphCanvasSnapCandidate(
+          id: "first",
+          frame: CGRect(x: 0, y: 0, width: 20, height: 20)
+        ),
+        FlowingGraphCanvasSnapCandidate(
+          id: "second",
+          frame: CGRect(x: 50, y: 0, width: 20, height: 20)
+        ),
+      ],
+      configuration: FlowingGraphCanvasSnappingConfiguration(
+        isEnabled: true,
+        targets: [.equalSpacing]
+      ),
+      zoom: 1
+    )
+
+    XCTAssertEqual(result.translation.width, 100)
+    XCTAssertEqual(result.guides.compactMap(\.measurement), [30, 30])
+  }
+
+  func testResizeSnapsTheMovingEdgeAndShowsItsDimension() {
+    let result = FlowingGraphCanvasArrangement.resize(
+      baseFrame: CGRect(x: 0, y: 0, width: 100, height: 60),
+      proposedFrame: CGRect(x: 0, y: 0, width: 146, height: 60),
+      edges: [.trailing],
+      candidates: [
+        FlowingGraphCanvasSnapCandidate(
+          id: "candidate",
+          frame: CGRect(x: 150, y: 100, width: 80, height: 40)
+        )
+      ],
+      configuration: FlowingGraphCanvasSnappingConfiguration(
+        isEnabled: true,
+        targets: [.alignment]
+      ),
+      minimumSize: CGSize(width: 40, height: 30),
+      zoom: 1
+    )
+
+    XCTAssertEqual(result.frame, CGRect(x: 0, y: 0, width: 150, height: 60))
+    XCTAssertEqual(result.guides.map(\.kind), [.alignment, .resize])
+    XCTAssertEqual(result.guides.last?.measurement, 150)
+  }
+
+  func testResizeCanMatchAnotherNodeSize() {
+    let result = FlowingGraphCanvasArrangement.resize(
+      baseFrame: CGRect(x: 0, y: 0, width: 100, height: 60),
+      proposedFrame: CGRect(x: 0, y: 0, width: 196, height: 60),
+      edges: [.trailing],
+      candidates: [
+        FlowingGraphCanvasSnapCandidate(
+          id: "candidate",
+          frame: CGRect(x: 400, y: 100, width: 200, height: 40)
+        )
+      ],
+      configuration: FlowingGraphCanvasSnappingConfiguration(
+        isEnabled: true,
+        targets: [.equalSize]
+      ),
+      minimumSize: CGSize(width: 40, height: 30),
+      zoom: 1
+    )
+
+    XCTAssertEqual(result.frame.width, 200)
+    XCTAssertEqual(result.guides.map(\.kind), [.equalSize, .resize])
+  }
+
+  func testResizeEnforcesMinimumSizeFromTheStationaryEdge() {
+    let result = FlowingGraphCanvasArrangement.resize(
+      baseFrame: CGRect(x: 0, y: 0, width: 100, height: 60),
+      proposedFrame: CGRect(x: 95, y: 0, width: 5, height: 60),
+      edges: [.leading],
+      candidates: [FlowingGraphCanvasSnapCandidate<String>](),
+      configuration: FlowingGraphCanvasSnappingConfiguration(
+        isEnabled: false,
+        showsGuides: true
+      ),
+      minimumSize: CGSize(width: 20, height: 30),
+      zoom: 1
+    )
+
+    XCTAssertEqual(result.frame, CGRect(x: 80, y: 0, width: 20, height: 60))
+    XCTAssertEqual(result.guides.count, 1)
+    XCTAssertEqual(result.guides.first?.kind, .resize)
+  }
+
   func testAlignmentHandlesNodesWithDifferentSizes() {
     let nodes = [
       FlowingGraphCanvasNodeGeometry(
