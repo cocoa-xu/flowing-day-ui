@@ -167,10 +167,34 @@ struct ShowcaseWorldDecoration: View {
               .strokeBorder(PreferencesAccent.celadon.fill, lineWidth: 1.5)
           }
           .frame(width: isCorner ? 10 : 9, height: isCorner ? 10 : 9)
+          .accessibilityLabel("Resize \(resizeHandleName(edges))")
+          .accessibilityIdentifier("showcase-resize-handle-\(resizeHandleIdentifier(edges))")
       }
     }
     .frame(width: resize.renderedFrame.width, height: resize.renderedFrame.height)
     .position(x: resize.renderedFrame.midX, y: resize.renderedFrame.midY)
+  }
+
+  private func resizeHandleName(_ edges: FlowingGraphCanvasResizeEdges) -> String {
+    resizeHandleIdentifier(edges)
+      .split(separator: "-")
+      .map { $0.capitalized }
+      .joined(separator: " ")
+  }
+
+  private func resizeHandleIdentifier(_ edges: FlowingGraphCanvasResizeEdges) -> String {
+    var components: [String] = []
+    if edges.contains(.top) {
+      components.append("top")
+    } else if edges.contains(.bottom) {
+      components.append("bottom")
+    }
+    if edges.contains(.leading) {
+      components.append("leading")
+    } else if edges.contains(.trailing) {
+      components.append("trailing")
+    }
+    return components.joined(separator: "-")
   }
 }
 

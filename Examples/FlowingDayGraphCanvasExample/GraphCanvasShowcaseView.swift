@@ -159,6 +159,7 @@ struct GraphCanvasShowcaseView: View {
               RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(PreferencesPalette.field.opacity(0.55))
             )
+            .accessibilityIdentifier("showcase-last-intent")
         }
 
         if let errorMessage = model.errorMessage {

@@ -1,0 +1,68 @@
+name: FlowingDayGraphCanvasTesting
+options:
+  bundleIdPrefix: moe.uwucocoa
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+
+packages:
+  FlowingDayUI:
+    path: .
+
+targets:
+  FlowingDayGraphCanvasTestHost:
+    type: application
+    platform: macOS
+    sources:
+      - UITesting/TestHost
+      - Examples/FlowingDayGraphCanvasExample/GraphCanvasShowcaseView.swift
+      - Examples/FlowingDayGraphCanvasExample/GraphCanvasShowcaseComponents.swift
+      - Examples/FlowingDayGraphCanvasExample/GraphCanvasShowcaseModel.swift
+      - Examples/FlowingDayGraphCanvasExample/ShowcaseDocumentFactory.swift
+      - Examples/FlowingDayGraphCanvasExample/ShowcaseLayoutBuilder.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: moe.uwucocoa.flowingday.graphcanvastesthost
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - package: FlowingDayUI
+        product: FlowingDayCanvas
+      - package: FlowingDayUI
+        product: FlowingDayGraphCanvas
+      - package: FlowingDayUI
+        product: FlowingDayGraphComposition
+      - package: FlowingDayUI
+        product: FlowingDayGraphCore
+      - package: FlowingDayUI
+        product: FlowingDayGraphLayout
+      - package: FlowingDayUI
+        product: FlowingDayPreferences
+
+  FlowingDayGraphCanvasUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - UITesting/FlowingDayGraphCanvasUITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: moe.uwucocoa.flowingday.graphcanvasuitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: FlowingDayGraphCanvasTestHost
+    dependencies:
+      - target: FlowingDayGraphCanvasTestHost
+
+schemes:
+  FlowingDayGraphCanvasUITests:
+    build:
+      targets:
+        FlowingDayGraphCanvasTestHost: all
+        FlowingDayGraphCanvasUITests: [test]
+    test:
+      targets:
+        - FlowingDayGraphCanvasUITests
+    run:
+      config: Debug

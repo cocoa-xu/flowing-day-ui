@@ -1,0 +1,502 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		232A0A2E56F0D60605545385 /* GraphCanvasShowcaseComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C41E4D3C37AB43170F61700 /* GraphCanvasShowcaseComponents.swift */; };
+		35012D51AC46F03B89700374 /* GraphCanvasShowcaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E44D13E68CD3EBAE26BFD5 /* GraphCanvasShowcaseView.swift */; };
+		383AEC6C64BE8C3EF1C2F98C /* FlowingDayGraphLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 27582861B385FE911392A0CA /* FlowingDayGraphLayout */; };
+		4E70E13A414F0A1711A97B74 /* FlowingDayGraphCanvas in Frameworks */ = {isa = PBXBuildFile; productRef = FA3991FAF475505B0B348306 /* FlowingDayGraphCanvas */; };
+		604121C5EC3F6FC3BF2C0DBE /* FlowingDayGraphComposition in Frameworks */ = {isa = PBXBuildFile; productRef = A4BD71D5EDFB076C8CE849F5 /* FlowingDayGraphComposition */; };
+		685518E9A483F779232E0AB4 /* FlowingDayGraphCanvasUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7327FC087CFA5A87A05173 /* FlowingDayGraphCanvasUITests.swift */; };
+		6C8665FA2D984B31D6FFB23E /* FlowingDayCanvas in Frameworks */ = {isa = PBXBuildFile; productRef = E515DAEB98122A249FFDC0E4 /* FlowingDayCanvas */; };
+		979D94228EA7CF5F04006138 /* FlowingDayGraphCore in Frameworks */ = {isa = PBXBuildFile; productRef = BCA4523F818193657DE0483A /* FlowingDayGraphCore */; };
+		98F760A574D52C0CA0173AC5 /* GraphCanvasShowcaseModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 290E69D5D63CD39E21761D70 /* GraphCanvasShowcaseModel.swift */; };
+		B0BCBE25B502ED44752E29FC /* FlowingDayPreferences in Frameworks */ = {isa = PBXBuildFile; productRef = C65BC7022C8EA5E8BB6852C5 /* FlowingDayPreferences */; };
+		B454F6056A83410611EDC99B /* ShowcaseLayoutBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41F87319D3930E20A36A91B3 /* ShowcaseLayoutBuilder.swift */; };
+		D7478D8CFAF3877D5C69FD3F /* FlowingDayGraphCanvasTestHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E58CE2EB1C2EA03BDA19FE43 /* FlowingDayGraphCanvasTestHostApp.swift */; };
+		FA884842339CA378E7DA8AAC /* ShowcaseDocumentFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A9786682F8655748390A6F /* ShowcaseDocumentFactory.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		62080256E503DDA8EEE10E37 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4797001817227754D4D1F02E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 49C29519670B9BDDD8100F38;
+			remoteInfo = FlowingDayGraphCanvasTestHost;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		290E69D5D63CD39E21761D70 /* GraphCanvasShowcaseModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphCanvasShowcaseModel.swift; sourceTree = "<group>"; };
+		3B7327FC087CFA5A87A05173 /* FlowingDayGraphCanvasUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowingDayGraphCanvasUITests.swift; sourceTree = "<group>"; };
+		3BC3C707296239D1B584F997 /* FlowingDayGraphCanvasTestHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlowingDayGraphCanvasTestHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		41F87319D3930E20A36A91B3 /* ShowcaseLayoutBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowcaseLayoutBuilder.swift; sourceTree = "<group>"; };
+		49E44D13E68CD3EBAE26BFD5 /* GraphCanvasShowcaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphCanvasShowcaseView.swift; sourceTree = "<group>"; };
+		4C41E4D3C37AB43170F61700 /* GraphCanvasShowcaseComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphCanvasShowcaseComponents.swift; sourceTree = "<group>"; };
+		89A9786682F8655748390A6F /* ShowcaseDocumentFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowcaseDocumentFactory.swift; sourceTree = "<group>"; };
+		AE8E099A923EA415948D9A82 /* FlowingDayGraphCanvasUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FlowingDayGraphCanvasUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		BAA8765073AEF5DBDC9BACFC /* flowing-day-ui */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "flowing-day-ui"; path = .; sourceTree = SOURCE_ROOT; };
+		E58CE2EB1C2EA03BDA19FE43 /* FlowingDayGraphCanvasTestHostApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowingDayGraphCanvasTestHostApp.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		8A77A882279965F25DA5B316 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6C8665FA2D984B31D6FFB23E /* FlowingDayCanvas in Frameworks */,
+				4E70E13A414F0A1711A97B74 /* FlowingDayGraphCanvas in Frameworks */,
+				604121C5EC3F6FC3BF2C0DBE /* FlowingDayGraphComposition in Frameworks */,
+				979D94228EA7CF5F04006138 /* FlowingDayGraphCore in Frameworks */,
+				383AEC6C64BE8C3EF1C2F98C /* FlowingDayGraphLayout in Frameworks */,
+				B0BCBE25B502ED44752E29FC /* FlowingDayPreferences in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		20E5DA903A5F835B985B80D0 /* FlowingDayGraphCanvasExample */ = {
+			isa = PBXGroup;
+			children = (
+				4C41E4D3C37AB43170F61700 /* GraphCanvasShowcaseComponents.swift */,
+				290E69D5D63CD39E21761D70 /* GraphCanvasShowcaseModel.swift */,
+				49E44D13E68CD3EBAE26BFD5 /* GraphCanvasShowcaseView.swift */,
+				89A9786682F8655748390A6F /* ShowcaseDocumentFactory.swift */,
+				41F87319D3930E20A36A91B3 /* ShowcaseLayoutBuilder.swift */,
+			);
+			path = FlowingDayGraphCanvasExample;
+			sourceTree = "<group>";
+		};
+		3A141F5D1C8A8B0FF9979B9B /* Examples */ = {
+			isa = PBXGroup;
+			children = (
+				20E5DA903A5F835B985B80D0 /* FlowingDayGraphCanvasExample */,
+			);
+			path = Examples;
+			sourceTree = "<group>";
+		};
+		55EECC67CD7583F474119C65 = {
+			isa = PBXGroup;
+			children = (
+				3A141F5D1C8A8B0FF9979B9B /* Examples */,
+				5BCE19C3AC1EF2E70E53CDF4 /* Packages */,
+				B93389B36003206459E5DA3A /* UITesting */,
+				B0B00F0FE9A825AF96FF22FB /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5BCE19C3AC1EF2E70E53CDF4 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				BAA8765073AEF5DBDC9BACFC /* flowing-day-ui */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		B0B00F0FE9A825AF96FF22FB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3BC3C707296239D1B584F997 /* FlowingDayGraphCanvasTestHost.app */,
+				AE8E099A923EA415948D9A82 /* FlowingDayGraphCanvasUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B93389B36003206459E5DA3A /* UITesting */ = {
+			isa = PBXGroup;
+			children = (
+				EA28D8A1F4417802D83F1740 /* FlowingDayGraphCanvasUITests */,
+				B9846C2D3CDF18DD49984F94 /* TestHost */,
+			);
+			path = UITesting;
+			sourceTree = "<group>";
+		};
+		B9846C2D3CDF18DD49984F94 /* TestHost */ = {
+			isa = PBXGroup;
+			children = (
+				E58CE2EB1C2EA03BDA19FE43 /* FlowingDayGraphCanvasTestHostApp.swift */,
+			);
+			path = TestHost;
+			sourceTree = "<group>";
+		};
+		EA28D8A1F4417802D83F1740 /* FlowingDayGraphCanvasUITests */ = {
+			isa = PBXGroup;
+			children = (
+				3B7327FC087CFA5A87A05173 /* FlowingDayGraphCanvasUITests.swift */,
+			);
+			path = FlowingDayGraphCanvasUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2B51085BC480818B21F3147E /* FlowingDayGraphCanvasUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 65F8AF36D9842B40F39CF642 /* Build configuration list for PBXNativeTarget "FlowingDayGraphCanvasUITests" */;
+			buildPhases = (
+				7F0AAB7EE5716DDAFE7DFC61 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6548AD90CE7DEDF2CEECA789 /* PBXTargetDependency */,
+			);
+			name = FlowingDayGraphCanvasUITests;
+			packageProductDependencies = (
+			);
+			productName = FlowingDayGraphCanvasUITests;
+			productReference = AE8E099A923EA415948D9A82 /* FlowingDayGraphCanvasUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		49C29519670B9BDDD8100F38 /* FlowingDayGraphCanvasTestHost */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2501383742694F80751C08F2 /* Build configuration list for PBXNativeTarget "FlowingDayGraphCanvasTestHost" */;
+			buildPhases = (
+				7028D3E1B377DBAD9621E946 /* Sources */,
+				8A77A882279965F25DA5B316 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FlowingDayGraphCanvasTestHost;
+			packageProductDependencies = (
+				E515DAEB98122A249FFDC0E4 /* FlowingDayCanvas */,
+				FA3991FAF475505B0B348306 /* FlowingDayGraphCanvas */,
+				A4BD71D5EDFB076C8CE849F5 /* FlowingDayGraphComposition */,
+				BCA4523F818193657DE0483A /* FlowingDayGraphCore */,
+				27582861B385FE911392A0CA /* FlowingDayGraphLayout */,
+				C65BC7022C8EA5E8BB6852C5 /* FlowingDayPreferences */,
+			);
+			productName = FlowingDayGraphCanvasTestHost;
+			productReference = 3BC3C707296239D1B584F997 /* FlowingDayGraphCanvasTestHost.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4797001817227754D4D1F02E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					2B51085BC480818B21F3147E = {
+						TestTargetID = 49C29519670B9BDDD8100F38;
+					};
+				};
+			};
+			buildConfigurationList = E2414CCAD06A627A83AC4C77 /* Build configuration list for PBXProject "FlowingDayGraphCanvasTesting" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 55EECC67CD7583F474119C65;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A92212ABEAF738FC6C2317B9 /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = B0B00F0FE9A825AF96FF22FB /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				49C29519670B9BDDD8100F38 /* FlowingDayGraphCanvasTestHost */,
+				2B51085BC480818B21F3147E /* FlowingDayGraphCanvasUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7028D3E1B377DBAD9621E946 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D7478D8CFAF3877D5C69FD3F /* FlowingDayGraphCanvasTestHostApp.swift in Sources */,
+				232A0A2E56F0D60605545385 /* GraphCanvasShowcaseComponents.swift in Sources */,
+				98F760A574D52C0CA0173AC5 /* GraphCanvasShowcaseModel.swift in Sources */,
+				35012D51AC46F03B89700374 /* GraphCanvasShowcaseView.swift in Sources */,
+				FA884842339CA378E7DA8AAC /* ShowcaseDocumentFactory.swift in Sources */,
+				B454F6056A83410611EDC99B /* ShowcaseLayoutBuilder.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7F0AAB7EE5716DDAFE7DFC61 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				685518E9A483F779232E0AB4 /* FlowingDayGraphCanvasUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6548AD90CE7DEDF2CEECA789 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 49C29519670B9BDDD8100F38 /* FlowingDayGraphCanvasTestHost */;
+			targetProxy = 62080256E503DDA8EEE10E37 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		03E6E7BBDA47FA97EACE7A11 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = moe.uwucocoa.flowingday.graphcanvasuitests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = FlowingDayGraphCanvasTestHost;
+			};
+			name = Release;
+		};
+		0CA2864DE37AAAC4536E8CE8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = moe.uwucocoa.flowingday.graphcanvastesthost;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		A2E7EEEBB559B10CABCE64DB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = moe.uwucocoa.flowingday.graphcanvastesthost;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		A4527946868048377E2B9865 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A8594E8114477EA5408738A7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		CCA941490175BB7C75C9AD53 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = moe.uwucocoa.flowingday.graphcanvasuitests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = FlowingDayGraphCanvasTestHost;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2501383742694F80751C08F2 /* Build configuration list for PBXNativeTarget "FlowingDayGraphCanvasTestHost" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A2E7EEEBB559B10CABCE64DB /* Debug */,
+				0CA2864DE37AAAC4536E8CE8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		65F8AF36D9842B40F39CF642 /* Build configuration list for PBXNativeTarget "FlowingDayGraphCanvasUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CCA941490175BB7C75C9AD53 /* Debug */,
+				03E6E7BBDA47FA97EACE7A11 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E2414CCAD06A627A83AC4C77 /* Build configuration list for PBXProject "FlowingDayGraphCanvasTesting" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A4527946868048377E2B9865 /* Debug */,
+				A8594E8114477EA5408738A7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A92212ABEAF738FC6C2317B9 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		27582861B385FE911392A0CA /* FlowingDayGraphLayout */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FlowingDayGraphLayout;
+		};
+		A4BD71D5EDFB076C8CE849F5 /* FlowingDayGraphComposition */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FlowingDayGraphComposition;
+		};
+		BCA4523F818193657DE0483A /* FlowingDayGraphCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FlowingDayGraphCore;
+		};
+		C65BC7022C8EA5E8BB6852C5 /* FlowingDayPreferences */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FlowingDayPreferences;
+		};
+		E515DAEB98122A249FFDC0E4 /* FlowingDayCanvas */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FlowingDayCanvas;
+		};
+		FA3991FAF475505B0B348306 /* FlowingDayGraphCanvas */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FlowingDayGraphCanvas;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 4797001817227754D4D1F02E /* Project object */;
+}

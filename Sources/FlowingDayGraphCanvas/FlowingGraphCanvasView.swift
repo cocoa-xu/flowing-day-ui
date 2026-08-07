@@ -383,7 +383,6 @@ public struct FlowingGraphCanvas<
         actions: actions(for: elementID)
       )
       portContent(port, portContext)
-        .position(renderedPosition)
         .allowsHitTesting(session.tool == .select)
         .onTapGesture {
           select(elementID, mode: nil)
@@ -391,6 +390,7 @@ public struct FlowingGraphCanvas<
         .onHover { isHovering in
           setHovered(elementID, isHovering: isHovering)
         }
+        .position(renderedPosition)
     }
   }
 
