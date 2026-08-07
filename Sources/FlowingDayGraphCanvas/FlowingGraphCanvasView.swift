@@ -27,6 +27,7 @@ public struct FlowingGraphCanvas<
   private let command: FlowingGraphCanvasSessionCommand<Schema>?
   private let nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema>
   private let nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema>
+  private let snappingStrategy: FlowingGraphCanvasSnappingStrategy<Schema>
   private let admitNodeDrag:
     @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
       FlowingGraphCanvasNodeDragAdmission<Schema>
@@ -67,6 +68,7 @@ public struct FlowingGraphCanvas<
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
     nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
     nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema> = .init(),
+    snappingStrategy: FlowingGraphCanvasSnappingStrategy<Schema> = .standard,
     admitNodeDrag:
       @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
       FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
@@ -121,6 +123,7 @@ public struct FlowingGraphCanvas<
     self.command = command
     self.nodeCapabilities = nodeCapabilities
     self.nodeSizeConstraints = nodeSizeConstraints
+    self.snappingStrategy = snappingStrategy
     self.admitNodeDrag = admitNodeDrag
     self.admitNodeResize = admitNodeResize
     self.isAdditiveSelectionActive = isAdditiveSelectionActive
@@ -854,18 +857,20 @@ public struct FlowingGraphCanvas<
       configuration.snapping.isEnabled
       ? snapCandidates(in: searchRect, excluding: resize.nodeIDs)
       : []
-    let result = FlowingGraphCanvasArrangement.resize(
-      baseFrame: resize.baseBounds,
-      proposedFrame: proposedFrame,
-      edges: resize.edges,
-      candidates: candidates,
-      configuration: configuration.snapping,
-      minimumSize: resize.minimumBoundsSize,
-      maximumSize: resize.maximumBoundsSize,
-      zoom: zoom,
-      snapState: resize.snapState,
-      allowsSnapping: !modifiers.contains(.disableSnapping),
-      behavior: behavior
+    let result = snappingStrategy.resize(
+      FlowingGraphCanvasResizeSnapRequest(
+        baseFrame: resize.baseBounds,
+        proposedFrame: proposedFrame,
+        edges: resize.edges,
+        candidates: candidates,
+        configuration: configuration.snapping,
+        minimumSize: resize.minimumBoundsSize,
+        maximumSize: resize.maximumBoundsSize,
+        zoom: zoom,
+        snapState: resize.snapState,
+        allowsSnapping: !modifiers.contains(.disableSnapping),
+        behavior: behavior
+      )
     )
     session.transientNodeResize?.bounds = result.frame
     session.transientNodeResize?.guides = result.guides
@@ -1453,14 +1458,16 @@ public struct FlowingGraphCanvas<
     let searchRadius = configuration.snapping.searchRadius / session.viewport.transform.zoom
     let searchRect = proposedBounds.insetBy(dx: -searchRadius, dy: -searchRadius)
     let candidates = snapCandidates(in: searchRect, excluding: drag.nodeIDs)
-    return FlowingGraphCanvasArrangement.snap(
-      movingBounds: baseBounds,
-      proposedTranslation: proposedTranslation,
-      candidates: candidates,
-      configuration: configuration.snapping,
-      zoom: session.viewport.transform.zoom,
-      snapState: drag.snapState,
-      allowsSnapping: allowsSnapping
+    return snappingStrategy.snap(
+      FlowingGraphCanvasTranslationSnapRequest(
+        movingBounds: baseBounds,
+        proposedTranslation: proposedTranslation,
+        candidates: candidates,
+        configuration: configuration.snapping,
+        zoom: session.viewport.transform.zoom,
+        snapState: drag.snapState,
+        allowsSnapping: allowsSnapping
+      )
     )
   }
 
@@ -1709,6 +1716,7 @@ extension FlowingGraphCanvas where PortContent == EmptyView {
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
     nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
     nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema> = .init(),
+    snappingStrategy: FlowingGraphCanvasSnappingStrategy<Schema> = .standard,
     admitNodeDrag:
       @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
       FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
@@ -1758,6 +1766,7 @@ extension FlowingGraphCanvas where PortContent == EmptyView {
       command: command,
       nodeCapabilities: nodeCapabilities,
       nodeSizeConstraints: nodeSizeConstraints,
+      snappingStrategy: snappingStrategy,
       admitNodeDrag: admitNodeDrag,
       admitNodeResize: admitNodeResize,
       isAdditiveSelectionActive: isAdditiveSelectionActive,
@@ -1788,6 +1797,7 @@ where PortContent == EmptyView, Decorations == EmptyView, Overlays == EmptyView 
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
     nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
     nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema> = .init(),
+    snappingStrategy: FlowingGraphCanvasSnappingStrategy<Schema> = .standard,
     admitNodeDrag:
       @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
       FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
@@ -1833,6 +1843,7 @@ where PortContent == EmptyView, Decorations == EmptyView, Overlays == EmptyView 
       command: command,
       nodeCapabilities: nodeCapabilities,
       nodeSizeConstraints: nodeSizeConstraints,
+      snappingStrategy: snappingStrategy,
       admitNodeDrag: admitNodeDrag,
       admitNodeResize: admitNodeResize,
       isAdditiveSelectionActive: isAdditiveSelectionActive,
@@ -1862,6 +1873,7 @@ where PortContent == EmptyView, Decorations == EmptyView {
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
     nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
     nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema> = .init(),
+    snappingStrategy: FlowingGraphCanvasSnappingStrategy<Schema> = .standard,
     admitNodeDrag:
       @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
       FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
@@ -1909,6 +1921,7 @@ where PortContent == EmptyView, Decorations == EmptyView {
       command: command,
       nodeCapabilities: nodeCapabilities,
       nodeSizeConstraints: nodeSizeConstraints,
+      snappingStrategy: snappingStrategy,
       admitNodeDrag: admitNodeDrag,
       admitNodeResize: admitNodeResize,
       isAdditiveSelectionActive: isAdditiveSelectionActive,
