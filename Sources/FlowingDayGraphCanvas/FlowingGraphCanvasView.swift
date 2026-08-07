@@ -134,6 +134,42 @@ public struct FlowingGraphCanvas<
         swiftUIBackend
       }
     }
+    .onAppear {
+      reconcileSession()
+      handleCommand(command)
+    }
+    .onChange(of: content.id) { _ in
+      reconcileSession()
+    }
+    .onChange(of: command) { newCommand in
+      handleCommand(newCommand)
+    }
+    .onChange(of: session.tool) { _ in
+      session.marquee = nil
+      session.transientNodeDrag = nil
+      session.transientNodeResize = nil
+      rejectedNodeDragID = nil
+    }
+    .onChange(of: accessibilityFocusedNodeID) { nodeID in
+      guard configuration.accessibility.isEnabled, let nodeID else { return }
+      session.focusedElementID = nodeID
+    }
+    .focusable(configuration.keyboardNavigation.isEnabled)
+    .focused($hasKeyboardFocus)
+    .onMoveCommand(perform: moveKeyboardFocus)
+    .background {
+      if configuration.accessibility.isEnabled, let accessibilitySnapshot {
+        FlowingGraphCanvasAccessibilityHost(
+          snapshot: accessibilitySnapshot,
+          configuration: configuration.accessibility,
+          selectedElementIDs: session.selection,
+          focusedElementID: session.focusedElementID,
+          viewportTransform: session.viewport.transform,
+          onRequest: handleAccessibilityRequest
+        )
+        .allowsHitTesting(false)
+      }
+    }
   }
 
   private var backendContext: FlowingGraphCanvasBackendContext<Schema> {
@@ -187,42 +223,6 @@ public struct FlowingGraphCanvas<
       )
       if let marquee = session.marquee {
         marqueeOverlay(marquee.rect)
-      }
-    }
-    .onAppear {
-      reconcileSession()
-      handleCommand(command)
-    }
-    .onChange(of: content.id) { _ in
-      reconcileSession()
-    }
-    .onChange(of: command) { newCommand in
-      handleCommand(newCommand)
-    }
-    .onChange(of: session.tool) { _ in
-      session.marquee = nil
-      session.transientNodeDrag = nil
-      session.transientNodeResize = nil
-      rejectedNodeDragID = nil
-    }
-    .onChange(of: accessibilityFocusedNodeID) { nodeID in
-      guard configuration.accessibility.isEnabled, let nodeID else { return }
-      session.focusedElementID = nodeID
-    }
-    .focusable(configuration.keyboardNavigation.isEnabled)
-    .focused($hasKeyboardFocus)
-    .onMoveCommand(perform: moveKeyboardFocus)
-    .background {
-      if configuration.accessibility.isEnabled, let accessibilitySnapshot {
-        FlowingGraphCanvasAccessibilityHost(
-          snapshot: accessibilitySnapshot,
-          configuration: configuration.accessibility,
-          selectedElementIDs: session.selection,
-          focusedElementID: session.focusedElementID,
-          viewportTransform: session.viewport.transform,
-          onRequest: handleAccessibilityRequest
-        )
-        .allowsHitTesting(false)
       }
     }
   }
