@@ -198,6 +198,7 @@ struct GraphCanvasShowcaseView: View {
               : nil
           )
         ),
+        accessibilitySnapshot: model.accessibilitySnapshot,
         command: command,
         onViewportChange: { viewport, phase in
           guard phase == .ended else { return }

@@ -45,12 +45,14 @@ final class GraphCanvasShowcaseModel: ObservableObject {
   typealias Presentation = FlowingGraphPresentation<ShowcaseCanvasSchema>
   typealias Content = FlowingGraphCanvasContent<ShowcaseCanvasSchema>
   typealias ElementID = FlowingGraphCompositionElementID<ShowcaseCanvasSchema>
+  typealias AccessibilitySnapshot = FlowingGraphCanvasAccessibilitySnapshot<ElementID>
   typealias InstancePath = FlowingGraphInstancePath<String, String>
 
   @Published private(set) var document: Document
   @Published private(set) var projectionState: FlowingGraphProjectionState<ShowcaseCanvasSchema>
   @Published private(set) var presentation: Presentation?
   @Published private(set) var content: Content?
+  @Published private(set) var accessibilitySnapshot: AccessibilitySnapshot?
   @Published private(set) var breadcrumb: [FlowingGraphBreadcrumbSegment<ShowcaseCanvasSchema>] = []
   @Published private(set) var layoutStyle = ShowcaseLayoutStyle.dag
   @Published private(set) var presentationStyle = ShowcasePresentationStyle.collapsed
@@ -396,6 +398,12 @@ final class GraphCanvasShowcaseModel: ObservableObject {
     case .drillIn:
       guard let site = instanceSite(from: address) else { return }
       sendProjection(.drillIn(at: site))
+    case .beginConnection:
+      lastEvent = "Started an accessible connection"
+    case .completeConnection:
+      lastEvent = "Completed an accessible connection"
+    case .cancelConnection:
+      lastEvent = "Cancelled an accessible connection"
     }
   }
 
@@ -442,7 +450,7 @@ final class GraphCanvasShowcaseModel: ObservableObject {
   private func refreshLayout() {
     guard let presentation else { return }
     do {
-      content = try ShowcaseLayoutBuilder.content(
+      let nextContent = try ShowcaseLayoutBuilder.content(
         presentation: presentation,
         layoutStyle: layoutStyle,
         placementOffsets: placementOffsets,
@@ -450,8 +458,57 @@ final class GraphCanvasShowcaseModel: ObservableObject {
         layoutStateRevision: layoutStateRevision,
         identities: layoutIdentities
       )
+      content = nextContent
+      accessibilitySnapshot = try nextContent.accessibilitySnapshot(
+        canvasDescription: .init(
+          label: "Graph Canvas",
+          value: "\(presentation.nodes.count) nodes and \(presentation.edges.count) connections",
+          hint: "Navigate nodes and connections, select elements, or move selected nodes."
+        ),
+        node: { node in
+          .element(
+            .init(
+              label: node.value,
+              value: node.value == "Subgraph" ? "Composite node" : "Graph node",
+              hint: "Select or move this node.",
+              roleDescription: "node",
+              identifier: String(describing: node.id),
+              actions: [
+                .init(action: .inspect, label: "Inspect Node")
+              ]
+            )
+          )
+        },
+        port: { port in
+          .element(
+            .init(
+              label: port.value,
+              hint: "Use this port to begin or complete a connection.",
+              roleDescription: "port",
+              identifier: String(describing: port.id),
+              actions: [
+                .init(action: .beginConnection, label: "Start Connection"),
+                .init(action: .completeConnection, label: "Complete Connection"),
+              ]
+            )
+          )
+        },
+        edge: { edge in
+          .element(
+            .init(
+              label: edge.value,
+              roleDescription: "connection",
+              identifier: String(describing: edge.id),
+              actions: [
+                .init(action: .inspect, label: "Inspect Connection")
+              ]
+            )
+          )
+        }
+      )
       errorMessage = nil
     } catch {
+      accessibilitySnapshot = nil
       fail(error)
     }
   }

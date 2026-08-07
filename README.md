@@ -185,10 +185,49 @@ let configuration = FlowingGraphCanvasConfiguration(
 ```
 
 Snapping is disabled by default so adopting the graph canvas does not change placement
-behavior. Keyboard navigation and node accessibility are enabled by default and can be
-disabled independently. Alignment, grid, equal-spacing, and equal-size targets can be
-selected independently. Snap tolerance and guide offsets are specified in rendered
-points and remain visually stable across zoom levels.
+behavior. Keyboard navigation and basic node accessibility are enabled by default and
+can be disabled independently. Alignment, grid, equal-spacing, and equal-size targets
+can be selected independently. Snap tolerance and guide offsets are specified in
+rendered points and remain visually stable across zoom levels.
+
+For semantic accessibility across nodes, ports, and edges, the consumer supplies labels,
+values, hints, roles, and available actions while the canvas owns focus, navigation,
+selection forwarding, viewport focus, and platform accessibility objects:
+
+```swift
+let accessibility = try content.accessibilitySnapshot(
+    canvasDescription: .init(label: "Workflow"),
+    node: { node in
+        .element(
+            .init(
+                label: String(describing: node.value),
+                roleDescription: "workflow node"
+            )
+        )
+    },
+    port: { _ in .hidden },
+    edge: { _ in .hidden }
+)
+
+FlowingGraphCanvas(
+    content: content,
+    sessionID: sessionID,
+    session: $session,
+    accessibilitySnapshot: accessibility
+) { context in
+    background(context)
+} node: { node, context in
+    nodeView(node, context: context)
+} edge: { edge, context in
+    edgeView(edge, context: context)
+}
+```
+
+Hidden intermediary elements remain part of relationship navigation without appearing
+in the accessibility tree. The AppKit bridge exposes a bounded window around stable
+focus, so a graph with one hundred thousand elements does not create one hundred thousand
+accessibility objects. Capabilities for selection, movement, connection workflows, and
+custom element actions can be enabled independently.
 
 Node builders can place `FlowingGraphCanvasResizeHandle` around their own node design.
 Resize gestures use transient node, port, and incident-edge geometry, then emit one
