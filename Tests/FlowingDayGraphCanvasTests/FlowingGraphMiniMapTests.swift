@@ -4,6 +4,37 @@ import XCTest
 @testable import FlowingDayGraphCanvas
 
 final class FlowingGraphMiniMapTests: XCTestCase {
+  @MainActor
+  func testViewportDriverForwardsNavigationWithoutAssumingARenderer() {
+    let viewport = FlowingCanvasViewport(
+      transform: FlowingCanvasTransform(
+        zoom: 1.5,
+        offset: CGSize(width: 20, height: 30)
+      ),
+      size: CGSize(width: 800, height: 600),
+      contentBounds: CGRect(x: 100, y: 20, width: 680, height: 560)
+    )
+    var centers: [(CGPoint, FlowingCanvasViewportChangePhase)] = []
+    var zooms: [(CGFloat, FlowingCanvasViewportChangePhase)] = []
+    let driver = FlowingGraphMiniMapViewportDriver(
+      viewport: viewport,
+      center: { centers.append(($0, $1)) },
+      setZoom: { zooms.append(($0, $1)) }
+    )
+
+    driver.center(on: CGPoint(x: 420, y: 240), phase: .continuous)
+    driver.setZoom(2.25, phase: .ended)
+
+    XCTAssertEqual(driver.viewport, viewport)
+    XCTAssertEqual(driver.zoom, 1.5)
+    XCTAssertEqual(centers.count, 1)
+    XCTAssertEqual(centers[0].0, CGPoint(x: 420, y: 240))
+    XCTAssertEqual(centers[0].1, .continuous)
+    XCTAssertEqual(zooms.count, 1)
+    XCTAssertEqual(zooms[0].0, 2.25)
+    XCTAssertEqual(zooms[0].1, .ended)
+  }
+
   func testTransformFitsAndRoundTripsWorldGeometry() {
     let transform = FlowingGraphMiniMapTransform(
       worldBounds: CGRect(x: 100, y: 200, width: 1_000, height: 500),

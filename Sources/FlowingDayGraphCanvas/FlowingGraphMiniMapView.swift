@@ -95,7 +95,7 @@ public struct FlowingGraphMiniMap<
   }
 
   private let snapshot: FlowingGraphMiniMapSnapshot<NodeID, EdgeID>
-  private let proxy: FlowingCanvasProxy
+  private let viewportDriver: FlowingGraphMiniMapViewportDriver
   private let configuration: FlowingGraphMiniMapConfiguration
   private let style: FlowingGraphMiniMapStyle
   private let content: (FlowingGraphMiniMapRenderingContext<NodeID, EdgeID>) -> Content
@@ -109,7 +109,7 @@ public struct FlowingGraphMiniMap<
 
   public init(
     snapshot: FlowingGraphMiniMapSnapshot<NodeID, EdgeID>,
-    proxy: FlowingCanvasProxy,
+    viewportDriver: FlowingGraphMiniMapViewportDriver,
     configuration: FlowingGraphMiniMapConfiguration = .init(),
     style: FlowingGraphMiniMapStyle = .init(),
     @ViewBuilder content:
@@ -118,7 +118,7 @@ public struct FlowingGraphMiniMap<
       @escaping (FlowingGraphMiniMapRenderingContext<NodeID, EdgeID>) -> Decorations
   ) {
     self.snapshot = snapshot
-    self.proxy = proxy
+    self.viewportDriver = viewportDriver
     self.configuration = configuration
     self.style = style
     self.content = content
@@ -160,7 +160,7 @@ public struct FlowingGraphMiniMap<
             direction == .increment
             ? FlowingGraphMiniMapMetrics.accessibilityZoomFactor
             : 1 / FlowingGraphMiniMapMetrics.accessibilityZoomFactor
-          proxy.setZoom(proxy.zoom * factor, animated: false)
+          viewportDriver.setZoom(viewportDriver.zoom * factor)
         }
       }
     }
@@ -168,7 +168,7 @@ public struct FlowingGraphMiniMap<
     .onAppear {
       refreshNavigatorBounds(force: true)
     }
-    .onChange(of: proxy.viewport.visibleWorldRect) { _ in
+    .onChange(of: viewportDriver.viewport.visibleWorldRect) { _ in
       refreshNavigatorBounds(force: false)
     }
     .onChange(of: configuration.scope) { _ in
@@ -180,12 +180,12 @@ public struct FlowingGraphMiniMap<
     pointerState != nil || pinnedWorldBounds != nil
       || configuration.visibility.isVisible(
         contentBounds: snapshot.contentBounds,
-        visibleWorldRect: proxy.viewport.visibleWorldRect
+        visibleWorldRect: viewportDriver.viewport.visibleWorldRect
       )
   }
 
   private var accessibilityValue: String {
-    let percentage = Int((proxy.zoom * 100).rounded())
+    let percentage = Int((viewportDriver.zoom * 100).rounded())
     return "Zoom \(percentage) percent"
   }
 
@@ -202,7 +202,7 @@ public struct FlowingGraphMiniMap<
   private func requestedWorldBounds() -> CGRect {
     configuration.scope.bounds(
       contentBounds: snapshot.contentBounds,
-      visibleWorldRect: proxy.viewport.visibleWorldRect
+      visibleWorldRect: viewportDriver.viewport.visibleWorldRect
     )
   }
 
@@ -224,7 +224,7 @@ public struct FlowingGraphMiniMap<
       dx: current.width * FlowingGraphMiniMapMetrics.localNavigatorMarginRatio,
       dy: current.height * FlowingGraphMiniMapMetrics.localNavigatorMarginRatio
     )
-    if !retained.contains(proxy.viewport.visibleWorldRect) {
+    if !retained.contains(viewportDriver.viewport.visibleWorldRect) {
       navigatorWorldBounds = requested
     }
   }
@@ -235,8 +235,8 @@ public struct FlowingGraphMiniMap<
     FlowingGraphMiniMapRenderingContext(
       snapshot: snapshot,
       transform: transform,
-      viewport: proxy.viewport,
-      viewportFrame: transform.viewRect(for: proxy.viewport.visibleWorldRect),
+      viewport: viewportDriver.viewport,
+      viewportFrame: transform.viewRect(for: viewportDriver.viewport.visibleWorldRect),
       configuration: configuration
     )
   }
@@ -277,8 +277,8 @@ public struct FlowingGraphMiniMap<
   ) {
     let worldPoint = context.transform.worldPoint(for: location)
     let visibleCenter = CGPoint(
-      x: proxy.viewport.visibleWorldRect.midX,
-      y: proxy.viewport.visibleWorldRect.midY
+      x: viewportDriver.viewport.visibleWorldRect.midX,
+      y: viewportDriver.viewport.visibleWorldRect.midY
     )
     let offset: CGSize
     if context.viewportFrame.contains(location) {
@@ -299,7 +299,7 @@ public struct FlowingGraphMiniMap<
     phase: FlowingCanvasViewportChangePhase
   ) {
     guard let pointerState else { return }
-    proxy.center(
+    viewportDriver.center(
       on: FlowingGraphMiniMapNavigation.center(
         pointerLocation: location,
         transform: pointerState.transform,
@@ -325,8 +325,8 @@ public struct FlowingGraphMiniMap<
     let currentCenter =
       trackpadCenter
       ?? CGPoint(
-        x: proxy.viewport.visibleWorldRect.midX,
-        y: proxy.viewport.visibleWorldRect.midY
+        x: viewportDriver.viewport.visibleWorldRect.midX,
+        y: viewportDriver.viewport.visibleWorldRect.midY
       )
     let nextCenter = FlowingGraphMiniMapNavigation.pannedCenter(
       currentCenter: currentCenter,
@@ -334,7 +334,7 @@ public struct FlowingGraphMiniMap<
       transform: transform
     )
     trackpadCenter = nextCenter
-    proxy.center(on: nextCenter, phase: phase)
+    viewportDriver.center(on: nextCenter, phase: phase)
     if phase == .ended {
       trackpadCenter = nil
       pinnedWorldBounds = nil
@@ -355,9 +355,9 @@ public struct FlowingGraphMiniMap<
       1 + magnification * configuration.zoomSensitivity,
       FlowingGraphMiniMapMetrics.minimumMagnificationFactor
     )
-    let nextZoom = (trackpadZoom ?? proxy.zoom) * factor
+    let nextZoom = (trackpadZoom ?? viewportDriver.zoom) * factor
     trackpadZoom = nextZoom
-    proxy.setZoom(nextZoom, phase: phase)
+    viewportDriver.setZoom(nextZoom, phase: phase)
     if phase == .ended {
       trackpadZoom = nil
       pinnedWorldBounds = nil
@@ -372,7 +372,7 @@ where
 {
   public init(
     snapshot: FlowingGraphMiniMapSnapshot<NodeID, EdgeID>,
-    proxy: FlowingCanvasProxy,
+    viewportDriver: FlowingGraphMiniMapViewportDriver,
     configuration: FlowingGraphMiniMapConfiguration = .init(),
     style: FlowingGraphMiniMapStyle = .init(),
     styleRevision: UInt64 = 0,
@@ -383,7 +383,7 @@ where
   ) {
     self.init(
       snapshot: snapshot,
-      proxy: proxy,
+      viewportDriver: viewportDriver,
       configuration: configuration,
       style: style,
       content: {
@@ -397,6 +397,28 @@ where
       decorations: decorations
     )
   }
+
+  public init(
+    snapshot: FlowingGraphMiniMapSnapshot<NodeID, EdgeID>,
+    proxy: FlowingCanvasProxy,
+    configuration: FlowingGraphMiniMapConfiguration = .init(),
+    style: FlowingGraphMiniMapStyle = .init(),
+    styleRevision: UInt64 = 0,
+    nodeStyleIndex:
+      @escaping @Sendable (FlowingGraphMiniMapNode<NodeID>) -> Int = { _ in 0 },
+    @ViewBuilder decorations:
+      @escaping (FlowingGraphMiniMapRenderingContext<NodeID, EdgeID>) -> Decorations
+  ) {
+    self.init(
+      snapshot: snapshot,
+      viewportDriver: FlowingGraphMiniMapViewportDriver(proxy: proxy),
+      configuration: configuration,
+      style: style,
+      styleRevision: styleRevision,
+      nodeStyleIndex: nodeStyleIndex,
+      decorations: decorations
+    )
+  }
 }
 
 extension FlowingGraphMiniMap
@@ -404,6 +426,26 @@ where
   Content == FlowingGraphMiniMapDefaultContent<NodeID, EdgeID>,
   Decorations == EmptyView
 {
+  public init(
+    snapshot: FlowingGraphMiniMapSnapshot<NodeID, EdgeID>,
+    viewportDriver: FlowingGraphMiniMapViewportDriver,
+    configuration: FlowingGraphMiniMapConfiguration = .init(),
+    style: FlowingGraphMiniMapStyle = .init(),
+    styleRevision: UInt64 = 0,
+    nodeStyleIndex:
+      @escaping @Sendable (FlowingGraphMiniMapNode<NodeID>) -> Int = { _ in 0 }
+  ) {
+    self.init(
+      snapshot: snapshot,
+      viewportDriver: viewportDriver,
+      configuration: configuration,
+      style: style,
+      styleRevision: styleRevision,
+      nodeStyleIndex: nodeStyleIndex,
+      decorations: { _ in EmptyView() }
+    )
+  }
+
   public init(
     snapshot: FlowingGraphMiniMapSnapshot<NodeID, EdgeID>,
     proxy: FlowingCanvasProxy,
@@ -415,12 +457,11 @@ where
   ) {
     self.init(
       snapshot: snapshot,
-      proxy: proxy,
+      viewportDriver: FlowingGraphMiniMapViewportDriver(proxy: proxy),
       configuration: configuration,
       style: style,
       styleRevision: styleRevision,
-      nodeStyleIndex: nodeStyleIndex,
-      decorations: { _ in EmptyView() }
+      nodeStyleIndex: nodeStyleIndex
     )
   }
 }
