@@ -82,6 +82,51 @@ public struct FlowingGraphCanvasNodeCapabilityMap<Schema: FlowingGraphCanvasSche
   }
 }
 
+public struct FlowingGraphCanvasNodeSizeConstraints: Equatable, Sendable {
+  public let minimumSize: CGSize
+  public let maximumSize: CGSize?
+
+  public init(
+    minimumSize: CGSize = .zero,
+    maximumSize: CGSize? = nil
+  ) {
+    precondition(minimumSize.width >= 0 && minimumSize.width.isFinite)
+    precondition(minimumSize.height >= 0 && minimumSize.height.isFinite)
+    if let maximumSize {
+      precondition(maximumSize.width >= minimumSize.width && maximumSize.width.isFinite)
+      precondition(maximumSize.height >= minimumSize.height && maximumSize.height.isFinite)
+    }
+    self.minimumSize = minimumSize
+    self.maximumSize = maximumSize
+  }
+}
+
+public struct FlowingGraphCanvasNodeSizeConstraintMap<Schema: FlowingGraphCanvasSchema>:
+  Equatable, Sendable
+{
+  public typealias ElementID = FlowingGraphCompositionElementID<Schema>
+
+  public let defaultConstraints: FlowingGraphCanvasNodeSizeConstraints?
+  public let overrides: [ElementID: FlowingGraphCanvasNodeSizeConstraints]
+
+  public init(
+    defaultConstraints: FlowingGraphCanvasNodeSizeConstraints? = nil,
+    overrides: [ElementID: FlowingGraphCanvasNodeSizeConstraints] = [:]
+  ) {
+    self.defaultConstraints = defaultConstraints
+    self.overrides = overrides
+  }
+
+  public func constraints(
+    for nodeID: ElementID,
+    fallbackMinimumSize: CGSize
+  ) -> FlowingGraphCanvasNodeSizeConstraints {
+    overrides[nodeID]
+      ?? defaultConstraints
+      ?? FlowingGraphCanvasNodeSizeConstraints(minimumSize: fallbackMinimumSize)
+  }
+}
+
 public struct FlowingGraphCanvasNodeDragAdmissionRequest<
   Schema: FlowingGraphCanvasSchema
 >: Equatable, Sendable {
@@ -153,6 +198,67 @@ public enum FlowingGraphCanvasNodeDragResolver {
   public static func admittedNodeIDs<Schema: FlowingGraphCanvasSchema>(
     for request: FlowingGraphCanvasNodeDragAdmissionRequest<Schema>,
     admission: FlowingGraphCanvasNodeDragAdmission<Schema>
+  ) -> Set<FlowingGraphCompositionElementID<Schema>> {
+    let candidates = Set(request.candidateNodeIDs)
+    let admitted: Set<FlowingGraphCompositionElementID<Schema>>
+    switch admission {
+    case .deny:
+      return []
+    case .allowAll:
+      admitted = candidates
+    case .allowOnly(let nodeIDs):
+      admitted = candidates.intersection(nodeIDs)
+    }
+    guard admitted.contains(request.anchorNodeID) else { return [] }
+    return admitted
+  }
+}
+
+public struct FlowingGraphCanvasNodeResizeAdmissionRequest<
+  Schema: FlowingGraphCanvasSchema
+>: Equatable, Sendable {
+  public typealias ElementID = FlowingGraphCompositionElementID<Schema>
+
+  public let anchorNodeID: ElementID
+  public let selectedNodeIDs: [ElementID]
+  public let candidateNodeIDs: [ElementID]
+  public let baseFrames: [ElementID: CGRect]
+  public let edges: FlowingGraphCanvasResizeEdges
+  public let basePresentationSnapshotID: FlowingGraphPresentationSnapshotID
+
+  public init(
+    anchorNodeID: ElementID,
+    selectedNodeIDs: [ElementID],
+    candidateNodeIDs: [ElementID],
+    baseFrames: [ElementID: CGRect],
+    edges: FlowingGraphCanvasResizeEdges,
+    basePresentationSnapshotID: FlowingGraphPresentationSnapshotID
+  ) {
+    precondition(edges.isValid)
+    precondition(candidateNodeIDs.allSatisfy { baseFrames[$0] != nil })
+    self.anchorNodeID = anchorNodeID
+    self.selectedNodeIDs = selectedNodeIDs
+    self.candidateNodeIDs = candidateNodeIDs
+    self.baseFrames = baseFrames
+    self.edges = edges
+    self.basePresentationSnapshotID = basePresentationSnapshotID
+  }
+}
+
+public enum FlowingGraphCanvasNodeResizeAdmission<Schema: FlowingGraphCanvasSchema>:
+  Equatable, Sendable
+{
+  public typealias ElementID = FlowingGraphCompositionElementID<Schema>
+
+  case deny
+  case allowAll
+  case allowOnly(Set<ElementID>)
+}
+
+public enum FlowingGraphCanvasNodeResizeResolver {
+  public static func admittedNodeIDs<Schema: FlowingGraphCanvasSchema>(
+    for request: FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>,
+    admission: FlowingGraphCanvasNodeResizeAdmission<Schema>
   ) -> Set<FlowingGraphCompositionElementID<Schema>> {
     let candidates = Set(request.candidateNodeIDs)
     let admitted: Set<FlowingGraphCompositionElementID<Schema>>

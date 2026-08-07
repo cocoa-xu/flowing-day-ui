@@ -26,9 +26,13 @@ public struct FlowingGraphCanvas<
   private let contentChangeBehavior: FlowingCanvasContentChangeBehavior
   private let command: FlowingGraphCanvasSessionCommand<Schema>?
   private let nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema>
+  private let nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema>
   private let admitNodeDrag:
     @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
       FlowingGraphCanvasNodeDragAdmission<Schema>
+  private let admitNodeResize:
+    @MainActor (FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>) ->
+      FlowingGraphCanvasNodeResizeAdmission<Schema>
   private let isAdditiveSelectionActive: @MainActor () -> Bool
   private let interactionModifiers: @MainActor () -> FlowingGraphCanvasInteractionModifiers
   private let onSmartMagnify:
@@ -62,9 +66,13 @@ public struct FlowingGraphCanvas<
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
     nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
+    nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema> = .init(),
     admitNodeDrag:
       @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
       FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
+    admitNodeResize:
+      @escaping @MainActor (FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>) ->
+      FlowingGraphCanvasNodeResizeAdmission<Schema> = { _ in .allowAll },
     isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
       FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
     },
@@ -112,7 +120,9 @@ public struct FlowingGraphCanvas<
     self.contentChangeBehavior = contentChangeBehavior
     self.command = command
     self.nodeCapabilities = nodeCapabilities
+    self.nodeSizeConstraints = nodeSizeConstraints
     self.admitNodeDrag = admitNodeDrag
+    self.admitNodeResize = admitNodeResize
     self.isAdditiveSelectionActive = isAdditiveSelectionActive
     self.interactionModifiers = interactionModifiers
     self.onSmartMagnify = onSmartMagnify
@@ -773,18 +783,34 @@ public struct FlowingGraphCanvas<
       return
     }
     if activeNodeResize?.anchorNodeID != elementID || activeNodeResize?.edges != edges {
-      let baseGeometry = resizeBaseGeometry(anchorNodeID: elementID)
-      guard baseGeometry.frames[elementID] != nil else { return }
+      let candidateGeometry = resizeBaseGeometry(anchorNodeID: elementID)
+      guard candidateGeometry.frames[elementID] != nil else { return }
+      let request = FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>(
+        anchorNodeID: elementID,
+        selectedNodeIDs: content.presentation.nodes.map(\.id).filter(session.selection.contains),
+        candidateNodeIDs: candidateGeometry.nodeOrder,
+        baseFrames: candidateGeometry.frames,
+        edges: edges,
+        basePresentationSnapshotID: content.presentation.snapshotID
+      )
+      let admittedNodeIDs = FlowingGraphCanvasNodeResizeResolver.admittedNodeIDs(
+        for: request,
+        admission: admitNodeResize(request)
+      )
+      guard !admittedNodeIDs.isEmpty else { return }
+      let baseGeometry = resizeBaseGeometry(
+        anchorNodeID: elementID,
+        admittedNodeIDs: admittedNodeIDs
+      )
+      let boundsConstraints = resizeBoundsConstraints(baseFrames: baseGeometry.frames)
       session.transientNodeResize = FlowingGraphCanvasTransientNodeResize(
         anchorNodeID: elementID,
         basePresentationSnapshotID: content.presentation.snapshotID,
         baseLayoutInputID: content.id,
         nodeOrder: baseGeometry.nodeOrder,
         baseFrames: baseGeometry.frames,
-        minimumBoundsSize: minimumResizeBoundsSize(
-          baseFrames: baseGeometry.frames,
-          baseBounds: baseGeometry.frames.values.reduce(CGRect.null) { $0.union($1) }
-        ),
+        minimumBoundsSize: boundsConstraints.minimumSize,
+        maximumBoundsSize: boundsConstraints.maximumSize,
         edges: edges
       )
       if !session.selection.contains(elementID) {
@@ -830,6 +856,7 @@ public struct FlowingGraphCanvas<
       candidates: candidates,
       configuration: configuration.snapping,
       minimumSize: resize.minimumBoundsSize,
+      maximumSize: resize.maximumBoundsSize,
       zoom: zoom,
       snapState: resize.snapState,
       allowsSnapping: !modifiers.contains(.disableSnapping),
@@ -871,13 +898,17 @@ public struct FlowingGraphCanvas<
   }
 
   private func resizeBaseGeometry(
-    anchorNodeID: ElementID
+    anchorNodeID: ElementID,
+    admittedNodeIDs: Set<ElementID>? = nil
   ) -> (nodeOrder: [ElementID], frames: [ElementID: CGRect]) {
     let selectedNodeIDs =
       session.selection.contains(anchorNodeID)
       ? session.selection
       : [anchorNodeID]
-    var geometry = resizableNodeGeometry(in: selectedNodeIDs)
+    let effectiveNodeIDs =
+      admittedNodeIDs.map { selectedNodeIDs.intersection($0) }
+      ?? selectedNodeIDs
+    var geometry = resizableNodeGeometry(in: effectiveNodeIDs)
       .map { ($0.id, $0.frame) }
     if let anchorIndex = geometry.firstIndex(where: { $0.0 == anchorNodeID }),
       anchorIndex != geometry.startIndex
@@ -907,22 +938,61 @@ public struct FlowingGraphCanvas<
     .sorted { $0.order < $1.order }
   }
 
-  private func minimumResizeBoundsSize(
-    baseFrames: [ElementID: CGRect],
-    baseBounds: CGRect
-  ) -> CGSize {
-    let minimumNodeSize = configuration.nodeResizing.minimumSize
-    let minimumHorizontalScale = baseFrames.values.reduce(CGFloat.zero) {
-      guard $1.width > 0 else { return $0 }
-      return max($0, minimumNodeSize.width / $1.width)
+  private func resizeBoundsConstraints(
+    baseFrames: [ElementID: CGRect]
+  ) -> FlowingGraphCanvasNodeSizeConstraints {
+    let baseBounds = baseFrames.values.reduce(CGRect.null) { $0.union($1) }
+    var minimumHorizontalScale: CGFloat = 0
+    var minimumVerticalScale: CGFloat = 0
+    var maximumHorizontalScale = CGFloat.greatestFiniteMagnitude
+    var maximumVerticalScale = CGFloat.greatestFiniteMagnitude
+    var hasMaximumSize = false
+    for (nodeID, frame) in baseFrames {
+      let constraints = nodeSizeConstraints.constraints(
+        for: nodeID,
+        fallbackMinimumSize: configuration.nodeResizing.minimumSize
+      )
+      if frame.width > 0 {
+        minimumHorizontalScale = max(
+          minimumHorizontalScale,
+          constraints.minimumSize.width / frame.width
+        )
+        if let maximumSize = constraints.maximumSize {
+          maximumHorizontalScale = min(
+            maximumHorizontalScale,
+            maximumSize.width / frame.width
+          )
+          hasMaximumSize = true
+        }
+      }
+      if frame.height > 0 {
+        minimumVerticalScale = max(
+          minimumVerticalScale,
+          constraints.minimumSize.height / frame.height
+        )
+        if let maximumSize = constraints.maximumSize {
+          maximumVerticalScale = min(
+            maximumVerticalScale,
+            maximumSize.height / frame.height
+          )
+          hasMaximumSize = true
+        }
+      }
     }
-    let minimumVerticalScale = baseFrames.values.reduce(CGFloat.zero) {
-      guard $1.height > 0 else { return $0 }
-      return max($0, minimumNodeSize.height / $1.height)
-    }
-    return CGSize(
+    let minimumSize = CGSize(
       width: baseBounds.width * minimumHorizontalScale,
       height: baseBounds.height * minimumVerticalScale
+    )
+    let maximumSize =
+      hasMaximumSize
+      ? CGSize(
+        width: max(minimumSize.width, baseBounds.width * maximumHorizontalScale),
+        height: max(minimumSize.height, baseBounds.height * maximumVerticalScale)
+      )
+      : nil
+    return FlowingGraphCanvasNodeSizeConstraints(
+      minimumSize: minimumSize,
+      maximumSize: maximumSize
     )
   }
 
@@ -1715,9 +1785,13 @@ extension FlowingGraphCanvas where PortContent == EmptyView {
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
     nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
+    nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema> = .init(),
     admitNodeDrag:
       @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
       FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
+    admitNodeResize:
+      @escaping @MainActor (FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>) ->
+      FlowingGraphCanvasNodeResizeAdmission<Schema> = { _ in .allowAll },
     isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
       FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
     },
@@ -1760,7 +1834,9 @@ extension FlowingGraphCanvas where PortContent == EmptyView {
       contentChangeBehavior: contentChangeBehavior,
       command: command,
       nodeCapabilities: nodeCapabilities,
+      nodeSizeConstraints: nodeSizeConstraints,
       admitNodeDrag: admitNodeDrag,
+      admitNodeResize: admitNodeResize,
       isAdditiveSelectionActive: isAdditiveSelectionActive,
       interactionModifiers: interactionModifiers,
       onSmartMagnify: onSmartMagnify,
@@ -1788,9 +1864,13 @@ where PortContent == EmptyView, Decorations == EmptyView, Overlays == EmptyView 
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
     nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
+    nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema> = .init(),
     admitNodeDrag:
       @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
       FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
+    admitNodeResize:
+      @escaping @MainActor (FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>) ->
+      FlowingGraphCanvasNodeResizeAdmission<Schema> = { _ in .allowAll },
     isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
       FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
     },
@@ -1829,7 +1909,9 @@ where PortContent == EmptyView, Decorations == EmptyView, Overlays == EmptyView 
       contentChangeBehavior: contentChangeBehavior,
       command: command,
       nodeCapabilities: nodeCapabilities,
+      nodeSizeConstraints: nodeSizeConstraints,
       admitNodeDrag: admitNodeDrag,
+      admitNodeResize: admitNodeResize,
       isAdditiveSelectionActive: isAdditiveSelectionActive,
       interactionModifiers: interactionModifiers,
       onSmartMagnify: onSmartMagnify,
@@ -1856,9 +1938,13 @@ where PortContent == EmptyView, Decorations == EmptyView {
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
     nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
+    nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema> = .init(),
     admitNodeDrag:
       @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
       FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
+    admitNodeResize:
+      @escaping @MainActor (FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>) ->
+      FlowingGraphCanvasNodeResizeAdmission<Schema> = { _ in .allowAll },
     isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
       FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
     },
@@ -1899,7 +1985,9 @@ where PortContent == EmptyView, Decorations == EmptyView {
       contentChangeBehavior: contentChangeBehavior,
       command: command,
       nodeCapabilities: nodeCapabilities,
+      nodeSizeConstraints: nodeSizeConstraints,
       admitNodeDrag: admitNodeDrag,
+      admitNodeResize: admitNodeResize,
       isAdditiveSelectionActive: isAdditiveSelectionActive,
       interactionModifiers: interactionModifiers,
       onSmartMagnify: onSmartMagnify,

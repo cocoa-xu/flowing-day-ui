@@ -372,6 +372,67 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
     )
   }
 
+  func testResizeAdmissionCannotIncludeNodesOutsideCandidatesOrExcludeAnchor() throws {
+    let presentation = try makeFixture().presentation
+    let nodeIDs = presentation.nodes.map(\.id)
+    let frames = Dictionary(
+      uniqueKeysWithValues: nodeIDs.enumerated().map { index, nodeID in
+        (nodeID, CGRect(x: CGFloat(index * 120), y: 0, width: 100, height: 60))
+      }
+    )
+    let request = FlowingGraphCanvasNodeResizeAdmissionRequest<CanvasCompositionSchema>(
+      anchorNodeID: nodeIDs[0],
+      selectedNodeIDs: nodeIDs,
+      candidateNodeIDs: nodeIDs,
+      baseFrames: frames,
+      edges: [.trailing, .bottom],
+      basePresentationSnapshotID: presentation.snapshotID
+    )
+
+    XCTAssertEqual(
+      FlowingGraphCanvasNodeResizeResolver.admittedNodeIDs(
+        for: request,
+        admission: .allowOnly([nodeIDs[0]])
+      ),
+      [nodeIDs[0]]
+    )
+    XCTAssertTrue(
+      FlowingGraphCanvasNodeResizeResolver.admittedNodeIDs(
+        for: request,
+        admission: .allowOnly([nodeIDs[1]])
+      ).isEmpty
+    )
+  }
+
+  func testNodeSizeConstraintsUseOverridesBeforeDefaultsAndFallbacks() throws {
+    let nodeIDs = try makeFixture().presentation.nodes.map(\.id)
+    let defaultConstraints = FlowingGraphCanvasNodeSizeConstraints(
+      minimumSize: CGSize(width: 80, height: 50)
+    )
+    let override = FlowingGraphCanvasNodeSizeConstraints(
+      minimumSize: CGSize(width: 120, height: 70),
+      maximumSize: CGSize(width: 240, height: 140)
+    )
+    let constraints = FlowingGraphCanvasNodeSizeConstraintMap<CanvasCompositionSchema>(
+      defaultConstraints: defaultConstraints,
+      overrides: [nodeIDs[0]: override]
+    )
+
+    XCTAssertEqual(
+      constraints.constraints(for: nodeIDs[0], fallbackMinimumSize: CGSize(width: 44, height: 32)),
+      override
+    )
+    XCTAssertEqual(
+      constraints.constraints(for: nodeIDs[1], fallbackMinimumSize: CGSize(width: 44, height: 32)),
+      defaultConstraints
+    )
+    XCTAssertEqual(
+      FlowingGraphCanvasNodeSizeConstraintMap<CanvasCompositionSchema>()
+        .constraints(for: nodeIDs[0], fallbackMinimumSize: CGSize(width: 44, height: 32)),
+      FlowingGraphCanvasNodeSizeConstraints(minimumSize: CGSize(width: 44, height: 32))
+    )
+  }
+
   func testSingleNodeModeIgnoresTheRestOfTheSelection() throws {
     let presentation = try makeFixture().presentation
     let nodeIDs = presentation.nodes.map(\.id)

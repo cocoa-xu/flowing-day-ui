@@ -17,6 +17,40 @@ final class FlowingGraphCanvasArrangementTests: XCTestCase {
     XCTAssertTrue(FlowingGraphCanvasResizeEdges.standardHandles.allSatisfy(\.isValid))
   }
 
+  func testResizeConstrainsTheMaximumSizeWithoutMovingTheOppositeEdges() {
+    let result = FlowingGraphCanvasArrangement.resize(
+      baseFrame: CGRect(x: 10, y: 20, width: 100, height: 60),
+      proposedFrame: CGRect(x: 10, y: 20, width: 260, height: 200),
+      edges: [.trailing, .bottom],
+      candidates: [FlowingGraphCanvasSnapCandidate<String>](),
+      configuration: .disabled,
+      minimumSize: CGSize(width: 40, height: 30),
+      maximumSize: CGSize(width: 140, height: 90),
+      zoom: 1
+    )
+
+    XCTAssertEqual(result.frame, CGRect(x: 10, y: 20, width: 140, height: 90))
+  }
+
+  func testAspectRatioResizeUsesTheStrictestMaximumAxis() {
+    let result = FlowingGraphCanvasArrangement.resize(
+      baseFrame: CGRect(x: 10, y: 20, width: 100, height: 50),
+      proposedFrame: CGRect(x: 10, y: 20, width: 220, height: 110),
+      edges: [.trailing, .bottom],
+      candidates: [FlowingGraphCanvasSnapCandidate<String>](),
+      configuration: .disabled,
+      minimumSize: CGSize(width: 40, height: 20),
+      maximumSize: CGSize(width: 150, height: 100),
+      zoom: 1,
+      behavior: FlowingGraphCanvasResizeBehavior(
+        preservesAspectRatio: true,
+        aspectRatioDrivingAxis: .horizontal
+      )
+    )
+
+    XCTAssertEqual(result.frame, CGRect(x: 10, y: 20, width: 150, height: 75))
+  }
+
   func testDisabledSnappingPreservesTheProposedTranslation() {
     let result = FlowingGraphCanvasArrangement.snap(
       movingBounds: CGRect(x: 0, y: 0, width: 100, height: 60),

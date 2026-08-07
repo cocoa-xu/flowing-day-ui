@@ -422,6 +422,7 @@ public enum FlowingGraphCanvasArrangement {
     candidates: [FlowingGraphCanvasSnapCandidate<ID>],
     configuration: FlowingGraphCanvasSnappingConfiguration,
     minimumSize: CGSize,
+    maximumSize: CGSize? = nil,
     zoom: CGFloat,
     snapState: FlowingGraphCanvasSnapState = .init(),
     allowsSnapping: Bool = true,
@@ -430,6 +431,10 @@ public enum FlowingGraphCanvasArrangement {
     precondition(edges.isValid)
     precondition(minimumSize.width >= 0 && minimumSize.width.isFinite)
     precondition(minimumSize.height >= 0 && minimumSize.height.isFinite)
+    if let maximumSize {
+      precondition(maximumSize.width >= minimumSize.width && maximumSize.width.isFinite)
+      precondition(maximumSize.height >= minimumSize.height && maximumSize.height.isFinite)
+    }
     guard !edges.isEmpty, zoom > 0, zoom.isFinite else {
       return FlowingGraphCanvasResizeResult(frame: proposedFrame, guides: [])
     }
@@ -441,6 +446,7 @@ public enum FlowingGraphCanvasArrangement {
       relativeTo: baseFrame,
       edges: edges,
       minimumSize: minimumSize,
+      maximumSize: maximumSize,
       behavior: behavior
     )
     var frame = proposedConstrainedFrame
@@ -509,6 +515,7 @@ public enum FlowingGraphCanvasArrangement {
         relativeTo: baseFrame,
         edges: edges,
         minimumSize: minimumSize,
+        maximumSize: maximumSize,
         behavior: behavior
       )
     }
@@ -984,6 +991,7 @@ public enum FlowingGraphCanvasArrangement {
     relativeTo baseFrame: CGRect,
     edges: FlowingGraphCanvasResizeEdges,
     minimumSize: CGSize,
+    maximumSize: CGSize?,
     behavior: FlowingGraphCanvasResizeBehavior
   ) -> CGRect {
     if behavior.preservesAspectRatio,
@@ -999,9 +1007,15 @@ public enum FlowingGraphCanvasArrangement {
         minimumSize.width / baseFrame.width,
         minimumSize.height / baseFrame.height
       )
+      let maximumScale = maximumSize.map {
+        min($0.width / baseFrame.width, $0.height / baseFrame.height)
+      }
       return scaled(
         baseFrame,
-        scale: max(proposedScale, minimumScale),
+        scale: min(
+          max(proposedScale, minimumScale),
+          maximumScale ?? .greatestFiniteMagnitude
+        ),
         edges: edges,
         fromCenter: behavior.resizesFromCenter
       )
@@ -1026,6 +1040,28 @@ public enum FlowingGraphCanvasArrangement {
         result.origin.y =
           edges.contains(.top)
           ? baseFrame.maxY - minimumSize.height
+          : baseFrame.minY
+      }
+    }
+    if let maximumSize, result.width > maximumSize.width {
+      result.size.width = maximumSize.width
+      if behavior.resizesFromCenter {
+        result.origin.x = baseFrame.midX - maximumSize.width / 2
+      } else {
+        result.origin.x =
+          edges.contains(.leading)
+          ? baseFrame.maxX - maximumSize.width
+          : baseFrame.minX
+      }
+    }
+    if let maximumSize, result.height > maximumSize.height {
+      result.size.height = maximumSize.height
+      if behavior.resizesFromCenter {
+        result.origin.y = baseFrame.midY - maximumSize.height / 2
+      } else {
+        result.origin.y =
+          edges.contains(.top)
+          ? baseFrame.maxY - maximumSize.height
           : baseFrame.minY
       }
     }

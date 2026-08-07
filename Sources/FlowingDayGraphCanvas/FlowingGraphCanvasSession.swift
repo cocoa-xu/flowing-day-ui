@@ -96,6 +96,7 @@ public struct FlowingGraphCanvasTransientNodeResize<
   public let baseFrames: [ElementID: CGRect]
   public let baseBounds: CGRect
   public let minimumBoundsSize: CGSize
+  public let maximumBoundsSize: CGSize?
   public let edges: FlowingGraphCanvasResizeEdges
   public var bounds: CGRect
   public var guides: [FlowingGraphCanvasGuide]
@@ -109,6 +110,7 @@ public struct FlowingGraphCanvasTransientNodeResize<
     nodeOrder: [ElementID],
     baseFrames: [ElementID: CGRect],
     minimumBoundsSize: CGSize = .zero,
+    maximumBoundsSize: CGSize? = nil,
     edges: FlowingGraphCanvasResizeEdges,
     bounds: CGRect? = nil,
     guides: [FlowingGraphCanvasGuide] = [],
@@ -121,6 +123,16 @@ public struct FlowingGraphCanvasTransientNodeResize<
     precondition(Set(nodeOrder) == Set(baseFrames.keys) && nodeOrder.count == baseFrames.count)
     precondition(minimumBoundsSize.width >= 0 && minimumBoundsSize.width.isFinite)
     precondition(minimumBoundsSize.height >= 0 && minimumBoundsSize.height.isFinite)
+    if let maximumBoundsSize {
+      precondition(
+        maximumBoundsSize.width >= minimumBoundsSize.width
+          && maximumBoundsSize.width.isFinite
+      )
+      precondition(
+        maximumBoundsSize.height >= minimumBoundsSize.height
+          && maximumBoundsSize.height.isFinite
+      )
+    }
     let resolvedBaseBounds = baseFrames.values.reduce(CGRect.null) { $0.union($1) }
     self.anchorNodeID = anchorNodeID
     nodeIDs = Set(baseFrames.keys)
@@ -130,6 +142,7 @@ public struct FlowingGraphCanvasTransientNodeResize<
     self.baseFrames = baseFrames
     baseBounds = resolvedBaseBounds
     self.minimumBoundsSize = minimumBoundsSize
+    self.maximumBoundsSize = maximumBoundsSize
     self.edges = edges
     self.bounds = bounds ?? resolvedBaseBounds
     self.guides = guides
