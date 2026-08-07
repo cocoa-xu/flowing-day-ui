@@ -24,7 +24,6 @@ let package = Package(
     .library(name: "FlowingDayGraphCore", targets: ["FlowingDayGraphCore"]),
     .library(name: "FlowingDayGraphHistory", targets: ["FlowingDayGraphHistory"]),
     .library(name: "FlowingDayGraphLayout", targets: ["FlowingDayGraphLayout"]),
-    .library(name: "FlowingDayMetalCanvas", targets: ["FlowingDayMetalCanvas"]),
     .library(name: "FlowingDayPreferences", targets: ["FlowingDayPreferences"]),
     .executable(
       name: "FlowingDayPreferencesExample",
@@ -95,10 +94,6 @@ let package = Package(
     .target(
       name: "FlowingDayGraphLayout",
       dependencies: ["FlowingDayGraphCore"]
-    ),
-    .target(
-      name: "FlowingDayMetalCanvas",
-      dependencies: ["FlowingDayCanvas"]
     ),
     .target(name: "FlowingDayPreferences"),
     .executableTarget(
@@ -185,10 +180,6 @@ let package = Package(
     .testTarget(
       name: "FlowingDayGraphLayoutTests",
       dependencies: ["FlowingDayGraphLayout"]
-    ),
-    .testTarget(
-      name: "FlowingDayMetalCanvasTests",
-      dependencies: ["FlowingDayCanvas", "FlowingDayMetalCanvas"]
     ),
     .testTarget(
       name: "FlowingDayPreferencesTests",

@@ -1,11 +1,11 @@
 import FlowingDayCanvas
-import FlowingDayMetalCanvas
+import FlowingDayGraphCanvas
 import SwiftUI
 import XCTest
 
-final class FlowingMetalCanvasTests: XCTestCase {
+final class FlowingGraphCanvasMetalBackendTests: XCTestCase {
   func testCameraRoundTripsWorldCoordinates() {
-    let camera = FlowingMetalCanvasCamera(
+    let camera = FlowingGraphCanvasMetalCamera(
       zoom: 1.75,
       offset: CGSize(width: 40, height: 70)
     )
@@ -18,7 +18,7 @@ final class FlowingMetalCanvasTests: XCTestCase {
   }
 
   func testMagnificationKeepsViewportAnchorStable() {
-    var camera = FlowingMetalCanvasCamera(
+    var camera = FlowingGraphCanvasMetalCamera(
       zoom: 1,
       offset: CGSize(width: 40, height: 70)
     )
@@ -38,7 +38,7 @@ final class FlowingMetalCanvasTests: XCTestCase {
   }
 
   func testFitCentersContentInsideViewportInsets() {
-    var camera = FlowingMetalCanvasCamera()
+    var camera = FlowingGraphCanvasMetalCamera()
     let content = CGRect(x: 100, y: 80, width: 600, height: 400)
     let insets = EdgeInsets(top: 20, leading: 280, bottom: 20, trailing: 20)
 
@@ -57,7 +57,7 @@ final class FlowingMetalCanvasTests: XCTestCase {
   }
 
   func testVisibleWorldRectExcludesViewportInsets() {
-    let camera = FlowingMetalCanvasCamera(
+    let camera = FlowingGraphCanvasMetalCamera(
       zoom: 2,
       offset: CGSize(width: 40, height: 20)
     )
@@ -74,7 +74,7 @@ final class FlowingMetalCanvasTests: XCTestCase {
   }
 
   func testConfigurationClampsInitialZoom() {
-    let configuration = FlowingMetalCanvasConfiguration(
+    let configuration = FlowingGraphCanvasMetalBackendConfiguration(
       initialZoom: 9,
       zoomRange: 0.5...3
     )

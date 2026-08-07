@@ -20,6 +20,7 @@ public struct FlowingGraphCanvas<
   private let sessionID: FlowingGraphCanvasSessionID
   @Binding private var session: FlowingGraphCanvasSessionState<Schema>
   private let configuration: FlowingGraphCanvasConfiguration
+  private let metalVisualAdapter: FlowingGraphCanvasMetalVisualAdapter<Schema>?
   private let accessibilitySnapshot: FlowingGraphCanvasAccessibilitySnapshot<ElementID>?
   private let contentInsets: EdgeInsets
   private let contentChangeBehavior: FlowingCanvasContentChangeBehavior
@@ -55,6 +56,7 @@ public struct FlowingGraphCanvas<
     sessionID: FlowingGraphCanvasSessionID,
     session: Binding<FlowingGraphCanvasSessionState<Schema>>,
     configuration: FlowingGraphCanvasConfiguration = .init(),
+    metalVisualAdapter: FlowingGraphCanvasMetalVisualAdapter<Schema>? = nil,
     accessibilitySnapshot: FlowingGraphCanvasAccessibilitySnapshot<ElementID>? = nil,
     contentInsets: EdgeInsets = .init(),
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
@@ -104,6 +106,7 @@ public struct FlowingGraphCanvas<
     self.sessionID = sessionID
     _session = session
     self.configuration = configuration
+    self.metalVisualAdapter = metalVisualAdapter
     self.accessibilitySnapshot = accessibilitySnapshot
     self.contentInsets = contentInsets
     self.contentChangeBehavior = contentChangeBehavior
@@ -124,6 +127,38 @@ public struct FlowingGraphCanvas<
   }
 
   public var body: some View {
+    Group {
+      if resolvedRenderingBackend == .metal, let metalVisualAdapter {
+        metalVisualAdapter(backendContext)
+      } else {
+        swiftUIBackend
+      }
+    }
+  }
+
+  private var backendContext: FlowingGraphCanvasBackendContext<Schema> {
+    FlowingGraphCanvasBackendContext(
+      content: content,
+      sessionID: sessionID,
+      session: $session,
+      configuration: configuration,
+      contentInsets: contentInsets,
+      contentChangeBehavior: contentChangeBehavior,
+      command: command
+    )
+  }
+
+  private var resolvedRenderingBackend: FlowingGraphCanvasResolvedRenderingBackend {
+    FlowingGraphCanvasRenderingBackendResolver.resolve(
+      preference: configuration.renderingBackend,
+      capabilities: FlowingGraphCanvasRenderingBackendCapabilities(
+        hasMetalDevice: FlowingGraphCanvasMetalBackendView.isSupported,
+        hasMetalVisualAdapter: metalVisualAdapter?.isAvailable == true
+      )
+    )
+  }
+
+  private var swiftUIBackend: some View {
     FlowingCanvas(
       viewport: $session.viewport,
       configuration: configuration.canvas,

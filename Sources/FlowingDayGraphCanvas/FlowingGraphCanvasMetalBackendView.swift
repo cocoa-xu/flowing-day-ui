@@ -5,10 +5,10 @@ import MetalKit
 import SwiftUI
 
 @MainActor
-open class FlowingMetalCanvasController: ObservableObject {
+open class FlowingGraphCanvasMetalBackendController: ObservableObject {
   @Published public private(set) var viewport: FlowingCanvasViewport
 
-  private weak var canvas: FlowingMetalCanvasView?
+  private weak var canvas: FlowingGraphCanvasMetalBackendView?
 
   public init(initialZoom: CGFloat = 1) {
     viewport = FlowingCanvasViewport(
@@ -20,7 +20,7 @@ open class FlowingMetalCanvasController: ObservableObject {
     viewport.transform.zoom
   }
 
-  public func attach(_ canvas: FlowingMetalCanvasView) {
+  public func attach(_ canvas: FlowingGraphCanvasMetalBackendView) {
     self.canvas = canvas
     publish(canvas.viewport, phase: .ended)
   }
@@ -49,12 +49,16 @@ open class FlowingMetalCanvasController: ObservableObject {
 }
 
 @MainActor
-open class FlowingMetalCanvasView: MTKView, MTKViewDelegate {
-  public let commandQueue: any MTLCommandQueue
-  public let configuration: FlowingMetalCanvasConfiguration
-  public let viewportController: FlowingMetalCanvasController
+open class FlowingGraphCanvasMetalBackendView: MTKView, MTKViewDelegate {
+  public static var isSupported: Bool {
+    MTLCreateSystemDefaultDevice() != nil
+  }
 
-  public var camera: FlowingMetalCanvasCamera {
+  public let commandQueue: any MTLCommandQueue
+  public let configuration: FlowingGraphCanvasMetalBackendConfiguration
+  public let viewportController: FlowingGraphCanvasMetalBackendController
+
+  public var camera: FlowingGraphCanvasMetalCamera {
     didSet {
       guard oldValue != camera else { return }
       publishViewport(phase: .continuous)
@@ -74,7 +78,7 @@ open class FlowingMetalCanvasView: MTKView, MTKViewDelegate {
     FlowingCanvasViewport(
       transform: camera.transform,
       size: bounds.size,
-      contentBounds: FlowingMetalCanvasCamera.availableViewportRect(
+      contentBounds: FlowingGraphCanvasMetalCamera.availableViewportRect(
         viewportSize: bounds.size,
         contentInsets: contentInsets
       )
@@ -83,9 +87,9 @@ open class FlowingMetalCanvasView: MTKView, MTKViewDelegate {
 
   public init(
     device: any MTLDevice,
-    configuration: FlowingMetalCanvasConfiguration = .standard,
+    configuration: FlowingGraphCanvasMetalBackendConfiguration = .standard,
     contentInsets: EdgeInsets = EdgeInsets(),
-    viewportController: FlowingMetalCanvasController
+    viewportController: FlowingGraphCanvasMetalBackendController
   ) {
     guard let commandQueue = device.makeCommandQueue() else {
       preconditionFailure("Metal command queue creation failed")
@@ -94,7 +98,7 @@ open class FlowingMetalCanvasView: MTKView, MTKViewDelegate {
     self.configuration = configuration
     self.contentInsets = contentInsets
     self.viewportController = viewportController
-    camera = FlowingMetalCanvasCamera(zoom: configuration.initialZoom)
+    camera = FlowingGraphCanvasMetalCamera(zoom: configuration.initialZoom)
     super.init(frame: .zero, device: device)
     delegate = self
     preferredFramesPerSecond = configuration.preferredFramesPerSecond

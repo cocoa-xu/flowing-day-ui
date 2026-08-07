@@ -9,6 +9,7 @@ import SwiftUI
 #endif
 
 public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
+  public let renderingBackend: FlowingGraphCanvasRenderingBackendPreference
   public let canvas: FlowingCanvasConfiguration
   public let edgeRenderPadding: CGFloat
   public let marqueeMinimumDistance: CGFloat
@@ -21,6 +22,7 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
   public let accessibility: FlowingGraphCanvasAccessibilityConfiguration
 
   public init(
+    renderingBackend: FlowingGraphCanvasRenderingBackendPreference = .automatic,
     canvas: FlowingCanvasConfiguration = .init(),
     edgeRenderPadding: CGFloat = 12,
     marqueeMinimumDistance: CGFloat = 2,
@@ -34,6 +36,7 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
   ) {
     precondition(edgeRenderPadding >= 0 && edgeRenderPadding.isFinite)
     precondition(marqueeMinimumDistance >= 0 && marqueeMinimumDistance.isFinite)
+    self.renderingBackend = renderingBackend
     self.canvas = canvas
     self.edgeRenderPadding = edgeRenderPadding
     self.marqueeMinimumDistance = marqueeMinimumDistance

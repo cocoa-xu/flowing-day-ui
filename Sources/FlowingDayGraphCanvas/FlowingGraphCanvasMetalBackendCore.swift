@@ -2,7 +2,7 @@ import CoreGraphics
 import FlowingDayCanvas
 import SwiftUI
 
-public struct FlowingMetalCanvasCamera: Equatable, Sendable {
+public struct FlowingGraphCanvasMetalCamera: Equatable, Sendable {
   public var zoom: CGFloat
   public var offset: CGSize
 
@@ -124,7 +124,7 @@ public struct FlowingMetalCanvasCamera: Equatable, Sendable {
   }
 }
 
-public struct FlowingMetalCanvasConfiguration: Equatable, Sendable {
+public struct FlowingGraphCanvasMetalBackendConfiguration: Equatable, Sendable {
   public let initialZoom: CGFloat
   public let zoomRange: ClosedRange<CGFloat>
   public let pinchSensitivity: CGFloat
