@@ -1,3 +1,4 @@
+import CoreGraphics
 import FlowingDayGraphComposition
 import FlowingDayGraphCore
 
@@ -5,6 +6,26 @@ public enum FlowingGraphCanvasNodeDraggingMode: Hashable, Sendable {
   case disabled
   case single
   case multiple
+}
+
+public struct FlowingGraphCanvasNodeResizingConfiguration: Equatable, Sendable {
+  public static let standardMinimumSize = CGSize(width: 44, height: 32)
+
+  public let isEnabled: Bool
+  public let minimumSize: CGSize
+
+  public init(
+    isEnabled: Bool,
+    minimumSize: CGSize = standardMinimumSize
+  ) {
+    precondition(minimumSize.width >= 0 && minimumSize.width.isFinite)
+    precondition(minimumSize.height >= 0 && minimumSize.height.isFinite)
+    self.isEnabled = isEnabled
+    self.minimumSize = minimumSize
+  }
+
+  public static let disabled = Self(isEnabled: false)
+  public static let standard = Self(isEnabled: true)
 }
 
 public struct FlowingGraphCanvasNodeCapabilities: OptionSet, Hashable, Sendable {
@@ -17,10 +38,12 @@ public struct FlowingGraphCanvasNodeCapabilities: OptionSet, Hashable, Sendable 
   public static let draggable = Self(rawValue: 1 << 0)
   public static let arrangementParticipant = Self(rawValue: 1 << 1)
   public static let keyboardNavigable = Self(rawValue: 1 << 2)
+  public static let resizable = Self(rawValue: 1 << 3)
   public static let standard: Self = [
     .draggable,
     .arrangementParticipant,
     .keyboardNavigable,
+    .resizable,
   ]
 }
 

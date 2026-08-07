@@ -13,6 +13,7 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
   public let edgeRenderPadding: CGFloat
   public let marqueeMinimumDistance: CGFloat
   public let nodeDraggingMode: FlowingGraphCanvasNodeDraggingMode
+  public let nodeResizing: FlowingGraphCanvasNodeResizingConfiguration
   public let snapping: FlowingGraphCanvasSnappingConfiguration
   public let allowsArrangementCommands: Bool
   public let keyboardNavigation: FlowingGraphCanvasKeyboardNavigationConfiguration
@@ -23,6 +24,7 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
     edgeRenderPadding: CGFloat = 12,
     marqueeMinimumDistance: CGFloat = 2,
     nodeDraggingMode: FlowingGraphCanvasNodeDraggingMode = .single,
+    nodeResizing: FlowingGraphCanvasNodeResizingConfiguration = .disabled,
     snapping: FlowingGraphCanvasSnappingConfiguration = .disabled,
     allowsArrangementCommands: Bool = true,
     keyboardNavigation: FlowingGraphCanvasKeyboardNavigationConfiguration = .standard,
@@ -34,10 +36,53 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
     self.edgeRenderPadding = edgeRenderPadding
     self.marqueeMinimumDistance = marqueeMinimumDistance
     self.nodeDraggingMode = nodeDraggingMode
+    self.nodeResizing = nodeResizing
     self.snapping = snapping
     self.allowsArrangementCommands = allowsArrangementCommands
     self.keyboardNavigation = keyboardNavigation
     self.accessibility = accessibility
+  }
+}
+
+@MainActor
+public struct FlowingGraphCanvasNodeResizeActions {
+  public let isEnabled: Bool
+  private let updateAction: (FlowingGraphCanvasResizeEdges, CGSize) -> Void
+  private let endAction: () -> Void
+  private let cancelAction: () -> Void
+
+  init(
+    isEnabled: Bool,
+    update: @escaping (FlowingGraphCanvasResizeEdges, CGSize) -> Void,
+    end: @escaping () -> Void,
+    cancel: @escaping () -> Void
+  ) {
+    self.isEnabled = isEnabled
+    updateAction = update
+    endAction = end
+    cancelAction = cancel
+  }
+
+  public func update(
+    edges: FlowingGraphCanvasResizeEdges,
+    renderedTranslation: CGSize
+  ) {
+    guard isEnabled else { return }
+    updateAction(edges, renderedTranslation)
+  }
+
+  public func end() {
+    guard isEnabled else { return }
+    endAction()
+  }
+
+  public func cancel() {
+    guard isEnabled else { return }
+    cancelAction()
+  }
+
+  public static var disabled: Self {
+    Self(isEnabled: false, update: { _, _ in }, end: {}, cancel: {})
   }
 }
 
@@ -96,8 +141,10 @@ public struct FlowingGraphCanvasNodeContext<Schema: FlowingGraphCanvasSchema> {
   public let isFocused: Bool
   public let isHovered: Bool
   public let isBeingDragged: Bool
+  public let isBeingResized: Bool
   public let capabilities: FlowingGraphCanvasNodeCapabilities
   public let actions: FlowingGraphCanvasElementActions<Schema>
+  public let resizeActions: FlowingGraphCanvasNodeResizeActions
 
   public init(
     elementID: ElementID,
@@ -110,8 +157,10 @@ public struct FlowingGraphCanvasNodeContext<Schema: FlowingGraphCanvasSchema> {
     isFocused: Bool = false,
     isHovered: Bool,
     isBeingDragged: Bool,
+    isBeingResized: Bool = false,
     capabilities: FlowingGraphCanvasNodeCapabilities = .standard,
-    actions: FlowingGraphCanvasElementActions<Schema>
+    actions: FlowingGraphCanvasElementActions<Schema>,
+    resizeActions: FlowingGraphCanvasNodeResizeActions = .disabled
   ) {
     self.elementID = elementID
     self.localID = localID
@@ -123,8 +172,10 @@ public struct FlowingGraphCanvasNodeContext<Schema: FlowingGraphCanvasSchema> {
     self.isFocused = isFocused
     self.isHovered = isHovered
     self.isBeingDragged = isBeingDragged
+    self.isBeingResized = isBeingResized
     self.capabilities = capabilities
     self.actions = actions
+    self.resizeActions = resizeActions
   }
 }
 

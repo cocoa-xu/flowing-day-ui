@@ -102,6 +102,14 @@ final class FlowingGraphCanvasKeyboardNavigationTests: XCTestCase {
       FlowingGraphCanvasAccessibilityConfiguration.standard.providesSelectionAction
     )
     XCTAssertFalse(FlowingGraphCanvasAccessibilityConfiguration.disabled.isEnabled)
+
+    XCTAssertTrue(FlowingGraphCanvasNodeResizingConfiguration.standard.isEnabled)
+    XCTAssertEqual(
+      FlowingGraphCanvasNodeResizingConfiguration.standard.minimumSize,
+      CGSize(width: 44, height: 32)
+    )
+    XCTAssertFalse(FlowingGraphCanvasNodeResizingConfiguration.disabled.isEnabled)
+    XCTAssertTrue(FlowingGraphCanvasNodeCapabilities.standard.contains(.resizable))
   }
 
   private func candidate(

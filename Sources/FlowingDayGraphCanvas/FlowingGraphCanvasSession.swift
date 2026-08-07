@@ -77,6 +77,39 @@ public struct FlowingGraphCanvasTransientNodeDrag<
   }
 }
 
+public struct FlowingGraphCanvasTransientNodeResize<
+  Schema: FlowingGraphCanvasSchema
+>: Equatable, Sendable {
+  public typealias ElementID = FlowingGraphCompositionElementID<Schema>
+
+  public let nodeID: ElementID
+  public let basePresentationSnapshotID: FlowingGraphPresentationSnapshotID
+  public let baseLayoutInputID: FlowingLayoutInputID
+  public let baseFrame: CGRect
+  public let edges: FlowingGraphCanvasResizeEdges
+  public var frame: CGRect
+  public var guides: [FlowingGraphCanvasGuide]
+
+  public init(
+    nodeID: ElementID,
+    basePresentationSnapshotID: FlowingGraphPresentationSnapshotID,
+    baseLayoutInputID: FlowingLayoutInputID,
+    baseFrame: CGRect,
+    edges: FlowingGraphCanvasResizeEdges,
+    frame: CGRect? = nil,
+    guides: [FlowingGraphCanvasGuide] = []
+  ) {
+    precondition(edges.isValid)
+    self.nodeID = nodeID
+    self.basePresentationSnapshotID = basePresentationSnapshotID
+    self.baseLayoutInputID = baseLayoutInputID
+    self.baseFrame = baseFrame
+    self.edges = edges
+    self.frame = frame ?? baseFrame
+    self.guides = guides
+  }
+}
+
 public struct FlowingGraphCanvasSessionState<
   Schema: FlowingGraphCanvasSchema
 >: Equatable, Sendable {
@@ -89,6 +122,7 @@ public struct FlowingGraphCanvasSessionState<
   public var tool: FlowingGraphCanvasTool
   public var marquee: FlowingGraphCanvasMarquee?
   public var transientNodeDrag: FlowingGraphCanvasTransientNodeDrag<Schema>?
+  public var transientNodeResize: FlowingGraphCanvasTransientNodeResize<Schema>?
 
   public init(
     viewport: FlowingCanvasViewport = .init(),
@@ -97,7 +131,8 @@ public struct FlowingGraphCanvasSessionState<
     hoveredElementID: ElementID? = nil,
     tool: FlowingGraphCanvasTool = .select,
     marquee: FlowingGraphCanvasMarquee? = nil,
-    transientNodeDrag: FlowingGraphCanvasTransientNodeDrag<Schema>? = nil
+    transientNodeDrag: FlowingGraphCanvasTransientNodeDrag<Schema>? = nil,
+    transientNodeResize: FlowingGraphCanvasTransientNodeResize<Schema>? = nil
   ) {
     self.viewport = viewport
     self.selection = selection
@@ -106,6 +141,7 @@ public struct FlowingGraphCanvasSessionState<
     self.tool = tool
     self.marquee = marquee
     self.transientNodeDrag = transientNodeDrag
+    self.transientNodeResize = transientNodeResize
   }
 }
 
@@ -213,6 +249,38 @@ public struct FlowingGraphCanvasNodeDragIntent<
   }
 }
 
+public struct FlowingGraphCanvasNodeResizeIntent<
+  Schema: FlowingGraphCanvasSchema
+>: Equatable, Sendable {
+  public typealias ElementID = FlowingGraphCompositionElementID<Schema>
+
+  public let nodeID: ElementID
+  public let edges: FlowingGraphCanvasResizeEdges
+  public let originTranslation: CGSize
+  public let sizeDelta: CGSize
+  public let basePresentationSnapshotID: FlowingGraphPresentationSnapshotID
+  public let baseLayoutInputID: FlowingLayoutInputID
+
+  public init(
+    nodeID: ElementID,
+    edges: FlowingGraphCanvasResizeEdges,
+    originTranslation: CGSize,
+    sizeDelta: CGSize,
+    basePresentationSnapshotID: FlowingGraphPresentationSnapshotID,
+    baseLayoutInputID: FlowingLayoutInputID
+  ) {
+    precondition(edges.isValid)
+    precondition(originTranslation.width.isFinite && originTranslation.height.isFinite)
+    precondition(sizeDelta.width.isFinite && sizeDelta.height.isFinite)
+    self.nodeID = nodeID
+    self.edges = edges
+    self.originTranslation = originTranslation
+    self.sizeDelta = sizeDelta
+    self.basePresentationSnapshotID = basePresentationSnapshotID
+    self.baseLayoutInputID = baseLayoutInputID
+  }
+}
+
 public struct FlowingGraphCanvasElementActionIntent<
   Schema: FlowingGraphCanvasSchema
 >: Equatable, Sendable {
@@ -237,6 +305,7 @@ public enum FlowingGraphCanvasInteractionIntent<
   Schema: FlowingGraphCanvasSchema
 >: Equatable, Sendable {
   case nodeDragCompleted(FlowingGraphCanvasNodeDragIntent<Schema>)
+  case nodeResizeCompleted(FlowingGraphCanvasNodeResizeIntent<Schema>)
   case nodeArrangementRequested(FlowingGraphCanvasNodeArrangementIntent<Schema>)
   case elementAction(FlowingGraphCanvasElementActionIntent<Schema>)
 }

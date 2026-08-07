@@ -2,6 +2,18 @@ import FlowingDayGraphCanvas
 import XCTest
 
 final class FlowingGraphCanvasArrangementTests: XCTestCase {
+  func testResizeEdgesRejectAmbiguousOpposingHandles() {
+    let corner: FlowingGraphCanvasResizeEdges = [.leading, .top]
+    let horizontalOpposites: FlowingGraphCanvasResizeEdges = [.leading, .trailing]
+    let verticalOpposites: FlowingGraphCanvasResizeEdges = [.top, .bottom]
+
+    XCTAssertTrue(FlowingGraphCanvasResizeEdges.trailing.isValid)
+    XCTAssertTrue(corner.isValid)
+    XCTAssertFalse(FlowingGraphCanvasResizeEdges().isValid)
+    XCTAssertFalse(horizontalOpposites.isValid)
+    XCTAssertFalse(verticalOpposites.isValid)
+  }
+
   func testDisabledSnappingPreservesTheProposedTranslation() {
     let result = FlowingGraphCanvasArrangement.snap(
       movingBounds: CGRect(x: 0, y: 0, width: 100, height: 60),
@@ -182,6 +194,35 @@ final class FlowingGraphCanvasArrangementTests: XCTestCase {
 
     XCTAssertEqual(result.translation.width, 100)
     XCTAssertEqual(result.guides.compactMap(\.measurement), [30, 30])
+  }
+
+  func testEqualSpacingGuidesUseTheFinalTwoAxisPosition() {
+    let result = FlowingGraphCanvasArrangement.snap(
+      movingBounds: CGRect(x: 0, y: 0, width: 20, height: 20),
+      proposedTranslation: CGSize(width: 46, height: 17),
+      candidates: [
+        FlowingGraphCanvasSnapCandidate(
+          id: "left",
+          frame: CGRect(x: 0, y: 0, width: 20, height: 20)
+        ),
+        FlowingGraphCanvasSnapCandidate(
+          id: "right",
+          frame: CGRect(x: 100, y: 0, width: 20, height: 20)
+        ),
+      ],
+      configuration: FlowingGraphCanvasSnappingConfiguration(
+        isEnabled: true,
+        targets: [.equalSpacing, .grid],
+        gridCellSize: CGSize(width: 20, height: 20)
+      ),
+      zoom: 1
+    )
+
+    XCTAssertEqual(result.translation, CGSize(width: 50, height: 20))
+    XCTAssertEqual(
+      result.guides.filter { $0.kind == .equalSpacing }.map(\.position),
+      [48, 48]
+    )
   }
 
   func testResizeSnapsTheMovingEdgeAndShowsItsDimension() {

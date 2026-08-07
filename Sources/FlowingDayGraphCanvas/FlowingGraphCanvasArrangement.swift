@@ -116,6 +116,12 @@ public struct FlowingGraphCanvasResizeEdges: OptionSet, Hashable, Sendable {
   public static let trailing = Self(rawValue: 1 << 1)
   public static let top = Self(rawValue: 1 << 2)
   public static let bottom = Self(rawValue: 1 << 3)
+
+  public var isValid: Bool {
+    !isEmpty
+      && !(contains(.leading) && contains(.trailing))
+      && !(contains(.top) && contains(.bottom))
+  }
 }
 
 public struct FlowingGraphCanvasSnapCandidate<ID: Hashable & Sendable>: Sendable {
@@ -254,6 +260,7 @@ public enum FlowingGraphCanvasArrangement {
     minimumSize: CGSize,
     zoom: CGFloat
   ) -> FlowingGraphCanvasResizeResult {
+    precondition(edges.isValid)
     precondition(minimumSize.width >= 0 && minimumSize.width.isFinite)
     precondition(minimumSize.height >= 0 && minimumSize.height.isFinite)
     guard !edges.isEmpty, zoom > 0, zoom.isFinite else {
@@ -335,20 +342,23 @@ public enum FlowingGraphCanvasArrangement {
     let value: CGFloat
     let candidateFrame: CGRect?
     let kind: FlowingGraphCanvasGuideKind
-    let customGuides: [FlowingGraphCanvasGuide]
+    let spacingReferenceFrames: [CGRect]
+    let guideOffset: CGFloat
 
     init(
       delta: CGFloat,
       value: CGFloat,
       candidateFrame: CGRect?,
       kind: FlowingGraphCanvasGuideKind,
-      customGuides: [FlowingGraphCanvasGuide] = []
+      spacingReferenceFrames: [CGRect] = [],
+      guideOffset: CGFloat = 0
     ) {
       self.delta = delta
       self.value = value
       self.candidateFrame = candidateFrame
       self.kind = kind
-      self.customGuides = customGuides
+      self.spacingReferenceFrames = spacingReferenceFrames
+      self.guideOffset = guideOffset
     }
   }
 
@@ -457,7 +467,7 @@ public enum FlowingGraphCanvasArrangement {
 
   private static func preferred(_ snaps: [Snap?]) -> Snap? {
     var result: Snap?
-    for snap in snaps.compactMap({ $0 }) {
+    for case let snap? in snaps {
       if result == nil || abs(snap.delta) < abs(result?.delta ?? .greatestFiniteMagnitude) {
         result = snap
       }
@@ -540,15 +550,24 @@ public enum FlowingGraphCanvasArrangement {
     fromEnd: Bool
   ) -> (first: CGRect, second: CGRect)? {
     guard frames.count > 1 else { return nil }
-    let indices =
-      fromEnd
-      ? Array(stride(from: frames.count - 2, through: 0, by: -1))
-      : Array(0..<(frames.count - 1))
-    for index in indices {
-      let first = frames[index]
-      let second = frames[index + 1]
-      if axis.upper(first) <= axis.lower(second) {
-        return (first, second)
+    if fromEnd {
+      var index = frames.count - 2
+      while true {
+        let first = frames[index]
+        let second = frames[index + 1]
+        if axis.upper(first) <= axis.lower(second) {
+          return (first, second)
+        }
+        guard index > 0 else { break }
+        index -= 1
+      }
+    } else {
+      for index in 0..<(frames.count - 1) {
+        let first = frames[index]
+        let second = frames[index + 1]
+        if axis.upper(first) <= axis.lower(second) {
+          return (first, second)
+        }
       }
     }
     return nil
@@ -564,39 +583,13 @@ public enum FlowingGraphCanvasArrangement {
   ) -> Snap? {
     let delta = targetLower - axis.lower(movingFrame)
     guard abs(delta) <= tolerance else { return nil }
-    let targetFrame = offset(movingFrame, by: delta, axis: axis)
-    let orderedFrames = (referenceFrames + [targetFrame]).sorted {
-      axis.lower($0) < axis.lower($1)
-    }
-    guard let crossUpper = orderedFrames.map({ axis.crossUpper($0) }).max() else {
-      return nil
-    }
-    let crossPosition = crossUpper + guideOffset
-    let guideAxis: FlowingGraphCanvasGuideAxis =
-      axis == .horizontal ? .horizontal : .vertical
-    let guides: [FlowingGraphCanvasGuide] = zip(
-      orderedFrames,
-      orderedFrames.dropFirst()
-    ).compactMap { pair -> FlowingGraphCanvasGuide? in
-      let (first, second) = pair
-      let lower = axis.upper(first)
-      let upper = axis.lower(second)
-      guard upper >= lower else { return nil }
-      return FlowingGraphCanvasGuide(
-        axis: guideAxis,
-        position: crossPosition,
-        lowerBound: lower,
-        upperBound: upper,
-        kind: .equalSpacing,
-        measurement: upper - lower
-      )
-    }
     return Snap(
       delta: delta,
       value: targetLower,
       candidateFrame: nil,
       kind: .equalSpacing,
-      customGuides: guides
+      spacingReferenceFrames: referenceFrames,
+      guideOffset: guideOffset
     )
   }
 
@@ -706,7 +699,14 @@ public enum FlowingGraphCanvasArrangement {
     snappedFrame: CGRect,
     axis: GeometryAxis
   ) -> [FlowingGraphCanvasGuide] {
-    guard snap.customGuides.isEmpty else { return snap.customGuides }
+    if snap.kind == .equalSpacing {
+      return spacingGuides(
+        movingFrame: snappedFrame,
+        referenceFrames: snap.spacingReferenceFrames,
+        axis: axis,
+        guideOffset: snap.guideOffset
+      )
+    }
     let candidateFrame = snap.candidateFrame ?? snappedFrame
     if axis == .horizontal {
       return [
@@ -728,6 +728,38 @@ public enum FlowingGraphCanvasArrangement {
         kind: snap.kind
       )
     ]
+  }
+
+  private static func spacingGuides(
+    movingFrame: CGRect,
+    referenceFrames: [CGRect],
+    axis: GeometryAxis,
+    guideOffset: CGFloat
+  ) -> [FlowingGraphCanvasGuide] {
+    let orderedFrames = (referenceFrames + [movingFrame]).sorted {
+      axis.lower($0) < axis.lower($1)
+    }
+    guard let crossUpper = orderedFrames.map({ axis.crossUpper($0) }).max() else {
+      return []
+    }
+    let crossPosition = crossUpper + guideOffset
+    let guideAxis: FlowingGraphCanvasGuideAxis =
+      axis == .horizontal ? .horizontal : .vertical
+    return zip(orderedFrames, orderedFrames.dropFirst()).compactMap {
+      pair -> FlowingGraphCanvasGuide? in
+      let (first, second) = pair
+      let lower = axis.upper(first)
+      let upper = axis.lower(second)
+      guard upper >= lower else { return nil }
+      return FlowingGraphCanvasGuide(
+        axis: guideAxis,
+        position: crossPosition,
+        lowerBound: lower,
+        upperBound: upper,
+        kind: .equalSpacing,
+        measurement: upper - lower
+      )
+    }
   }
 
   private static func dimensionGuide(
@@ -754,16 +786,6 @@ public enum FlowingGraphCanvasArrangement {
       kind: kind,
       measurement: frame.height
     )
-  }
-
-  private static func offset(
-    _ frame: CGRect,
-    by delta: CGFloat,
-    axis: GeometryAxis
-  ) -> CGRect {
-    axis == .horizontal
-      ? frame.offsetBy(dx: delta, dy: 0)
-      : frame.offsetBy(dx: 0, dy: delta)
   }
 
   private static func alignedTranslations<ID: Hashable & Sendable>(

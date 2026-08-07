@@ -381,10 +381,27 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
       basePresentationSnapshotID: fixture.presentation.snapshotID,
       baseLayoutInputID: fixture.input.id
     )
+    let resize = FlowingGraphCanvasNodeResizeIntent<CanvasCompositionSchema>(
+      nodeID: nodeID,
+      edges: [.trailing, .bottom],
+      originTranslation: CGSize(width: 10, height: 20),
+      sizeDelta: CGSize(width: 40, height: 20),
+      basePresentationSnapshotID: fixture.presentation.snapshotID,
+      baseLayoutInputID: fixture.input.id
+    )
+    let transientResize = FlowingGraphCanvasTransientNodeResize<CanvasCompositionSchema>(
+      nodeID: nodeID,
+      basePresentationSnapshotID: fixture.presentation.snapshotID,
+      baseLayoutInputID: fixture.input.id,
+      baseFrame: CGRect(x: 10, y: 20, width: 100, height: 60),
+      edges: [.trailing, .bottom]
+    )
 
     XCTAssertEqual(drag.baseLayoutInputID, fixture.input.id)
+    XCTAssertEqual(resize.baseLayoutInputID, fixture.input.id)
     XCTAssertEqual(arrangement.baseLayoutInputID, fixture.input.id)
     XCTAssertEqual(transient.baseLayoutInputID, fixture.input.id)
+    XCTAssertEqual(transientResize.baseLayoutInputID, fixture.input.id)
   }
 
   func testTransientGeometryMovesEndpointsWithoutRecomputingLayout() {
@@ -415,6 +432,32 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
           end: CGPoint(x: 42, y: 38)
         )
       ]
+    )
+  }
+
+  func testTransientResizePreservesAnchorPositionInsideNode() {
+    let baseFrame = CGRect(x: 10, y: 20, width: 100, height: 60)
+    let resizedFrame = FlowingGraphCanvasTransientGeometry.resizing(
+      baseFrame,
+      edges: [.trailing, .bottom],
+      translation: CGSize(width: 100, height: 30)
+    )
+    let anchor = FlowingGraphCanvasAnchor(
+      position: CGPoint(x: 110, y: 50),
+      normal: CGVector(dx: 1, dy: 0)
+    )
+
+    XCTAssertEqual(resizedFrame, CGRect(x: 10, y: 20, width: 200, height: 90))
+    XCTAssertEqual(
+      FlowingGraphCanvasTransientGeometry.resizing(
+        anchor,
+        from: baseFrame,
+        to: resizedFrame
+      ),
+      FlowingGraphCanvasAnchor(
+        position: CGPoint(x: 210, y: 65),
+        normal: CGVector(dx: 1, dy: 0)
+      )
     )
   }
 

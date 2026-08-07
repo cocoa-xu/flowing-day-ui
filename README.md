@@ -173,7 +173,12 @@ spatial index around the moving bounds and has an explicit candidate budget.
 ```swift
 let configuration = FlowingGraphCanvasConfiguration(
     nodeDraggingMode: .multiple,
-    snapping: .standard,
+    nodeResizing: .standard,
+    snapping: FlowingGraphCanvasSnappingConfiguration(
+        isEnabled: true,
+        targets: [.alignment, .grid, .equalSpacing, .equalSize],
+        gridCellSize: CGSize(width: 24, height: 24)
+    ),
     keyboardNavigation: .standard,
     accessibility: .standard
 )
@@ -181,8 +186,14 @@ let configuration = FlowingGraphCanvasConfiguration(
 
 Snapping is disabled by default so adopting the graph canvas does not change placement
 behavior. Keyboard navigation and node accessibility are enabled by default and can be
-disabled independently. Align and distribute operations arrive through the session
-command channel and emit translations through the same intent boundary.
+disabled independently. Alignment, grid, equal-spacing, and equal-size targets can be
+selected independently. Snap tolerance and guide offsets are specified in rendered
+points and remain visually stable across zoom levels.
+
+Node builders can place `FlowingGraphCanvasResizeHandle` around their own node design.
+Resize gestures use transient node, port, and incident-edge geometry, then emit one
+snapshot-pinned resize intent when the gesture ends. Align and equal-gap distribute
+operations arrive through the session command channel and use the same intent boundary.
 
 Section footers align with the title and caption text inside their rows by default.
 

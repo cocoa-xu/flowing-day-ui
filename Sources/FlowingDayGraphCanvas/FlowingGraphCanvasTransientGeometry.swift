@@ -2,6 +2,44 @@ import CoreGraphics
 import FlowingDayGraphLayout
 
 public enum FlowingGraphCanvasTransientGeometry {
+  public static func resizing(
+    _ frame: CGRect,
+    edges: FlowingGraphCanvasResizeEdges,
+    translation: CGSize
+  ) -> CGRect {
+    precondition(edges.isValid)
+    var result = frame
+    if edges.contains(.leading) {
+      result.origin.x += translation.width
+      result.size.width -= translation.width
+    } else if edges.contains(.trailing) {
+      result.size.width += translation.width
+    }
+    if edges.contains(.top) {
+      result.origin.y += translation.height
+      result.size.height -= translation.height
+    } else if edges.contains(.bottom) {
+      result.size.height += translation.height
+    }
+    return result
+  }
+
+  public static func resizing(
+    _ anchor: FlowingGraphCanvasAnchor,
+    from source: CGRect,
+    to destination: CGRect
+  ) -> FlowingGraphCanvasAnchor {
+    let horizontal = source.width == 0 ? 0.5 : (anchor.position.x - source.minX) / source.width
+    let vertical = source.height == 0 ? 0.5 : (anchor.position.y - source.minY) / source.height
+    return FlowingGraphCanvasAnchor(
+      position: CGPoint(
+        x: destination.minX + destination.width * horizontal,
+        y: destination.minY + destination.height * vertical
+      ),
+      normal: anchor.normal
+    )
+  }
+
   public static func deforming(
     _ route: FlowingGraphEdgeRoute,
     firstEndpointDelta: CGSize,
@@ -20,7 +58,7 @@ public enum FlowingGraphCanvasTransientGeometry {
       let startProgress = CGFloat(index) / count
       let endProgress = CGFloat(index + 1) / count
       switch segment {
-      case let .line(end):
+      case .line(let end):
         return FlowingGraphEdgePathSegment.line(
           end: translated(
             end,
@@ -31,7 +69,7 @@ public enum FlowingGraphCanvasTransientGeometry {
             )
           )
         )
-      case let .quadratic(control, end):
+      case .quadratic(let control, let end):
         return FlowingGraphEdgePathSegment.quadratic(
           control: translated(
             control,
@@ -50,7 +88,7 @@ public enum FlowingGraphCanvasTransientGeometry {
             )
           )
         )
-      case let .cubic(control1, control2, end):
+      case .cubic(let control1, let control2, let end):
         let interval = endProgress - startProgress
         return FlowingGraphEdgePathSegment.cubic(
           control1: translated(

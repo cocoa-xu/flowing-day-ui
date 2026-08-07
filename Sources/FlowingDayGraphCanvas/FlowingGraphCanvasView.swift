@@ -158,6 +158,7 @@ public struct FlowingGraphCanvas<
     .onChange(of: session.tool) { _ in
       session.marquee = nil
       session.transientNodeDrag = nil
+      session.transientNodeResize = nil
       rejectedNodeDragID = nil
     }
     .onChange(of: accessibilityFocusedNodeID) { nodeID in
@@ -182,7 +183,7 @@ public struct FlowingGraphCanvas<
         ForEach(slice.portIDs, id: \.self) { portID in
           portView(portID, context: context, surface: surface)
         }
-        ForEach(Array((activeNodeDrag?.guides ?? []).enumerated()), id: \.offset) {
+        ForEach(Array(activeGuides.enumerated()), id: \.offset) {
           _, guide in
           guideView(guide, surface: surface)
         }
@@ -205,11 +206,10 @@ public struct FlowingGraphCanvas<
     surface: FlowingCanvasRenderSurface
   ) -> some View {
     if let node = content.node(for: localID),
-      let baseFrame = content.frame(for: localID)
+      let baseFrame = content.frame(for: localID),
+      let frame = resolvedNodeFrame(localID)
     {
       let elementID = node.id
-      let delta = translation(for: localID)
-      let frame = baseFrame.offsetBy(dx: delta.width, dy: delta.height)
       let renderedFrame = surface.localTransform.applying(to: frame)
       let capabilities = nodeCapabilities.capabilities(for: elementID)
       let nodeContext = FlowingGraphCanvasNodeContext(
@@ -223,8 +223,10 @@ public struct FlowingGraphCanvas<
         isFocused: session.focusedElementID == elementID,
         isHovered: session.hoveredElementID == elementID,
         isBeingDragged: activeNodeDrag?.nodeIDs.contains(elementID) == true,
+        isBeingResized: activeNodeResize?.nodeID == elementID,
         capabilities: capabilities,
-        actions: actions(for: elementID)
+        actions: actions(for: elementID),
+        resizeActions: resizeActions(for: elementID, capabilities: capabilities)
       )
       renderedNode(
         nodeContent(node, nodeContext)
@@ -289,11 +291,7 @@ public struct FlowingGraphCanvas<
       let baseAnchor = content.anchor(for: localID)
     {
       let elementID = port.id
-      let delta = translation(for: nodeLocalID)
-      let anchor = FlowingGraphCanvasAnchor(
-        position: translated(baseAnchor.position, by: delta),
-        normal: baseAnchor.normal
-      )
+      let anchor = resolvedAnchor(baseAnchor, for: nodeLocalID)
       let renderedPosition = surface.localTransform.applying(to: anchor.position)
       let portContext = FlowingGraphCanvasPortContext(
         elementID: elementID,
@@ -329,8 +327,10 @@ public struct FlowingGraphCanvas<
       let anchors = content.edgeAnchors(for: localID),
       let endpointNodeIDs = content.endpointNodeLocalIDs(for: localID)
     {
-      let firstDelta = translation(for: endpointNodeIDs.first)
-      let secondDelta = translation(for: endpointNodeIDs.second)
+      let resolvedFirstAnchor = resolvedAnchor(anchors.first, for: endpointNodeIDs.first)
+      let resolvedSecondAnchor = resolvedAnchor(anchors.second, for: endpointNodeIDs.second)
+      let firstDelta = delta(from: anchors.first.position, to: resolvedFirstAnchor.position)
+      let secondDelta = delta(from: anchors.second.position, to: resolvedSecondAnchor.position)
       let isTransient = firstDelta != .zero || secondDelta != .zero
       let worldRoute =
         isTransient
@@ -341,8 +341,8 @@ public struct FlowingGraphCanvas<
         )
         : baseRoute
       let resolvedAnchors = FlowingGraphCanvasEdgeAnchors(
-        first: FlowingGraphCanvasRenderingGeometry.translated(anchors.first, by: firstDelta),
-        second: FlowingGraphCanvasRenderingGeometry.translated(anchors.second, by: secondDelta),
+        first: resolvedFirstAnchor,
+        second: resolvedSecondAnchor,
         isDirected: anchors.isDirected
       )
       let worldPadding = configuration.edgeRenderPadding / context.zoom
@@ -404,6 +404,17 @@ public struct FlowingGraphCanvas<
         }
       }
     }
+    if let resize = activeNodeResize,
+      resize.frame.intersects(rect),
+      let nodeID = content.localID(for: resize.nodeID)
+    {
+      if !nodeIDs.contains(nodeID) {
+        nodeIDs.append(nodeID)
+      }
+      for edgeID in content.incidentEdgeLocalIDs(of: nodeID) where !edgeIDs.contains(edgeID) {
+        edgeIDs.append(edgeID)
+      }
+    }
     let portIDs = nodeIDs.flatMap(content.portLocalIDs)
     return (nodeIDs, edgeIDs, portIDs)
   }
@@ -416,6 +427,21 @@ public struct FlowingGraphCanvas<
       return nil
     }
     return drag
+  }
+
+  private var activeNodeResize: FlowingGraphCanvasTransientNodeResize<Schema>? {
+    guard session.transientNodeDrag == nil,
+      let resize = session.transientNodeResize,
+      resize.basePresentationSnapshotID == content.presentation.snapshotID,
+      resize.baseLayoutInputID == content.id
+    else {
+      return nil
+    }
+    return resize
+  }
+
+  private var activeGuides: [FlowingGraphCanvasGuide] {
+    activeNodeResize?.guides ?? activeNodeDrag?.guides ?? []
   }
 
   private func isBeingDragged(_ nodeLocalID: LocalElementID) -> Bool {
@@ -431,6 +457,7 @@ public struct FlowingGraphCanvas<
     DragGesture(minimumDistance: configuration.canvas.dragMinimumDistance)
       .onChanged { value in
         guard session.tool == .select else { return }
+        guard activeNodeResize == nil else { return }
         guard rejectedNodeDragID != elementID else { return }
         if activeNodeDrag?.nodeID != elementID {
           guard
@@ -570,6 +597,118 @@ public struct FlowingGraphCanvas<
     )
   }
 
+  private func resizeActions(
+    for elementID: ElementID,
+    capabilities: FlowingGraphCanvasNodeCapabilities
+  ) -> FlowingGraphCanvasNodeResizeActions {
+    let isEnabled =
+      configuration.nodeResizing.isEnabled
+      && capabilities.contains(.resizable)
+    return FlowingGraphCanvasNodeResizeActions(
+      isEnabled: isEnabled,
+      update: { edges, renderedTranslation in
+        updateNodeResize(
+          elementID: elementID,
+          edges: edges,
+          renderedTranslation: renderedTranslation
+        )
+      },
+      end: {
+        endNodeResize(elementID: elementID)
+      },
+      cancel: {
+        if session.transientNodeResize?.nodeID == elementID {
+          session.transientNodeResize = nil
+        }
+      }
+    )
+  }
+
+  private func updateNodeResize(
+    elementID: ElementID,
+    edges: FlowingGraphCanvasResizeEdges,
+    renderedTranslation: CGSize
+  ) {
+    guard session.tool == .select,
+      session.transientNodeDrag == nil,
+      edges.isValid,
+      let localID = content.localID(for: elementID),
+      let baseFrame = content.frame(for: localID)
+    else {
+      return
+    }
+    if activeNodeResize?.nodeID != elementID || activeNodeResize?.edges != edges {
+      session.transientNodeResize = FlowingGraphCanvasTransientNodeResize(
+        nodeID: elementID,
+        basePresentationSnapshotID: content.presentation.snapshotID,
+        baseLayoutInputID: content.id,
+        baseFrame: baseFrame,
+        edges: edges
+      )
+      session.selection = [elementID]
+      session.focusedElementID = elementID
+      hasKeyboardFocus = true
+    }
+    guard let resize = activeNodeResize else { return }
+    let zoom = session.viewport.transform.zoom
+    let worldTranslation = CGSize(
+      width: renderedTranslation.width / zoom,
+      height: renderedTranslation.height / zoom
+    )
+    let proposedFrame = FlowingGraphCanvasTransientGeometry.resizing(
+      resize.baseFrame,
+      edges: resize.edges,
+      translation: worldTranslation
+    )
+    let searchRadius = configuration.snapping.searchRadius / zoom
+    let searchRect = proposedFrame.standardized.insetBy(
+      dx: -searchRadius,
+      dy: -searchRadius
+    )
+    let candidates =
+      configuration.snapping.isEnabled
+      ? snapCandidates(in: searchRect, excluding: [resize.nodeID])
+      : []
+    let result = FlowingGraphCanvasArrangement.resize(
+      baseFrame: resize.baseFrame,
+      proposedFrame: proposedFrame,
+      edges: resize.edges,
+      candidates: candidates,
+      configuration: configuration.snapping,
+      minimumSize: configuration.nodeResizing.minimumSize,
+      zoom: zoom
+    )
+    session.transientNodeResize?.frame = result.frame
+    session.transientNodeResize?.guides = result.guides
+  }
+
+  private func endNodeResize(elementID: ElementID) {
+    guard let resize = activeNodeResize, resize.nodeID == elementID else { return }
+    if resize.frame != resize.baseFrame {
+      onIntent(
+        .nodeResizeCompleted(
+          FlowingGraphCanvasNodeResizeIntent(
+            nodeID: resize.nodeID,
+            edges: resize.edges,
+            originTranslation: CGSize(
+              width: resize.frame.minX - resize.baseFrame.minX,
+              height: resize.frame.minY - resize.baseFrame.minY
+            ),
+            sizeDelta: CGSize(
+              width: resize.frame.width - resize.baseFrame.width,
+              height: resize.frame.height - resize.baseFrame.height
+            ),
+            basePresentationSnapshotID: resize.basePresentationSnapshotID,
+            baseLayoutInputID: resize.baseLayoutInputID
+          )
+        )
+      )
+    }
+    if session.transientNodeResize == resize {
+      session.transientNodeResize = nil
+    }
+  }
+
   private func select(
     _ elementID: ElementID,
     mode requestedMode: FlowingGraphCanvasSelectionMode?
@@ -687,6 +826,12 @@ public struct FlowingGraphCanvas<
     {
       session.transientNodeDrag = nil
     }
+    if let resize = session.transientNodeResize,
+      resize.basePresentationSnapshotID != content.presentation.snapshotID
+        || resize.baseLayoutInputID != content.id
+    {
+      session.transientNodeResize = nil
+    }
   }
 
   private func handleCommand(_ command: FlowingGraphCanvasSessionCommand<Schema>?) {
@@ -763,7 +908,8 @@ public struct FlowingGraphCanvas<
       )
     case .arrange(let action):
       guard configuration.allowsArrangementCommands,
-        session.transientNodeDrag == nil
+        session.transientNodeDrag == nil,
+        session.transientNodeResize == nil
       else {
         return
       }
@@ -827,10 +973,24 @@ public struct FlowingGraphCanvas<
     )
     let searchRadius = configuration.snapping.searchRadius / session.viewport.transform.zoom
     let searchRect = proposedBounds.insetBy(dx: -searchRadius, dy: -searchRadius)
-    let candidates = content.nodeLocalIDs(intersecting: searchRect).lazy
+    let candidates = snapCandidates(in: searchRect, excluding: drag.nodeIDs)
+    return FlowingGraphCanvasArrangement.snap(
+      movingBounds: baseBounds,
+      proposedTranslation: proposedTranslation,
+      candidates: candidates,
+      configuration: configuration.snapping,
+      zoom: session.viewport.transform.zoom
+    )
+  }
+
+  private func snapCandidates(
+    in searchRect: CGRect,
+    excluding excludedIDs: Set<ElementID>
+  ) -> [FlowingGraphCanvasSnapCandidate<ElementID>] {
+    content.nodeLocalIDs(intersecting: searchRect).lazy
       .filter { localID in
         guard let elementID = content.elementID(for: localID) else { return false }
-        return !drag.nodeIDs.contains(elementID)
+        return !excludedIDs.contains(elementID)
           && nodeCapabilities.capabilities(for: elementID).contains(.arrangementParticipant)
       }
       .prefix(configuration.snapping.maximumCandidates)
@@ -842,13 +1002,6 @@ public struct FlowingGraphCanvas<
         }
         return FlowingGraphCanvasSnapCandidate(id: elementID, frame: frame)
       }
-    return FlowingGraphCanvasArrangement.snap(
-      movingBounds: baseBounds,
-      proposedTranslation: proposedTranslation,
-      candidates: Array(candidates),
-      configuration: configuration.snapping,
-      zoom: session.viewport.transform.zoom
-    )
   }
 
   private func filtered(
@@ -896,7 +1049,7 @@ public struct FlowingGraphCanvas<
       let nodeID = content.nodeLocalID(for: localID)
     {
       return CGRect(
-        origin: translated(anchor.position, by: translation(for: nodeID)),
+        origin: resolvedAnchor(anchor, for: nodeID).position,
         size: .zero
       )
     }
@@ -905,6 +1058,11 @@ public struct FlowingGraphCanvas<
   }
 
   private func resolvedNodeFrame(_ localID: LocalElementID) -> CGRect? {
+    if let resize = activeNodeResize,
+      content.localID(for: resize.nodeID) == localID
+    {
+      return resize.frame
+    }
     guard let frame = content.frame(for: localID) else { return nil }
     let delta = translation(for: localID)
     return frame.offsetBy(dx: delta.width, dy: delta.height)
@@ -912,17 +1070,44 @@ public struct FlowingGraphCanvas<
 
   private func resolvedEdgeRoute(_ localID: LocalElementID) -> FlowingGraphEdgeRoute? {
     guard let route = content.route(for: localID),
-      let endpoints = content.endpointNodeLocalIDs(for: localID)
+      let endpoints = content.endpointNodeLocalIDs(for: localID),
+      let anchors = content.edgeAnchors(for: localID)
     else {
       return nil
     }
-    let firstDelta = translation(for: endpoints.first)
-    let secondDelta = translation(for: endpoints.second)
+    let firstDelta = delta(
+      from: anchors.first.position,
+      to: resolvedAnchor(anchors.first, for: endpoints.first).position
+    )
+    let secondDelta = delta(
+      from: anchors.second.position,
+      to: resolvedAnchor(anchors.second, for: endpoints.second).position
+    )
     guard firstDelta != .zero || secondDelta != .zero else { return route }
     return FlowingGraphCanvasTransientGeometry.deforming(
       route,
       firstEndpointDelta: firstDelta,
       secondEndpointDelta: secondDelta
+    )
+  }
+
+  private func resolvedAnchor(
+    _ anchor: FlowingGraphCanvasAnchor,
+    for nodeLocalID: LocalElementID
+  ) -> FlowingGraphCanvasAnchor {
+    let dragTranslation = translation(for: nodeLocalID)
+    if dragTranslation != .zero {
+      return FlowingGraphCanvasRenderingGeometry.translated(anchor, by: dragTranslation)
+    }
+    guard let resize = activeNodeResize,
+      content.localID(for: resize.nodeID) == nodeLocalID
+    else {
+      return anchor
+    }
+    return FlowingGraphCanvasTransientGeometry.resizing(
+      anchor,
+      from: resize.baseFrame,
+      to: resize.frame
     )
   }
 
@@ -993,12 +1178,60 @@ public struct FlowingGraphCanvas<
     }
     let renderedStart = surface.localTransform.applying(to: start)
     let renderedEnd = surface.localTransform.applying(to: end)
-    return Path { path in
-      path.move(to: renderedStart)
-      path.addLine(to: renderedEnd)
+    let renderedLength = hypot(
+      renderedEnd.x - renderedStart.x,
+      renderedEnd.y - renderedStart.y
+    )
+    let usesTicks =
+      guide.kind == .equalSpacing || guide.kind == .equalSize
+      || guide.kind == .resize
+    return ZStack(alignment: .topLeading) {
+      Path { path in
+        path.move(to: renderedStart)
+        path.addLine(to: renderedEnd)
+        guard usesTicks else { return }
+        addGuideTick(to: &path, at: renderedStart, axis: guide.axis)
+        addGuideTick(to: &path, at: renderedEnd, axis: guide.axis)
+      }
+      .stroke(
+        Color.accentColor.opacity(FlowingGraphCanvasGuideMetrics.lineOpacity),
+        style: StrokeStyle(
+          lineWidth: FlowingGraphCanvasGuideMetrics.lineWidth,
+          dash: guide.kind == .grid ? FlowingGraphCanvasGuideMetrics.gridDash : []
+        )
+      )
+      if let measurement = guide.measurement,
+        renderedLength >= FlowingGraphCanvasGuideMetrics.minimumLabelLength
+      {
+        Text("\(measurement.rounded(), specifier: "%.0f")")
+          .font(.system(size: FlowingGraphCanvasGuideMetrics.labelSize, weight: .medium))
+          .foregroundStyle(.white)
+          .padding(.horizontal, FlowingGraphCanvasGuideMetrics.labelHorizontalPadding)
+          .padding(.vertical, FlowingGraphCanvasGuideMetrics.labelVerticalPadding)
+          .background(Color.accentColor, in: Capsule())
+          .position(
+            x: (renderedStart.x + renderedEnd.x) / 2,
+            y: (renderedStart.y + renderedEnd.y) / 2
+          )
+      }
     }
-    .stroke(Color.accentColor.opacity(0.82), lineWidth: 1)
     .allowsHitTesting(false)
+  }
+
+  private func addGuideTick(
+    to path: inout Path,
+    at point: CGPoint,
+    axis: FlowingGraphCanvasGuideAxis
+  ) {
+    let radius = FlowingGraphCanvasGuideMetrics.tickLength / 2
+    switch axis {
+    case .horizontal:
+      path.move(to: CGPoint(x: point.x, y: point.y - radius))
+      path.addLine(to: CGPoint(x: point.x, y: point.y + radius))
+    case .vertical:
+      path.move(to: CGPoint(x: point.x - radius, y: point.y))
+      path.addLine(to: CGPoint(x: point.x + radius, y: point.y))
+    }
   }
 }
 
@@ -1006,10 +1239,25 @@ private func translated(_ point: CGPoint, by delta: CGSize) -> CGPoint {
   CGPoint(x: point.x + delta.width, y: point.y + delta.height)
 }
 
+private func delta(from start: CGPoint, to end: CGPoint) -> CGSize {
+  CGSize(width: end.x - start.x, height: end.y - start.y)
+}
+
 private func squaredDistance(from point: CGPoint, to rect: CGRect) -> CGFloat {
   let dx = max(rect.minX - point.x, 0, point.x - rect.maxX)
   let dy = max(rect.minY - point.y, 0, point.y - rect.maxY)
   return dx * dx + dy * dy
+}
+
+private enum FlowingGraphCanvasGuideMetrics {
+  static let lineWidth: CGFloat = 1
+  static let lineOpacity = 0.84
+  static let tickLength: CGFloat = 7
+  static let gridDash: [CGFloat] = [3, 3]
+  static let minimumLabelLength: CGFloat = 24
+  static let labelSize: CGFloat = 9
+  static let labelHorizontalPadding: CGFloat = 5
+  static let labelVerticalPadding: CGFloat = 2
 }
 
 private struct FlowingGraphCanvasNodeAccessibility: ViewModifier {
