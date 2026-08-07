@@ -1,5 +1,6 @@
 import FlowingDayCanvas
 import FlowingDayGraphComposition
+import FlowingDayGraphCore
 import FlowingDayGraphLayout
 import SwiftUI
 
@@ -19,6 +20,7 @@ public struct FlowingGraphCanvas<
   private let sessionID: FlowingGraphCanvasSessionID
   @Binding private var session: FlowingGraphCanvasSessionState<Schema>
   private let configuration: FlowingGraphCanvasConfiguration
+  private let accessibilitySnapshot: FlowingGraphCanvasAccessibilitySnapshot<ElementID>?
   private let contentInsets: EdgeInsets
   private let contentChangeBehavior: FlowingCanvasContentChangeBehavior
   private let command: FlowingGraphCanvasSessionCommand<Schema>?
@@ -53,6 +55,7 @@ public struct FlowingGraphCanvas<
     sessionID: FlowingGraphCanvasSessionID,
     session: Binding<FlowingGraphCanvasSessionState<Schema>>,
     configuration: FlowingGraphCanvasConfiguration = .init(),
+    accessibilitySnapshot: FlowingGraphCanvasAccessibilitySnapshot<ElementID>? = nil,
     contentInsets: EdgeInsets = .init(),
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
@@ -101,6 +104,7 @@ public struct FlowingGraphCanvas<
     self.sessionID = sessionID
     _session = session
     self.configuration = configuration
+    self.accessibilitySnapshot = accessibilitySnapshot
     self.contentInsets = contentInsets
     self.contentChangeBehavior = contentChangeBehavior
     self.command = command
@@ -173,6 +177,19 @@ public struct FlowingGraphCanvas<
     .focusable(configuration.keyboardNavigation.isEnabled)
     .focused($hasKeyboardFocus)
     .onMoveCommand(perform: moveKeyboardFocus)
+    .background {
+      if configuration.accessibility.isEnabled, let accessibilitySnapshot {
+        FlowingGraphCanvasAccessibilityHost(
+          snapshot: accessibilitySnapshot,
+          configuration: configuration.accessibility,
+          selectedElementIDs: session.selection,
+          focusedElementID: session.focusedElementID,
+          viewportTransform: session.viewport.transform,
+          onRequest: handleAccessibilityRequest
+        )
+        .allowsHitTesting(false)
+      }
+    }
   }
 
   private func graphLayer(context: FlowingCanvasRenderContext) -> some View {
@@ -267,9 +284,11 @@ public struct FlowingGraphCanvas<
         }
         .modifier(
           FlowingGraphCanvasNodeAccessibility(
-            isEnabled: configuration.accessibility.isEnabled,
+            isEnabled: configuration.accessibility.isEnabled && accessibilitySnapshot == nil,
             isSelected: session.selection.contains(elementID),
-            providesSelectionAction: configuration.accessibility.providesSelectionAction,
+            providesSelectionAction: configuration.accessibility.capabilities.contains(
+              .selection
+            ),
             select: { select(elementID, mode: .replace) }
           )
         )
@@ -978,6 +997,93 @@ public struct FlowingGraphCanvas<
     focusNode(candidate)
   }
 
+  private func handleAccessibilityRequest(
+    _ request: FlowingGraphCanvasAccessibilityRequest<ElementID>
+  ) -> Bool {
+    switch request {
+    case .focus(let elementID):
+      guard configuration.accessibility.capabilities.contains(.focusNavigation),
+        content.contains(elementID)
+      else { return false }
+      session.focusedElementID = elementID
+      guard configuration.accessibility.keepsFocusedElementVisible,
+        let bounds = resolvedBounds(for: elementID),
+        !session.viewport.visibleWorldRect.contains(bounds)
+      else { return true }
+      canvasRequest = FlowingCanvasRequest(
+        action: .focus(rect: bounds, zoom: session.viewport.transform.zoom)
+      )
+      return true
+    case .select(let elementID):
+      guard configuration.accessibility.capabilities.contains(.selection),
+        content.contains(elementID)
+      else { return false }
+      select(elementID, mode: .replace)
+      return true
+    case .move(let elementID, let direction, let largeStep):
+      return moveElementFromAccessibility(
+        elementID,
+        direction: direction,
+        largeStep: largeStep
+      )
+    case .perform(let elementID, let action):
+      guard content.contains(elementID) else { return false }
+      onIntent(
+        .elementAction(
+          FlowingGraphCanvasElementActionIntent(
+            action: action,
+            elementID: elementID,
+            basePresentationSnapshotID: content.presentation.snapshotID
+          )
+        )
+      )
+      return true
+    }
+  }
+
+  private func moveElementFromAccessibility(
+    _ elementID: ElementID,
+    direction: FlowingGraphCanvasNavigationDirection,
+    largeStep: Bool
+  ) -> Bool {
+    guard configuration.accessibility.capabilities.contains(.movement),
+      let translation = FlowingGraphCanvasKeyboardNudger.translation(
+        direction: direction,
+        configuration: configuration.keyboardNudging,
+        modifiers: largeStep ? [.largeKeyboardNudge] : []
+      )
+    else { return false }
+    let requestedSelection =
+      session.selection.contains(elementID) ? session.selection : [elementID]
+    guard
+      let request = FlowingGraphCanvasNodeDragResolver.request(
+        anchorNodeID: elementID,
+        selection: requestedSelection,
+        presentation: content.presentation,
+        mode: configuration.nodeDraggingMode,
+        capabilities: nodeCapabilities
+      )
+    else { return false }
+    let nodeIDs = FlowingGraphCanvasNodeDragResolver.admittedNodeIDs(
+      for: request,
+      admission: admitNodeDrag(request)
+    )
+    guard !nodeIDs.isEmpty else { return false }
+    session.selection = requestedSelection
+    onIntent(
+      .nodeDragCompleted(
+        FlowingGraphCanvasNodeDragIntent(
+          nodeID: elementID,
+          nodeIDs: nodeIDs,
+          basePresentationSnapshotID: content.presentation.snapshotID,
+          baseLayoutInputID: content.id,
+          translation: translation
+        )
+      )
+    )
+    return true
+  }
+
   private func nudgeSelection(
     direction: FlowingGraphCanvasNavigationDirection,
     modifiers: FlowingGraphCanvasInteractionModifiers
@@ -1569,6 +1675,7 @@ extension FlowingGraphCanvas where PortContent == EmptyView {
     sessionID: FlowingGraphCanvasSessionID,
     session: Binding<FlowingGraphCanvasSessionState<Schema>>,
     configuration: FlowingGraphCanvasConfiguration = .init(),
+    accessibilitySnapshot: FlowingGraphCanvasAccessibilitySnapshot<ElementID>? = nil,
     contentInsets: EdgeInsets = .init(),
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
@@ -1613,6 +1720,7 @@ extension FlowingGraphCanvas where PortContent == EmptyView {
       sessionID: sessionID,
       session: session,
       configuration: configuration,
+      accessibilitySnapshot: accessibilitySnapshot,
       contentInsets: contentInsets,
       contentChangeBehavior: contentChangeBehavior,
       command: command,
@@ -1640,6 +1748,7 @@ where PortContent == EmptyView, Decorations == EmptyView, Overlays == EmptyView 
     sessionID: FlowingGraphCanvasSessionID,
     session: Binding<FlowingGraphCanvasSessionState<Schema>>,
     configuration: FlowingGraphCanvasConfiguration = .init(),
+    accessibilitySnapshot: FlowingGraphCanvasAccessibilitySnapshot<ElementID>? = nil,
     contentInsets: EdgeInsets = .init(),
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
@@ -1680,6 +1789,7 @@ where PortContent == EmptyView, Decorations == EmptyView, Overlays == EmptyView 
       sessionID: sessionID,
       session: session,
       configuration: configuration,
+      accessibilitySnapshot: accessibilitySnapshot,
       contentInsets: contentInsets,
       contentChangeBehavior: contentChangeBehavior,
       command: command,
@@ -1706,6 +1816,7 @@ where PortContent == EmptyView, Decorations == EmptyView {
     sessionID: FlowingGraphCanvasSessionID,
     session: Binding<FlowingGraphCanvasSessionState<Schema>>,
     configuration: FlowingGraphCanvasConfiguration = .init(),
+    accessibilitySnapshot: FlowingGraphCanvasAccessibilitySnapshot<ElementID>? = nil,
     contentInsets: EdgeInsets = .init(),
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
@@ -1748,6 +1859,7 @@ where PortContent == EmptyView, Decorations == EmptyView {
       sessionID: sessionID,
       session: session,
       configuration: configuration,
+      accessibilitySnapshot: accessibilitySnapshot,
       contentInsets: contentInsets,
       contentChangeBehavior: contentChangeBehavior,
       command: command,

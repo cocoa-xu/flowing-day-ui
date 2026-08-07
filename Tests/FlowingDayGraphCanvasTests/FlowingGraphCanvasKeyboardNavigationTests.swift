@@ -99,7 +99,7 @@ final class FlowingGraphCanvasKeyboardNavigationTests: XCTestCase {
 
     XCTAssertTrue(FlowingGraphCanvasAccessibilityConfiguration.standard.isEnabled)
     XCTAssertTrue(
-      FlowingGraphCanvasAccessibilityConfiguration.standard.providesSelectionAction
+      FlowingGraphCanvasAccessibilityConfiguration.standard.capabilities.contains(.selection)
     )
     XCTAssertFalse(FlowingGraphCanvasAccessibilityConfiguration.disabled.isEnabled)
 

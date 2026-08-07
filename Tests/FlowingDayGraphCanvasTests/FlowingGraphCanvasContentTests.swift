@@ -80,6 +80,33 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
     XCTAssertEqual(miniMapSnapshot.edges.first?.id, edge.id)
   }
 
+  @MainActor
+  func testAccessibilitySnapshotKeepsHiddenTopologyNavigable() throws {
+    let fixture = try makeFixture()
+    let content = try FlowingGraphCanvasContent<CanvasCompositionSchema>(
+      presentation: fixture.presentation,
+      layoutInput: fixture.input,
+      layoutResult: fixture.result
+    )
+
+    let snapshot = try content.accessibilitySnapshot(
+      canvasDescription: .init(label: "Workflow"),
+      node: { node in
+        .element(.init(label: node.value, identifier: String(describing: node.id)))
+      },
+      port: { _ in .hidden },
+      edge: { _ in .hidden }
+    )
+
+    XCTAssertEqual(snapshot.canvasDescription.label, "Workflow")
+    XCTAssertEqual(snapshot.items.count, fixture.presentation.nodes.count)
+    XCTAssertEqual(Set(snapshot.items.map(\.id)), Set(fixture.presentation.nodes.map(\.id)))
+    for item in snapshot.items {
+      XCTAssertEqual(snapshot.relatedElementIDs(for: item.id).count, 1)
+      XCTAssertNotEqual(snapshot.nextRelatedElementID(after: item.id), item.id)
+    }
+  }
+
   func testContentRejectsGeometryForADifferentTopology() throws {
     let fixture = try makeFixture()
     let reversedTopology = try FlowingGraphLayoutTopology<CanvasLayoutSchema>(

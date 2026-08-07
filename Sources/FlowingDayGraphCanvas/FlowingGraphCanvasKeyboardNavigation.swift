@@ -79,22 +79,6 @@ public enum FlowingGraphCanvasKeyboardNudger {
   }
 }
 
-public struct FlowingGraphCanvasAccessibilityConfiguration: Equatable, Sendable {
-  public let isEnabled: Bool
-  public let providesSelectionAction: Bool
-
-  public init(
-    isEnabled: Bool = true,
-    providesSelectionAction: Bool = true
-  ) {
-    self.isEnabled = isEnabled
-    self.providesSelectionAction = providesSelectionAction
-  }
-
-  public static let disabled = Self(isEnabled: false, providesSelectionAction: false)
-  public static let standard = Self()
-}
-
 public struct FlowingGraphCanvasNavigationCandidate<ID: Hashable & Sendable>: Sendable {
   public let id: ID
   public let frame: CGRect

@@ -247,6 +247,9 @@ public enum FlowingGraphCanvasElementAction: Hashable, Sendable {
   case expand
   case drillIn
   case inspect
+  case beginConnection
+  case completeConnection
+  case cancelConnection
 }
 
 public struct FlowingGraphCanvasNodeDragIntent<
