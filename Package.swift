@@ -22,6 +22,7 @@ let package = Package(
     ),
     .library(name: "FlowingDayGraphComposition", targets: ["FlowingDayGraphComposition"]),
     .library(name: "FlowingDayGraphCore", targets: ["FlowingDayGraphCore"]),
+    .library(name: "FlowingDayGraphHistory", targets: ["FlowingDayGraphHistory"]),
     .library(name: "FlowingDayGraphLayout", targets: ["FlowingDayGraphLayout"]),
     .library(name: "FlowingDayPreferences", targets: ["FlowingDayPreferences"]),
     .executable(
@@ -82,6 +83,14 @@ let package = Package(
       dependencies: ["FlowingDayGraphCore"]
     ),
     .target(name: "FlowingDayGraphCore"),
+    .target(
+      name: "FlowingDayGraphHistory",
+      dependencies: [
+        "FlowingDayGraphCollaboration",
+        "FlowingDayGraphComposition",
+        "FlowingDayGraphCore",
+      ]
+    ),
     .target(
       name: "FlowingDayGraphLayout",
       dependencies: ["FlowingDayGraphCore"]
@@ -158,6 +167,15 @@ let package = Package(
     .testTarget(
       name: "FlowingDayGraphCoreTests",
       dependencies: ["FlowingDayGraphCore"]
+    ),
+    .testTarget(
+      name: "FlowingDayGraphHistoryTests",
+      dependencies: [
+        "FlowingDayGraphCollaboration",
+        "FlowingDayGraphComposition",
+        "FlowingDayGraphCore",
+        "FlowingDayGraphHistory",
+      ]
     ),
     .testTarget(
       name: "FlowingDayGraphLayoutTests",
