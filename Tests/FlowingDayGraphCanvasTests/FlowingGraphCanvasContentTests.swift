@@ -404,6 +404,148 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
     )
   }
 
+  @MainActor
+  func testInteractionPolicyKeepsBackendBehaviorInOneValue() throws {
+    let presentation = try makeFixture().presentation
+    let nodeIDs = presentation.nodes.map(\.id)
+    let frames = Dictionary(
+      uniqueKeysWithValues: nodeIDs.enumerated().map { index, nodeID in
+        (nodeID, CGRect(x: CGFloat(index * 120), y: 0, width: 100, height: 60))
+      }
+    )
+    let capabilities = FlowingGraphCanvasNodeCapabilityMap<CanvasCompositionSchema>(
+      overrides: [nodeIDs[1]: []]
+    )
+    let constraints = FlowingGraphCanvasNodeSizeConstraintMap<CanvasCompositionSchema>(
+      overrides: [
+        nodeIDs[0]: FlowingGraphCanvasNodeSizeConstraints(
+          minimumSize: CGSize(width: 80, height: 48)
+        )
+      ]
+    )
+    let strategy = FlowingGraphCanvasSnappingStrategy<CanvasCompositionSchema>(
+      translation: { request in
+        FlowingGraphCanvasSnapResult(
+          translation: CGSize(width: 37, height: request.proposedTranslation.height),
+          guides: []
+        )
+      }
+    )
+    let policy = FlowingGraphCanvasInteractionPolicy<CanvasCompositionSchema>(
+      nodeCapabilities: capabilities,
+      nodeSizeConstraints: constraints,
+      snappingStrategy: strategy,
+      admitNodeDrag: { .allowOnly([$0.anchorNodeID]) },
+      admitNodeResize: { .allowOnly([$0.anchorNodeID]) },
+      isAdditiveSelectionActive: { true },
+      interactionModifiers: { [.disableSnapping, .largeKeyboardNudge] }
+    )
+    let dragRequest = try XCTUnwrap(
+      FlowingGraphCanvasNodeDragResolver.request(
+        anchorNodeID: nodeIDs[0],
+        selection: Set(nodeIDs),
+        presentation: presentation,
+        mode: .multiple,
+        capabilities: capabilities
+      )
+    )
+    let resizeRequest = FlowingGraphCanvasNodeResizeAdmissionRequest<CanvasCompositionSchema>(
+      anchorNodeID: nodeIDs[0],
+      selectedNodeIDs: nodeIDs,
+      candidateNodeIDs: nodeIDs,
+      baseFrames: frames,
+      edges: [.trailing, .bottom],
+      basePresentationSnapshotID: presentation.snapshotID
+    )
+    let firstFrame = try XCTUnwrap(frames[nodeIDs[0]])
+    let snapRequest = FlowingGraphCanvasTranslationSnapRequest<CanvasCompositionSchema>(
+      movingBounds: firstFrame,
+      proposedTranslation: CGSize(width: 10, height: 12),
+      candidates: [],
+      configuration: .disabled,
+      zoom: 1
+    )
+
+    XCTAssertEqual(policy.nodeCapabilities, capabilities)
+    XCTAssertEqual(policy.nodeSizeConstraints, constraints)
+    XCTAssertEqual(policy.admission(for: dragRequest), .allowOnly([nodeIDs[0]]))
+    XCTAssertEqual(policy.admission(for: resizeRequest), .allowOnly([nodeIDs[0]]))
+    XCTAssertTrue(policy.isAdditiveSelectionActive)
+    XCTAssertEqual(policy.interactionModifiers, [.disableSnapping, .largeKeyboardNudge])
+    XCTAssertEqual(policy.snappingStrategy.snap(snapRequest).translation.width, 37)
+  }
+
+  @MainActor
+  func testBackendContextForwardsTheCompleteInteractionContract() throws {
+    let fixture = try makeFixture()
+    let content = try FlowingGraphCanvasContent<CanvasCompositionSchema>(
+      presentation: fixture.presentation,
+      layoutInput: fixture.input,
+      layoutResult: fixture.result
+    )
+    let node = try XCTUnwrap(fixture.presentation.nodes.first)
+    let nodeID = node.id
+    var session = FlowingGraphCanvasSessionState<CanvasCompositionSchema>()
+    var receivedViewport: FlowingCanvasViewport?
+    var receivedPhase: FlowingCanvasViewportChangePhase?
+    var receivedIntent: FlowingGraphCanvasInteractionIntent<CanvasCompositionSchema>?
+    let interactionPolicy = FlowingGraphCanvasInteractionPolicy<CanvasCompositionSchema>(
+      interactionModifiers: { .disableSnapping }
+    )
+    let context = FlowingGraphCanvasBackendContext(
+      content: content,
+      sessionID: FlowingGraphCanvasSessionID(),
+      session: Binding(
+        get: { session },
+        set: { session = $0 }
+      ),
+      configuration: .init(),
+      interactionPolicy: interactionPolicy,
+      accessibilitySnapshot: nil,
+      contentInsets: .init(),
+      contentChangeBehavior: .preserveViewport,
+      command: nil,
+      onSmartMagnify: { _ in .restore },
+      onViewportChange: { viewport, phase in
+        receivedViewport = viewport
+        receivedPhase = phase
+      },
+      onIntent: { receivedIntent = $0 }
+    )
+    let viewport = FlowingCanvasViewport(
+      transform: FlowingCanvasTransform(zoom: 1.5, offset: CGSize(width: 8, height: 12))
+    )
+    let smartMagnifyContext = FlowingGraphCanvasSmartMagnifyContext<CanvasCompositionSchema>(
+      canvas: FlowingCanvasSmartMagnifyContext(
+        location: .zero,
+        worldLocation: .zero,
+        viewport: viewport,
+        initialZoom: 1,
+        canRestoreViewport: true
+      ),
+      nearestNodeID: nodeID,
+      nearestNodeFrame: content.frame(for: node.localID),
+      focusedElementID: nil,
+      focusedElementBounds: nil
+    )
+    let intent = FlowingGraphCanvasInteractionIntent<CanvasCompositionSchema>.elementAction(
+      FlowingGraphCanvasElementActionIntent(
+        action: .inspect,
+        elementID: nodeID,
+        basePresentationSnapshotID: fixture.presentation.snapshotID
+      )
+    )
+
+    context.viewportDidChange(viewport, phase: .continuous)
+    context.send(intent)
+
+    XCTAssertEqual(context.interactionPolicy.interactionModifiers, .disableSnapping)
+    XCTAssertEqual(context.smartMagnify(smartMagnifyContext), .restore)
+    XCTAssertEqual(receivedViewport, viewport)
+    XCTAssertEqual(receivedPhase, .continuous)
+    XCTAssertEqual(receivedIntent, intent)
+  }
+
   func testNodeSizeConstraintsUseOverridesBeforeDefaultsAndFallbacks() throws {
     let nodeIDs = try makeFixture().presentation.nodes.map(\.id)
     let defaultConstraints = FlowingGraphCanvasNodeSizeConstraints(

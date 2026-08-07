@@ -127,6 +127,75 @@ public struct FlowingGraphCanvasNodeSizeConstraintMap<Schema: FlowingGraphCanvas
   }
 }
 
+public struct FlowingGraphCanvasInteractionPolicy<Schema: FlowingGraphCanvasSchema> {
+  public let nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema>
+  public let nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema>
+  public let snappingStrategy: FlowingGraphCanvasSnappingStrategy<Schema>
+
+  private let nodeDragAdmission:
+    @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
+      FlowingGraphCanvasNodeDragAdmission<Schema>
+  private let nodeResizeAdmission:
+    @MainActor (FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>) ->
+      FlowingGraphCanvasNodeResizeAdmission<Schema>
+  private let additiveSelectionState: @MainActor () -> Bool
+  private let modifiers: @MainActor () -> FlowingGraphCanvasInteractionModifiers
+
+  public init(
+    nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
+    nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema> = .init(),
+    snappingStrategy: FlowingGraphCanvasSnappingStrategy<Schema> = .standard,
+    admitNodeDrag:
+      @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
+      FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
+    admitNodeResize:
+      @escaping @MainActor (FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>) ->
+      FlowingGraphCanvasNodeResizeAdmission<Schema> = { _ in .allowAll },
+    isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
+      FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
+    },
+    interactionModifiers: @escaping @MainActor () -> FlowingGraphCanvasInteractionModifiers = {
+      FlowingGraphCanvasPlatformInput.interactionModifiers
+    }
+  ) {
+    self.nodeCapabilities = nodeCapabilities
+    self.nodeSizeConstraints = nodeSizeConstraints
+    self.snappingStrategy = snappingStrategy
+    nodeDragAdmission = admitNodeDrag
+    nodeResizeAdmission = admitNodeResize
+    additiveSelectionState = isAdditiveSelectionActive
+    modifiers = interactionModifiers
+  }
+
+  @MainActor
+  public func admission(
+    for request: FlowingGraphCanvasNodeDragAdmissionRequest<Schema>
+  ) -> FlowingGraphCanvasNodeDragAdmission<Schema> {
+    nodeDragAdmission(request)
+  }
+
+  @MainActor
+  public func admission(
+    for request: FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>
+  ) -> FlowingGraphCanvasNodeResizeAdmission<Schema> {
+    nodeResizeAdmission(request)
+  }
+
+  @MainActor
+  public var isAdditiveSelectionActive: Bool {
+    additiveSelectionState()
+  }
+
+  @MainActor
+  public var interactionModifiers: FlowingGraphCanvasInteractionModifiers {
+    modifiers()
+  }
+
+  public static var standard: Self {
+    Self()
+  }
+}
+
 public struct FlowingGraphCanvasNodeDragAdmissionRequest<
   Schema: FlowingGraphCanvasSchema
 >: Equatable, Sendable {

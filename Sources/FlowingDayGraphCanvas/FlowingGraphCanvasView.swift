@@ -25,17 +25,7 @@ public struct FlowingGraphCanvas<
   private let contentInsets: EdgeInsets
   private let contentChangeBehavior: FlowingCanvasContentChangeBehavior
   private let command: FlowingGraphCanvasSessionCommand<Schema>?
-  private let nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema>
-  private let nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema>
-  private let snappingStrategy: FlowingGraphCanvasSnappingStrategy<Schema>
-  private let admitNodeDrag:
-    @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
-      FlowingGraphCanvasNodeDragAdmission<Schema>
-  private let admitNodeResize:
-    @MainActor (FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>) ->
-      FlowingGraphCanvasNodeResizeAdmission<Schema>
-  private let isAdditiveSelectionActive: @MainActor () -> Bool
-  private let interactionModifiers: @MainActor () -> FlowingGraphCanvasInteractionModifiers
+  private let interactionPolicy: FlowingGraphCanvasInteractionPolicy<Schema>
   private let onSmartMagnify:
     (FlowingGraphCanvasSmartMagnifyContext<Schema>) -> FlowingCanvasViewportAction
   private let onViewportChange: (FlowingCanvasViewport, FlowingCanvasViewportChangePhase) -> Void
@@ -66,21 +56,7 @@ public struct FlowingGraphCanvas<
     contentInsets: EdgeInsets = .init(),
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
-    nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
-    nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema> = .init(),
-    snappingStrategy: FlowingGraphCanvasSnappingStrategy<Schema> = .standard,
-    admitNodeDrag:
-      @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
-      FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
-    admitNodeResize:
-      @escaping @MainActor (FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>) ->
-      FlowingGraphCanvasNodeResizeAdmission<Schema> = { _ in .allowAll },
-    isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
-      FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
-    },
-    interactionModifiers: @escaping @MainActor () -> FlowingGraphCanvasInteractionModifiers = {
-      FlowingGraphCanvasPlatformInput.interactionModifiers
-    },
+    interactionPolicy: FlowingGraphCanvasInteractionPolicy<Schema> = .standard,
     onSmartMagnify:
       @escaping (FlowingGraphCanvasSmartMagnifyContext<Schema>) ->
       FlowingCanvasViewportAction = { context in
@@ -121,13 +97,7 @@ public struct FlowingGraphCanvas<
     self.contentInsets = contentInsets
     self.contentChangeBehavior = contentChangeBehavior
     self.command = command
-    self.nodeCapabilities = nodeCapabilities
-    self.nodeSizeConstraints = nodeSizeConstraints
-    self.snappingStrategy = snappingStrategy
-    self.admitNodeDrag = admitNodeDrag
-    self.admitNodeResize = admitNodeResize
-    self.isAdditiveSelectionActive = isAdditiveSelectionActive
-    self.interactionModifiers = interactionModifiers
+    self.interactionPolicy = interactionPolicy
     self.onSmartMagnify = onSmartMagnify
     self.onViewportChange = onViewportChange
     self.onIntent = onIntent
@@ -191,9 +161,14 @@ public struct FlowingGraphCanvas<
       sessionID: sessionID,
       session: $session,
       configuration: configuration,
+      interactionPolicy: interactionPolicy,
+      accessibilitySnapshot: accessibilitySnapshot,
       contentInsets: contentInsets,
       contentChangeBehavior: contentChangeBehavior,
-      command: command
+      command: command,
+      onSmartMagnify: onSmartMagnify,
+      onViewportChange: onViewportChange,
+      onIntent: onIntent
     )
   }
 
@@ -287,7 +262,7 @@ public struct FlowingGraphCanvas<
     {
       let elementID = node.id
       let renderedFrame = surface.localTransform.applying(to: frame)
-      let capabilities = nodeCapabilities.capabilities(for: elementID)
+      let capabilities = interactionPolicy.nodeCapabilities.capabilities(for: elementID)
       let nodeContext = FlowingGraphCanvasNodeContext(
         elementID: elementID,
         localID: localID,
@@ -560,7 +535,7 @@ public struct FlowingGraphCanvas<
     }
     let actions = resizeActions(
       for: anchorNodeID,
-      capabilities: nodeCapabilities.capabilities(for: anchorNodeID)
+      capabilities: interactionPolicy.nodeCapabilities.capabilities(for: anchorNodeID)
     )
     guard actions.isEnabled else { return nil }
     return FlowingGraphCanvasSelectionResizeContext(
@@ -600,7 +575,7 @@ public struct FlowingGraphCanvas<
               selection: session.selection,
               presentation: content.presentation,
               mode: configuration.nodeDraggingMode,
-              capabilities: nodeCapabilities
+              capabilities: interactionPolicy.nodeCapabilities
             )
           else {
             rejectedNodeDragID = elementID
@@ -608,7 +583,7 @@ public struct FlowingGraphCanvas<
           }
           let admittedNodeIDs = FlowingGraphCanvasNodeDragResolver.admittedNodeIDs(
             for: request,
-            admission: admitNodeDrag(request)
+            admission: interactionPolicy.admission(for: request)
           )
           guard !admittedNodeIDs.isEmpty else {
             rejectedNodeDragID = elementID
@@ -627,7 +602,7 @@ public struct FlowingGraphCanvas<
             baseBounds: nodeBounds(for: admittedNodeIDs)
           )
         }
-        let modifiers = interactionModifiers()
+        let modifiers = interactionPolicy.interactionModifiers
         var proposedTranslation = CGSize(
           width: value.translation.width / session.viewport.transform.zoom,
           height: value.translation.height / session.viewport.transform.zoom
@@ -711,7 +686,7 @@ public struct FlowingGraphCanvas<
       content.nodeLocalIDs(intersecting: worldRect).compactMap(content.elementID)
     )
     let command: FlowingGraphCanvasSelectionCommand<Schema> =
-      isAdditiveSelectionActive() ? .add(elementIDs) : .replace(elementIDs)
+      interactionPolicy.isAdditiveSelectionActive ? .add(elementIDs) : .replace(elementIDs)
     FlowingGraphCanvasSessionReducer.apply(command, to: &session.selection)
   }
 
@@ -786,7 +761,7 @@ public struct FlowingGraphCanvas<
     guard session.tool == .select,
       session.transientNodeDrag == nil,
       edges.isValid,
-      nodeCapabilities.capabilities(for: elementID).contains(.resizable)
+      interactionPolicy.nodeCapabilities.capabilities(for: elementID).contains(.resizable)
     else {
       return
     }
@@ -803,7 +778,7 @@ public struct FlowingGraphCanvas<
       )
       let admittedNodeIDs = FlowingGraphCanvasNodeResizeResolver.admittedNodeIDs(
         for: request,
-        admission: admitNodeResize(request)
+        admission: interactionPolicy.admission(for: request)
       )
       guard !admittedNodeIDs.isEmpty else { return }
       let baseGeometry = resizeBaseGeometry(
@@ -828,7 +803,7 @@ public struct FlowingGraphCanvas<
       hasKeyboardFocus = true
     }
     guard let resize = activeNodeResize else { return }
-    let modifiers = interactionModifiers()
+    let modifiers = interactionPolicy.interactionModifiers
     let zoom = session.viewport.transform.zoom
     let worldTranslation = CGSize(
       width: renderedTranslation.width / zoom,
@@ -857,7 +832,7 @@ public struct FlowingGraphCanvas<
       configuration.snapping.isEnabled
       ? snapCandidates(in: searchRect, excluding: resize.nodeIDs)
       : []
-    let result = snappingStrategy.resize(
+    let result = interactionPolicy.snappingStrategy.resize(
       FlowingGraphCanvasResizeSnapRequest(
         baseFrame: resize.baseBounds,
         proposedFrame: proposedFrame,
@@ -935,7 +910,7 @@ public struct FlowingGraphCanvas<
     in elementIDs: Set<ElementID>
   ) -> [(id: ElementID, frame: CGRect, order: Int)] {
     elementIDs.compactMap { elementID in
-      guard nodeCapabilities.capabilities(for: elementID).contains(.resizable),
+      guard interactionPolicy.nodeCapabilities.capabilities(for: elementID).contains(.resizable),
         let localID = content.localID(for: elementID),
         content.node(for: localID) != nil,
         let frame = content.frame(for: localID),
@@ -958,7 +933,7 @@ public struct FlowingGraphCanvas<
     var maximumVerticalScale = CGFloat.greatestFiniteMagnitude
     var hasMaximumSize = false
     for (nodeID, frame) in baseFrames {
-      let constraints = nodeSizeConstraints.constraints(
+      let constraints = interactionPolicy.nodeSizeConstraints.constraints(
         for: nodeID,
         fallbackMinimumSize: configuration.nodeResizing.minimumSize
       )
@@ -1052,7 +1027,7 @@ public struct FlowingGraphCanvas<
     _ elementID: ElementID,
     mode requestedMode: FlowingGraphCanvasSelectionMode?
   ) {
-    let mode = requestedMode ?? (isAdditiveSelectionActive() ? .toggle : .replace)
+    let mode = requestedMode ?? (interactionPolicy.isAdditiveSelectionActive ? .toggle : .replace)
     let command: FlowingGraphCanvasSelectionCommand<Schema>
     switch mode {
     case .replace:
@@ -1073,14 +1048,18 @@ public struct FlowingGraphCanvas<
     else {
       return
     }
-    let modifiers = interactionModifiers()
+    let modifiers = interactionPolicy.interactionModifiers
     if nudgeSelection(direction: direction, modifiers: modifiers) {
       return
     }
     guard configuration.keyboardNavigation.isEnabled else { return }
     let candidates = content.presentation.nodes.compactMap {
       node -> FlowingGraphCanvasNavigationCandidate<ElementID>? in
-      guard nodeCapabilities.capabilities(for: node.id).contains(.keyboardNavigable),
+
+      guard
+        interactionPolicy.nodeCapabilities.capabilities(for: node.id).contains(
+          .keyboardNavigable
+        ),
         let frame = resolvedNodeFrame(node.localID),
         let order = content.nodePresentationOrder(for: node.localID)
       else {
@@ -1176,12 +1155,12 @@ public struct FlowingGraphCanvas<
         selection: requestedSelection,
         presentation: content.presentation,
         mode: configuration.nodeDraggingMode,
-        capabilities: nodeCapabilities
+        capabilities: interactionPolicy.nodeCapabilities
       )
     else { return false }
     let nodeIDs = FlowingGraphCanvasNodeDragResolver.admittedNodeIDs(
       for: request,
-      admission: admitNodeDrag(request)
+      admission: interactionPolicy.admission(for: request)
     )
     guard !nodeIDs.isEmpty else { return false }
     session.selection = requestedSelection
@@ -1221,14 +1200,14 @@ public struct FlowingGraphCanvas<
         selection: session.selection,
         presentation: content.presentation,
         mode: configuration.nodeDraggingMode,
-        capabilities: nodeCapabilities
+        capabilities: interactionPolicy.nodeCapabilities
       )
     else {
       return false
     }
     let nodeIDs = FlowingGraphCanvasNodeDragResolver.admittedNodeIDs(
       for: request,
-      admission: admitNodeDrag(request)
+      admission: interactionPolicy.admission(for: request)
     )
     guard !nodeIDs.isEmpty else { return false }
     onIntent(
@@ -1399,7 +1378,9 @@ public struct FlowingGraphCanvas<
       let nodes = content.presentation.nodes.compactMap {
         node -> FlowingGraphCanvasNodeGeometry<ElementID>? in
         guard session.selection.contains(node.id),
-          nodeCapabilities.capabilities(for: node.id).contains(.arrangementParticipant),
+          interactionPolicy.nodeCapabilities.capabilities(for: node.id).contains(
+            .arrangementParticipant
+          ),
           let frame = content.frame(for: node.localID)
         else {
           return nil
@@ -1458,7 +1439,7 @@ public struct FlowingGraphCanvas<
     let searchRadius = configuration.snapping.searchRadius / session.viewport.transform.zoom
     let searchRect = proposedBounds.insetBy(dx: -searchRadius, dy: -searchRadius)
     let candidates = snapCandidates(in: searchRect, excluding: drag.nodeIDs)
-    return snappingStrategy.snap(
+    return interactionPolicy.snappingStrategy.snap(
       FlowingGraphCanvasTranslationSnapRequest(
         movingBounds: baseBounds,
         proposedTranslation: proposedTranslation,
@@ -1479,7 +1460,9 @@ public struct FlowingGraphCanvas<
       .filter { localID in
         guard let elementID = content.elementID(for: localID) else { return false }
         return !excludedIDs.contains(elementID)
-          && nodeCapabilities.capabilities(for: elementID).contains(.arrangementParticipant)
+          && interactionPolicy.nodeCapabilities.capabilities(for: elementID).contains(
+            .arrangementParticipant
+          )
       }
       .prefix(configuration.snapping.maximumCandidates)
       .compactMap { localID -> FlowingGraphCanvasSnapCandidate<ElementID>? in
@@ -1710,25 +1693,12 @@ extension FlowingGraphCanvas where PortContent == EmptyView {
     sessionID: FlowingGraphCanvasSessionID,
     session: Binding<FlowingGraphCanvasSessionState<Schema>>,
     configuration: FlowingGraphCanvasConfiguration = .init(),
+    metalVisualAdapter: FlowingGraphCanvasMetalVisualAdapter<Schema>? = nil,
     accessibilitySnapshot: FlowingGraphCanvasAccessibilitySnapshot<ElementID>? = nil,
     contentInsets: EdgeInsets = .init(),
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
-    nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
-    nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema> = .init(),
-    snappingStrategy: FlowingGraphCanvasSnappingStrategy<Schema> = .standard,
-    admitNodeDrag:
-      @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
-      FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
-    admitNodeResize:
-      @escaping @MainActor (FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>) ->
-      FlowingGraphCanvasNodeResizeAdmission<Schema> = { _ in .allowAll },
-    isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
-      FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
-    },
-    interactionModifiers: @escaping @MainActor () -> FlowingGraphCanvasInteractionModifiers = {
-      FlowingGraphCanvasPlatformInput.interactionModifiers
-    },
+    interactionPolicy: FlowingGraphCanvasInteractionPolicy<Schema> = .standard,
     onSmartMagnify:
       @escaping (FlowingGraphCanvasSmartMagnifyContext<Schema>) ->
       FlowingCanvasViewportAction = { context in
@@ -1760,17 +1730,12 @@ extension FlowingGraphCanvas where PortContent == EmptyView {
       sessionID: sessionID,
       session: session,
       configuration: configuration,
+      metalVisualAdapter: metalVisualAdapter,
       accessibilitySnapshot: accessibilitySnapshot,
       contentInsets: contentInsets,
       contentChangeBehavior: contentChangeBehavior,
       command: command,
-      nodeCapabilities: nodeCapabilities,
-      nodeSizeConstraints: nodeSizeConstraints,
-      snappingStrategy: snappingStrategy,
-      admitNodeDrag: admitNodeDrag,
-      admitNodeResize: admitNodeResize,
-      isAdditiveSelectionActive: isAdditiveSelectionActive,
-      interactionModifiers: interactionModifiers,
+      interactionPolicy: interactionPolicy,
       onSmartMagnify: onSmartMagnify,
       onViewportChange: onViewportChange,
       onIntent: onIntent,
@@ -1791,25 +1756,12 @@ where PortContent == EmptyView, Decorations == EmptyView, Overlays == EmptyView 
     sessionID: FlowingGraphCanvasSessionID,
     session: Binding<FlowingGraphCanvasSessionState<Schema>>,
     configuration: FlowingGraphCanvasConfiguration = .init(),
+    metalVisualAdapter: FlowingGraphCanvasMetalVisualAdapter<Schema>? = nil,
     accessibilitySnapshot: FlowingGraphCanvasAccessibilitySnapshot<ElementID>? = nil,
     contentInsets: EdgeInsets = .init(),
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
-    nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
-    nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema> = .init(),
-    snappingStrategy: FlowingGraphCanvasSnappingStrategy<Schema> = .standard,
-    admitNodeDrag:
-      @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
-      FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
-    admitNodeResize:
-      @escaping @MainActor (FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>) ->
-      FlowingGraphCanvasNodeResizeAdmission<Schema> = { _ in .allowAll },
-    isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
-      FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
-    },
-    interactionModifiers: @escaping @MainActor () -> FlowingGraphCanvasInteractionModifiers = {
-      FlowingGraphCanvasPlatformInput.interactionModifiers
-    },
+    interactionPolicy: FlowingGraphCanvasInteractionPolicy<Schema> = .standard,
     onSmartMagnify:
       @escaping (FlowingGraphCanvasSmartMagnifyContext<Schema>) ->
       FlowingCanvasViewportAction = { context in
@@ -1837,17 +1789,12 @@ where PortContent == EmptyView, Decorations == EmptyView, Overlays == EmptyView 
       sessionID: sessionID,
       session: session,
       configuration: configuration,
+      metalVisualAdapter: metalVisualAdapter,
       accessibilitySnapshot: accessibilitySnapshot,
       contentInsets: contentInsets,
       contentChangeBehavior: contentChangeBehavior,
       command: command,
-      nodeCapabilities: nodeCapabilities,
-      nodeSizeConstraints: nodeSizeConstraints,
-      snappingStrategy: snappingStrategy,
-      admitNodeDrag: admitNodeDrag,
-      admitNodeResize: admitNodeResize,
-      isAdditiveSelectionActive: isAdditiveSelectionActive,
-      interactionModifiers: interactionModifiers,
+      interactionPolicy: interactionPolicy,
       onSmartMagnify: onSmartMagnify,
       onViewportChange: onViewportChange,
       onIntent: onIntent,
@@ -1867,25 +1814,12 @@ where PortContent == EmptyView, Decorations == EmptyView {
     sessionID: FlowingGraphCanvasSessionID,
     session: Binding<FlowingGraphCanvasSessionState<Schema>>,
     configuration: FlowingGraphCanvasConfiguration = .init(),
+    metalVisualAdapter: FlowingGraphCanvasMetalVisualAdapter<Schema>? = nil,
     accessibilitySnapshot: FlowingGraphCanvasAccessibilitySnapshot<ElementID>? = nil,
     contentInsets: EdgeInsets = .init(),
     contentChangeBehavior: FlowingCanvasContentChangeBehavior = .preserveViewport,
     command: FlowingGraphCanvasSessionCommand<Schema>? = nil,
-    nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
-    nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema> = .init(),
-    snappingStrategy: FlowingGraphCanvasSnappingStrategy<Schema> = .standard,
-    admitNodeDrag:
-      @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
-      FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
-    admitNodeResize:
-      @escaping @MainActor (FlowingGraphCanvasNodeResizeAdmissionRequest<Schema>) ->
-      FlowingGraphCanvasNodeResizeAdmission<Schema> = { _ in .allowAll },
-    isAdditiveSelectionActive: @escaping @MainActor () -> Bool = {
-      FlowingGraphCanvasPlatformInput.isAdditiveSelectionActive
-    },
-    interactionModifiers: @escaping @MainActor () -> FlowingGraphCanvasInteractionModifiers = {
-      FlowingGraphCanvasPlatformInput.interactionModifiers
-    },
+    interactionPolicy: FlowingGraphCanvasInteractionPolicy<Schema> = .standard,
     onSmartMagnify:
       @escaping (FlowingGraphCanvasSmartMagnifyContext<Schema>) ->
       FlowingCanvasViewportAction = { context in
@@ -1915,17 +1849,12 @@ where PortContent == EmptyView, Decorations == EmptyView {
       sessionID: sessionID,
       session: session,
       configuration: configuration,
+      metalVisualAdapter: metalVisualAdapter,
       accessibilitySnapshot: accessibilitySnapshot,
       contentInsets: contentInsets,
       contentChangeBehavior: contentChangeBehavior,
       command: command,
-      nodeCapabilities: nodeCapabilities,
-      nodeSizeConstraints: nodeSizeConstraints,
-      snappingStrategy: snappingStrategy,
-      admitNodeDrag: admitNodeDrag,
-      admitNodeResize: admitNodeResize,
-      isAdditiveSelectionActive: isAdditiveSelectionActive,
-      interactionModifiers: interactionModifiers,
+      interactionPolicy: interactionPolicy,
       onSmartMagnify: onSmartMagnify,
       onViewportChange: onViewportChange,
       onIntent: onIntent,

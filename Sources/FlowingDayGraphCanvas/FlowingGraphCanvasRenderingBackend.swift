@@ -1,4 +1,6 @@
 import FlowingDayCanvas
+import FlowingDayGraphComposition
+import FlowingDayGraphCore
 import SwiftUI
 
 public enum FlowingGraphCanvasRenderingBackendPreference: Equatable, Sendable {
@@ -46,26 +48,66 @@ public struct FlowingGraphCanvasBackendContext<Schema: FlowingGraphCanvasSchema>
   public let sessionID: FlowingGraphCanvasSessionID
   public let session: Binding<FlowingGraphCanvasSessionState<Schema>>
   public let configuration: FlowingGraphCanvasConfiguration
+  public let interactionPolicy: FlowingGraphCanvasInteractionPolicy<Schema>
+  public let accessibilitySnapshot:
+    FlowingGraphCanvasAccessibilitySnapshot<FlowingGraphCompositionElementID<Schema>>?
   public let contentInsets: EdgeInsets
   public let contentChangeBehavior: FlowingCanvasContentChangeBehavior
   public let command: FlowingGraphCanvasSessionCommand<Schema>?
+
+  private let smartMagnifyAction:
+    (FlowingGraphCanvasSmartMagnifyContext<Schema>) -> FlowingCanvasViewportAction
+  private let viewportChangeAction:
+    (FlowingCanvasViewport, FlowingCanvasViewportChangePhase) -> Void
+  private let intentAction: (FlowingGraphCanvasInteractionIntent<Schema>) -> Void
 
   public init(
     content: FlowingGraphCanvasContent<Schema>,
     sessionID: FlowingGraphCanvasSessionID,
     session: Binding<FlowingGraphCanvasSessionState<Schema>>,
     configuration: FlowingGraphCanvasConfiguration,
+    interactionPolicy: FlowingGraphCanvasInteractionPolicy<Schema>,
+    accessibilitySnapshot:
+      FlowingGraphCanvasAccessibilitySnapshot<FlowingGraphCompositionElementID<Schema>>?,
     contentInsets: EdgeInsets,
     contentChangeBehavior: FlowingCanvasContentChangeBehavior,
-    command: FlowingGraphCanvasSessionCommand<Schema>?
+    command: FlowingGraphCanvasSessionCommand<Schema>?,
+    onSmartMagnify:
+      @escaping (FlowingGraphCanvasSmartMagnifyContext<Schema>) ->
+      FlowingCanvasViewportAction,
+    onViewportChange:
+      @escaping (FlowingCanvasViewport, FlowingCanvasViewportChangePhase) -> Void,
+    onIntent: @escaping (FlowingGraphCanvasInteractionIntent<Schema>) -> Void
   ) {
     self.content = content
     self.sessionID = sessionID
     self.session = session
     self.configuration = configuration
+    self.interactionPolicy = interactionPolicy
+    self.accessibilitySnapshot = accessibilitySnapshot
     self.contentInsets = contentInsets
     self.contentChangeBehavior = contentChangeBehavior
     self.command = command
+    smartMagnifyAction = onSmartMagnify
+    viewportChangeAction = onViewportChange
+    intentAction = onIntent
+  }
+
+  public func smartMagnify(
+    _ context: FlowingGraphCanvasSmartMagnifyContext<Schema>
+  ) -> FlowingCanvasViewportAction {
+    smartMagnifyAction(context)
+  }
+
+  public func viewportDidChange(
+    _ viewport: FlowingCanvasViewport,
+    phase: FlowingCanvasViewportChangePhase
+  ) {
+    viewportChangeAction(viewport, phase)
+  }
+
+  public func send(_ intent: FlowingGraphCanvasInteractionIntent<Schema>) {
+    intentAction(intent)
   }
 }
 
