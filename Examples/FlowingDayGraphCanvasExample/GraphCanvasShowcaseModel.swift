@@ -68,6 +68,7 @@ final class GraphCanvasShowcaseModel: ObservableObject {
     "output": .port(FlowingGraphPortKey(nodeID: "output", portID: "output")),
   ]
   private var placementOffsets: [ElementID: CGSize] = [:]
+  private var nodeSizes: [ElementID: CGSize] = [:]
   private var layoutStateRevision = FlowingLayoutRevision()
   private let layoutIdentities = ShowcaseLayoutIdentities()
 
@@ -189,6 +190,37 @@ final class GraphCanvasShowcaseModel: ObservableObject {
       layoutStateRevision = FlowingLayoutRevision()
       refreshLayout()
       lastEvent = "Applied node placement intent"
+    case .nodeResizeCompleted(let resize):
+      guard resize.basePresentationSnapshotID == presentation?.snapshotID,
+        resize.baseLayoutInputID == content?.id,
+        let localID = presentation?.nodes.first(where: { $0.id == resize.nodeID })?.localID,
+        let baseFrame = content?.frame(for: localID)
+      else {
+        return
+      }
+      let requestedFrame = CGRect(
+        x: baseFrame.minX + resize.originTranslation.width,
+        y: baseFrame.minY + resize.originTranslation.height,
+        width: baseFrame.width + resize.sizeDelta.width,
+        height: baseFrame.height + resize.sizeDelta.height
+      )
+      guard requestedFrame.width > 0, requestedFrame.height > 0 else { return }
+      nodeSizes[resize.nodeID] = requestedFrame.size
+      layoutStateRevision = FlowingLayoutRevision()
+      refreshLayout()
+      guard let resolvedFrame = content?.frame(for: localID) else { return }
+      let correction = CGSize(
+        width: requestedFrame.minX - resolvedFrame.minX,
+        height: requestedFrame.minY - resolvedFrame.minY
+      )
+      let current = placementOffsets[resize.nodeID, default: .zero]
+      placementOffsets[resize.nodeID] = CGSize(
+        width: current.width + correction.width,
+        height: current.height + correction.height
+      )
+      layoutStateRevision = FlowingLayoutRevision()
+      refreshLayout()
+      lastEvent = "Applied node resize intent"
     case .nodeArrangementRequested(let arrangement):
       guard arrangement.basePresentationSnapshotID == presentation?.snapshotID,
         arrangement.baseLayoutInputID == content?.id
@@ -401,6 +433,7 @@ final class GraphCanvasShowcaseModel: ObservableObject {
         presentation: presentation,
         layoutStyle: layoutStyle,
         placementOffsets: placementOffsets,
+        nodeSizes: nodeSizes,
         layoutStateRevision: layoutStateRevision,
         identities: layoutIdentities
       )

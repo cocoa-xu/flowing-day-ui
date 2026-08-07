@@ -94,6 +94,38 @@ struct ShowcaseNode: View {
         }
       }
     }
+    .overlay(alignment: .topLeading) {
+      resizeHandle(edges: [.leading, .top], x: -0.5, y: -0.5)
+    }
+    .overlay(alignment: .topTrailing) {
+      resizeHandle(edges: [.trailing, .top], x: 0.5, y: -0.5)
+    }
+    .overlay(alignment: .bottomLeading) {
+      resizeHandle(edges: [.leading, .bottom], x: -0.5, y: 0.5)
+    }
+    .overlay(alignment: .bottomTrailing) {
+      resizeHandle(edges: [.trailing, .bottom], x: 0.5, y: 0.5)
+    }
+  }
+
+  @ViewBuilder
+  private func resizeHandle(
+    edges: FlowingGraphCanvasResizeEdges,
+    x: CGFloat,
+    y: CGFloat
+  ) -> some View {
+    if context.isSelected && context.resizeActions.isEnabled {
+      let diameter = 10 * context.renderScale
+      FlowingGraphCanvasResizeHandle(edges: edges, actions: context.resizeActions) {
+        Circle()
+          .fill(PreferencesPalette.control)
+          .overlay {
+            Circle().strokeBorder(PreferencesAccent.celadon.fill, lineWidth: 1.5)
+          }
+          .frame(width: diameter, height: diameter)
+      }
+      .offset(x: diameter * x, y: diameter * y)
+    }
   }
 }
 

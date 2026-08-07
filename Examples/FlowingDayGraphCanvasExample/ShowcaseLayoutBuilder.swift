@@ -38,6 +38,7 @@ enum ShowcaseLayoutBuilder {
     presentation: FlowingGraphPresentation<CanvasSchema>,
     layoutStyle: ShowcaseLayoutStyle,
     placementOffsets: [FlowingGraphCompositionElementID<CanvasSchema>: CGSize],
+    nodeSizes: [FlowingGraphCompositionElementID<CanvasSchema>: CGSize],
     layoutStateRevision: FlowingLayoutRevision,
     identities: ShowcaseLayoutIdentities
   ) throws -> FlowingGraphCanvasContent<CanvasSchema> {
@@ -56,6 +57,7 @@ enum ShowcaseLayoutBuilder {
         presentation: presentation,
         levelLayout: level,
         placementOffsets: placementOffsets,
+        nodeSizes: nodeSizes,
         layoutStateRevision: layoutStateRevision,
         identities: identities
       )
@@ -71,6 +73,7 @@ enum ShowcaseLayoutBuilder {
         presentation: presentation,
         levelLayout: level,
         placementOffsets: placementOffsets,
+        nodeSizes: nodeSizes,
         layoutStateRevision: layoutStateRevision,
         identities: identities
       )
@@ -86,6 +89,7 @@ enum ShowcaseLayoutBuilder {
         presentation: presentation,
         levelLayout: level,
         placementOffsets: placementOffsets,
+        nodeSizes: nodeSizes,
         layoutStateRevision: layoutStateRevision,
         identities: identities
       )
@@ -96,6 +100,7 @@ enum ShowcaseLayoutBuilder {
     presentation: FlowingGraphPresentation<CanvasSchema>,
     levelLayout: LevelLayout,
     placementOffsets: [FlowingGraphCompositionElementID<CanvasSchema>: CGSize],
+    nodeSizes: [FlowingGraphCompositionElementID<CanvasSchema>: CGSize],
     layoutStateRevision: FlowingLayoutRevision,
     identities: ShowcaseLayoutIdentities
   ) throws -> FlowingGraphCanvasContent<CanvasSchema> {
@@ -111,6 +116,11 @@ enum ShowcaseLayoutBuilder {
       edgeRouter: FlowingCubicEdgeRouter(identity: identities.finalRouter)
     )
     let topology = try FlowingGraphCanvasLayoutAdapter.topology(for: presentation)
+    let sizesByLocalID = Dictionary(
+      uniqueKeysWithValues: presentation.nodes.map { node in
+        (node.localID, nodeSizes[node.id] ?? ShowcaseLayoutMetrics.nodeSize)
+      }
+    )
     let offsetsByLocalID = Dictionary(
       uniqueKeysWithValues: presentation.nodes.compactMap { node in
         placementOffsets[node.id].map { (node.localID, $0) }
@@ -123,8 +133,8 @@ enum ShowcaseLayoutBuilder {
     }
     let input = try FlowingGraphLayoutResolution.input(
       topology: topology,
-      nodeSizeResolver: FlowingFixedNodeSizeResolver<LayoutSchema>(
-        size: ShowcaseLayoutMetrics.nodeSize,
+      nodeSizeResolver: ShowcaseNodeSizeResolver(
+        sizes: sizesByLocalID,
         identity: identities.nodeSize
       ),
       portAnchorResolver: ShowcasePortAnchorResolver(identity: identities.portAnchor),
@@ -181,6 +191,17 @@ enum ShowcaseLayoutBuilder {
       minimumCanvasSize: ShowcaseLayoutMetrics.minimumCanvasSize
     )
   )
+}
+
+private struct ShowcaseNodeSizeResolver: FlowingGraphNodeSizeResolver {
+  typealias Schema = FlowingGraphCanvasLayoutSchema<ShowcaseCanvasSchema>
+
+  let sizes: [Schema.NodeID: CGSize]
+  let identity: FlowingLayoutComponentIdentity
+
+  func size(for nodeID: Schema.NodeID) throws -> CGSize {
+    sizes[nodeID] ?? ShowcaseLayoutMetrics.nodeSize
+  }
 }
 
 private struct ShowcasePortAnchorResolver: FlowingGraphPortAnchorResolver {

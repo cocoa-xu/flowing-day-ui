@@ -37,6 +37,9 @@ struct FlowingDayGraphCanvasExampleApp: App {
         GraphCanvasShowcaseView()
           .frame(minWidth: 960, minHeight: 640)
           .preferredColorScheme(.light)
+          .onAppear {
+            NSApplication.shared.activate(ignoringOtherApps: true)
+          }
       }
     }
     .defaultSize(width: 1180, height: 760)

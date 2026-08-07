@@ -9,6 +9,7 @@ struct GraphCanvasShowcaseView: View {
   @StateObject private var model = GraphCanvasShowcaseModel()
   @State private var session = FlowingGraphCanvasSessionState<ShowcaseCanvasSchema>()
   @State private var command: FlowingGraphCanvasSessionCommand<ShowcaseCanvasSchema>?
+  @State private var usesGridSnapping = true
   @State private var viewportByPath:
     [FlowingGraphInstancePath<String, String>: FlowingCanvasTransform] = [:]
   private let sessionID = FlowingGraphCanvasSessionID()
@@ -139,6 +140,15 @@ struct GraphCanvasShowcaseView: View {
           }
         }
 
+        sidebarSection("Precision Tools") {
+          VStack(alignment: .leading, spacing: 10) {
+            Toggle("Grid Snapping", isOn: $usesGridSnapping)
+              .toggleStyle(.switch)
+              .font(.system(size: 11.5, weight: .medium))
+            arrangementButtons
+          }
+        }
+
         sidebarSection("Latest Intent") {
           Text(model.lastEvent)
             .font(.system(size: 11.5))
@@ -180,7 +190,13 @@ struct GraphCanvasShowcaseView: View {
             zoomRange: 0.2...4
           ),
           nodeDraggingMode: .multiple,
-          snapping: .standard
+          nodeResizing: .standard,
+          snapping: FlowingGraphCanvasSnappingConfiguration(
+            isEnabled: true,
+            gridCellSize: usesGridSnapping
+              ? CGSize(width: 24, height: 24)
+              : nil
+          )
         ),
         command: command,
         onViewportChange: { viewport, phase in
@@ -298,6 +314,70 @@ struct GraphCanvasShowcaseView: View {
         }
       }
       .frame(width: 16, height: 16)
+  }
+
+  private var arrangementButtons: some View {
+    VStack(spacing: 6) {
+      HStack(spacing: 6) {
+        arrangementButton("align.horizontal.left", action: .align(.leading))
+        arrangementButton("align.horizontal.center", action: .align(.horizontalCenter))
+        arrangementButton("align.horizontal.right", action: .align(.trailing))
+        arrangementButton("align.vertical.top", action: .align(.top))
+        arrangementButton("align.vertical.center", action: .align(.verticalCenter))
+        arrangementButton("align.vertical.bottom", action: .align(.bottom))
+      }
+      HStack(spacing: 6) {
+        arrangementButton(
+          "distribute.horizontal.center",
+          action: .distribute(.horizontal),
+          width: 100
+        )
+        arrangementButton(
+          "distribute.vertical.center",
+          action: .distribute(.vertical),
+          width: 100
+        )
+      }
+    }
+  }
+
+  private func arrangementButton(
+    _ symbol: String,
+    action: FlowingGraphCanvasArrangementAction,
+    width: CGFloat = 30
+  ) -> some View {
+    let isEnabled = arrangementIsEnabled(action)
+    return Button {
+      command = FlowingGraphCanvasSessionCommand(
+        targetSessionID: sessionID,
+        action: .arrange(action)
+      )
+    } label: {
+      Image(systemName: symbol)
+        .font(.system(size: 11, weight: .medium))
+        .foregroundStyle(PreferencesPalette.muted)
+        .frame(width: width, height: 28)
+        .background(
+          RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .fill(PreferencesPalette.field)
+        )
+    }
+    .buttonStyle(.plain)
+    .disabled(!isEnabled)
+    .opacity(isEnabled ? 1 : 0.42)
+  }
+
+  private func arrangementIsEnabled(_ action: FlowingGraphCanvasArrangementAction) -> Bool {
+    let selectedNodeCount =
+      model.presentation?.nodes.lazy.filter {
+        session.selection.contains($0.id)
+      }.count ?? 0
+    switch action {
+    case .align:
+      return selectedNodeCount >= 2
+    case .distribute:
+      return selectedNodeCount >= 3
+    }
   }
 
   private func transition(to style: ShowcasePresentationStyle) {
