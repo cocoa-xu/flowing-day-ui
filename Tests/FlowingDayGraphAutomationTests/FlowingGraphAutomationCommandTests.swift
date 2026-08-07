@@ -58,7 +58,7 @@ final class FlowingGraphAutomationCommandTests: XCTestCase {
       intents: [.updateNode(id: 1, value: "second")]
     )
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await gateway.commit(
         conflicting,
         policy: AutomationCommandPolicy(),
@@ -94,16 +94,19 @@ final class FlowingGraphAutomationCommandTests: XCTestCase {
       intents: [.updateNode(id: 1, value: "stale")]
     )
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await gateway.commit(
         stale,
         policy: AutomationCommandPolicy(),
         authorizer: FlowingAllowAllCollaborationAuthorizer<AutomationTestOperationSchema>()
       )
     ) { error in
-      guard case .staleBase = error as? FlowingGraphAutomationCommandIssue<
-        String, AutomationTestCompilerFailure
-      > else {
+      guard
+        case .staleBase = error
+          as? FlowingGraphAutomationCommandIssue<
+            String, AutomationTestCompilerFailure
+          >
+      else {
         return XCTFail("Expected stale base")
       }
     }
@@ -113,7 +116,7 @@ final class FlowingGraphAutomationCommandTests: XCTestCase {
       baseVersion: firstCommit.snapshotID.version,
       intents: [.updateNode(id: 1, value: "proposal-only")]
     )
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await gateway.commit(
         direct,
         policy: AutomationCommandPolicy(.requireProposal),
@@ -199,7 +202,7 @@ final class FlowingGraphAutomationCommandTests: XCTestCase {
       provenance: .init(origin: .human)
     )
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await gateway.accept(
         acceptance,
         at: 1,
@@ -224,7 +227,7 @@ final class FlowingGraphAutomationCommandTests: XCTestCase {
       authorizer: FlowingAllowAllCollaborationAuthorizer<AutomationTestOperationSchema>()
     )
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await gateway.accept(
         acceptance,
         at: 2,
@@ -232,9 +235,12 @@ final class FlowingGraphAutomationCommandTests: XCTestCase {
         authorizer: FlowingAllowAllCollaborationAuthorizer<AutomationTestOperationSchema>()
       )
     ) { error in
-      guard case .staleBase = error as? FlowingGraphAutomationCommandIssue<
-        String, AutomationTestCompilerFailure
-      > else {
+      guard
+        case .staleBase = error
+          as? FlowingGraphAutomationCommandIssue<
+            String, AutomationTestCompilerFailure
+          >
+      else {
         return XCTFail("Expected stale proposal base")
       }
     }
@@ -406,7 +412,7 @@ final class FlowingGraphAutomationCommandTests: XCTestCase {
       intents: [.updateNode(id: 2, value: "second")]
     )
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await gateway.propose(
         secondRequest,
         at: 0,
@@ -414,14 +420,15 @@ final class FlowingGraphAutomationCommandTests: XCTestCase {
       )
     ) { error in
       XCTAssertEqual(
-        error as? FlowingGraphAutomationCommandIssue<
-          String,
-          AutomationTestCompilerFailure
-        >,
+        error
+          as? FlowingGraphAutomationCommandIssue<
+            String,
+            AutomationTestCompilerFailure
+          >,
         .proposalLimitExceeded(maximum: 1)
       )
     }
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await gateway.reject(
         proposalID: first.proposalID,
         participantID: automationParticipant(3),
@@ -431,10 +438,11 @@ final class FlowingGraphAutomationCommandTests: XCTestCase {
       )
     ) { error in
       XCTAssertEqual(
-        error as? FlowingGraphAutomationCommandIssue<
-          String,
-          AutomationTestCompilerFailure
-        >,
+        error
+          as? FlowingGraphAutomationCommandIssue<
+            String,
+            AutomationTestCompilerFailure
+          >,
         .unauthorized(code: "reviewer-revoked")
       )
     }
@@ -463,7 +471,7 @@ final class FlowingGraphAutomationCommandTests: XCTestCase {
       expiresAt: 5,
       intents: [.updateNode(id: 3, value: "expired")]
     )
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await gateway.propose(
         expired,
         at: 5,
@@ -471,10 +479,11 @@ final class FlowingGraphAutomationCommandTests: XCTestCase {
       )
     ) { error in
       XCTAssertEqual(
-        error as? FlowingGraphAutomationCommandIssue<
-          String,
-          AutomationTestCompilerFailure
-        >,
+        error
+          as? FlowingGraphAutomationCommandIssue<
+            String,
+            AutomationTestCompilerFailure
+          >,
         .expiredProposal(expired.proposalID)
       )
     }

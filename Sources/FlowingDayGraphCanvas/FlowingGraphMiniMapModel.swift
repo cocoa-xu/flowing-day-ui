@@ -358,7 +358,8 @@ enum FlowingGraphMiniMapPlanning {
     displayTransform: FlowingGraphMiniMapTransform,
     scope: FlowingGraphMiniMapScope
   ) -> FlowingGraphMiniMapTransform {
-    let worldBounds = scope == .overview
+    let worldBounds =
+      scope == .overview
       ? snapshotBounds
       : displayTransform.worldBounds
     return FlowingGraphMiniMapTransform(

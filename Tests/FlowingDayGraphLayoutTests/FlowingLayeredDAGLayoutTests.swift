@@ -123,7 +123,7 @@ final class FlowingLayeredDAGLayoutTests: XCTestCase {
     )
 
     XCTAssertThrowsError(try strategy.layout(input)) { error in
-      guard case let FlowingGraphLayoutDAGValidationIssue<LayoutSchema>.cycle(edgePath) = error
+      guard case FlowingGraphLayoutDAGValidationIssue<LayoutSchema>.cycle(let edgePath) = error
       else { return XCTFail("Expected cycle evidence") }
       XCTAssertEqual(Set(edgePath), ["first-second", "return"])
     }
@@ -330,7 +330,7 @@ final class FlowingLayeredDAGLayoutTests: XCTestCase {
     let route = try XCTUnwrap(try strategy.layout(input).route(for: "loop"))
 
     XCTAssertEqual(route.start, CGPoint(x: 100, y: 15))
-    guard case let .cubic(_, _, end)? = route.segments.last else {
+    guard case .cubic(_, _, let end)? = route.segments.last else {
       return XCTFail("Expected a cubic loop segment")
     }
     XCTAssertEqual(end, CGPoint(x: 0, y: 45))
@@ -658,7 +658,8 @@ private struct LoopAnchorResolver: FlowingGraphPortAnchorResolver {
     for port: FlowingGraphLayoutPort<LayoutSchema>,
     nodeSize: CGSize
   ) throws -> FlowingGraphPortAnchor<LayoutSchema> {
-    let position = port.id == "output"
+    let position =
+      port.id == "output"
       ? CGPoint(x: nodeSize.width, y: 15)
       : CGPoint(x: 0, y: 45)
     return FlowingGraphPortAnchor(

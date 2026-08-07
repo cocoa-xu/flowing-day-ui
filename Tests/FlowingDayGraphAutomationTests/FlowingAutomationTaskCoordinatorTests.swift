@@ -57,7 +57,7 @@ final class FlowingAutomationTaskCoordinatorTests: XCTestCase {
       provenance: request.provenance,
       payload: 2
     )
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await coordinator.start(
         conflicting,
         authorizer: AutomationTaskAuthorizer()
@@ -81,7 +81,7 @@ final class FlowingAutomationTaskCoordinatorTests: XCTestCase {
     _ = try await coordinator.start(request, authorizer: AutomationTaskAuthorizer())
     await probe.waitUntilStarted()
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await coordinator.start(
         request,
         authorizer: AutomationTaskAuthorizer(startDecision: .deny(code: "revoked"))
@@ -89,7 +89,7 @@ final class FlowingAutomationTaskCoordinatorTests: XCTestCase {
     ) { error in
       XCTAssertEqual(error as? FlowingAutomationTaskIssue, .unauthorized(code: "revoked"))
     }
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await coordinator.poll(
         automationTaskAccess(request),
         maximumProgressEvents: 1,
@@ -98,7 +98,7 @@ final class FlowingAutomationTaskCoordinatorTests: XCTestCase {
     ) { error in
       XCTAssertEqual(error as? FlowingAutomationTaskIssue, .unauthorized(code: "revoked"))
     }
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await coordinator.cancel(
         automationTaskAccess(request),
         authorizer: AutomationTaskAuthorizer(accessDecision: .deny(code: "revoked"))
@@ -148,7 +148,7 @@ final class FlowingAutomationTaskCoordinatorTests: XCTestCase {
     _ = try await coordinator.start(first, authorizer: AutomationTaskAuthorizer())
     await probe.waitUntilStarted()
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await coordinator.start(second, authorizer: AutomationTaskAuthorizer())
     ) { error in
       XCTAssertEqual(
@@ -195,10 +195,11 @@ final class FlowingAutomationTaskCoordinatorTests: XCTestCase {
       progressRequest,
       authorizer: AutomationTaskAuthorizer()
     )
-    var progressResult: FlowingAutomationTaskPollResult<
-      [FlowingAutomationTaskContextIssue],
-      AutomationTaskFailure
-    >?
+    var progressResult:
+      FlowingAutomationTaskPollResult<
+        [FlowingAutomationTaskContextIssue],
+        AutomationTaskFailure
+      >?
     for _ in 0..<1_000 {
       let result = try await progressCoordinator.poll(
         automationTaskAccess(progressRequest),
@@ -232,7 +233,7 @@ final class FlowingAutomationTaskCoordinatorTests: XCTestCase {
       authorizer: AutomationTaskAuthorizer()
     )
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await retentionCoordinator.poll(
         automationTaskAccess(first),
         maximumProgressEvents: 1,

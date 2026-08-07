@@ -51,7 +51,7 @@ final class FlowingAutomationSessionRouterTests: XCTestCase {
     let commands = await endpoint.receivedCommands()
     XCTAssertEqual(commands, [.inspect(7)])
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await router.deliver(
         request,
         authorizer: AutomationSessionAuthorizer(decision: .deny(code: "revoked"))
@@ -82,7 +82,7 @@ final class FlowingAutomationSessionRouterTests: XCTestCase {
       command: AutomationSessionCommand.focus(2)
     )
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await router.deliver(
         conflicting,
         authorizer: AutomationSessionAuthorizer()
@@ -94,7 +94,7 @@ final class FlowingAutomationSessionRouterTests: XCTestCase {
       )
     }
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await router.deliver(
         automationSessionRequest(target: automationSession(99), command: .ping),
         authorizer: AutomationSessionAuthorizer()

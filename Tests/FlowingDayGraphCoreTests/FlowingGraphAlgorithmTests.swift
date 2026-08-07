@@ -1,5 +1,5 @@
-import XCTest
 import FlowingDayGraphCore
+import XCTest
 
 final class FlowingGraphAlgorithmTests: XCTestCase {
   private enum TestSchema: FlowingGraphSchema {
@@ -26,7 +26,7 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
       edges: [
         directed("ab", "a", "b"),
         directed("cb", "c", "b"),
-        undirected("bd", "b", "d")
+        undirected("bd", "b", "d"),
       ]
     )
 
@@ -49,7 +49,7 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
       edges: [
         directed("ab", "a", "b"),
         directed("bc", "b", "c"),
-        directed("ca", "c", "a")
+        directed("ca", "c", "a"),
       ]
     )
 
@@ -64,7 +64,7 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
         directed("ab-second", "a", "b"),
         directed("bd", "b", "d"),
         directed("ac", "a", "c"),
-        directed("cd", "c", "d")
+        directed("cd", "c", "d"),
       ]
     )
 
@@ -80,7 +80,7 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
       nodes: ["a", "b", "c", "isolated"],
       edges: [
         directed("ba", "b", "a"),
-        undirected("bc", "b", "c")
+        undirected("bc", "b", "c"),
       ]
     )
 
@@ -94,7 +94,7 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
         undirected("ab", "a", "b"),
         directed("bc", "b", "c"),
         directed("cb", "c", "b"),
-        directed("cd", "c", "d")
+        directed("cd", "c", "d"),
       ]
     )
 
@@ -125,7 +125,7 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
       nodes: ["a", "b"],
       edges: [
         undirected("first", "a", "b"),
-        undirected("second", "a", "b")
+        undirected("second", "a", "b"),
       ]
     )
 
@@ -138,7 +138,7 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
       nodes: ["a", "b"],
       edges: [
         undirected("undirected", "a", "b"),
-        directed("directed", "a", "b")
+        directed("directed", "a", "b"),
       ]
     )
 
@@ -151,7 +151,7 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
       edges: [
         directed("ab", "a", "b"),
         undirected("bc", "b", "c"),
-        directed("ca", "c", "a")
+        directed("ca", "c", "a"),
       ]
     )
     let acyclic = graph(
@@ -159,7 +159,7 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
       edges: [
         directed("ba", "b", "a"),
         undirected("bc", "b", "c"),
-        directed("ca", "c", "a")
+        directed("ca", "c", "a"),
       ]
     )
 
@@ -193,7 +193,7 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
       nodes: ["a", "b", "c"],
       edges: [
         undirected("first", "a", "b"),
-        undirected("second", "b", "c")
+        undirected("second", "b", "c"),
       ]
     )
 
@@ -207,7 +207,7 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
         directed("ab", "a", "b"),
         directed("bc", "b", "c"),
         directed("ca", "c", "a"),
-        directed("ac", "a", "c")
+        directed("ac", "a", "c"),
       ]
     )
 
@@ -223,7 +223,7 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
       edges: [
         directed("ac", "a", "c"),
         directed("bc", "b", "c"),
-        directed("cd", "c", "d")
+        directed("cd", "c", "d"),
       ]
     )
     let view = validDAG(graph.validateDAG())
@@ -377,9 +377,9 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
     _ body: (inout FlowingGraphTransaction<Schema>) -> Void
   ) -> FlowingGraphChangeSet<Schema> {
     switch graph.update(body) {
-    case let .committed(changeSet):
+    case .committed(let changeSet):
       return changeSet
-    case let .rejected(issue):
+    case .rejected(let issue):
       XCTFail("Unexpected rejection: \(issue)")
       fatalError("Unexpected rejection")
     }
@@ -392,7 +392,7 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
     switch result {
     case .valid:
       XCTFail("Expected invalid DAG")
-    case let .invalid(issue):
+    case .invalid(let issue):
       XCTAssertEqual(issue, expectedIssue)
     }
   }
@@ -401,9 +401,9 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
     _ result: FlowingDAGValidationResult<Schema>
   ) -> FlowingDAGView<Schema> {
     switch result {
-    case let .valid(view):
+    case .valid(let view):
       return view
-    case let .invalid(issue):
+    case .invalid(let issue):
       XCTFail("Unexpected DAG validation failure: \(issue)")
       fatalError("Unexpected DAG validation failure")
     }
@@ -449,8 +449,9 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
     return graph.nodeIDs.contains { start in
       var current = start
       for edgeID in edgeIDs {
-        guard let step = referenceSteps(from: current, in: graph)
-          .first(where: { $0.edgeID == edgeID })
+        guard
+          let step = referenceSteps(from: current, in: graph)
+            .first(where: { $0.edgeID == edgeID })
         else { return false }
         current = step.nodeID
       }
@@ -465,13 +466,13 @@ final class FlowingGraphAlgorithmTests: XCTestCase {
     graph.outgoingEdgeIDs(nodeID: nodeID).compactMap { edgeID in
       guard let edge = graph.edge(id: edgeID) else { return nil }
       switch edge.endpoints {
-      case let .directed(source, target):
-        guard case .node(nodeID) = source, case let .node(targetID) = target else {
+      case .directed(let source, let target):
+        guard case .node(nodeID) = source, case .node(let targetID) = target else {
           return nil
         }
         return (edgeID, targetID)
-      case let .undirected(first, second):
-        guard case let .node(firstID) = first, case let .node(secondID) = second else {
+      case .undirected(let first, let second):
+        guard case .node(let firstID) = first, case .node(let secondID) = second else {
           return nil
         }
         if firstID == nodeID {

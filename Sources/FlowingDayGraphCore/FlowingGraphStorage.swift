@@ -27,26 +27,17 @@ extension FlowingGraphOrderChange: Sendable where ID: Sendable {}
 public struct FlowingGraphChangeSet<Schema: FlowingGraphSchema> {
   public let oldSnapshotID: FlowingGraphSnapshotID
   public let newSnapshotID: FlowingGraphSnapshotID
-  public let nodeChanges: [
-    FlowingGraphElementChange<Schema.NodeID, FlowingGraphNode<Schema>>
-  ]
-  public let portChanges: [
-    FlowingGraphElementChange<FlowingGraphPortKey<Schema>, FlowingGraphPort<Schema>>
-  ]
-  public let edgeChanges: [
-    FlowingGraphElementChange<Schema.EdgeID, FlowingGraphEdge<Schema>>
-  ]
+  public let nodeChanges: [FlowingGraphElementChange<Schema.NodeID, FlowingGraphNode<Schema>>]
+  public let portChanges:
+    [FlowingGraphElementChange<FlowingGraphPortKey<Schema>, FlowingGraphPort<Schema>>]
+  public let edgeChanges: [FlowingGraphElementChange<Schema.EdgeID, FlowingGraphEdge<Schema>>]
   public let nodeOrderChanges: [FlowingGraphOrderChange<Schema.NodeID>]
   public let portOrderChanges: [FlowingGraphOrderChange<FlowingGraphPortKey<Schema>>]
   public let edgeOrderChanges: [FlowingGraphOrderChange<Schema.EdgeID>]
 
   public var isEmpty: Bool {
-    nodeChanges.isEmpty &&
-      portChanges.isEmpty &&
-      edgeChanges.isEmpty &&
-      nodeOrderChanges.isEmpty &&
-      portOrderChanges.isEmpty &&
-      edgeOrderChanges.isEmpty
+    nodeChanges.isEmpty && portChanges.isEmpty && edgeChanges.isEmpty && nodeOrderChanges.isEmpty
+      && portOrderChanges.isEmpty && edgeOrderChanges.isEmpty
   }
 
   public func inverted() -> Self {
@@ -122,9 +113,7 @@ public struct FlowingGraph<Schema: FlowingGraphSchema> {
   fileprivate var directedIncomingEdgeIDsByNodeID: [Schema.NodeID: [Schema.EdgeID]] = [:]
   fileprivate var undirectedEdgeIDsByNodeID: [Schema.NodeID: [Schema.EdgeID]] = [:]
   fileprivate var incidentEdgeIDsByNodeID: [Schema.NodeID: [Schema.EdgeID]] = [:]
-  fileprivate var incidentEdgeIDsByEndpoint: [
-    FlowingGraphEndpoint<Schema>: [Schema.EdgeID]
-  ] = [:]
+  fileprivate var incidentEdgeIDsByEndpoint: [FlowingGraphEndpoint<Schema>: [Schema.EdgeID]] = [:]
 
   public var nodes: [FlowingGraphNode<Schema>] {
     nodeOrder.compactMap { nodesByID[$0] }
@@ -274,8 +263,9 @@ public struct FlowingGraph<Schema: FlowingGraphSchema> {
     var secondIndex = 0
 
     while firstIndex < first.count, secondIndex < second.count {
-      if edgeOrderIndex[first[firstIndex], default: .max] <
-        edgeOrderIndex[second[secondIndex], default: .max] {
+      if edgeOrderIndex[first[firstIndex], default: .max]
+        < edgeOrderIndex[second[secondIndex], default: .max]
+      {
         result.append(first[firstIndex])
         firstIndex += 1
       } else {
@@ -300,7 +290,7 @@ public struct FlowingGraph<Schema: FlowingGraphSchema> {
     }
 
     switch edge.endpoints {
-    case let .directed(source, target):
+    case .directed(let source, let target):
       directedOutgoingEdgeIDsByNodeID[source.nodeID, default: []].append(edge.id)
       directedIncomingEdgeIDsByNodeID[target.nodeID, default: []].append(edge.id)
     case .undirected:
@@ -346,7 +336,7 @@ public struct FlowingGraph<Schema: FlowingGraphSchema> {
     directedOutgoingEdgeIDsByNodeID.retainUniqueValues(
       for: directedOutgoingNodeIDs
     ) { nodeID, edgeID in
-      guard case let .directed(source, _) = edges[edgeID]?.endpoints else {
+      guard case .directed(let source, _) = edges[edgeID]?.endpoints else {
         return false
       }
       return source.nodeID == nodeID
@@ -354,7 +344,7 @@ public struct FlowingGraph<Schema: FlowingGraphSchema> {
     directedIncomingEdgeIDsByNodeID.retainUniqueValues(
       for: directedIncomingNodeIDs
     ) { nodeID, edgeID in
-      guard case let .directed(_, target) = edges[edgeID]?.endpoints else {
+      guard case .directed(_, let target) = edges[edgeID]?.endpoints else {
         return false
       }
       return target.nodeID == nodeID
@@ -362,7 +352,7 @@ public struct FlowingGraph<Schema: FlowingGraphSchema> {
     undirectedEdgeIDsByNodeID.retainUniqueValues(
       for: undirectedNodeIDs
     ) { nodeID, edgeID in
-      guard case let .undirected(first, second) = edges[edgeID]?.endpoints else {
+      guard case .undirected(let first, let second) = edges[edgeID]?.endpoints else {
         return false
       }
       return first.nodeID == nodeID || second.nodeID == nodeID
@@ -457,18 +447,18 @@ public struct FlowingGraph<Schema: FlowingGraphSchema> {
       rebuilt.addToIndices(edge)
     }
 
-    return directedOutgoingEdgeIDsByNodeID == rebuilt.directedOutgoingEdgeIDsByNodeID &&
-      directedIncomingEdgeIDsByNodeID == rebuilt.directedIncomingEdgeIDsByNodeID &&
-      undirectedEdgeIDsByNodeID == rebuilt.undirectedEdgeIDsByNodeID &&
-      incidentEdgeIDsByNodeID == rebuilt.incidentEdgeIDsByNodeID &&
-      incidentEdgeIDsByEndpoint == rebuilt.incidentEdgeIDsByEndpoint
+    return directedOutgoingEdgeIDsByNodeID == rebuilt.directedOutgoingEdgeIDsByNodeID
+      && directedIncomingEdgeIDsByNodeID == rebuilt.directedIncomingEdgeIDsByNodeID
+      && undirectedEdgeIDsByNodeID == rebuilt.undirectedEdgeIDsByNodeID
+      && incidentEdgeIDsByNodeID == rebuilt.incidentEdgeIDsByNodeID
+      && incidentEdgeIDsByEndpoint == rebuilt.incidentEdgeIDsByEndpoint
   }
 
   private func contains(_ endpoint: FlowingGraphEndpoint<Schema>) -> Bool {
     switch endpoint {
-    case let .node(nodeID):
+    case .node(let nodeID):
       nodesByID[nodeID] != nil
-    case let .port(key):
+    case .port(let key):
       portsByKey[key] != nil
     }
   }
@@ -511,12 +501,9 @@ public struct FlowingGraphTransaction<Schema: FlowingGraphSchema> {
   fileprivate var dirtyIncidentEndpoints: Set<FlowingGraphEndpoint<Schema>> = []
 
   fileprivate var hasChanges: Bool {
-    !touchedNodeIDs.isEmpty ||
-      !touchedPortKeys.isEmpty ||
-      !touchedEdgeIDs.isEmpty ||
-      !touchedNodeOrderIDs.isEmpty ||
-      !touchedPortOrderKeys.isEmpty ||
-      !touchedEdgeOrderIDs.isEmpty
+    !touchedNodeIDs.isEmpty || !touchedPortKeys.isEmpty || !touchedEdgeIDs.isEmpty
+      || !touchedNodeOrderIDs.isEmpty || !touchedPortOrderKeys.isEmpty
+      || !touchedEdgeOrderIDs.isEmpty
   }
 
   public mutating func insert(_ node: FlowingGraphNode<Schema>) {
@@ -558,7 +545,8 @@ public struct FlowingGraphTransaction<Schema: FlowingGraphSchema> {
       return
     }
     if portOrderNodeIDsNeedingFinalization.contains(port.key.nodeID),
-      touchedPortKeys.contains(port.key) {
+      touchedPortKeys.contains(port.key)
+    {
       finalizeIndices()
     }
 
@@ -828,9 +816,9 @@ public struct FlowingGraphTransaction<Schema: FlowingGraphSchema> {
 
   private func contains(_ endpoint: FlowingGraphEndpoint<Schema>) -> Bool {
     switch endpoint {
-    case let .node(nodeID):
+    case .node(let nodeID):
       graph.nodesByID[nodeID] != nil
-    case let .port(key):
+    case .port(let key):
       graph.portsByKey[key] != nil
     }
   }
@@ -890,7 +878,7 @@ public struct FlowingGraphTransaction<Schema: FlowingGraphSchema> {
     dirtyIncidentEndpoints.formUnion(endpoints)
     dirtyIncidentNodeIDs.formUnion(endpoints.map(\.nodeID))
     switch edge.endpoints {
-    case let .directed(source, target):
+    case .directed(let source, let target):
       dirtyDirectedOutgoingNodeIDs.insert(source.nodeID)
       dirtyDirectedIncomingNodeIDs.insert(target.nodeID)
     case .undirected:
@@ -987,9 +975,9 @@ public struct FlowingGraphTransaction<Schema: FlowingGraphSchema> {
       result.insert(id, at: 0)
     case .last:
       result.append(id)
-    case let .before(target):
+    case .before(let target):
       result.insert(id, at: result.firstIndex(of: target)!)
-    case let .after(target):
+    case .after(let target):
       result.insert(id, at: result.firstIndex(of: target)! + 1)
     }
     return result
@@ -1031,9 +1019,8 @@ public struct FlowingGraphTransaction<Schema: FlowingGraphSchema> {
   ) -> [FlowingGraphPortKey<Schema>: FlowingGraphOrderPosition<FlowingGraphPortKey<Schema>>] {
     guard !requestedKeys.isEmpty else { return [:] }
     let nodeIDs = Set(requestedKeys.map(\.nodeID))
-    var result: [
-      FlowingGraphPortKey<Schema>: FlowingGraphOrderPosition<FlowingGraphPortKey<Schema>>
-    ] = [:]
+    var result:
+      [FlowingGraphPortKey<Schema>: FlowingGraphOrderPosition<FlowingGraphPortKey<Schema>>] = [:]
     result.reserveCapacity(requestedKeys.count)
 
     for nodeID in nodeIDs {
@@ -1050,48 +1037,48 @@ public struct FlowingGraphTransaction<Schema: FlowingGraphSchema> {
   }
 }
 
-private extension FlowingGraphEndpoint {
-  var nodeID: Schema.NodeID {
+extension FlowingGraphEndpoint {
+  fileprivate var nodeID: Schema.NodeID {
     switch self {
-    case let .node(nodeID):
+    case .node(let nodeID):
       nodeID
-    case let .port(key):
+    case .port(let key):
       key.nodeID
     }
   }
 }
 
-private extension FlowingGraphEdgeEndpoints {
-  var endpointList: [FlowingGraphEndpoint<Schema>] {
+extension FlowingGraphEdgeEndpoints {
+  fileprivate var endpointList: [FlowingGraphEndpoint<Schema>] {
     switch self {
-    case let .directed(source, target):
+    case .directed(let source, let target):
       [source, target]
-    case let .undirected(first, second):
+    case .undirected(let first, let second):
       [first, second]
     }
   }
 }
 
-private extension FlowingGraphOrderPosition {
-  var targetID: ID? {
+extension FlowingGraphOrderPosition {
+  fileprivate var targetID: ID? {
     switch self {
     case .first, .last:
       nil
-    case let .before(id), let .after(id):
+    case .before(let id), .after(let id):
       id
     }
   }
 }
 
-private extension Dictionary {
-  mutating func sortValues<EdgeID: Hashable>(using rank: [EdgeID: Int])
+extension Dictionary {
+  fileprivate mutating func sortValues<EdgeID: Hashable>(using rank: [EdgeID: Int])
   where Value == [EdgeID] {
     for key in Array(keys) {
       self[key]?.sort { rank[$0, default: .max] < rank[$1, default: .max] }
     }
   }
 
-  mutating func sortValues<EdgeID: Hashable>(
+  fileprivate mutating func sortValues<EdgeID: Hashable>(
     using rank: [EdgeID: Int],
     for keys: Set<Key>
   ) where Value == [EdgeID] {
@@ -1100,7 +1087,7 @@ private extension Dictionary {
     }
   }
 
-  mutating func retainValues<Element: Hashable>(in retainedValues: Set<Element>)
+  fileprivate mutating func retainValues<Element: Hashable>(in retainedValues: Set<Element>)
   where Value == [Element] {
     for key in Array(keys) {
       self[key]?.removeAll { !retainedValues.contains($0) }
@@ -1110,7 +1097,7 @@ private extension Dictionary {
     }
   }
 
-  mutating func retainUniqueValues<Element: Hashable>(
+  fileprivate mutating func retainUniqueValues<Element: Hashable>(
     for keys: Set<Key>,
     where isIncluded: (Key, Element) -> Bool
   ) where Value == [Element] {

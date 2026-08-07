@@ -1,5 +1,5 @@
-import XCTest
 import FlowingDayGraphCore
+import XCTest
 
 final class FlowingGraphMutationTests: XCTestCase {
   private enum TestSchema: FlowingGraphSchema {
@@ -19,7 +19,8 @@ final class FlowingGraphMutationTests: XCTestCase {
       transaction.insert(node("device"))
       transaction.insert(port("hub", 1))
       transaction.insert(port("hub", 2))
-      transaction.insert(directedEdge("connection", from: .port(portKey("hub", 1)), to: .node("device")))
+      transaction.insert(
+        directedEdge("connection", from: .port(portKey("hub", 1)), to: .node("device")))
     }
 
     XCTAssertEqual(graph.nodeIDs, ["hub", "device"])
@@ -42,8 +43,10 @@ final class FlowingGraphMutationTests: XCTestCase {
       }
       transaction.insert(node("first-device"))
       transaction.insert(node("fourth-device"))
-      transaction.insert(directedEdge("first", from: .port(portKey("hub", 1)), to: .node("first-device")))
-      transaction.insert(directedEdge("fourth", from: .port(portKey("hub", 4)), to: .node("fourth-device")))
+      transaction.insert(
+        directedEdge("first", from: .port(portKey("hub", 1)), to: .node("first-device")))
+      transaction.insert(
+        directedEdge("fourth", from: .port(portKey("hub", 4)), to: .node("fourth-device")))
     }
 
     XCTAssertEqual(graph.ports(nodeID: "hub").map(\.key.portID), [1, 2, 3, 4])
@@ -543,7 +546,8 @@ final class FlowingGraphMutationTests: XCTestCase {
       transaction.insert(node("hub"))
       transaction.insert(node("device"))
       transaction.insert(port("hub", 1))
-      transaction.insert(directedEdge("connection", from: .port(portKey("hub", 1)), to: .node("device")))
+      transaction.insert(
+        directedEdge("connection", from: .port(portKey("hub", 1)), to: .node("device")))
     }
     return graph
   }
@@ -554,9 +558,9 @@ final class FlowingGraphMutationTests: XCTestCase {
     _ body: (inout FlowingGraphTransaction<TestSchema>) -> Void
   ) -> FlowingGraphChangeSet<TestSchema> {
     switch graph.update(body) {
-    case let .committed(changeSet):
+    case .committed(let changeSet):
       return changeSet
-    case let .rejected(issue):
+    case .rejected(let issue):
       XCTFail("Unexpected rejection: \(issue)")
       fatalError("Unexpected rejection")
     }
@@ -569,7 +573,7 @@ final class FlowingGraphMutationTests: XCTestCase {
     switch result {
     case .committed:
       XCTFail("Expected transaction rejection")
-    case let .rejected(issue):
+    case .rejected(let issue):
       XCTAssertEqual(issue, expectedIssue)
     }
   }

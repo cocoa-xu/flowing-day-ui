@@ -114,8 +114,8 @@ public protocol FlowingGraphAutomationReadAuthorizer<Schema>: Sendable {
   ) -> FlowingGraphAutomationElementAccess
 }
 
-public extension FlowingGraphAutomationReadAuthorizer {
-  func authorizeSnapshot(
+extension FlowingGraphAutomationReadAuthorizer {
+  public func authorizeSnapshot(
     _ snapshotID: FlowingAutomationSnapshotID<Schema.DocumentID>,
     context: FlowingAutomationAccessContext
   ) -> FlowingGraphAutomationReadDecision {

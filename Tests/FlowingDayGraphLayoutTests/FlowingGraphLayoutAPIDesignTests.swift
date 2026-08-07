@@ -14,7 +14,7 @@ final class FlowingGraphLayoutAPIDesignTests: XCTestCase {
       strategy: strategy
     )
 
-    guard case let .completed(result) = outcome else {
+    guard case .completed(let result) = outcome else {
       return XCTFail("Expected the current layout request to complete")
     }
     XCTAssertEqual(result.nodeFrames.count, 2)

@@ -147,8 +147,8 @@ public struct FlowingSpatialIndex<ItemID: Hashable & Sendable>: Sendable {
         for itemID in itemIDs where visited.insert(itemID).inserted {
           guard !excludedIDs.contains(itemID), let frame = frameByID[itemID] else { continue }
           let distance = Self.distanceSquared(from: point, to: frame)
-          if distance < nearestDistance ||
-            (distance == nearestDistance && isOrdered(itemID, before: nearestID))
+          if distance < nearestDistance
+            || (distance == nearestDistance && isOrdered(itemID, before: nearestID))
           {
             nearestID = itemID
             nearestDistance = distance
@@ -355,9 +355,9 @@ public struct FlowingSpatialIndex<ItemID: Hashable & Sendable>: Sendable {
   }
 }
 
-private extension CGRect {
-  var isUsable: Bool {
-    !isNull && !isInfinite && origin.x.isFinite && origin.y.isFinite &&
-      width.isFinite && height.isFinite && width >= 0 && height >= 0
+extension CGRect {
+  fileprivate var isUsable: Bool {
+    !isNull && !isInfinite && origin.x.isFinite && origin.y.isFinite && width.isFinite
+      && height.isFinite && width >= 0 && height >= 0
   }
 }

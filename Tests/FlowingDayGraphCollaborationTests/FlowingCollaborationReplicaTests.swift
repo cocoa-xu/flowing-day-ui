@@ -27,7 +27,8 @@ final class FlowingCollaborationReplicaTests: XCTestCase {
     }
 
     XCTAssertEqual(snapshots.map(\.state), [["A", "B", "C"], ["A", "B", "C"], ["A", "B", "C"]])
-    XCTAssertTrue(snapshots.dropFirst().allSatisfy { $0.operationOrder == snapshots[0].operationOrder })
+    XCTAssertTrue(
+      snapshots.dropFirst().allSatisfy { $0.operationOrder == snapshots[0].operationOrder })
     XCTAssertTrue(snapshots.dropFirst().allSatisfy { $0.version == snapshots[0].version })
     XCTAssertTrue(snapshots.allSatisfy(\.pendingOperations.isEmpty))
   }

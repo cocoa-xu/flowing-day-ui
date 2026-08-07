@@ -206,8 +206,9 @@ public actor FlowingGraphAutomationQueryCoordinator<
         .filter { $0.participantID == context.participantID }
         .map(\.snapshotID)
     )
-    guard participantPinnedSnapshots.contains(request.snapshotID)
-      || participantPinnedSnapshots.count < limits.maximumPinnedSnapshotsPerParticipant
+    guard
+      participantPinnedSnapshots.contains(request.snapshotID)
+        || participantPinnedSnapshots.count < limits.maximumPinnedSnapshotsPerParticipant
     else {
       throw FlowingGraphAutomationQueryIssue<Schema.DocumentID>
         .participantPinnedSnapshotLimitExceeded(
@@ -625,7 +626,8 @@ public actor FlowingGraphAutomationQueryCoordinator<
       )
     case .subgraphLink(let id):
       guard let link = snapshot.linksByID[id] else { return nil }
-      let value: FlowingGraphAutomationDisclosure<Projector.Payload> = isFull
+      let value: FlowingGraphAutomationDisclosure<Projector.Payload> =
+        isFull
         ? .value(projector.linkPayload(link.value, linkID: id, context: context))
         : .redacted
       return .subgraphLink(
@@ -641,7 +643,8 @@ public actor FlowingGraphAutomationQueryCoordinator<
       switch elementID {
       case .node(let nodeID):
         guard let node = graph.node(id: nodeID) else { return nil }
-        let value: FlowingGraphAutomationDisclosure<Projector.Payload> = isFull
+        let value: FlowingGraphAutomationDisclosure<Projector.Payload> =
+          isFull
           ? .value(
             projector.nodePayload(
               node.value,
@@ -654,7 +657,8 @@ public actor FlowingGraphAutomationQueryCoordinator<
         return .node(graphID: graphID, nodeID: nodeID, value: value)
       case .port(let key):
         guard let port = graph.port(key: key) else { return nil }
-        let value: FlowingGraphAutomationDisclosure<Projector.Payload> = isFull
+        let value: FlowingGraphAutomationDisclosure<Projector.Payload> =
+          isFull
           ? .value(
             projector.portPayload(
               port.value,
@@ -667,7 +671,8 @@ public actor FlowingGraphAutomationQueryCoordinator<
         return .port(graphID: graphID, key: key, value: value)
       case .edge(let edgeID):
         guard let edge = graph.edge(id: edgeID) else { return nil }
-        let value: FlowingGraphAutomationDisclosure<Projector.Payload> = isFull
+        let value: FlowingGraphAutomationDisclosure<Projector.Payload> =
+          isFull
           ? .value(
             projector.edgePayload(
               edge.value,

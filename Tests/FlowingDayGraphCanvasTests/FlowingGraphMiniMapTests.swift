@@ -109,7 +109,8 @@ final class FlowingGraphMiniMapTests: XCTestCase {
     XCTAssertEqual(projectedRect.minX, target.viewRect(for: worldRect).minX, accuracy: 0.000_001)
     XCTAssertEqual(projectedRect.minY, target.viewRect(for: worldRect).minY, accuracy: 0.000_001)
     XCTAssertEqual(projectedRect.width, target.viewRect(for: worldRect).width, accuracy: 0.000_001)
-    XCTAssertEqual(projectedRect.height, target.viewRect(for: worldRect).height, accuracy: 0.000_001)
+    XCTAssertEqual(
+      projectedRect.height, target.viewRect(for: worldRect).height, accuracy: 0.000_001)
   }
 
   func testLocalNavigatorUsesStableSurroundingScale() {

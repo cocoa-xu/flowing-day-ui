@@ -233,8 +233,9 @@ public actor FlowingAutomationSessionRouter<
       }
       return try duplicateDelivery(request: request, result: result)
     }
-    guard requestHistory.count + inFlightRequests.count
-      < limits.maximumSessionRequestHistory
+    guard
+      requestHistory.count + inFlightRequests.count
+        < limits.maximumSessionRequestHistory
     else {
       throw FlowingAutomationSessionIssue<Endpoint.Failure>
         .requestHistoryLimitExceeded(maximum: limits.maximumSessionRequestHistory)

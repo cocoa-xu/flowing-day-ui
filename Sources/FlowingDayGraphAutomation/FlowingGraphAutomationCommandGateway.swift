@@ -20,12 +20,14 @@ private struct FlowingGraphAutomationDirectEntry<
   Intent: Equatable & Sendable
 >: Sendable {
   let request: FlowingGraphAutomationDirectRequest<Schema, Intent>
-  let envelope: FlowingCollaborationOperationEnvelope<
-    FlowingGraphCollaborationOperationSchema<Schema>
-  >
-  let outcome: FlowingCollaborationTransactionOutcome<
-    FlowingGraphCollaborationFailure<Schema>
-  >?
+  let envelope:
+    FlowingCollaborationOperationEnvelope<
+      FlowingGraphCollaborationOperationSchema<Schema>
+    >
+  let outcome:
+    FlowingCollaborationTransactionOutcome<
+      FlowingGraphCollaborationFailure<Schema>
+    >?
 }
 
 public actor FlowingGraphAutomationCommandGateway<
@@ -109,8 +111,9 @@ public actor FlowingGraphAutomationCommandGateway<
       }
       throw CommandIssue.operationInFlight(request.operationID)
     }
-    guard directRequestsByOperationID.count + directRequestsInFlight.count
-      < limits.maximumCommandHistory
+    guard
+      directRequestsByOperationID.count + directRequestsInFlight.count
+        < limits.maximumCommandHistory
     else {
       throw CommandIssue.commandHistoryLimitExceeded(
         maximum: limits.maximumCommandHistory
@@ -201,9 +204,11 @@ public actor FlowingGraphAutomationCommandGateway<
     )
   }
 
-  public func propose<Policy: FlowingGraphAutomationCommandAuthorizer<
-    Schema, Compiler.Intent
-  >>(
+  public func propose<
+    Policy: FlowingGraphAutomationCommandAuthorizer<
+      Schema, Compiler.Intent
+    >
+  >(
     _ request: FlowingGraphAutomationProposalRequest<Schema, Compiler.Intent>,
     at currentTick: UInt64,
     policy: Policy
@@ -357,9 +362,11 @@ public actor FlowingGraphAutomationCommandGateway<
     return result
   }
 
-  public func reject<Policy: FlowingGraphAutomationCommandAuthorizer<
-    Schema, Compiler.Intent
-  >>(
+  public func reject<
+    Policy: FlowingGraphAutomationCommandAuthorizer<
+      Schema, Compiler.Intent
+    >
+  >(
     proposalID: FlowingCollaborationProposalID,
     participantID: FlowingParticipantID,
     sessionID: FlowingCollaborationSessionID,
@@ -551,9 +558,11 @@ public actor FlowingGraphAutomationCommandGateway<
     case .rejected:
       return .failed(code: "collaboration_rejected")
     case .admitted:
-      guard let outcome = snapshot.audit.last.flatMap({ entry in
-        entry.operationID == receipt.operationID ? entry.outcome : nil
-      }) else {
+      guard
+        let outcome = snapshot.audit.last.flatMap({ entry in
+          entry.operationID == receipt.operationID ? entry.outcome : nil
+        })
+      else {
         return .failed(code: "missing_transaction_outcome")
       }
       switch outcome {

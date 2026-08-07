@@ -1,5 +1,5 @@
-import XCTest
 import FlowingDayGraphCore
+import XCTest
 
 final class FlowingGraphAPIDesignTests: XCTestCase {
   func testSchemaTypeKeepsConsumerSignaturesReadable() {

@@ -192,7 +192,8 @@ extension FlowingStableLayerOrdering: FlowingLayerOrderingStrategy {
     )
     let parentOrder = Dictionary(
       uniqueKeysWithValues: view.input.topology.nodeIDs.map { nodeID in
-        let parent = view.input.topology.directedPredecessorNodeIDs(of: nodeID)
+        let parent =
+          view.input.topology.directedPredecessorNodeIDs(of: nodeID)
           .compactMap { order[$0] }
           .min() ?? .max
         return (nodeID, parent)
@@ -265,8 +266,8 @@ public struct FlowingLayeredLayoutConfiguration: Sendable, Equatable {
     precondition(verticalNodeSpacing.isFinite && verticalNodeSpacing >= 0)
     precondition(componentSpacing.isFinite && componentSpacing >= 0)
     precondition(
-      minimumCanvasSize.width.isFinite && minimumCanvasSize.width >= 0 &&
-        minimumCanvasSize.height.isFinite && minimumCanvasSize.height >= 0
+      minimumCanvasSize.width.isFinite && minimumCanvasSize.width >= 0
+        && minimumCanvasSize.height.isFinite && minimumCanvasSize.height >= 0
     )
     self.horizontalNodeSpacing = horizontalNodeSpacing
     self.verticalNodeSpacing = verticalNodeSpacing
@@ -330,8 +331,9 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
     var rankOrigins: [Int: CGFloat] = [:]
     var precedingHeights: CGFloat = 0
     for rank in occupiedRanks {
-      rankOrigins[rank] = configuration.canvasInsets.top +
-        CGFloat(rank) * configuration.verticalNodeSpacing + precedingHeights
+      rankOrigins[rank] =
+        configuration.canvasInsets.top + CGFloat(rank) * configuration.verticalNodeSpacing
+        + precedingHeights
       precedingHeights += rankHeights[rank, default: 0]
     }
 
@@ -341,9 +343,10 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
 
     for component in ordering.components {
       try Task.checkCancellation()
-      let componentWidth = component.layers.map {
-        layerWidth(nodeIDs: $0.nodeIDs, input: input)
-      }.max() ?? 0
+      let componentWidth =
+        component.layers.map {
+          layerWidth(nodeIDs: $0.nodeIDs, input: input)
+        }.max() ?? 0
 
       for layer in component.layers.reversed() {
         let centers = layerCenters(
@@ -358,8 +361,8 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
           let offset = input.resolvedPlacementOffset(for: nodeID)
           frameByNodeID[nodeID] = CGRect(
             x: center - size.width / 2 + offset.width,
-            y: rankOrigins[layer.rank, default: configuration.canvasInsets.top] +
-              (rankHeights[layer.rank, default: 0] - size.height) / 2 + offset.height,
+            y: rankOrigins[layer.rank, default: configuration.canvasInsets.top]
+              + (rankHeights[layer.rank, default: 0] - size.height) / 2 + offset.height,
             width: size.width,
             height: size.height
           )
@@ -368,11 +371,12 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
       componentX += componentWidth + configuration.componentSpacing
     }
 
-    let measuredWidth = componentX - configuration.componentSpacing +
-      configuration.canvasInsets.trailing
+    let measuredWidth =
+      componentX - configuration.componentSpacing + configuration.canvasInsets.trailing
     let lastRank = occupiedRanks.last ?? 0
-    let measuredHeight = rankOrigins[lastRank, default: configuration.canvasInsets.top] +
-      rankHeights[lastRank, default: 0] + configuration.canvasInsets.bottom
+    let measuredHeight =
+      rankOrigins[lastRank, default: configuration.canvasInsets.top]
+      + rankHeights[lastRank, default: 0] + configuration.canvasInsets.bottom
     let minimumBounds = CGRect(
       origin: .zero,
       size: CGSize(
@@ -397,8 +401,8 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
     input: FlowingGraphLayoutInput<Schema>
   ) -> CGFloat {
     guard !nodeIDs.isEmpty else { return 0 }
-    return nodeIDs.reduce(0) { $0 + input.resolvedSize(for: $1).width } +
-      CGFloat(nodeIDs.count - 1) * configuration.horizontalNodeSpacing
+    return nodeIDs.reduce(0) { $0 + input.resolvedSize(for: $1).width } + CGFloat(nodeIDs.count - 1)
+      * configuration.horizontalNodeSpacing
   }
 
   private func layerCenters(
@@ -429,8 +433,8 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
       for index in 1..<centers.count {
         let previousWidth = input.resolvedSize(for: nodeIDs[index - 1]).width
         let width = input.resolvedSize(for: nodeIDs[index]).width
-        let minimum = centers[index - 1] + (previousWidth + width) / 2 +
-          configuration.horizontalNodeSpacing
+        let minimum =
+          centers[index - 1] + (previousWidth + width) / 2 + configuration.horizontalNodeSpacing
         centers[index] = max(centers[index], minimum)
       }
     }
@@ -486,9 +490,9 @@ extension FlowingLayeredDAGPlacement: FlowingGraphNodePlacementStrategy {
   ) throws -> FlowingGraphNodePlacement<Schema> {
     let view: FlowingGraphLayoutDAGView<Schema>
     switch input.validateDAG() {
-    case let .valid(validatedView):
+    case .valid(let validatedView):
       view = validatedView
-    case let .invalid(issue):
+    case .invalid(let issue):
       throw issue
     }
     let assignment = try layerAssignment.assignLayers(to: view)

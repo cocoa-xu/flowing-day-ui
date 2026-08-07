@@ -32,11 +32,11 @@ public struct FlowingGraphEdgeRoute: Sendable, Equatable {
     var points = [start]
     for segment in segments {
       switch segment {
-      case let .line(end):
+      case .line(let end):
         points.append(end)
-      case let .quadratic(control, end):
+      case .quadratic(let control, let end):
         points.append(contentsOf: [control, end])
-      case let .cubic(control1, control2, end):
+      case .cubic(let control1, let control2, let end):
         points.append(contentsOf: [control1, control2, end])
       }
     }
@@ -324,30 +324,29 @@ extension FlowingGraphLayoutPipeline: FlowingGraphLayoutStrategy {
   }
 }
 
-private extension CGRect {
-  var isUsable: Bool {
-    !isNull && !isInfinite && origin.x.isFinite && origin.y.isFinite &&
-      width.isFinite && height.isFinite && width >= 0 && height >= 0
+extension CGRect {
+  fileprivate var isUsable: Bool {
+    !isNull && !isInfinite && origin.x.isFinite && origin.y.isFinite && width.isFinite
+      && height.isFinite && width >= 0 && height >= 0
   }
 }
 
-private extension FlowingGraphEdgeRoute {
-  var isFinite: Bool {
+extension FlowingGraphEdgeRoute {
+  fileprivate var isFinite: Bool {
     start.x.isFinite && start.y.isFinite && segments.allSatisfy(\.isFinite)
   }
 }
 
-private extension FlowingGraphEdgePathSegment {
-  var isFinite: Bool {
+extension FlowingGraphEdgePathSegment {
+  fileprivate var isFinite: Bool {
     switch self {
-    case let .line(end):
+    case .line(let end):
       end.x.isFinite && end.y.isFinite
-    case let .quadratic(control, end):
+    case .quadratic(let control, let end):
       control.x.isFinite && control.y.isFinite && end.x.isFinite && end.y.isFinite
-    case let .cubic(control1, control2, end):
-      control1.x.isFinite && control1.y.isFinite &&
-        control2.x.isFinite && control2.y.isFinite &&
-        end.x.isFinite && end.y.isFinite
+    case .cubic(let control1, let control2, let end):
+      control1.x.isFinite && control1.y.isFinite && control2.x.isFinite && control2.y.isFinite
+        && end.x.isFinite && end.y.isFinite
     }
   }
 }

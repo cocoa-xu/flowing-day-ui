@@ -69,8 +69,7 @@ extension FlowingCubicEdgeRouter: FlowingGraphEdgeRoutingStrategy {
       let index = indexByPair[pair, default: 0]
       indexByPair[pair] = index + 1
       let count = countByPair[pair, default: 1]
-      let separation = (CGFloat(index) - CGFloat(count - 1) / 2) *
-        configuration.parallelEdgeSpacing
+      let separation = (CGFloat(index) - CGFloat(count - 1) / 2) * configuration.parallelEdgeSpacing
       return FlowingGraphLayoutEdgeRoute(
         edgeID: edge.id,
         route: route(
@@ -156,8 +155,8 @@ extension FlowingCubicEdgeRouter: FlowingGraphEdgeRoutingStrategy {
     input: FlowingGraphLayoutInput<Schema>,
     loopIndex: Int
   ) -> FlowingGraphEdgeRoute {
-    let radius = configuration.selfLoopRadius +
-      CGFloat(loopIndex) * configuration.parallelEdgeSpacing
+    let radius =
+      configuration.selfLoopRadius + CGFloat(loopIndex) * configuration.parallelEdgeSpacing
     let start = resolvedEndpoint(
       firstEndpoint,
       frame: frame,
@@ -197,13 +196,14 @@ extension FlowingCubicEdgeRouter: FlowingGraphEdgeRoutingStrategy {
     switch endpoint {
     case .node:
       return frameBoundaryEndpoint(frame: frame, toward: target)
-    case let .port(key):
+    case .port(let key):
       let anchor = input.resolvedAnchor(for: key)
       let point = CGPoint(
         x: frame.minX + anchor.position.x,
         y: frame.minY + anchor.position.y
       )
-      let normal = anchor.normal == .zero
+      let normal =
+        anchor.normal == .zero
         ? normalized(CGVector(dx: target.x - point.x, dy: target.y - point.y))
         : normalized(anchor.normal)
       return FlowingResolvedEndpoint(point: point, normal: normal)
@@ -304,12 +304,12 @@ private struct FlowingNodePair<Schema: FlowingGraphLayoutSchema>: Hashable {
   let second: Schema.NodeID
 }
 
-private extension FlowingGraphLayoutEdgeEndpoints {
-  var elements: [FlowingGraphLayoutEndpoint<Schema>] {
+extension FlowingGraphLayoutEdgeEndpoints {
+  fileprivate var elements: [FlowingGraphLayoutEndpoint<Schema>] {
     switch self {
-    case let .directed(source, target):
+    case .directed(let source, let target):
       [source, target]
-    case let .undirected(first, second):
+    case .undirected(let first, let second):
       [first, second]
     }
   }

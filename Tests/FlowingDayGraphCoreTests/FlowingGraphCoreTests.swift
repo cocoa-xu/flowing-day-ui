@@ -1,5 +1,5 @@
-import XCTest
 import FlowingDayGraphCore
+import XCTest
 
 final class FlowingGraphCoreTests: XCTestCase {
   private enum TestSchema: FlowingGraphSchema {

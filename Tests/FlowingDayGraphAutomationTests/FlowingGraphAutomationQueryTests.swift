@@ -22,7 +22,7 @@ final class FlowingGraphAutomationQueryTests: XCTestCase {
     XCTAssertEqual(metadata.pendingOperationCount, 0)
     XCTAssertEqual(metadata.auditEntryCount, 0)
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await coordinator.metadata(
         for: snapshotID,
         context: context,
@@ -138,7 +138,7 @@ final class FlowingGraphAutomationQueryTests: XCTestCase {
       projector: AutomationStringProjector()
     )
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await coordinator.nextPage(
         cursorID: XCTUnwrap(firstPage.nextCursorID),
         context: context,
@@ -167,7 +167,7 @@ final class FlowingGraphAutomationQueryTests: XCTestCase {
       at: 10,
       authorizer: AutomationReadAuthorizer()
     )
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await coordinator.nextPage(
         cursorID: wrongParticipantCursor,
         context: automationContext(participant: 2),
@@ -188,7 +188,7 @@ final class FlowingGraphAutomationQueryTests: XCTestCase {
       at: 10,
       authorizer: AutomationReadAuthorizer()
     )
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await coordinator.nextPage(
         cursorID: wrongScopeCursor,
         context: automationContext(
@@ -211,7 +211,7 @@ final class FlowingGraphAutomationQueryTests: XCTestCase {
       at: 10,
       authorizer: AutomationReadAuthorizer()
     )
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await coordinator.nextPage(
         cursorID: expiredCursor,
         context: context,
@@ -260,7 +260,7 @@ final class FlowingGraphAutomationQueryTests: XCTestCase {
     ])
     let secondID = try await coordinator.publish(replica.materialize(), at: 1)
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await coordinator.openQuery(
         automationElementQuery(kinds: [.node], pageSize: 1, snapshotID: secondID),
         context: context,
@@ -349,7 +349,7 @@ final class FlowingGraphAutomationQueryTests: XCTestCase {
   }
 }
 
-func XCTAssertThrowsErrorAsync<T: Sendable>(
+func assertThrowsErrorAsync<T: Sendable>(
   _ expression: @autoclosure () async throws -> T,
   _ handler: (Error) -> Void
 ) async {

@@ -103,11 +103,12 @@ public struct FlowingAutomationTaskContext: Sendable {
 
   init(
     taskID: FlowingAutomationTaskID,
-    progressHandler: @escaping @Sendable (
-      UInt64,
-      UInt64?,
-      String?
-    ) async -> Result<Void, FlowingAutomationTaskContextIssue>,
+    progressHandler:
+      @escaping @Sendable (
+        UInt64,
+        UInt64?,
+        String?
+      ) async -> Result<Void, FlowingAutomationTaskContextIssue>,
     cancellationHandler: @escaping @Sendable () async -> Bool
   ) {
     self.taskID = taskID

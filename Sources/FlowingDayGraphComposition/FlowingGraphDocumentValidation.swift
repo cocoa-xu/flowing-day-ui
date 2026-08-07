@@ -374,16 +374,6 @@ public struct FlowingValidatedGraphDocument<Schema: FlowingGraphCompositionSchem
   public let defaultEntryPoint: FlowingGraphEntryPoint<Schema>
   let index: FlowingGraphDocumentIndex<Schema>
 
-  init(
-    document: FlowingGraphDocument<Schema>,
-    defaultEntryPoint: FlowingGraphEntryPoint<Schema>,
-    index: FlowingGraphDocumentIndex<Schema>
-  ) {
-    self.document = document
-    self.defaultEntryPoint = defaultEntryPoint
-    self.index = index
-  }
-
   public func definition(
     id: Schema.GraphID
   ) -> FlowingGraphDefinition<Schema>? {

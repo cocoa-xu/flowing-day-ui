@@ -94,7 +94,7 @@ final class FlowingAutomationAuditTests: XCTestCase {
       at: 0
     )
 
-    await XCTAssertThrowsErrorAsync(
+    await assertThrowsErrorAsync(
       try await coordinator.openQuery(
         automationElementQuery(kinds: [.node], pageSize: 1, snapshotID: snapshotID),
         context: automationContext(),

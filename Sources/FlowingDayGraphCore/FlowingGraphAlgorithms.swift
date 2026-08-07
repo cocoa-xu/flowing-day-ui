@@ -89,8 +89,8 @@ where
   Schema.EdgeValue: Sendable
 {}
 
-public extension FlowingGraph {
-  func reachableNodeIDs(
+extension FlowingGraph {
+  public func reachableNodeIDs(
     from start: Schema.NodeID,
     policy: FlowingGraphTraversalPolicy = .outgoing,
     includesStart: Bool = true
@@ -114,7 +114,7 @@ public extension FlowingGraph {
     return result
   }
 
-  func descendantNodeIDs(
+  public func descendantNodeIDs(
     of nodeID: Schema.NodeID,
     includesStart: Bool = false
   ) -> [Schema.NodeID] {
@@ -128,7 +128,7 @@ public extension FlowingGraph {
     )
   }
 
-  func ancestorNodeIDs(
+  public func ancestorNodeIDs(
     of nodeID: Schema.NodeID,
     includesStart: Bool = false
   ) -> [Schema.NodeID] {
@@ -142,7 +142,7 @@ public extension FlowingGraph {
     )
   }
 
-  func shortestPath(
+  public func shortestPath(
     from start: Schema.NodeID,
     to destination: Schema.NodeID,
     policy: FlowingGraphTraversalPolicy = .outgoing
@@ -193,7 +193,7 @@ public extension FlowingGraph {
     return nil
   }
 
-  func weaklyConnectedComponents() -> [[Schema.NodeID]] {
+  public func weaklyConnectedComponents() -> [[Schema.NodeID]] {
     var visited: Set<Schema.NodeID> = []
     var components: [[Schema.NodeID]] = []
 
@@ -214,7 +214,7 @@ public extension FlowingGraph {
     return components
   }
 
-  func stronglyConnectedComponents() -> [[Schema.NodeID]] {
+  public func stronglyConnectedComponents() -> [[Schema.NodeID]] {
     let forward = FlowingGraphTraversalPolicy(
       direction: .outgoing,
       includesUndirected: true
@@ -260,7 +260,7 @@ public extension FlowingGraph {
     return components
   }
 
-  func firstCycleEdgeIDs() -> [Schema.EdgeID]? {
+  public func firstCycleEdgeIDs() -> [Schema.EdgeID]? {
     let components = stronglyConnectedComponents()
     var componentByNodeID: [Schema.NodeID: Int] = [:]
     componentByNodeID.reserveCapacity(nodeIDs.count)
@@ -271,7 +271,7 @@ public extension FlowingGraph {
     }
 
     for edge in edges {
-      guard case let .directed(source, target) = edge.endpoints else { continue }
+      guard case .directed(let source, let target) = edge.endpoints else { continue }
       if source.nodeID == target.nodeID {
         return [edge.id]
       }
@@ -305,7 +305,7 @@ public extension FlowingGraph {
 
       while let event = stack.popLast() {
         switch event {
-        case let .enter(nodeID, parentNodeID, parentEdgeID):
+        case .enter(let nodeID, let parentNodeID, let parentEdgeID):
           guard visited.insert(nodeID).inserted else { continue }
           active.insert(nodeID)
           if let parentNodeID, let parentEdgeID {
@@ -320,7 +320,7 @@ public extension FlowingGraph {
             stack.append(.traverse(from: nodeID, step: step))
           }
 
-        case let .traverse(source, step):
+        case .traverse(let source, let step):
           if step.isUndirected, parentEdgeByNodeID[source] == step.edgeID {
             continue
           }
@@ -343,7 +343,7 @@ public extension FlowingGraph {
             )
           }
 
-        case let .exit(nodeID):
+        case .exit(let nodeID):
           active.remove(nodeID)
         }
       }
@@ -352,7 +352,7 @@ public extension FlowingGraph {
     return nil
   }
 
-  func validateDAG(
+  public func validateDAG(
     configuration: FlowingDAGValidationConfiguration = .init()
   ) -> FlowingDAGValidationResult<Schema> {
     let undirectedEdgeIDs = edges.compactMap { edge -> Schema.EdgeID? in
@@ -370,7 +370,7 @@ public extension FlowingGraph {
       uniqueKeysWithValues: nodeIDs.map { ($0, 0) }
     )
     for edge in edges {
-      guard case let .directed(_, target) = edge.endpoints else { continue }
+      guard case .directed(_, let target) = edge.endpoints else { continue }
       incomingCount[target.nodeID, default: 0] += 1
     }
 
@@ -415,19 +415,19 @@ public extension FlowingGraph {
   }
 }
 
-private extension FlowingGraph {
-  struct TraversalStep {
+extension FlowingGraph {
+  fileprivate struct TraversalStep {
     let edgeID: Schema.EdgeID
     let nodeID: Schema.NodeID
     let isUndirected: Bool
   }
 
-  enum FinishEvent {
+  fileprivate enum FinishEvent {
     case enter(Schema.NodeID)
     case exit(Schema.NodeID)
   }
 
-  enum CycleEvent {
+  fileprivate enum CycleEvent {
     case enter(
       nodeID: Schema.NodeID,
       parentNodeID: Schema.NodeID?,
@@ -437,7 +437,7 @@ private extension FlowingGraph {
     case exit(Schema.NodeID)
   }
 
-  func traversalSteps(
+  fileprivate func traversalSteps(
     from nodeID: Schema.NodeID,
     policy: FlowingGraphTraversalPolicy
   ) -> [TraversalStep] {
@@ -454,7 +454,7 @@ private extension FlowingGraph {
     return candidateEdgeIDs.compactMap { edgeID in
       guard let edge = edge(id: edgeID) else { return nil }
       switch edge.endpoints {
-      case let .directed(source, target):
+      case .directed(let source, let target):
         switch policy.direction {
         case .outgoing where source.nodeID == nodeID:
           return TraversalStep(edgeID: edgeID, nodeID: target.nodeID, isUndirected: false)
@@ -468,7 +468,7 @@ private extension FlowingGraph {
           return nil
         }
 
-      case let .undirected(first, second):
+      case .undirected(let first, let second):
         guard policy.includesUndirected else { return nil }
         if first.nodeID == nodeID {
           return TraversalStep(edgeID: edgeID, nodeID: second.nodeID, isUndirected: true)
@@ -481,7 +481,7 @@ private extension FlowingGraph {
     }
   }
 
-  func depthFirstFinishOrder(
+  fileprivate func depthFirstFinishOrder(
     from start: Schema.NodeID,
     policy: FlowingGraphTraversalPolicy,
     visited: inout Set<Schema.NodeID>,
@@ -490,20 +490,20 @@ private extension FlowingGraph {
     var stack: [FinishEvent] = [.enter(start)]
     while let event = stack.popLast() {
       switch event {
-      case let .enter(nodeID):
+      case .enter(let nodeID):
         guard visited.insert(nodeID).inserted else { continue }
         stack.append(.exit(nodeID))
         let neighbors = traversalSteps(from: nodeID, policy: policy).map(\.nodeID)
         for neighbor in neighbors.reversed() where !visited.contains(neighbor) {
           stack.append(.enter(neighbor))
         }
-      case let .exit(nodeID):
+      case .exit(let nodeID):
         finishOrder.append(nodeID)
       }
     }
   }
 
-  static func path(
+  fileprivate static func path(
     from start: Schema.NodeID,
     to destination: Schema.NodeID,
     parents: [Schema.NodeID: (nodeID: Schema.NodeID, edgeID: Schema.EdgeID)]
@@ -525,7 +525,7 @@ private extension FlowingGraph {
     )
   }
 
-  static func cyclePath(
+  fileprivate static func cyclePath(
     from source: Schema.NodeID,
     to target: Schema.NodeID,
     closingEdgeID: Schema.EdgeID,
@@ -542,12 +542,12 @@ private extension FlowingGraph {
   }
 }
 
-private extension FlowingGraphEndpoint {
-  var nodeID: Schema.NodeID {
+extension FlowingGraphEndpoint {
+  fileprivate var nodeID: Schema.NodeID {
     switch self {
-    case let .node(nodeID):
+    case .node(let nodeID):
       nodeID
-    case let .port(key):
+    case .port(let key):
       key.nodeID
     }
   }

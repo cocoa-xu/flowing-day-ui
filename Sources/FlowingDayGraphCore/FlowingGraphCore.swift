@@ -52,11 +52,11 @@ public enum FlowingGraphEdgeEndpoints<Schema: FlowingGraphSchema>: Equatable {
     rhs: FlowingGraphEdgeEndpoints
   ) -> Bool {
     switch (lhs, rhs) {
-    case let (.directed(leftSource, leftTarget), .directed(rightSource, rightTarget)):
+    case (.directed(let leftSource, let leftTarget), .directed(let rightSource, let rightTarget)):
       leftSource == rightSource && leftTarget == rightTarget
-    case let (.undirected(leftFirst, leftSecond), .undirected(rightFirst, rightSecond)):
-      (leftFirst == rightFirst && leftSecond == rightSecond) ||
-        (leftFirst == rightSecond && leftSecond == rightFirst)
+    case (.undirected(let leftFirst, let leftSecond), .undirected(let rightFirst, let rightSecond)):
+      (leftFirst == rightFirst && leftSecond == rightSecond)
+        || (leftFirst == rightSecond && leftSecond == rightFirst)
     default:
       false
     }
