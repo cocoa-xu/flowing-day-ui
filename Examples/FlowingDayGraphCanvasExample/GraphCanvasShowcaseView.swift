@@ -193,8 +193,10 @@ struct GraphCanvasShowcaseView: View {
           nodeResizing: .standard,
           snapping: FlowingGraphCanvasSnappingConfiguration(
             isEnabled: true,
-            gridCellSize: usesGridSnapping
-              ? CGSize(width: 24, height: 24)
+            grid: usesGridSnapping
+              ? FlowingGraphCanvasGridConfiguration(
+                majorCellSize: CGSize(width: 24, height: 24)
+              )
               : nil
           )
         ),

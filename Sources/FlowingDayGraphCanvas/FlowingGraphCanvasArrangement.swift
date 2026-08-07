@@ -3,6 +3,85 @@ import FlowingDayGraphComposition
 import FlowingDayGraphCore
 import FlowingDayGraphLayout
 
+public struct FlowingGraphCanvasGridAxes: OptionSet, Hashable, Sendable {
+  public let rawValue: UInt8
+
+  public init(rawValue: UInt8) {
+    self.rawValue = rawValue
+  }
+
+  public static let x = Self(rawValue: 1 << 0)
+  public static let y = Self(rawValue: 1 << 1)
+  public static let both: Self = [.x, .y]
+}
+
+public enum FlowingGraphCanvasGridRoundingPolicy: Hashable, Sendable {
+  case nearest
+  case down
+  case up
+  case towardZero
+  case awayFromZero
+
+  fileprivate func rounded(_ value: CGFloat) -> CGFloat {
+    switch self {
+    case .nearest:
+      value.rounded()
+    case .down:
+      value.rounded(.down)
+    case .up:
+      value.rounded(.up)
+    case .towardZero:
+      value.rounded(.towardZero)
+    case .awayFromZero:
+      value.rounded(.awayFromZero)
+    }
+  }
+}
+
+public struct FlowingGraphCanvasGridSubdivisions: Equatable, Sendable {
+  public let x: Int
+  public let y: Int
+
+  public init(x: Int = 1, y: Int = 1) {
+    precondition(x > 0)
+    precondition(y > 0)
+    self.x = x
+    self.y = y
+  }
+}
+
+public struct FlowingGraphCanvasGridConfiguration: Equatable, Sendable {
+  public let origin: CGPoint
+  public let majorCellSize: CGSize
+  public let subdivisions: FlowingGraphCanvasGridSubdivisions
+  public let enabledAxes: FlowingGraphCanvasGridAxes
+  public let roundingPolicy: FlowingGraphCanvasGridRoundingPolicy
+
+  public init(
+    origin: CGPoint = .zero,
+    majorCellSize: CGSize,
+    subdivisions: FlowingGraphCanvasGridSubdivisions = .init(),
+    enabledAxes: FlowingGraphCanvasGridAxes = .both,
+    roundingPolicy: FlowingGraphCanvasGridRoundingPolicy = .nearest
+  ) {
+    precondition(origin.x.isFinite && origin.y.isFinite)
+    precondition(majorCellSize.width > 0 && majorCellSize.width.isFinite)
+    precondition(majorCellSize.height > 0 && majorCellSize.height.isFinite)
+    self.origin = origin
+    self.majorCellSize = majorCellSize
+    self.subdivisions = subdivisions
+    self.enabledAxes = enabledAxes
+    self.roundingPolicy = roundingPolicy
+  }
+
+  public var minorCellSize: CGSize {
+    CGSize(
+      width: majorCellSize.width / CGFloat(subdivisions.x),
+      height: majorCellSize.height / CGFloat(subdivisions.y)
+    )
+  }
+}
+
 public struct FlowingGraphCanvasSnappingConfiguration: Equatable, Sendable {
   public static let standardTolerance: CGFloat = 6
   public static let standardSearchRadius: CGFloat = 600
@@ -15,7 +94,7 @@ public struct FlowingGraphCanvasSnappingConfiguration: Equatable, Sendable {
   public let tolerance: CGFloat
   public let searchRadius: CGFloat
   public let maximumCandidates: Int
-  public let gridCellSize: CGSize?
+  public let grid: FlowingGraphCanvasGridConfiguration?
   public let showsGuides: Bool
   public let guideOffset: CGFloat
   public let releaseTolerance: CGFloat
@@ -26,7 +105,7 @@ public struct FlowingGraphCanvasSnappingConfiguration: Equatable, Sendable {
     tolerance: CGFloat = standardTolerance,
     searchRadius: CGFloat = standardSearchRadius,
     maximumCandidates: Int = standardMaximumCandidates,
-    gridCellSize: CGSize? = nil,
+    grid: FlowingGraphCanvasGridConfiguration? = nil,
     showsGuides: Bool = true,
     guideOffset: CGFloat = standardGuideOffset,
     releaseTolerance: CGFloat? = nil
@@ -37,16 +116,12 @@ public struct FlowingGraphCanvasSnappingConfiguration: Equatable, Sendable {
     precondition(maximumCandidates > 0)
     precondition(guideOffset >= 0 && guideOffset.isFinite)
     precondition(resolvedReleaseTolerance >= tolerance && resolvedReleaseTolerance.isFinite)
-    if let gridCellSize {
-      precondition(gridCellSize.width > 0 && gridCellSize.width.isFinite)
-      precondition(gridCellSize.height > 0 && gridCellSize.height.isFinite)
-    }
     self.isEnabled = isEnabled
     self.targets = targets
     self.tolerance = tolerance
     self.searchRadius = searchRadius
     self.maximumCandidates = maximumCandidates
-    self.gridCellSize = gridCellSize
+    self.grid = grid
     self.showsGuides = showsGuides
     self.guideOffset = guideOffset
     self.releaseTolerance = resolvedReleaseTolerance
@@ -711,11 +786,14 @@ public enum FlowingGraphCanvasArrangement {
       )
     }
     if configuration.targets.contains(.grid) {
-      let cell =
-        axis == .horizontal
-        ? configuration.gridCellSize?.width
-        : configuration.gridCellSize?.height
-      snaps.append(gridSnap(value: axis.lower(frame), cell: cell, tolerance: tolerance))
+      snaps.append(
+        gridSnap(
+          value: axis.lower(frame),
+          axis: axis,
+          grid: configuration.grid,
+          tolerance: tolerance
+        )
+      )
     }
     return preferred(snaps)
   }
@@ -750,9 +828,19 @@ public enum FlowingGraphCanvasArrangement {
     return best
   }
 
-  private static func gridSnap(value: CGFloat, cell: CGFloat?, tolerance: CGFloat) -> Snap? {
-    guard let cell else { return nil }
-    let target = (value / cell).rounded() * cell
+  private static func gridSnap(
+    value: CGFloat,
+    axis: GeometryAxis,
+    grid: FlowingGraphCanvasGridConfiguration?,
+    tolerance: CGFloat
+  ) -> Snap? {
+    guard let grid else { return nil }
+    let isHorizontal = axis == .horizontal
+    let requiredAxis: FlowingGraphCanvasGridAxes = isHorizontal ? .x : .y
+    guard grid.enabledAxes.contains(requiredAxis) else { return nil }
+    let cell = isHorizontal ? grid.minorCellSize.width : grid.minorCellSize.height
+    let origin = isHorizontal ? grid.origin.x : grid.origin.y
+    let target = grid.roundingPolicy.rounded((value - origin) / cell) * cell + origin
     let delta = target - value
     guard abs(delta) <= tolerance else { return nil }
     return Snap(delta: delta, value: target, candidateFrame: nil, kind: .grid)
@@ -807,13 +895,20 @@ public enum FlowingGraphCanvasArrangement {
       }
     }
 
-    if let pair = nearestNonoverlappingPair(in: before, axis: axis, fromEnd: true) {
-      let gap = axis.lower(pair.second) - axis.upper(pair.first)
+    if let chain = nearestEqualSpacingChain(
+      in: before,
+      axis: axis,
+      fromEnd: true,
+      tolerance: tolerance
+    ),
+      let last = chain.last
+    {
+      let gap = chainGap(chain, axis: axis)
       snaps.append(
         spacingSnap(
-          targetLower: axis.upper(pair.second) + gap,
+          targetLower: axis.upper(last) + gap,
           movingFrame: movingFrame,
-          referenceFrames: [pair.first, pair.second],
+          referenceFrames: chain,
           axis: axis,
           tolerance: tolerance,
           guideOffset: guideOffset
@@ -821,13 +916,20 @@ public enum FlowingGraphCanvasArrangement {
       )
     }
 
-    if let pair = nearestNonoverlappingPair(in: after, axis: axis, fromEnd: false) {
-      let gap = axis.lower(pair.second) - axis.upper(pair.first)
+    if let chain = nearestEqualSpacingChain(
+      in: after,
+      axis: axis,
+      fromEnd: false,
+      tolerance: tolerance
+    ),
+      let first = chain.first
+    {
+      let gap = chainGap(chain, axis: axis)
       snaps.append(
         spacingSnap(
-          targetLower: axis.lower(pair.first) - gap - movingLength,
+          targetLower: axis.lower(first) - gap - movingLength,
           movingFrame: movingFrame,
-          referenceFrames: [pair.first, pair.second],
+          referenceFrames: chain,
           axis: axis,
           tolerance: tolerance,
           guideOffset: guideOffset
@@ -837,33 +939,59 @@ public enum FlowingGraphCanvasArrangement {
     return preferred(snaps)
   }
 
-  private static func nearestNonoverlappingPair(
+  private static func nearestEqualSpacingChain(
     in frames: [CGRect],
     axis: GeometryAxis,
-    fromEnd: Bool
-  ) -> (first: CGRect, second: CGRect)? {
+    fromEnd: Bool,
+    tolerance: CGFloat
+  ) -> [CGRect]? {
     guard frames.count > 1 else { return nil }
+    let pairIndex: Int?
     if fromEnd {
       var index = frames.count - 2
+      var match: Int?
       while true {
-        let first = frames[index]
-        let second = frames[index + 1]
-        if axis.upper(first) <= axis.lower(second) {
-          return (first, second)
+        if axis.upper(frames[index]) <= axis.lower(frames[index + 1]) {
+          match = index
+          break
         }
         guard index > 0 else { break }
         index -= 1
       }
+      pairIndex = match
     } else {
-      for index in 0..<(frames.count - 1) {
-        let first = frames[index]
-        let second = frames[index + 1]
-        if axis.upper(first) <= axis.lower(second) {
-          return (first, second)
-        }
+      pairIndex = (0..<(frames.count - 1)).first { index in
+        axis.upper(frames[index]) <= axis.lower(frames[index + 1])
       }
     }
-    return nil
+    guard let pairIndex else { return nil }
+    let gap = axis.lower(frames[pairIndex + 1]) - axis.upper(frames[pairIndex])
+    var lowerIndex = pairIndex
+    var upperIndex = pairIndex + 1
+    while lowerIndex > 0 {
+      let previousGap =
+        axis.lower(frames[lowerIndex]) - axis.upper(frames[lowerIndex - 1])
+      guard previousGap >= 0, abs(previousGap - gap) <= tolerance else { break }
+      lowerIndex -= 1
+    }
+    while upperIndex + 1 < frames.count {
+      let nextGap = axis.lower(frames[upperIndex + 1]) - axis.upper(frames[upperIndex])
+      guard nextGap >= 0, abs(nextGap - gap) <= tolerance else { break }
+      upperIndex += 1
+    }
+    return Array(frames[lowerIndex...upperIndex])
+  }
+
+  private static func chainGap(
+    _ frames: [CGRect],
+    axis: GeometryAxis
+  ) -> CGFloat {
+    guard frames.count > 1 else { return 0 }
+    var total: CGFloat = 0
+    for index in 0..<(frames.count - 1) {
+      total += axis.lower(frames[index + 1]) - axis.upper(frames[index])
+    }
+    return total / CGFloat(frames.count - 1)
   }
 
   private static func spacingSnap(
@@ -939,11 +1067,14 @@ public enum FlowingGraphCanvasArrangement {
       snaps.append(best)
     }
     if configuration.targets.contains(.grid) {
-      let cell =
-        axis == .horizontal
-        ? configuration.gridCellSize?.width
-        : configuration.gridCellSize?.height
-      snaps.append(gridSnap(value: movingValue, cell: cell, tolerance: tolerance))
+      snaps.append(
+        gridSnap(
+          value: movingValue,
+          axis: axis,
+          grid: configuration.grid,
+          tolerance: tolerance
+        )
+      )
     }
     return preferred(snaps)
   }
