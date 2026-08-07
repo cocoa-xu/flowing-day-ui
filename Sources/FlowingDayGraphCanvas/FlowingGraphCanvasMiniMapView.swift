@@ -11,7 +11,6 @@ public struct FlowingGraphCanvasMiniMap<
   public typealias ElementID = FlowingGraphCompositionElementID<Schema>
 
   private struct ResolvedSnapshot {
-    let inputID: FlowingLayoutInputID
     let snapshot: FlowingGraphMiniMapSnapshot<ElementID, ElementID>
   }
 
@@ -50,7 +49,7 @@ public struct FlowingGraphCanvasMiniMap<
 
   public var body: some View {
     Group {
-      if let resolvedSnapshot, resolvedSnapshot.inputID == content.id {
+      if let resolvedSnapshot {
         FlowingGraphMiniMap(
           snapshot: resolvedSnapshot.snapshot,
           viewportDriver: viewportDriver,
@@ -67,7 +66,6 @@ public struct FlowingGraphCanvasMiniMap<
       }
     }
     .task(id: content.id) {
-      resolvedSnapshot = nil
       let inputID = content.id
       let source = content.miniMapSnapshotSource()
       let task = Task.detached(priority: .userInitiated) {
@@ -80,7 +78,7 @@ public struct FlowingGraphCanvasMiniMap<
           task.cancel()
         }
         guard !Task.isCancelled, inputID == content.id else { return }
-        resolvedSnapshot = ResolvedSnapshot(inputID: inputID, snapshot: snapshot)
+        resolvedSnapshot = ResolvedSnapshot(snapshot: snapshot)
       } catch {
         return
       }

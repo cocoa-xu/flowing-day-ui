@@ -501,12 +501,15 @@ public struct FlowingGraphMiniMapDefaultContent<
 
   public var body: some View {
     Canvas(opaque: false, rendersAsynchronously: true) { graphics, _ in
-      guard let plan, plan.snapshotID == context.snapshot.id,
-        plan.transform == context.transform
-      else {
-        return
-      }
-      draw(plan, in: &graphics)
+      guard let plan else { return }
+      draw(
+        plan,
+        projection: FlowingGraphMiniMapPlanProjection(
+          source: plan.transform,
+          target: context.transform
+        ),
+        in: &graphics
+      )
     }
     .task(id: planID) {
       if context.configuration.refreshPolicy == .afterChangesSettle {
@@ -519,7 +522,7 @@ public struct FlowingGraphMiniMapDefaultContent<
         }
       }
       let snapshot = context.snapshot
-      let transform = context.transform
+      let transform = planningTransform
       let representation = context.configuration.representation
       let performance = context.configuration.performance
       let styleIndex = nodeStyleIndex
@@ -552,7 +555,7 @@ public struct FlowingGraphMiniMapDefaultContent<
   private var planID: PlanID {
     PlanID(
       snapshotID: context.snapshot.id,
-      transform: context.transform,
+      transform: planningTransform,
       representation: context.configuration.representation,
       performance: context.configuration.performance,
       refreshPolicy: context.configuration.refreshPolicy,
@@ -560,15 +563,24 @@ public struct FlowingGraphMiniMapDefaultContent<
     )
   }
 
+  private var planningTransform: FlowingGraphMiniMapTransform {
+    FlowingGraphMiniMapPlanning.transform(
+      snapshotBounds: context.snapshot.contentBounds,
+      displayTransform: context.transform,
+      scope: context.configuration.scope
+    )
+  }
+
   private func draw(
     _ plan: FlowingGraphMiniMapRenderPlan,
+    projection: FlowingGraphMiniMapPlanProjection,
     in graphics: inout GraphicsContext
   ) {
     if !plan.edgeSegments.isEmpty {
       var edgePath = Path()
       for edge in plan.edgeSegments {
-        edgePath.move(to: edge.start)
-        edgePath.addLine(to: edge.end)
+        edgePath.move(to: projection.point(edge.start))
+        edgePath.addLine(to: projection.point(edge.end))
       }
       graphics.stroke(edgePath, with: .color(style.edge), lineWidth: 1)
     }
@@ -579,7 +591,7 @@ public struct FlowingGraphMiniMapDefaultContent<
         : style.nodeStyles[0]
       var path = Path()
       for rect in batch.rects {
-        path.addRect(rect)
+        path.addRect(projection.rect(rect))
       }
       graphics.fill(path, with: .color(nodeStyle.fill))
       if batch.drawsStroke, let stroke = nodeStyle.stroke,

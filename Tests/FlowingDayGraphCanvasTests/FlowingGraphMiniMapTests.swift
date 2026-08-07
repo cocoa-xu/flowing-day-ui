@@ -59,6 +59,59 @@ final class FlowingGraphMiniMapTests: XCTestCase {
     XCTAssertEqual(bounds, CGRect(x: -200, y: 50, width: 700, height: 350))
   }
 
+  func testOverviewPlanningTransformIgnoresViewportMovement() {
+    let snapshotBounds = CGRect(x: 0, y: 0, width: 1_000, height: 600)
+    let firstDisplay = FlowingGraphMiniMapTransform(
+      worldBounds: snapshotBounds.union(CGRect(x: -400, y: 0, width: 300, height: 300)),
+      viewSize: CGSize(width: 220, height: 144),
+      padding: 10
+    )
+    let secondDisplay = FlowingGraphMiniMapTransform(
+      worldBounds: snapshotBounds.union(CGRect(x: 1_100, y: 0, width: 300, height: 300)),
+      viewSize: CGSize(width: 220, height: 144),
+      padding: 10
+    )
+
+    let first = FlowingGraphMiniMapPlanning.transform(
+      snapshotBounds: snapshotBounds,
+      displayTransform: firstDisplay,
+      scope: .overview
+    )
+    let second = FlowingGraphMiniMapPlanning.transform(
+      snapshotBounds: snapshotBounds,
+      displayTransform: secondDisplay,
+      scope: .overview
+    )
+
+    XCTAssertEqual(first, second)
+  }
+
+  func testPlanProjectionKeepsWorldGeometryAlignedWithCurrentTransform() {
+    let source = FlowingGraphMiniMapTransform(
+      worldBounds: CGRect(x: 0, y: 0, width: 1_000, height: 500),
+      viewSize: CGSize(width: 220, height: 144),
+      padding: 10
+    )
+    let target = FlowingGraphMiniMapTransform(
+      worldBounds: CGRect(x: -400, y: -200, width: 1_800, height: 900),
+      viewSize: CGSize(width: 220, height: 144),
+      padding: 10
+    )
+    let projection = FlowingGraphMiniMapPlanProjection(source: source, target: target)
+    let worldPoint = CGPoint(x: 720, y: 310)
+    let worldRect = CGRect(x: 340, y: 120, width: 180, height: 90)
+
+    let projectedPoint = projection.point(source.viewPoint(for: worldPoint))
+    let projectedRect = projection.rect(source.viewRect(for: worldRect))
+
+    XCTAssertEqual(projectedPoint.x, target.viewPoint(for: worldPoint).x, accuracy: 0.000_001)
+    XCTAssertEqual(projectedPoint.y, target.viewPoint(for: worldPoint).y, accuracy: 0.000_001)
+    XCTAssertEqual(projectedRect.minX, target.viewRect(for: worldRect).minX, accuracy: 0.000_001)
+    XCTAssertEqual(projectedRect.minY, target.viewRect(for: worldRect).minY, accuracy: 0.000_001)
+    XCTAssertEqual(projectedRect.width, target.viewRect(for: worldRect).width, accuracy: 0.000_001)
+    XCTAssertEqual(projectedRect.height, target.viewRect(for: worldRect).height, accuracy: 0.000_001)
+  }
+
   func testLocalNavigatorUsesStableSurroundingScale() {
     let bounds = FlowingGraphMiniMapScope.localNavigator(surroundingScale: 3).bounds(
       contentBounds: CGRect(x: 0, y: 0, width: 10_000, height: 10_000),

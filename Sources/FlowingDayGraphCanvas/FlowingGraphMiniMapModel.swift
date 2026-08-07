@@ -322,6 +322,53 @@ struct FlowingGraphMiniMapRenderPlan: Sendable {
   }
 }
 
+struct FlowingGraphMiniMapPlanProjection: Equatable, Sendable {
+  let scale: CGFloat
+  let offset: CGSize
+
+  init(
+    source: FlowingGraphMiniMapTransform,
+    target: FlowingGraphMiniMapTransform
+  ) {
+    scale = target.scale / source.scale
+    offset = CGSize(
+      width: target.offset.width - source.offset.width * scale,
+      height: target.offset.height - source.offset.height * scale
+    )
+  }
+
+  func point(_ point: CGPoint) -> CGPoint {
+    CGPoint(
+      x: point.x * scale + offset.width,
+      y: point.y * scale + offset.height
+    )
+  }
+
+  func rect(_ rect: CGRect) -> CGRect {
+    CGRect(
+      origin: point(rect.origin),
+      size: CGSize(width: rect.width * scale, height: rect.height * scale)
+    )
+  }
+}
+
+enum FlowingGraphMiniMapPlanning {
+  static func transform(
+    snapshotBounds: CGRect,
+    displayTransform: FlowingGraphMiniMapTransform,
+    scope: FlowingGraphMiniMapScope
+  ) -> FlowingGraphMiniMapTransform {
+    let worldBounds = scope == .overview
+      ? snapshotBounds
+      : displayTransform.worldBounds
+    return FlowingGraphMiniMapTransform(
+      worldBounds: worldBounds,
+      viewSize: displayTransform.viewSize,
+      padding: displayTransform.padding
+    )
+  }
+}
+
 enum FlowingGraphMiniMapPlanner {
   private static let minimumVisibleNodeDimension: CGFloat = 1
   private static let cancellationCheckStride = 2_048
