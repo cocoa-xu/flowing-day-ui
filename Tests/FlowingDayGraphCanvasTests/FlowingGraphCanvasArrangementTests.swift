@@ -98,6 +98,81 @@ final class FlowingGraphCanvasArrangementTests: XCTestCase {
     XCTAssertEqual(enlarged.translation.width, 2)
   }
 
+  func testTranslationSnapRemainsLockedUntilReleaseToleranceIsExceeded() {
+    let candidate = FlowingGraphCanvasSnapCandidate(
+      id: "candidate",
+      frame: CGRect(x: 105, y: 200, width: 80, height: 40)
+    )
+    let configuration = FlowingGraphCanvasSnappingConfiguration(isEnabled: true)
+    let movingBounds = CGRect(x: 0, y: 0, width: 100, height: 60)
+    let acquired = FlowingGraphCanvasArrangement.snap(
+      movingBounds: movingBounds,
+      proposedTranslation: CGSize(width: 5, height: 0),
+      candidates: [candidate],
+      configuration: configuration,
+      zoom: 1
+    )
+    let retained = FlowingGraphCanvasArrangement.snap(
+      movingBounds: movingBounds,
+      proposedTranslation: CGSize(width: 13, height: 0),
+      candidates: [candidate],
+      configuration: configuration,
+      zoom: 1,
+      snapState: acquired.snapState
+    )
+    let released = FlowingGraphCanvasArrangement.snap(
+      movingBounds: movingBounds,
+      proposedTranslation: CGSize(width: 16, height: 0),
+      candidates: [candidate],
+      configuration: configuration,
+      zoom: 1,
+      snapState: retained.snapState
+    )
+
+    XCTAssertEqual(acquired.translation.width, 5)
+    XCTAssertEqual(retained.translation.width, 5)
+    XCTAssertEqual(retained.snapState, acquired.snapState)
+    XCTAssertEqual(released.translation.width, 16)
+    XCTAssertEqual(released.snapState, FlowingGraphCanvasSnapState())
+  }
+
+  func testSnapReleaseToleranceIsMeasuredInRenderedPoints() {
+    let candidate = FlowingGraphCanvasSnapCandidate(
+      id: "candidate",
+      frame: CGRect(x: 105, y: 200, width: 80, height: 40)
+    )
+    let configuration = FlowingGraphCanvasSnappingConfiguration(isEnabled: true)
+    let movingBounds = CGRect(x: 0, y: 0, width: 100, height: 60)
+    let acquired = FlowingGraphCanvasArrangement.snap(
+      movingBounds: movingBounds,
+      proposedTranslation: CGSize(width: 5, height: 0),
+      candidates: [candidate],
+      configuration: configuration,
+      zoom: 2
+    )
+    let released = FlowingGraphCanvasArrangement.snap(
+      movingBounds: movingBounds,
+      proposedTranslation: CGSize(width: 11, height: 0),
+      candidates: [candidate],
+      configuration: configuration,
+      zoom: 2,
+      snapState: acquired.snapState
+    )
+
+    XCTAssertEqual(acquired.translation.width, 5)
+    XCTAssertEqual(released.translation.width, 11)
+    XCTAssertEqual(released.snapState, FlowingGraphCanvasSnapState())
+  }
+
+  func testReleaseToleranceDefaultsToAtLeastTheAcquisitionTolerance() {
+    let configuration = FlowingGraphCanvasSnappingConfiguration(
+      isEnabled: true,
+      tolerance: 14
+    )
+
+    XCTAssertEqual(configuration.releaseTolerance, 14)
+  }
+
   func testSnappingHonorsTheCandidateBudget() {
     let result = FlowingGraphCanvasArrangement.snap(
       movingBounds: CGRect(x: 0, y: 0, width: 100, height: 60),
@@ -270,6 +345,40 @@ final class FlowingGraphCanvasArrangementTests: XCTestCase {
 
     XCTAssertEqual(result.frame.width, 200)
     XCTAssertEqual(result.guides.map(\.kind), [.equalSize, .resize])
+  }
+
+  func testResizeSnapUsesHysteresisWithoutChangingTheStationaryEdge() {
+    let candidate = FlowingGraphCanvasSnapCandidate(
+      id: "candidate",
+      frame: CGRect(x: 150, y: 100, width: 80, height: 40)
+    )
+    let configuration = FlowingGraphCanvasSnappingConfiguration(
+      isEnabled: true,
+      targets: [.alignment]
+    )
+    let baseFrame = CGRect(x: 0, y: 0, width: 100, height: 60)
+    let acquired = FlowingGraphCanvasArrangement.resize(
+      baseFrame: baseFrame,
+      proposedFrame: CGRect(x: 0, y: 0, width: 150, height: 60),
+      edges: [.trailing],
+      candidates: [candidate],
+      configuration: configuration,
+      minimumSize: CGSize(width: 40, height: 30),
+      zoom: 1
+    )
+    let retained = FlowingGraphCanvasArrangement.resize(
+      baseFrame: baseFrame,
+      proposedFrame: CGRect(x: 0, y: 0, width: 158, height: 60),
+      edges: [.trailing],
+      candidates: [candidate],
+      configuration: configuration,
+      minimumSize: CGSize(width: 40, height: 30),
+      zoom: 1,
+      snapState: acquired.snapState
+    )
+
+    XCTAssertEqual(retained.frame, CGRect(x: 0, y: 0, width: 150, height: 60))
+    XCTAssertEqual(retained.snapState, acquired.snapState)
   }
 
   func testResizeEnforcesMinimumSizeFromTheStationaryEdge() {

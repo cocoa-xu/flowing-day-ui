@@ -8,6 +8,7 @@ public struct FlowingGraphCanvasSnappingConfiguration: Equatable, Sendable {
   public static let standardSearchRadius: CGFloat = 600
   public static let standardMaximumCandidates = 512
   public static let standardGuideOffset: CGFloat = 8
+  public static let standardReleaseTolerance: CGFloat = 10
 
   public let isEnabled: Bool
   public let targets: FlowingGraphCanvasSnapTargets
@@ -17,6 +18,7 @@ public struct FlowingGraphCanvasSnappingConfiguration: Equatable, Sendable {
   public let gridCellSize: CGSize?
   public let showsGuides: Bool
   public let guideOffset: CGFloat
+  public let releaseTolerance: CGFloat
 
   public init(
     isEnabled: Bool,
@@ -26,12 +28,15 @@ public struct FlowingGraphCanvasSnappingConfiguration: Equatable, Sendable {
     maximumCandidates: Int = standardMaximumCandidates,
     gridCellSize: CGSize? = nil,
     showsGuides: Bool = true,
-    guideOffset: CGFloat = standardGuideOffset
+    guideOffset: CGFloat = standardGuideOffset,
+    releaseTolerance: CGFloat? = nil
   ) {
+    let resolvedReleaseTolerance = releaseTolerance ?? max(tolerance, Self.standardReleaseTolerance)
     precondition(tolerance >= 0 && tolerance.isFinite)
     precondition(searchRadius >= 0 && searchRadius.isFinite)
     precondition(maximumCandidates > 0)
     precondition(guideOffset >= 0 && guideOffset.isFinite)
+    precondition(resolvedReleaseTolerance >= tolerance && resolvedReleaseTolerance.isFinite)
     if let gridCellSize {
       precondition(gridCellSize.width > 0 && gridCellSize.width.isFinite)
       precondition(gridCellSize.height > 0 && gridCellSize.height.isFinite)
@@ -44,6 +49,7 @@ public struct FlowingGraphCanvasSnappingConfiguration: Equatable, Sendable {
     self.gridCellSize = gridCellSize
     self.showsGuides = showsGuides
     self.guideOffset = guideOffset
+    self.releaseTolerance = resolvedReleaseTolerance
   }
 
   public static let disabled = Self(isEnabled: false, showsGuides: false)
@@ -105,6 +111,80 @@ public struct FlowingGraphCanvasGuide: Equatable, Sendable {
   }
 }
 
+private enum GeometryAxis: Hashable, Sendable {
+  case horizontal
+  case vertical
+
+  fileprivate func lower(_ frame: CGRect) -> CGFloat {
+    self == .horizontal ? frame.minX : frame.minY
+  }
+
+  fileprivate func middle(_ frame: CGRect) -> CGFloat {
+    self == .horizontal ? frame.midX : frame.midY
+  }
+
+  fileprivate func upper(_ frame: CGRect) -> CGFloat {
+    self == .horizontal ? frame.maxX : frame.maxY
+  }
+
+  fileprivate func length(_ frame: CGRect) -> CGFloat {
+    self == .horizontal ? frame.width : frame.height
+  }
+
+  fileprivate func crossUpper(_ frame: CGRect) -> CGFloat {
+    self == .horizontal ? frame.maxY : frame.maxX
+  }
+}
+
+private struct SnapLock: Equatable, Sendable {
+  let axis: GeometryAxis
+  let acquisitionValue: CGFloat
+  let snappedValue: CGFloat
+  let guideValue: CGFloat
+  let candidateFrame: CGRect?
+  let kind: FlowingGraphCanvasGuideKind
+  let spacingReferenceFrames: [CGRect]
+  let guideOffset: CGFloat
+
+  init(
+    axis: GeometryAxis,
+    acquisitionValue: CGFloat,
+    snappedValue: CGFloat,
+    guideValue: CGFloat,
+    candidateFrame: CGRect?,
+    kind: FlowingGraphCanvasGuideKind,
+    spacingReferenceFrames: [CGRect] = [],
+    guideOffset: CGFloat = 0
+  ) {
+    precondition(acquisitionValue.isFinite)
+    precondition(snappedValue.isFinite)
+    precondition(guideValue.isFinite)
+    precondition(guideOffset >= 0 && guideOffset.isFinite)
+    self.axis = axis
+    self.acquisitionValue = acquisitionValue
+    self.snappedValue = snappedValue
+    self.guideValue = guideValue
+    self.candidateFrame = candidateFrame
+    self.kind = kind
+    self.spacingReferenceFrames = spacingReferenceFrames
+    self.guideOffset = guideOffset
+  }
+}
+
+public struct FlowingGraphCanvasSnapState: Equatable, Sendable {
+  fileprivate var horizontal: SnapLock?
+  fileprivate var vertical: SnapLock?
+
+  public init() {}
+
+  fileprivate init(horizontal: SnapLock?, vertical: SnapLock?) {
+    precondition(horizontal == nil || horizontal?.axis == .horizontal)
+    precondition(vertical == nil || vertical?.axis == .vertical)
+    self.horizontal = horizontal
+    self.vertical = vertical
+  }
+}
+
 public struct FlowingGraphCanvasResizeEdges: OptionSet, Hashable, Sendable {
   public let rawValue: UInt8
 
@@ -139,20 +219,32 @@ extension FlowingGraphCanvasSnapCandidate: Equatable where ID: Equatable {}
 public struct FlowingGraphCanvasSnapResult: Equatable, Sendable {
   public let translation: CGSize
   public let guides: [FlowingGraphCanvasGuide]
+  public let snapState: FlowingGraphCanvasSnapState
 
-  public init(translation: CGSize, guides: [FlowingGraphCanvasGuide]) {
+  public init(
+    translation: CGSize,
+    guides: [FlowingGraphCanvasGuide],
+    snapState: FlowingGraphCanvasSnapState = .init()
+  ) {
     self.translation = translation
     self.guides = guides
+    self.snapState = snapState
   }
 }
 
 public struct FlowingGraphCanvasResizeResult: Equatable, Sendable {
   public let frame: CGRect
   public let guides: [FlowingGraphCanvasGuide]
+  public let snapState: FlowingGraphCanvasSnapState
 
-  public init(frame: CGRect, guides: [FlowingGraphCanvasGuide]) {
+  public init(
+    frame: CGRect,
+    guides: [FlowingGraphCanvasGuide],
+    snapState: FlowingGraphCanvasSnapState = .init()
+  ) {
     self.frame = frame
     self.guides = guides
+    self.snapState = snapState
   }
 }
 
@@ -193,7 +285,8 @@ public enum FlowingGraphCanvasArrangement {
     proposedTranslation: CGSize,
     candidates: [FlowingGraphCanvasSnapCandidate<ID>],
     configuration: FlowingGraphCanvasSnappingConfiguration,
-    zoom: CGFloat
+    zoom: CGFloat,
+    snapState: FlowingGraphCanvasSnapState = .init()
   ) -> FlowingGraphCanvasSnapResult {
     guard configuration.isEnabled, zoom > 0, zoom.isFinite else {
       return FlowingGraphCanvasSnapResult(
@@ -206,29 +299,60 @@ public enum FlowingGraphCanvasArrangement {
       dy: proposedTranslation.height
     )
     let tolerance = configuration.tolerance / zoom
+    let releaseTolerance = configuration.releaseTolerance / zoom
     let effectiveCandidates = Array(candidates.prefix(configuration.maximumCandidates))
-    let resolvedX = translationSnap(
-      frame: proposedBounds,
-      candidates: effectiveCandidates,
-      axis: .horizontal,
-      configuration: configuration,
-      tolerance: tolerance,
-      zoom: zoom
-    )
-    let resolvedY = translationSnap(
-      frame: proposedBounds,
-      candidates: effectiveCandidates,
-      axis: .vertical,
-      configuration: configuration,
-      tolerance: tolerance,
-      zoom: zoom
-    )
+    let resolvedX = retainedSnap(
+      snapState.horizontal,
+      proposedValue: proposedTranslation.width,
+      releaseTolerance: releaseTolerance
+    ) ?? translationSnap(
+        frame: proposedBounds,
+        candidates: effectiveCandidates,
+        axis: .horizontal,
+        configuration: configuration,
+        tolerance: tolerance,
+        zoom: zoom
+      )
+    let resolvedY = retainedSnap(
+      snapState.vertical,
+      proposedValue: proposedTranslation.height,
+      releaseTolerance: releaseTolerance
+    ) ?? translationSnap(
+        frame: proposedBounds,
+        candidates: effectiveCandidates,
+        axis: .vertical,
+        configuration: configuration,
+        tolerance: tolerance,
+        zoom: zoom
+      )
     let translation = CGSize(
       width: proposedTranslation.width + (resolvedX?.delta ?? 0),
       height: proposedTranslation.height + (resolvedY?.delta ?? 0)
     )
+    let resolvedState = FlowingGraphCanvasSnapState(
+      horizontal: resolvedX.map {
+        lock(
+          from: $0,
+          axis: .horizontal,
+          proposedValue: proposedTranslation.width,
+          snappedValue: translation.width
+        )
+      },
+      vertical: resolvedY.map {
+        lock(
+          from: $0,
+          axis: .vertical,
+          proposedValue: proposedTranslation.height,
+          snappedValue: translation.height
+        )
+      }
+    )
     guard configuration.showsGuides else {
-      return FlowingGraphCanvasSnapResult(translation: translation, guides: [])
+      return FlowingGraphCanvasSnapResult(
+        translation: translation,
+        guides: [],
+        snapState: resolvedState
+      )
     }
     let snappedBounds = movingBounds.offsetBy(dx: translation.width, dy: translation.height)
     var guides: [FlowingGraphCanvasGuide] = []
@@ -248,7 +372,11 @@ public enum FlowingGraphCanvasArrangement {
           axis: .vertical
         ))
     }
-    return FlowingGraphCanvasSnapResult(translation: translation, guides: guides)
+    return FlowingGraphCanvasSnapResult(
+      translation: translation,
+      guides: guides,
+      snapState: resolvedState
+    )
   }
 
   public static func resize<ID: Hashable & Sendable>(
@@ -258,7 +386,8 @@ public enum FlowingGraphCanvasArrangement {
     candidates: [FlowingGraphCanvasSnapCandidate<ID>],
     configuration: FlowingGraphCanvasSnappingConfiguration,
     minimumSize: CGSize,
-    zoom: CGFloat
+    zoom: CGFloat,
+    snapState: FlowingGraphCanvasSnapState = .init()
   ) -> FlowingGraphCanvasResizeResult {
     precondition(edges.isValid)
     precondition(minimumSize.width >= 0 && minimumSize.width.isFinite)
@@ -268,33 +397,49 @@ public enum FlowingGraphCanvasArrangement {
     }
     let effectiveCandidates = Array(candidates.prefix(configuration.maximumCandidates))
     let tolerance = configuration.tolerance / zoom
-    var frame = constrained(
+    let releaseTolerance = configuration.releaseTolerance / zoom
+    let proposedConstrainedFrame = constrained(
       proposedFrame,
       relativeTo: baseFrame,
       edges: edges,
       minimumSize: minimumSize
     )
+    var frame = proposedConstrainedFrame
     var resolved: [(GeometryAxis, Snap)] = []
     if configuration.isEnabled {
-      if let snap = resizeSnap(
-        frame: frame,
-        edges: edges,
-        candidates: effectiveCandidates,
-        axis: .horizontal,
-        configuration: configuration,
-        tolerance: tolerance
-      ) {
+      let proposedHorizontalValue = resizeValue(frame, edges: edges, axis: .horizontal)
+      if let snap = proposedHorizontalValue.flatMap({ value in
+        retainedSnap(
+          snapState.horizontal,
+          proposedValue: value,
+          releaseTolerance: releaseTolerance
+        ) ?? resizeSnap(
+          frame: frame,
+          edges: edges,
+          candidates: effectiveCandidates,
+          axis: .horizontal,
+          configuration: configuration,
+          tolerance: tolerance
+        )
+      }) {
         frame = applying(snap, to: frame, edges: edges, axis: .horizontal)
         resolved.append((.horizontal, snap))
       }
-      if let snap = resizeSnap(
-        frame: frame,
-        edges: edges,
-        candidates: effectiveCandidates,
-        axis: .vertical,
-        configuration: configuration,
-        tolerance: tolerance
-      ) {
+      let proposedVerticalValue = resizeValue(frame, edges: edges, axis: .vertical)
+      if let snap = proposedVerticalValue.flatMap({ value in
+        retainedSnap(
+          snapState.vertical,
+          proposedValue: value,
+          releaseTolerance: releaseTolerance
+        ) ?? resizeSnap(
+          frame: frame,
+          edges: edges,
+          candidates: effectiveCandidates,
+          axis: .vertical,
+          configuration: configuration,
+          tolerance: tolerance
+        )
+      }) {
         frame = applying(snap, to: frame, edges: edges, axis: .vertical)
         resolved.append((.vertical, snap))
       }
@@ -305,8 +450,34 @@ public enum FlowingGraphCanvasArrangement {
         minimumSize: minimumSize
       )
     }
+    let resolvedState = FlowingGraphCanvasSnapState(
+      horizontal: resizeLock(
+        in: resolved,
+        axis: .horizontal,
+        proposedValue: resizeValue(
+          proposedConstrainedFrame,
+          edges: edges,
+          axis: .horizontal
+        ),
+        snappedValue: resizeValue(frame, edges: edges, axis: .horizontal)
+      ),
+      vertical: resizeLock(
+        in: resolved,
+        axis: .vertical,
+        proposedValue: resizeValue(
+          proposedConstrainedFrame,
+          edges: edges,
+          axis: .vertical
+        ),
+        snappedValue: resizeValue(frame, edges: edges, axis: .vertical)
+      )
+    )
     guard configuration.showsGuides else {
-      return FlowingGraphCanvasResizeResult(frame: frame, guides: [])
+      return FlowingGraphCanvasResizeResult(
+        frame: frame,
+        guides: [],
+        snapState: resolvedState
+      )
     }
     var guides = resolved.flatMap {
       resolvedGuides(for: $0.1, snappedFrame: frame, axis: $0.0)
@@ -322,7 +493,11 @@ public enum FlowingGraphCanvasArrangement {
         dimensionGuide(for: frame, axis: .vertical, offset: offset, kind: .resize)
       )
     }
-    return FlowingGraphCanvasResizeResult(frame: frame, guides: guides)
+    return FlowingGraphCanvasResizeResult(
+      frame: frame,
+      guides: guides,
+      snapState: resolvedState
+    )
   }
 
   public static func translations<ID: Hashable & Sendable>(
@@ -344,6 +519,7 @@ public enum FlowingGraphCanvasArrangement {
     let kind: FlowingGraphCanvasGuideKind
     let spacingReferenceFrames: [CGRect]
     let guideOffset: CGFloat
+    let retainedLock: SnapLock?
 
     init(
       delta: CGFloat,
@@ -351,7 +527,8 @@ public enum FlowingGraphCanvasArrangement {
       candidateFrame: CGRect?,
       kind: FlowingGraphCanvasGuideKind,
       spacingReferenceFrames: [CGRect] = [],
-      guideOffset: CGFloat = 0
+      guideOffset: CGFloat = 0,
+      retainedLock: SnapLock? = nil
     ) {
       self.delta = delta
       self.value = value
@@ -359,32 +536,79 @@ public enum FlowingGraphCanvasArrangement {
       self.kind = kind
       self.spacingReferenceFrames = spacingReferenceFrames
       self.guideOffset = guideOffset
+      self.retainedLock = retainedLock
     }
   }
 
-  private enum GeometryAxis {
-    case horizontal
-    case vertical
-
-    func lower(_ frame: CGRect) -> CGFloat {
-      self == .horizontal ? frame.minX : frame.minY
+  private static func retainedSnap(
+    _ lock: SnapLock?,
+    proposedValue: CGFloat,
+    releaseTolerance: CGFloat
+  ) -> Snap? {
+    guard let lock,
+      abs(proposedValue - lock.acquisitionValue) <= releaseTolerance
+    else {
+      return nil
     }
+    return Snap(
+      delta: lock.snappedValue - proposedValue,
+      value: lock.guideValue,
+      candidateFrame: lock.candidateFrame,
+      kind: lock.kind,
+      spacingReferenceFrames: lock.spacingReferenceFrames,
+      guideOffset: lock.guideOffset,
+      retainedLock: lock
+    )
+  }
 
-    func middle(_ frame: CGRect) -> CGFloat {
-      self == .horizontal ? frame.midX : frame.midY
-    }
+  private static func lock(
+    from snap: Snap,
+    axis: GeometryAxis,
+    proposedValue: CGFloat,
+    snappedValue: CGFloat
+  ) -> SnapLock {
+    snap.retainedLock
+      ?? SnapLock(
+        axis: axis,
+        acquisitionValue: proposedValue,
+        snappedValue: snappedValue,
+        guideValue: snap.value,
+        candidateFrame: snap.candidateFrame,
+        kind: snap.kind,
+        spacingReferenceFrames: snap.spacingReferenceFrames,
+        guideOffset: snap.guideOffset
+      )
+  }
 
-    func upper(_ frame: CGRect) -> CGFloat {
-      self == .horizontal ? frame.maxX : frame.maxY
-    }
+  private static func resizeValue(
+    _ frame: CGRect,
+    edges: FlowingGraphCanvasResizeEdges,
+    axis: GeometryAxis
+  ) -> CGFloat? {
+    let usesLower = axis == .horizontal ? edges.contains(.leading) : edges.contains(.top)
+    let usesUpper = axis == .horizontal ? edges.contains(.trailing) : edges.contains(.bottom)
+    guard usesLower != usesUpper else { return nil }
+    return usesLower ? axis.lower(frame) : axis.upper(frame)
+  }
 
-    func length(_ frame: CGRect) -> CGFloat {
-      self == .horizontal ? frame.width : frame.height
+  private static func resizeLock(
+    in resolved: [(GeometryAxis, Snap)],
+    axis: GeometryAxis,
+    proposedValue: CGFloat?,
+    snappedValue: CGFloat?
+  ) -> SnapLock? {
+    guard let proposedValue,
+      let snappedValue,
+      let snap = resolved.first(where: { $0.0 == axis })?.1
+    else {
+      return nil
     }
-
-    func crossUpper(_ frame: CGRect) -> CGFloat {
-      self == .horizontal ? frame.maxY : frame.maxX
-    }
+    return lock(
+      from: snap,
+      axis: axis,
+      proposedValue: proposedValue,
+      snappedValue: snappedValue
+    )
   }
 
   private static func translationSnap<ID>(

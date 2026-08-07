@@ -55,6 +55,7 @@ public struct FlowingGraphCanvasTransientNodeDrag<
   public let baseBounds: CGRect?
   public var translation: CGSize
   public var guides: [FlowingGraphCanvasGuide]
+  public var snapState: FlowingGraphCanvasSnapState
 
   public init(
     nodeID: ElementID,
@@ -63,7 +64,8 @@ public struct FlowingGraphCanvasTransientNodeDrag<
     baseLayoutInputID: FlowingLayoutInputID,
     baseBounds: CGRect? = nil,
     translation: CGSize = .zero,
-    guides: [FlowingGraphCanvasGuide] = []
+    guides: [FlowingGraphCanvasGuide] = [],
+    snapState: FlowingGraphCanvasSnapState = .init()
   ) {
     let resolvedNodeIDs = nodeIDs ?? [nodeID]
     precondition(resolvedNodeIDs.contains(nodeID))
@@ -74,6 +76,7 @@ public struct FlowingGraphCanvasTransientNodeDrag<
     self.baseBounds = baseBounds
     self.translation = translation
     self.guides = guides
+    self.snapState = snapState
   }
 }
 
@@ -89,6 +92,7 @@ public struct FlowingGraphCanvasTransientNodeResize<
   public let edges: FlowingGraphCanvasResizeEdges
   public var frame: CGRect
   public var guides: [FlowingGraphCanvasGuide]
+  public var snapState: FlowingGraphCanvasSnapState
 
   public init(
     nodeID: ElementID,
@@ -97,7 +101,8 @@ public struct FlowingGraphCanvasTransientNodeResize<
     baseFrame: CGRect,
     edges: FlowingGraphCanvasResizeEdges,
     frame: CGRect? = nil,
-    guides: [FlowingGraphCanvasGuide] = []
+    guides: [FlowingGraphCanvasGuide] = [],
+    snapState: FlowingGraphCanvasSnapState = .init()
   ) {
     precondition(edges.isValid)
     self.nodeID = nodeID
@@ -107,6 +112,7 @@ public struct FlowingGraphCanvasTransientNodeResize<
     self.edges = edges
     self.frame = frame ?? baseFrame
     self.guides = guides
+    self.snapState = snapState
   }
 }
 

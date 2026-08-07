@@ -501,6 +501,7 @@ public struct FlowingGraphCanvas<
         let result = snap(drag: drag, proposedTranslation: proposedTranslation)
         session.transientNodeDrag?.translation = result.translation
         session.transientNodeDrag?.guides = result.guides
+        session.transientNodeDrag?.snapState = result.snapState
       }
       .onEnded { _ in
         defer { rejectedNodeDragID = nil }
@@ -676,10 +677,12 @@ public struct FlowingGraphCanvas<
       candidates: candidates,
       configuration: configuration.snapping,
       minimumSize: configuration.nodeResizing.minimumSize,
-      zoom: zoom
+      zoom: zoom,
+      snapState: resize.snapState
     )
     session.transientNodeResize?.frame = result.frame
     session.transientNodeResize?.guides = result.guides
+    session.transientNodeResize?.snapState = result.snapState
   }
 
   private func endNodeResize(elementID: ElementID) {
@@ -979,7 +982,8 @@ public struct FlowingGraphCanvas<
       proposedTranslation: proposedTranslation,
       candidates: candidates,
       configuration: configuration.snapping,
-      zoom: session.viewport.transform.zoom
+      zoom: session.viewport.transform.zoom,
+      snapState: drag.snapState
     )
   }
 
