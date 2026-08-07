@@ -198,6 +198,16 @@ public struct FlowingGraphCanvasResizeEdges: OptionSet, Hashable, Sendable {
   public static let trailing = Self(rawValue: 1 << 1)
   public static let top = Self(rawValue: 1 << 2)
   public static let bottom = Self(rawValue: 1 << 3)
+  public static let standardHandles: [Self] = [
+    [.leading, .top],
+    [.top],
+    [.trailing, .top],
+    [.trailing],
+    [.trailing, .bottom],
+    [.bottom],
+    [.leading, .bottom],
+    [.leading],
+  ]
 
   public var isValid: Bool {
     !isEmpty
@@ -323,11 +333,13 @@ public enum FlowingGraphCanvasArrangement {
     let tolerance = configuration.tolerance / zoom
     let releaseTolerance = configuration.releaseTolerance / zoom
     let effectiveCandidates = Array(candidates.prefix(configuration.maximumCandidates))
-    let resolvedX = retainedSnap(
-      snapState.horizontal,
-      proposedValue: proposedTranslation.width,
-      releaseTolerance: releaseTolerance
-    ) ?? translationSnap(
+    let resolvedX =
+      retainedSnap(
+        snapState.horizontal,
+        proposedValue: proposedTranslation.width,
+        releaseTolerance: releaseTolerance
+      )
+      ?? translationSnap(
         frame: proposedBounds,
         candidates: effectiveCandidates,
         axis: .horizontal,
@@ -335,11 +347,13 @@ public enum FlowingGraphCanvasArrangement {
         tolerance: tolerance,
         zoom: zoom
       )
-    let resolvedY = retainedSnap(
-      snapState.vertical,
-      proposedValue: proposedTranslation.height,
-      releaseTolerance: releaseTolerance
-    ) ?? translationSnap(
+    let resolvedY =
+      retainedSnap(
+        snapState.vertical,
+        proposedValue: proposedTranslation.height,
+        releaseTolerance: releaseTolerance
+      )
+      ?? translationSnap(
         frame: proposedBounds,
         candidates: effectiveCandidates,
         axis: .vertical,
@@ -435,20 +449,22 @@ public enum FlowingGraphCanvasArrangement {
       let proposedHorizontalValue = resizeValue(frame, edges: edges, axis: .horizontal)
       if shouldResolve(axis: .horizontal, behavior: behavior),
         let snap = proposedHorizontalValue.flatMap({ value in
-        retainedSnap(
-          snapState.horizontal,
-          proposedValue: value,
-          releaseTolerance: releaseTolerance
-        ) ?? resizeSnap(
-          frame: frame,
-          edges: edges,
-          candidates: effectiveCandidates,
-          axis: .horizontal,
-          configuration: configuration,
-          tolerance: tolerance,
-          behavior: behavior
-        )
-      }) {
+          retainedSnap(
+            snapState.horizontal,
+            proposedValue: value,
+            releaseTolerance: releaseTolerance
+          )
+            ?? resizeSnap(
+              frame: frame,
+              edges: edges,
+              candidates: effectiveCandidates,
+              axis: .horizontal,
+              configuration: configuration,
+              tolerance: tolerance,
+              behavior: behavior
+            )
+        })
+      {
         frame = applying(
           snap,
           to: frame,
@@ -462,20 +478,22 @@ public enum FlowingGraphCanvasArrangement {
       let proposedVerticalValue = resizeValue(frame, edges: edges, axis: .vertical)
       if shouldResolve(axis: .vertical, behavior: behavior),
         let snap = proposedVerticalValue.flatMap({ value in
-        retainedSnap(
-          snapState.vertical,
-          proposedValue: value,
-          releaseTolerance: releaseTolerance
-        ) ?? resizeSnap(
-          frame: frame,
-          edges: edges,
-          candidates: effectiveCandidates,
-          axis: .vertical,
-          configuration: configuration,
-          tolerance: tolerance,
-          behavior: behavior
-        )
-      }) {
+          retainedSnap(
+            snapState.vertical,
+            proposedValue: value,
+            releaseTolerance: releaseTolerance
+          )
+            ?? resizeSnap(
+              frame: frame,
+              edges: edges,
+              candidates: effectiveCandidates,
+              axis: .vertical,
+              configuration: configuration,
+              tolerance: tolerance,
+              behavior: behavior
+            )
+        })
+      {
         frame = applying(
           snap,
           to: frame,

@@ -12,6 +12,9 @@ final class FlowingGraphCanvasArrangementTests: XCTestCase {
     XCTAssertFalse(FlowingGraphCanvasResizeEdges().isValid)
     XCTAssertFalse(horizontalOpposites.isValid)
     XCTAssertFalse(verticalOpposites.isValid)
+    XCTAssertEqual(FlowingGraphCanvasResizeEdges.standardHandles.count, 8)
+    XCTAssertEqual(Set(FlowingGraphCanvasResizeEdges.standardHandles).count, 8)
+    XCTAssertTrue(FlowingGraphCanvasResizeEdges.standardHandles.allSatisfy(\.isValid))
   }
 
   func testDisabledSnappingPreservesTheProposedTranslation() {

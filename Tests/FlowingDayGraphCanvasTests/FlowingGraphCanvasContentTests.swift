@@ -382,18 +382,24 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
       baseLayoutInputID: fixture.input.id
     )
     let resize = FlowingGraphCanvasNodeResizeIntent<CanvasCompositionSchema>(
-      nodeID: nodeID,
+      anchorNodeID: nodeID,
+      changes: [
+        FlowingGraphCanvasNodeResizeChange(
+          nodeID: nodeID,
+          originTranslation: CGSize(width: 10, height: 20),
+          sizeDelta: CGSize(width: 40, height: 20)
+        )
+      ],
       edges: [.trailing, .bottom],
-      originTranslation: CGSize(width: 10, height: 20),
-      sizeDelta: CGSize(width: 40, height: 20),
       basePresentationSnapshotID: fixture.presentation.snapshotID,
       baseLayoutInputID: fixture.input.id
     )
     let transientResize = FlowingGraphCanvasTransientNodeResize<CanvasCompositionSchema>(
-      nodeID: nodeID,
+      anchorNodeID: nodeID,
       basePresentationSnapshotID: fixture.presentation.snapshotID,
       baseLayoutInputID: fixture.input.id,
-      baseFrame: CGRect(x: 10, y: 20, width: 100, height: 60),
+      nodeOrder: [nodeID],
+      baseFrames: [nodeID: CGRect(x: 10, y: 20, width: 100, height: 60)],
       edges: [.trailing, .bottom]
     )
 
@@ -487,6 +493,20 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
     XCTAssertEqual(result, CGRect(x: -10, y: 10, width: 120, height: 60))
   }
 
+  func testTransientResizeKeepsTheLockedAspectRatioDrivingAxis() {
+    let result = FlowingGraphCanvasTransientGeometry.resizing(
+      CGRect(x: 10, y: 20, width: 100, height: 50),
+      edges: [.trailing, .bottom],
+      translation: CGSize(width: 20, height: 40),
+      behavior: FlowingGraphCanvasResizeBehavior(
+        preservesAspectRatio: true,
+        aspectRatioDrivingAxis: .horizontal
+      )
+    )
+
+    XCTAssertEqual(result, CGRect(x: 10, y: 20, width: 120, height: 60))
+  }
+
   func testTransientResizeCanScaleFromCenter() {
     let result = FlowingGraphCanvasTransientGeometry.resizing(
       CGRect(x: 10, y: 20, width: 100, height: 50),
@@ -507,6 +527,46 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
     )
 
     XCTAssertEqual(result, CGRect(x: 10, y: 15, width: 120, height: 60))
+  }
+
+  func testTransientGeometryScalesEveryFrameInsideSelectionBounds() {
+    let result = FlowingGraphCanvasTransientGeometry.scaling(
+      [
+        "first": CGRect(x: 0, y: 0, width: 10, height: 10),
+        "second": CGRect(x: 30, y: 20, width: 20, height: 20),
+      ],
+      from: CGRect(x: 0, y: 0, width: 50, height: 40),
+      to: CGRect(x: 10, y: 20, width: 100, height: 80)
+    )
+
+    XCTAssertEqual(result["first"], CGRect(x: 10, y: 20, width: 20, height: 20))
+    XCTAssertEqual(result["second"], CGRect(x: 70, y: 60, width: 40, height: 40))
+  }
+
+  func testTransientGroupResizeDerivesStableBoundsAndMembership() throws {
+    let fixture = try makeFixture()
+    let nodeIDs = fixture.presentation.nodes.prefix(2).map(\.id)
+    let frames = Dictionary(
+      uniqueKeysWithValues: try nodeIDs.map { nodeID in
+        let localID = try XCTUnwrap(fixture.presentation.nodes.first { $0.id == nodeID }?.localID)
+        return (nodeID, try XCTUnwrap(fixture.result.frame(for: localID)))
+      }
+    )
+    let resize = FlowingGraphCanvasTransientNodeResize<CanvasCompositionSchema>(
+      anchorNodeID: nodeIDs[0],
+      basePresentationSnapshotID: fixture.presentation.snapshotID,
+      baseLayoutInputID: fixture.input.id,
+      nodeOrder: Array(nodeIDs),
+      baseFrames: frames,
+      edges: [.trailing, .bottom]
+    )
+
+    XCTAssertEqual(resize.nodeIDs, Set(nodeIDs))
+    XCTAssertEqual(
+      resize.baseBounds,
+      frames.values.reduce(CGRect.null) { $0.union($1) }
+    )
+    XCTAssertEqual(resize.bounds, resize.baseBounds)
   }
 
   @MainActor

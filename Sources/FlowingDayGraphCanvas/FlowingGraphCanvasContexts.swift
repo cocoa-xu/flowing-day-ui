@@ -90,6 +90,38 @@ public struct FlowingGraphCanvasNodeResizeActions {
 }
 
 @MainActor
+public struct FlowingGraphCanvasSelectionResizeContext<Schema: FlowingGraphCanvasSchema> {
+  public typealias ElementID = FlowingGraphCompositionElementID<Schema>
+
+  public let anchorNodeID: ElementID
+  public let nodeIDs: Set<ElementID>
+  public let frame: CGRect
+  public let renderedFrame: CGRect
+  public let renderScale: CGFloat
+  public let isResizing: Bool
+  public let actions: FlowingGraphCanvasNodeResizeActions
+
+  public init(
+    anchorNodeID: ElementID,
+    nodeIDs: Set<ElementID>,
+    frame: CGRect,
+    renderedFrame: CGRect,
+    renderScale: CGFloat,
+    isResizing: Bool,
+    actions: FlowingGraphCanvasNodeResizeActions
+  ) {
+    precondition(!nodeIDs.isEmpty && nodeIDs.contains(anchorNodeID))
+    self.anchorNodeID = anchorNodeID
+    self.nodeIDs = nodeIDs
+    self.frame = frame
+    self.renderedFrame = renderedFrame
+    self.renderScale = renderScale
+    self.isResizing = isResizing
+    self.actions = actions
+  }
+}
+
+@MainActor
 public enum FlowingGraphCanvasPlatformInput {
   public static var isAdditiveSelectionActive: Bool {
     #if canImport(AppKit)
@@ -296,6 +328,7 @@ public struct FlowingGraphCanvasWorldContext<Schema: FlowingGraphCanvasSchema> {
   public let session: FlowingGraphCanvasSessionState<Schema>
   public let renderContext: FlowingCanvasRenderContext
   public let surface: FlowingCanvasRenderSurface
+  public let selectionResize: FlowingGraphCanvasSelectionResizeContext<Schema>?
 }
 
 @MainActor

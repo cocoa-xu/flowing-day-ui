@@ -56,6 +56,7 @@ public struct FlowingGraphCanvasTransientNodeDrag<
   public var translation: CGSize
   public var guides: [FlowingGraphCanvasGuide]
   public var snapState: FlowingGraphCanvasSnapState
+  public var constrainedAxis: FlowingGraphCanvasGeometryAxis?
 
   public init(
     nodeID: ElementID,
@@ -65,7 +66,8 @@ public struct FlowingGraphCanvasTransientNodeDrag<
     baseBounds: CGRect? = nil,
     translation: CGSize = .zero,
     guides: [FlowingGraphCanvasGuide] = [],
-    snapState: FlowingGraphCanvasSnapState = .init()
+    snapState: FlowingGraphCanvasSnapState = .init(),
+    constrainedAxis: FlowingGraphCanvasGeometryAxis? = nil
   ) {
     let resolvedNodeIDs = nodeIDs ?? [nodeID]
     precondition(resolvedNodeIDs.contains(nodeID))
@@ -77,6 +79,7 @@ public struct FlowingGraphCanvasTransientNodeDrag<
     self.translation = translation
     self.guides = guides
     self.snapState = snapState
+    self.constrainedAxis = constrainedAxis
   }
 }
 
@@ -85,34 +88,53 @@ public struct FlowingGraphCanvasTransientNodeResize<
 >: Equatable, Sendable {
   public typealias ElementID = FlowingGraphCompositionElementID<Schema>
 
-  public let nodeID: ElementID
+  public let anchorNodeID: ElementID
+  public let nodeIDs: Set<ElementID>
+  public let nodeOrder: [ElementID]
   public let basePresentationSnapshotID: FlowingGraphPresentationSnapshotID
   public let baseLayoutInputID: FlowingLayoutInputID
-  public let baseFrame: CGRect
+  public let baseFrames: [ElementID: CGRect]
+  public let baseBounds: CGRect
+  public let minimumBoundsSize: CGSize
   public let edges: FlowingGraphCanvasResizeEdges
-  public var frame: CGRect
+  public var bounds: CGRect
   public var guides: [FlowingGraphCanvasGuide]
   public var snapState: FlowingGraphCanvasSnapState
+  public var aspectRatioDrivingAxis: FlowingGraphCanvasGeometryAxis?
 
   public init(
-    nodeID: ElementID,
+    anchorNodeID: ElementID,
     basePresentationSnapshotID: FlowingGraphPresentationSnapshotID,
     baseLayoutInputID: FlowingLayoutInputID,
-    baseFrame: CGRect,
+    nodeOrder: [ElementID],
+    baseFrames: [ElementID: CGRect],
+    minimumBoundsSize: CGSize = .zero,
     edges: FlowingGraphCanvasResizeEdges,
-    frame: CGRect? = nil,
+    bounds: CGRect? = nil,
     guides: [FlowingGraphCanvasGuide] = [],
-    snapState: FlowingGraphCanvasSnapState = .init()
+    snapState: FlowingGraphCanvasSnapState = .init(),
+    aspectRatioDrivingAxis: FlowingGraphCanvasGeometryAxis? = nil
   ) {
     precondition(edges.isValid)
-    self.nodeID = nodeID
+    precondition(!baseFrames.isEmpty && baseFrames[anchorNodeID] != nil)
+    precondition(nodeOrder.first == anchorNodeID)
+    precondition(Set(nodeOrder) == Set(baseFrames.keys) && nodeOrder.count == baseFrames.count)
+    precondition(minimumBoundsSize.width >= 0 && minimumBoundsSize.width.isFinite)
+    precondition(minimumBoundsSize.height >= 0 && minimumBoundsSize.height.isFinite)
+    let resolvedBaseBounds = baseFrames.values.reduce(CGRect.null) { $0.union($1) }
+    self.anchorNodeID = anchorNodeID
+    nodeIDs = Set(baseFrames.keys)
+    self.nodeOrder = nodeOrder
     self.basePresentationSnapshotID = basePresentationSnapshotID
     self.baseLayoutInputID = baseLayoutInputID
-    self.baseFrame = baseFrame
+    self.baseFrames = baseFrames
+    baseBounds = resolvedBaseBounds
+    self.minimumBoundsSize = minimumBoundsSize
     self.edges = edges
-    self.frame = frame ?? baseFrame
+    self.bounds = bounds ?? resolvedBaseBounds
     self.guides = guides
     self.snapState = snapState
+    self.aspectRatioDrivingAxis = aspectRatioDrivingAxis
   }
 }
 
@@ -255,33 +277,52 @@ public struct FlowingGraphCanvasNodeDragIntent<
   }
 }
 
-public struct FlowingGraphCanvasNodeResizeIntent<
+public struct FlowingGraphCanvasNodeResizeChange<
   Schema: FlowingGraphCanvasSchema
 >: Equatable, Sendable {
   public typealias ElementID = FlowingGraphCompositionElementID<Schema>
 
   public let nodeID: ElementID
-  public let edges: FlowingGraphCanvasResizeEdges
   public let originTranslation: CGSize
   public let sizeDelta: CGSize
+
+  public init(
+    nodeID: ElementID,
+    originTranslation: CGSize,
+    sizeDelta: CGSize
+  ) {
+    precondition(originTranslation.width.isFinite && originTranslation.height.isFinite)
+    precondition(sizeDelta.width.isFinite && sizeDelta.height.isFinite)
+    self.nodeID = nodeID
+    self.originTranslation = originTranslation
+    self.sizeDelta = sizeDelta
+  }
+}
+
+public struct FlowingGraphCanvasNodeResizeIntent<
+  Schema: FlowingGraphCanvasSchema
+>: Equatable, Sendable {
+  public typealias ElementID = FlowingGraphCompositionElementID<Schema>
+
+  public let anchorNodeID: ElementID
+  public let changes: [FlowingGraphCanvasNodeResizeChange<Schema>]
+  public let edges: FlowingGraphCanvasResizeEdges
   public let basePresentationSnapshotID: FlowingGraphPresentationSnapshotID
   public let baseLayoutInputID: FlowingLayoutInputID
 
   public init(
-    nodeID: ElementID,
+    anchorNodeID: ElementID,
+    changes: [FlowingGraphCanvasNodeResizeChange<Schema>],
     edges: FlowingGraphCanvasResizeEdges,
-    originTranslation: CGSize,
-    sizeDelta: CGSize,
     basePresentationSnapshotID: FlowingGraphPresentationSnapshotID,
     baseLayoutInputID: FlowingLayoutInputID
   ) {
     precondition(edges.isValid)
-    precondition(originTranslation.width.isFinite && originTranslation.height.isFinite)
-    precondition(sizeDelta.width.isFinite && sizeDelta.height.isFinite)
-    self.nodeID = nodeID
+    precondition(!changes.isEmpty && changes.contains { $0.nodeID == anchorNodeID })
+    precondition(Set(changes.map(\.nodeID)).count == changes.count)
+    self.anchorNodeID = anchorNodeID
+    self.changes = changes
     self.edges = edges
-    self.originTranslation = originTranslation
-    self.sizeDelta = sizeDelta
     self.basePresentationSnapshotID = basePresentationSnapshotID
     self.baseLayoutInputID = baseLayoutInputID
   }

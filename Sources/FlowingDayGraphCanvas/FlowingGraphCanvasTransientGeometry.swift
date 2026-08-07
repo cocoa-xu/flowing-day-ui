@@ -8,9 +8,38 @@ public enum FlowingGraphCanvasTransientGeometry {
     translation: CGSize,
     modifiers: FlowingGraphCanvasInteractionModifiers = []
   ) -> CGRect {
+    let preservesAspectRatio = modifiers.contains(.preserveResizeAspectRatio)
+    let hasHorizontalEdge = edges.intersection([.leading, .trailing]).isEmpty == false
+    let hasVerticalEdge = edges.intersection([.top, .bottom]).isEmpty == false
+    let drivingAxis: FlowingGraphCanvasGeometryAxis?
+    if !preservesAspectRatio {
+      drivingAxis = nil
+    } else if hasHorizontalEdge && hasVerticalEdge {
+      drivingAxis = dominantAxis(for: translation, relativeTo: frame.size)
+    } else {
+      drivingAxis = hasHorizontalEdge ? .horizontal : .vertical
+    }
+    return resizing(
+      frame,
+      edges: edges,
+      translation: translation,
+      behavior: FlowingGraphCanvasResizeBehavior(
+        preservesAspectRatio: preservesAspectRatio,
+        resizesFromCenter: modifiers.contains(.resizeFromCenter),
+        aspectRatioDrivingAxis: drivingAxis
+      )
+    )
+  }
+
+  public static func resizing(
+    _ frame: CGRect,
+    edges: FlowingGraphCanvasResizeEdges,
+    translation: CGSize,
+    behavior: FlowingGraphCanvasResizeBehavior
+  ) -> CGRect {
     precondition(edges.isValid)
     var result = frame
-    let fromCenter = modifiers.contains(.resizeFromCenter)
+    let fromCenter = behavior.resizesFromCenter
     if edges.contains(.leading) {
       result.origin.x += translation.width
       result.size.width -= translation.width * (fromCenter ? 2 : 1)
@@ -29,23 +58,16 @@ public enum FlowingGraphCanvasTransientGeometry {
       }
       result.size.height += translation.height * (fromCenter ? 2 : 1)
     }
-    guard modifiers.contains(.preserveResizeAspectRatio),
+    guard behavior.preservesAspectRatio,
       frame.width > 0,
       frame.height > 0
     else {
       return result
     }
-    let hasHorizontalEdge = edges.intersection([.leading, .trailing]).isEmpty == false
-    let hasVerticalEdge = edges.intersection([.top, .bottom]).isEmpty == false
     let horizontalScale = result.width / frame.width
     let verticalScale = result.height / frame.height
     let scale: CGFloat
-    if hasHorizontalEdge && hasVerticalEdge {
-      scale =
-        abs(horizontalScale - 1) >= abs(verticalScale - 1)
-        ? horizontalScale
-        : verticalScale
-    } else if hasHorizontalEdge {
+    if behavior.aspectRatioDrivingAxis == .horizontal {
       scale = horizontalScale
     } else {
       scale = verticalScale
@@ -69,7 +91,23 @@ public enum FlowingGraphCanvasTransientGeometry {
   }
 
   public static func constrainingToDominantAxis(_ translation: CGSize) -> CGSize {
-    abs(translation.width) >= abs(translation.height)
+    constraining(translation, to: dominantAxis(for: translation))
+  }
+
+  public static func dominantAxis(
+    for translation: CGSize,
+    relativeTo size: CGSize? = nil
+  ) -> FlowingGraphCanvasGeometryAxis {
+    let horizontal = normalizedChange(translation.width, length: size?.width)
+    let vertical = normalizedChange(translation.height, length: size?.height)
+    return horizontal >= vertical ? .horizontal : .vertical
+  }
+
+  public static func constraining(
+    _ translation: CGSize,
+    to axis: FlowingGraphCanvasGeometryAxis
+  ) -> CGSize {
+    axis == .horizontal
       ? CGSize(width: translation.width, height: 0)
       : CGSize(width: 0, height: translation.height)
   }
@@ -87,6 +125,37 @@ public enum FlowingGraphCanvasTransientGeometry {
         y: destination.minY + destination.height * vertical
       ),
       normal: anchor.normal
+    )
+  }
+
+  public static func scaling<ID: Hashable>(
+    _ frames: [ID: CGRect],
+    from source: CGRect,
+    to destination: CGRect
+  ) -> [ID: CGRect] {
+    Dictionary(
+      uniqueKeysWithValues: frames.map { id, frame in
+        (id, resizing(frame, from: source, to: destination))
+      }
+    )
+  }
+
+  public static func resizing(
+    _ frame: CGRect,
+    from source: CGRect,
+    to destination: CGRect
+  ) -> CGRect {
+    let horizontalScale = source.width == 0 ? 1 : destination.width / source.width
+    let verticalScale = source.height == 0 ? 1 : destination.height / source.height
+    let horizontalPosition =
+      source.width == 0 ? 0.5 : (frame.minX - source.minX) / source.width
+    let verticalPosition =
+      source.height == 0 ? 0.5 : (frame.minY - source.minY) / source.height
+    return CGRect(
+      x: destination.minX + destination.width * horizontalPosition,
+      y: destination.minY + destination.height * verticalPosition,
+      width: frame.width * horizontalScale,
+      height: frame.height * verticalScale
     )
   }
 
@@ -187,6 +256,11 @@ public enum FlowingGraphCanvasTransientGeometry {
 
   private static func translated(_ point: CGPoint, by delta: CGSize) -> CGPoint {
     CGPoint(x: point.x + delta.width, y: point.y + delta.height)
+  }
+
+  private static func normalizedChange(_ delta: CGFloat, length: CGFloat?) -> CGFloat {
+    guard let length, length != 0 else { return abs(delta) }
+    return abs(delta / length)
   }
 
   private static func anchor(
