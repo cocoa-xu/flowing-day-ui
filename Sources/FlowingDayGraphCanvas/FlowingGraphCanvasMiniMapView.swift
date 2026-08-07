@@ -16,7 +16,7 @@ public struct FlowingGraphCanvasMiniMap<
   }
 
   private let content: FlowingGraphCanvasContent<Schema>
-  private let proxy: FlowingCanvasProxy
+  private let viewportDriver: FlowingGraphMiniMapViewportDriver
   private let configuration: FlowingGraphMiniMapConfiguration
   private let style: FlowingGraphMiniMapStyle
   private let styleRevision: UInt64
@@ -28,7 +28,7 @@ public struct FlowingGraphCanvasMiniMap<
 
   public init(
     content: FlowingGraphCanvasContent<Schema>,
-    proxy: FlowingCanvasProxy,
+    viewportDriver: FlowingGraphMiniMapViewportDriver,
     configuration: FlowingGraphMiniMapConfiguration = .init(),
     style: FlowingGraphMiniMapStyle = .init(),
     styleRevision: UInt64 = 0,
@@ -40,7 +40,7 @@ public struct FlowingGraphCanvasMiniMap<
       ) -> Decorations
   ) {
     self.content = content
-    self.proxy = proxy
+    self.viewportDriver = viewportDriver
     self.configuration = configuration
     self.style = style
     self.styleRevision = styleRevision
@@ -53,7 +53,7 @@ public struct FlowingGraphCanvasMiniMap<
       if let resolvedSnapshot, resolvedSnapshot.inputID == content.id {
         FlowingGraphMiniMap(
           snapshot: resolvedSnapshot.snapshot,
-          proxy: proxy,
+          viewportDriver: viewportDriver,
           configuration: configuration,
           style: style,
           styleRevision: styleRevision,
@@ -88,7 +88,53 @@ public struct FlowingGraphCanvasMiniMap<
   }
 }
 
+extension FlowingGraphCanvasMiniMap {
+  public init(
+    content: FlowingGraphCanvasContent<Schema>,
+    proxy: FlowingCanvasProxy,
+    configuration: FlowingGraphMiniMapConfiguration = .init(),
+    style: FlowingGraphMiniMapStyle = .init(),
+    styleRevision: UInt64 = 0,
+    nodeStyleIndex:
+      @escaping @Sendable (FlowingGraphMiniMapNode<ElementID>) -> Int = { _ in 0 },
+    @ViewBuilder decorations:
+      @escaping (
+        FlowingGraphMiniMapRenderingContext<ElementID, ElementID>
+      ) -> Decorations
+  ) {
+    self.init(
+      content: content,
+      viewportDriver: FlowingGraphMiniMapViewportDriver(proxy: proxy),
+      configuration: configuration,
+      style: style,
+      styleRevision: styleRevision,
+      nodeStyleIndex: nodeStyleIndex,
+      decorations: decorations
+    )
+  }
+}
+
 extension FlowingGraphCanvasMiniMap where Decorations == EmptyView {
+  public init(
+    content: FlowingGraphCanvasContent<Schema>,
+    viewportDriver: FlowingGraphMiniMapViewportDriver,
+    configuration: FlowingGraphMiniMapConfiguration = .init(),
+    style: FlowingGraphMiniMapStyle = .init(),
+    styleRevision: UInt64 = 0,
+    nodeStyleIndex:
+      @escaping @Sendable (FlowingGraphMiniMapNode<ElementID>) -> Int = { _ in 0 }
+  ) {
+    self.init(
+      content: content,
+      viewportDriver: viewportDriver,
+      configuration: configuration,
+      style: style,
+      styleRevision: styleRevision,
+      nodeStyleIndex: nodeStyleIndex,
+      decorations: { _ in EmptyView() }
+    )
+  }
+
   public init(
     content: FlowingGraphCanvasContent<Schema>,
     proxy: FlowingCanvasProxy,
@@ -100,12 +146,11 @@ extension FlowingGraphCanvasMiniMap where Decorations == EmptyView {
   ) {
     self.init(
       content: content,
-      proxy: proxy,
+      viewportDriver: FlowingGraphMiniMapViewportDriver(proxy: proxy),
       configuration: configuration,
       style: style,
       styleRevision: styleRevision,
-      nodeStyleIndex: nodeStyleIndex,
-      decorations: { _ in EmptyView() }
+      nodeStyleIndex: nodeStyleIndex
     )
   }
 }
