@@ -321,7 +321,7 @@ extension FlowingGraphCanvasAccessibilityRequest: Equatable where ID: Equatable 
   @MainActor
   public final class FlowingGraphCanvasAccessibilityBridge<ID: Hashable & Sendable> {
     public typealias RequestHandler = (FlowingGraphCanvasAccessibilityRequest<ID>) -> Bool
-    public typealias FrameResolver = (CGRect) -> CGRect
+    public typealias FrameResolver = (ID, CGRect) -> CGRect
 
     public private(set) var focusedElementID: ID?
 
@@ -329,7 +329,7 @@ extension FlowingGraphCanvasAccessibilityRequest: Equatable where ID: Equatable 
     private var configuration: FlowingGraphCanvasAccessibilityConfiguration = .disabled
     private var selectedElementIDs: Set<ID> = []
     fileprivate weak var parent: NSView?
-    private var frameResolver: FrameResolver = { $0 }
+    private var frameResolver: FrameResolver = { _, frame in frame }
     private var requestHandler: RequestHandler = { _ in false }
     private var elementsByID: [ID: FlowingGraphCanvasPlatformAccessibilityElement<ID>] = [:]
 
@@ -389,6 +389,11 @@ extension FlowingGraphCanvasAccessibilityRequest: Equatable where ID: Equatable 
       exposedElements().filter { selectedElementIDs.contains($0.id) }
     }
 
+    public func notifyLayoutChanged() {
+      guard isEnabled, let parent else { return }
+      NSAccessibility.post(element: parent, notification: .layoutChanged)
+    }
+
     fileprivate func item(for id: ID) -> FlowingGraphCanvasAccessibilityItem<ID>? {
       snapshot?.item(for: id)
     }
@@ -399,7 +404,7 @@ extension FlowingGraphCanvasAccessibilityRequest: Equatable where ID: Equatable 
 
     fileprivate func screenFrame(for id: ID) -> CGRect {
       guard let frame = snapshot?.item(for: id)?.frame else { return .zero }
-      return frameResolver(frame.minimumAccessibilitySize)
+      return frameResolver(id, frame.minimumAccessibilitySize)
     }
 
     fileprivate func request(_ request: FlowingGraphCanvasAccessibilityRequest<ID>) -> Bool {
@@ -668,7 +673,7 @@ extension FlowingGraphCanvasAccessibilityRequest: Equatable where ID: Equatable 
         selectedElementIDs: selectedElementIDs,
         focusedElementID: focusedElementID,
         parent: view,
-        frameResolver: { [weak view] worldFrame in
+        frameResolver: { [weak view] _, worldFrame in
           guard let view, let window = view.window else { return .zero }
           let viewportFrame = viewportTransform.applying(to: worldFrame)
           return window.convertToScreen(view.convert(viewportFrame, to: nil))

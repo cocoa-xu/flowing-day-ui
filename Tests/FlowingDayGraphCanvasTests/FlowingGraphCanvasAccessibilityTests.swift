@@ -115,7 +115,7 @@ final class FlowingGraphCanvasAccessibilityTests: XCTestCase {
       selectedElementIDs: [50_000],
       focusedElementID: 50_000,
       parent: parent,
-      frameResolver: { $0 },
+      frameResolver: { _, frame in frame },
       onRequest: { _ in true }
     )
 
@@ -140,7 +140,7 @@ final class FlowingGraphCanvasAccessibilityTests: XCTestCase {
       selectedElementIDs: [],
       focusedElementID: 2,
       parent: parent,
-      frameResolver: { $0 },
+      frameResolver: { _, frame in frame },
       onRequest: {
         requests.append($0)
         return true
@@ -153,7 +153,7 @@ final class FlowingGraphCanvasAccessibilityTests: XCTestCase {
       selectedElementIDs: [],
       focusedElementID: nil,
       parent: parent,
-      frameResolver: { $0 },
+      frameResolver: { _, frame in frame },
       onRequest: {
         requests.append($0)
         return true
@@ -169,13 +169,17 @@ final class FlowingGraphCanvasAccessibilityTests: XCTestCase {
     let bridge = FlowingGraphCanvasAccessibilityBridge<Int>()
     let parent = NSView()
     var requests: [FlowingGraphCanvasAccessibilityRequest<Int>] = []
+    var resolvedFrameIDs: [Int] = []
     bridge.update(
       snapshot: snapshot,
       configuration: .standard,
       selectedElementIDs: [],
       focusedElementID: 1,
       parent: parent,
-      frameResolver: { $0.offsetBy(dx: 10, dy: 20) },
+      frameResolver: { id, frame in
+        resolvedFrameIDs.append(id)
+        return frame.offsetBy(dx: 10, dy: 20)
+      },
       onRequest: {
         requests.append($0)
         return true
@@ -190,6 +194,7 @@ final class FlowingGraphCanvasAccessibilityTests: XCTestCase {
     XCTAssertEqual(requests, [.focus(2), .select(2)])
     XCTAssertEqual(bridge.focusedElementID, 2)
     XCTAssertEqual(second.accessibilityFrame(), CGRect(x: 50, y: 20, width: 20, height: 20))
+    XCTAssertEqual(resolvedFrameIDs, [2])
   }
 
   func testCapabilitiesIndependentlyControlSelectionMovementConnectionsAndActions() throws {
@@ -215,7 +220,7 @@ final class FlowingGraphCanvasAccessibilityTests: XCTestCase {
       selectedElementIDs: [],
       focusedElementID: 1,
       parent: parent,
-      frameResolver: { $0 },
+      frameResolver: { _, frame in frame },
       onRequest: { _ in true }
     )
     let readOnlyElement = try XCTUnwrap(
@@ -235,7 +240,7 @@ final class FlowingGraphCanvasAccessibilityTests: XCTestCase {
       selectedElementIDs: [],
       focusedElementID: 1,
       parent: parent,
-      frameResolver: { $0 },
+      frameResolver: { _, frame in frame },
       onRequest: { _ in true }
     )
     let actionElement = try XCTUnwrap(
