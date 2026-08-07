@@ -15,6 +15,7 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
   public let marqueeMinimumDistance: CGFloat
   public let nodeDraggingMode: FlowingGraphCanvasNodeDraggingMode
   public let nodeResizing: FlowingGraphCanvasNodeResizingConfiguration
+  public let connectionEditing: FlowingGraphCanvasConnectionEditingConfiguration
   public let snapping: FlowingGraphCanvasSnappingConfiguration
   public let rendersDefaultGuides: Bool
   public let allowsArrangementCommands: Bool
@@ -29,6 +30,7 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
     marqueeMinimumDistance: CGFloat = 2,
     nodeDraggingMode: FlowingGraphCanvasNodeDraggingMode = .single,
     nodeResizing: FlowingGraphCanvasNodeResizingConfiguration = .disabled,
+    connectionEditing: FlowingGraphCanvasConnectionEditingConfiguration = .disabled,
     snapping: FlowingGraphCanvasSnappingConfiguration = .disabled,
     rendersDefaultGuides: Bool = true,
     allowsArrangementCommands: Bool = true,
@@ -44,6 +46,7 @@ public struct FlowingGraphCanvasConfiguration: Equatable, Sendable {
     self.marqueeMinimumDistance = marqueeMinimumDistance
     self.nodeDraggingMode = nodeDraggingMode
     self.nodeResizing = nodeResizing
+    self.connectionEditing = connectionEditing
     self.snapping = snapping
     self.rendersDefaultGuides = rendersDefaultGuides
     self.allowsArrangementCommands = allowsArrangementCommands
@@ -256,6 +259,7 @@ public struct FlowingGraphCanvasPortContext<Schema: FlowingGraphCanvasSchema> {
   public let renderScale: CGFloat
   public let isSelected: Bool
   public let isHovered: Bool
+  public let connectionState: FlowingGraphCanvasPortConnectionState
   public let actions: FlowingGraphCanvasElementActions<Schema>
 
   public init(
@@ -267,6 +271,7 @@ public struct FlowingGraphCanvasPortContext<Schema: FlowingGraphCanvasSchema> {
     renderScale: CGFloat,
     isSelected: Bool,
     isHovered: Bool,
+    connectionState: FlowingGraphCanvasPortConnectionState = .idle,
     actions: FlowingGraphCanvasElementActions<Schema>
   ) {
     self.elementID = elementID
@@ -277,6 +282,7 @@ public struct FlowingGraphCanvasPortContext<Schema: FlowingGraphCanvasSchema> {
     self.renderScale = renderScale
     self.isSelected = isSelected
     self.isHovered = isHovered
+    self.connectionState = connectionState
     self.actions = actions
   }
 }
@@ -298,6 +304,7 @@ public struct FlowingGraphCanvasEdgeContext<Schema: FlowingGraphCanvasSchema> {
   public let isHovered: Bool
   public let isTransient: Bool
   public let actions: FlowingGraphCanvasElementActions<Schema>
+  public let reconnectionActions: FlowingGraphCanvasEdgeReconnectionActions<Schema>
 
   public init(
     elementID: ElementID,
@@ -311,7 +318,8 @@ public struct FlowingGraphCanvasEdgeContext<Schema: FlowingGraphCanvasSchema> {
     isSelected: Bool,
     isHovered: Bool,
     isTransient: Bool,
-    actions: FlowingGraphCanvasElementActions<Schema>
+    actions: FlowingGraphCanvasElementActions<Schema>,
+    reconnectionActions: FlowingGraphCanvasEdgeReconnectionActions<Schema> = .disabled
   ) {
     self.elementID = elementID
     self.localID = localID
@@ -325,6 +333,7 @@ public struct FlowingGraphCanvasEdgeContext<Schema: FlowingGraphCanvasSchema> {
     self.isHovered = isHovered
     self.isTransient = isTransient
     self.actions = actions
+    self.reconnectionActions = reconnectionActions
   }
 }
 
@@ -336,6 +345,7 @@ public struct FlowingGraphCanvasWorldContext<Schema: FlowingGraphCanvasSchema> {
   public let surface: FlowingCanvasRenderSurface
   public let guides: [FlowingGraphCanvasGuide]
   public let selectionResize: FlowingGraphCanvasSelectionResizeContext<Schema>?
+  public let connectionPreview: FlowingGraphCanvasConnectionPreview<Schema>?
 }
 
 @MainActor

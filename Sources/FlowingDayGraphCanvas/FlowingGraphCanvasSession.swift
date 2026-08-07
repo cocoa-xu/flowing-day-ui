@@ -164,6 +164,7 @@ public struct FlowingGraphCanvasSessionState<
   public var marquee: FlowingGraphCanvasMarquee?
   public var transientNodeDrag: FlowingGraphCanvasTransientNodeDrag<Schema>?
   public var transientNodeResize: FlowingGraphCanvasTransientNodeResize<Schema>?
+  public var transientConnection: FlowingGraphCanvasTransientConnection<Schema>?
 
   public init(
     viewport: FlowingCanvasViewport = .init(),
@@ -173,7 +174,8 @@ public struct FlowingGraphCanvasSessionState<
     tool: FlowingGraphCanvasTool = .select,
     marquee: FlowingGraphCanvasMarquee? = nil,
     transientNodeDrag: FlowingGraphCanvasTransientNodeDrag<Schema>? = nil,
-    transientNodeResize: FlowingGraphCanvasTransientNodeResize<Schema>? = nil
+    transientNodeResize: FlowingGraphCanvasTransientNodeResize<Schema>? = nil,
+    transientConnection: FlowingGraphCanvasTransientConnection<Schema>? = nil
   ) {
     self.viewport = viewport
     self.selection = selection
@@ -183,6 +185,7 @@ public struct FlowingGraphCanvasSessionState<
     self.marquee = marquee
     self.transientNodeDrag = transientNodeDrag
     self.transientNodeResize = transientNodeResize
+    self.transientConnection = transientConnection
   }
 }
 
@@ -208,12 +211,23 @@ public enum FlowingGraphCanvasFitScope<
   case elements(Set<ElementID>)
 }
 
+public enum FlowingGraphCanvasJumpSelectionBehavior: Hashable, Sendable {
+  case preserve
+  case replace
+  case add
+}
+
 public enum FlowingGraphCanvasSessionCommandAction<
   Schema: FlowingGraphCanvasSchema
 >: Equatable, Sendable {
   public typealias ElementID = FlowingGraphCompositionElementID<Schema>
 
   case focus(elementID: ElementID, zoom: CGFloat? = nil)
+  case jumpToElement(
+    elementID: ElementID,
+    selection: FlowingGraphCanvasJumpSelectionBehavior = .replace,
+    zoom: CGFloat? = nil
+  )
   case pan(
     worldPoint: CGPoint,
     viewportPoint: CGPoint? = nil,
@@ -228,6 +242,26 @@ public enum FlowingGraphCanvasSessionCommandAction<
   )
   case inspect(ElementID)
   case arrange(FlowingGraphCanvasArrangementAction)
+}
+
+public enum FlowingGraphCanvasNavigation {
+  public static func jumpCommand<Schema: FlowingGraphCanvasSchema>(
+    to elementID: FlowingGraphCompositionElementID<Schema>,
+    in sessionID: FlowingGraphCanvasSessionID,
+    selection: FlowingGraphCanvasJumpSelectionBehavior = .replace,
+    zoom: CGFloat? = nil,
+    animated: Bool = true
+  ) -> FlowingGraphCanvasSessionCommand<Schema> {
+    FlowingGraphCanvasSessionCommand(
+      targetSessionID: sessionID,
+      action: .jumpToElement(
+        elementID: elementID,
+        selection: selection,
+        zoom: zoom
+      ),
+      animated: animated
+    )
+  }
 }
 
 public struct FlowingGraphCanvasSessionCommand<
@@ -370,6 +404,8 @@ public enum FlowingGraphCanvasInteractionIntent<
   case nodeDragCompleted(FlowingGraphCanvasNodeDragIntent<Schema>)
   case nodeResizeCompleted(FlowingGraphCanvasNodeResizeIntent<Schema>)
   case nodeArrangementRequested(FlowingGraphCanvasNodeArrangementIntent<Schema>)
+  case connectionCompleted(FlowingGraphCanvasConnectionCompletionIntent<Schema>)
+  case connectionCancelled(FlowingGraphCanvasConnectionCancellationIntent<Schema>)
   case elementAction(FlowingGraphCanvasElementActionIntent<Schema>)
 }
 

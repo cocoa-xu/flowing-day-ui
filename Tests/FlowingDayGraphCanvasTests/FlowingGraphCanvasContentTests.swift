@@ -852,6 +852,198 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
     XCTAssertFalse(command.animated)
   }
 
+  func testJumpCommandTargetsOneSessionAndCarriesSelectionPolicy() throws {
+    let fixture = try makeFixture()
+    let nodeID = try XCTUnwrap(fixture.presentation.nodes.first?.id)
+    let sessionID = FlowingGraphCanvasSessionID()
+    let command: FlowingGraphCanvasSessionCommand<CanvasCompositionSchema> =
+      FlowingGraphCanvasNavigation.jumpCommand(
+        to: nodeID,
+        in: sessionID,
+        selection: .add,
+        zoom: 1.4,
+        animated: false
+      )
+
+    XCTAssertTrue(command.targets(sessionID))
+    XCTAssertEqual(
+      command.action,
+      .jumpToElement(elementID: nodeID, selection: .add, zoom: 1.4)
+    )
+    XCTAssertFalse(command.animated)
+  }
+
+  @MainActor
+  func testConnectionResolverCreatesValidatedPortConnection() throws {
+    let fixture = try makeFixture()
+    let content = try FlowingGraphCanvasContent<CanvasCompositionSchema>(
+      presentation: fixture.presentation,
+      layoutInput: fixture.input,
+      layoutResult: fixture.result
+    )
+    let source = try XCTUnwrap(
+      fixture.presentation.ports.first(where: { $0.value == "Output" })
+    )
+    let target = try XCTUnwrap(
+      fixture.presentation.ports.first(where: { $0.value == "Input" })
+    )
+    let targetAnchor = try XCTUnwrap(content.anchor(for: target.localID))
+    let origin = FlowingGraphCanvasConnectionOrigin<CanvasCompositionSchema>.new(
+      sourcePortID: source.id
+    )
+    var requests: [FlowingGraphCanvasConnectionValidationRequest<CanvasCompositionSchema>] = []
+    let policy = FlowingGraphCanvasConnectionPolicy<CanvasCompositionSchema>(
+      validate: {
+        requests.append($0)
+        return .valid
+      }
+    )
+    var connection = try XCTUnwrap(
+      FlowingGraphCanvasConnectionInteractionResolver.begin(
+        origin: origin,
+        content: content,
+        policy: policy
+      )
+    )
+
+    FlowingGraphCanvasConnectionInteractionResolver.update(
+      &connection,
+      worldLocation: targetAnchor.position,
+      targetHitRadius: 12,
+      content: content,
+      policy: policy
+    )
+
+    XCTAssertEqual(connection.candidatePortID, target.id)
+    XCTAssertEqual(connection.validation, .valid)
+    XCTAssertEqual(requests.map(\.targetPortID), [target.id])
+    guard
+      case .completed(let intent) =
+        FlowingGraphCanvasConnectionInteractionResolver.resolve(connection)
+    else {
+      return XCTFail("Expected a completed connection")
+    }
+    XCTAssertEqual(
+      intent.operation,
+      .create(sourcePortID: source.id, targetPortID: target.id)
+    )
+  }
+
+  @MainActor
+  func testConnectionResolverPreservesInvalidFeedbackAndCancellation() throws {
+    let fixture = try makeFixture()
+    let content = try FlowingGraphCanvasContent<CanvasCompositionSchema>(
+      presentation: fixture.presentation,
+      layoutInput: fixture.input,
+      layoutResult: fixture.result
+    )
+    let ports = fixture.presentation.ports
+    let source = try XCTUnwrap(ports.first)
+    let target = try XCTUnwrap(ports.last)
+    let targetAnchor = try XCTUnwrap(content.anchor(for: target.localID))
+    let feedback = FlowingGraphCanvasConnectionFeedback(message: "Type mismatch")
+    let policy = FlowingGraphCanvasConnectionPolicy<CanvasCompositionSchema>(
+      validate: { _ in .invalid(feedback) }
+    )
+    var connection = try XCTUnwrap(
+      FlowingGraphCanvasConnectionInteractionResolver.begin(
+        origin: .new(sourcePortID: source.id),
+        content: content,
+        policy: policy
+      )
+    )
+
+    FlowingGraphCanvasConnectionInteractionResolver.update(
+      &connection,
+      worldLocation: targetAnchor.position,
+      targetHitRadius: 12,
+      content: content,
+      policy: policy
+    )
+
+    guard
+      case .cancelled(let intent) =
+        FlowingGraphCanvasConnectionInteractionResolver.resolve(connection)
+    else {
+      return XCTFail("Expected an invalid connection to be cancelled")
+    }
+    XCTAssertEqual(intent.reason, .invalidTarget(feedback))
+  }
+
+  @MainActor
+  func testConnectionResolverSupportsEndpointReconnection() throws {
+    let fixture = try makeFixture()
+    let content = try FlowingGraphCanvasContent<CanvasCompositionSchema>(
+      presentation: fixture.presentation,
+      layoutInput: fixture.input,
+      layoutResult: fixture.result
+    )
+    let edge = try XCTUnwrap(fixture.presentation.edges.first)
+    guard case .directed(.port(let firstID), .port(let secondID)) = edge.endpoints else {
+      return XCTFail("Expected port endpoints")
+    }
+    let origin = FlowingGraphCanvasConnectionOrigin<CanvasCompositionSchema>.reconnect(
+      edgeID: edge.id,
+      endpoint: .first,
+      originalEndpointID: firstID,
+      fixedEndpointID: secondID
+    )
+    let policy = FlowingGraphCanvasConnectionPolicy<CanvasCompositionSchema>()
+    var connection = try XCTUnwrap(
+      FlowingGraphCanvasConnectionInteractionResolver.begin(
+        origin: origin,
+        content: content,
+        policy: policy
+      )
+    )
+    let firstAnchor = try XCTUnwrap(content.connectionAnchor(for: firstID))
+    let secondAnchor = try XCTUnwrap(content.connectionAnchor(for: secondID))
+    let initialPreview = FlowingGraphCanvasConnectionPreview(connection: connection)
+    XCTAssertEqual(initialPreview.first, firstAnchor)
+    XCTAssertEqual(initialPreview.second, secondAnchor)
+
+    FlowingGraphCanvasConnectionInteractionResolver.update(
+      &connection,
+      worldLocation: firstAnchor.position,
+      targetHitRadius: 12,
+      content: content,
+      policy: policy
+    )
+
+    guard
+      case .completed(let intent) =
+        FlowingGraphCanvasConnectionInteractionResolver.resolve(connection)
+    else {
+      return XCTFail("Expected endpoint reconnection")
+    }
+    XCTAssertEqual(
+      intent.operation,
+      .reconnect(edgeID: edge.id, endpoint: .first, targetPortID: firstID)
+    )
+  }
+
+  @MainActor
+  func testConnectionPolicyCanRejectInteractionBeforeSessionAllocation() throws {
+    let fixture = try makeFixture()
+    let content = try FlowingGraphCanvasContent<CanvasCompositionSchema>(
+      presentation: fixture.presentation,
+      layoutInput: fixture.input,
+      layoutResult: fixture.result
+    )
+    let portID = try XCTUnwrap(fixture.presentation.ports.first?.id)
+    let policy = FlowingGraphCanvasConnectionPolicy<CanvasCompositionSchema>(
+      canBegin: { _ in false }
+    )
+
+    XCTAssertNil(
+      FlowingGraphCanvasConnectionInteractionResolver.begin(
+        origin: .new(sourcePortID: portID),
+        content: content,
+        policy: policy
+      )
+    )
+  }
+
   private func makeFixture() throws -> CanvasFixture {
     var graph = FlowingGraph<CanvasGraphSchema>()
     let mutation = graph.update { transaction in
@@ -864,11 +1056,17 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
         )
       )
       transaction.insert(
+        FlowingGraphPort(
+          key: FlowingGraphPortKey(nodeID: "target", portID: "input"),
+          value: "Input"
+        )
+      )
+      transaction.insert(
         FlowingGraphEdge(
           id: "edge",
           endpoints: .directed(
             source: .port(FlowingGraphPortKey(nodeID: "source", portID: "output")),
-            target: .node("target")
+            target: .port(FlowingGraphPortKey(nodeID: "target", portID: "input"))
           ),
           value: "Edge"
         )

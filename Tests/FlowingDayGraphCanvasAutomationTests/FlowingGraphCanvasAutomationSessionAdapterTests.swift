@@ -55,6 +55,13 @@ final class FlowingGraphCanvasAutomationSessionAdapterTests: XCTestCase {
     XCTAssertFalse(focus.readRequirement.includesSessionState)
     XCTAssertFalse(focus.readRequirement.includesPresentation)
 
+    let jump = FlowingGraphCanvasAutomationCommand<AutomationCanvasSchema>(
+      action: .jumpToElement(elementID: first, selection: .add)
+    )
+    XCTAssertEqual(jump.readRequirement.elementIDs, [first])
+    XCTAssertTrue(jump.readRequirement.includesSessionState)
+    XCTAssertFalse(jump.readRequirement.includesPresentation)
+
     let selection = FlowingGraphCanvasAutomationCommand<AutomationCanvasSchema>(
       action: .select(.toggle([first, second]))
     )

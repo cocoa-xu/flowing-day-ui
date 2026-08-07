@@ -103,16 +103,39 @@ struct ShowcasePort: View {
 
   var body: some View {
     Circle()
-      .fill(
-        context.isSelected
-          ? PreferencesAccent.celadon.fill
-          : PreferencesPalette.control
-      )
+      .fill(fillColor)
       .overlay {
-        Circle().strokeBorder(PreferencesAccent.celadon.fill, lineWidth: 1.5)
+        Circle().strokeBorder(strokeColor, lineWidth: 1.5)
       }
       .frame(width: 11 * context.renderScale, height: 11 * context.renderScale)
       .help(port.value)
+      .accessibilityElement()
+      .accessibilityLabel(port.value)
+      .accessibilityIdentifier("showcase-port-\(port.value.lowercased())")
+  }
+
+  private var fillColor: Color {
+    switch context.connectionState {
+    case .source:
+      PreferencesAccent.celadon.fill
+    case .target(.valid, let isCandidate):
+      isCandidate ? Color.green.opacity(0.3) : Color.green.opacity(0.12)
+    case .target(.invalid, let isCandidate):
+      isCandidate ? Color.red.opacity(0.25) : PreferencesPalette.control
+    case .idle:
+      context.isSelected ? PreferencesAccent.celadon.fill : PreferencesPalette.control
+    }
+  }
+
+  private var strokeColor: Color {
+    switch context.connectionState {
+    case .target(.valid, _):
+      .green
+    case .target(.invalid, let isCandidate):
+      isCandidate ? .red : PreferencesAccent.celadon.fill.opacity(0.45)
+    case .idle, .source:
+      PreferencesAccent.celadon.fill
+    }
   }
 }
 

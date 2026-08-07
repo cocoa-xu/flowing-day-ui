@@ -10,7 +10,9 @@ enum ShowcaseDocumentFactory {
     externalPortOrder: [String],
     externalPortValues: [String: String],
     bindingOrder: [String],
-    bindings: [String: FlowingGraphEndpoint<GraphSchema>]
+    bindings: [String: FlowingGraphEndpoint<GraphSchema>],
+    edgeEndpointOverrides: [String: [String: FlowingGraphEdgeEndpoints<GraphSchema>]] = [:],
+    additionalEdges: [String: [FlowingGraphEdge<GraphSchema>]] = [:]
   ) -> FlowingGraphDocument<Schema> {
     let externalPorts = externalPortOrder.compactMap { portID in
       externalPortValues[portID].map {
@@ -57,6 +59,12 @@ enum ShowcaseDocumentFactory {
         )
       )
     }
+    rootEdges = resolvedEdges(
+      rootEdges,
+      graphID: "root",
+      edgeEndpointOverrides: edgeEndpointOverrides,
+      additionalEdges: additionalEdges
+    )
 
     let root = graph(
       nodes: ["node-a", "subgraph", "node-b"],
@@ -73,7 +81,7 @@ enum ShowcaseDocumentFactory {
     )
     let inputEndpoint = FlowingGraphEndpoint<GraphSchema>.port(inputPort.key)
     let outputEndpoint = FlowingGraphEndpoint<GraphSchema>.port(outputPort.key)
-    let childEdges: [FlowingGraphEdge<GraphSchema>] =
+    var childEdges: [FlowingGraphEdge<GraphSchema>] =
       [
         FlowingGraphEdge(
           id: "input-to-node-c",
@@ -97,6 +105,12 @@ enum ShowcaseDocumentFactory {
           )
         ]
         : [])
+    childEdges = resolvedEdges(
+      childEdges,
+      graphID: "subgraph-definition",
+      edgeEndpointOverrides: edgeEndpointOverrides,
+      additionalEdges: additionalEdges
+    )
     let child = graph(
       nodes: ["input", "node-c", "output"],
       ports: [inputPort, outputPort],
@@ -129,6 +143,22 @@ enum ShowcaseDocumentFactory {
         )
       ]
     )
+  }
+
+  private static func resolvedEdges(
+    _ edges: [FlowingGraphEdge<GraphSchema>],
+    graphID: String,
+    edgeEndpointOverrides: [String: [String: FlowingGraphEdgeEndpoints<GraphSchema>]],
+    additionalEdges: [String: [FlowingGraphEdge<GraphSchema>]]
+  ) -> [FlowingGraphEdge<GraphSchema>] {
+    edges.map { edge in
+      guard let endpoints = edgeEndpointOverrides[graphID]?[edge.id] else { return edge }
+      return FlowingGraphEdge(id: edge.id, endpoints: endpoints, value: edge.value)
+    }
+      + additionalEdges[graphID, default: []].map { edge in
+        guard let endpoints = edgeEndpointOverrides[graphID]?[edge.id] else { return edge }
+        return FlowingGraphEdge(id: edge.id, endpoints: endpoints, value: edge.value)
+      }
   }
 
   private static func graph(

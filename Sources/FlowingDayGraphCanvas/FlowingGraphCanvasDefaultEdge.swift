@@ -64,6 +64,14 @@ public struct FlowingGraphCanvasDefaultEdge<Schema: FlowingGraphCanvasSchema>: V
           .rotationEffect(arrow.angle)
           .position(arrow.position)
       }
+      if context.isSelected && context.reconnectionActions.isEnabled {
+        if context.reconnectionActions.isEnabled(for: .first) {
+          reconnectHandle(.first)
+        }
+        if context.reconnectionActions.isEnabled(for: .second) {
+          reconnectHandle(.second)
+        }
+      }
     }
     .contentShape(
       path.path().strokedPath(
@@ -72,6 +80,25 @@ public struct FlowingGraphCanvasDefaultEdge<Schema: FlowingGraphCanvasSchema>: V
     )
     .onTapGesture {
       context.actions.select()
+    }
+  }
+
+  private func reconnectHandle(
+    _ endpoint: FlowingGraphCanvasEdgeEndpoint
+  ) -> some View {
+    FlowingGraphCanvasEdgeReconnectHandle(
+      endpoint: endpoint,
+      actions: context.reconnectionActions
+    ) {
+      Circle()
+        .fill(.background)
+        .overlay {
+          Circle().strokeBorder(style.selectedColor, lineWidth: 1.5)
+        }
+        .frame(width: 10, height: 10)
+        .accessibilityLabel(
+          endpoint == .first ? "Reconnect first endpoint" : "Reconnect second endpoint"
+        )
     }
   }
 }
@@ -88,11 +115,11 @@ private struct FlowingGraphCanvasEdgePath: Shape {
     path.move(to: route.start)
     for segment in route.segments {
       switch segment {
-      case let .line(end):
+      case .line(let end):
         path.addLine(to: end)
-      case let .quadratic(control, end):
+      case .quadratic(let control, let end):
         path.addQuadCurve(to: end, control: control)
-      case let .cubic(control1, control2, end):
+      case .cubic(let control1, let control2, let end):
         path.addCurve(to: end, control1: control1, control2: control2)
       }
     }
@@ -109,15 +136,16 @@ private struct FlowingGraphCanvasArrowGeometry {
     let endpoint: CGPoint
     let tangentOrigin: CGPoint
     switch segment {
-    case let .line(end):
+    case .line(let end):
       endpoint = end
-      tangentOrigin = route.segments.count == 1
+      tangentOrigin =
+        route.segments.count == 1
         ? route.start
         : route.segments[route.segments.count - 2].end
-    case let .quadratic(control, end):
+    case .quadratic(let control, let end):
       endpoint = end
       tangentOrigin = control
-    case let .cubic(_, control2, end):
+    case .cubic(_, let control2, let end):
       endpoint = end
       tangentOrigin = control2
     }
@@ -145,10 +173,10 @@ private struct FlowingGraphCanvasArrowHead: Shape {
   }
 }
 
-private extension FlowingGraphEdgePathSegment {
-  var end: CGPoint {
+extension FlowingGraphEdgePathSegment {
+  fileprivate var end: CGPoint {
     switch self {
-    case let .line(end), let .quadratic(_, end), let .cubic(_, _, end):
+    case .line(let end), .quadratic(_, let end), .cubic(_, _, let end):
       end
     }
   }

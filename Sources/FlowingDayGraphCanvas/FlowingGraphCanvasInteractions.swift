@@ -131,6 +131,7 @@ public struct FlowingGraphCanvasInteractionPolicy<Schema: FlowingGraphCanvasSche
   public let nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema>
   public let nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema>
   public let snappingStrategy: FlowingGraphCanvasSnappingStrategy<Schema>
+  public let connectionPolicy: FlowingGraphCanvasConnectionPolicy<Schema>
 
   private let nodeDragAdmission:
     @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
@@ -145,6 +146,7 @@ public struct FlowingGraphCanvasInteractionPolicy<Schema: FlowingGraphCanvasSche
     nodeCapabilities: FlowingGraphCanvasNodeCapabilityMap<Schema> = .init(),
     nodeSizeConstraints: FlowingGraphCanvasNodeSizeConstraintMap<Schema> = .init(),
     snappingStrategy: FlowingGraphCanvasSnappingStrategy<Schema> = .standard,
+    connectionPolicy: FlowingGraphCanvasConnectionPolicy<Schema> = .standard,
     admitNodeDrag:
       @escaping @MainActor (FlowingGraphCanvasNodeDragAdmissionRequest<Schema>) ->
       FlowingGraphCanvasNodeDragAdmission<Schema> = { _ in .allowAll },
@@ -161,6 +163,7 @@ public struct FlowingGraphCanvasInteractionPolicy<Schema: FlowingGraphCanvasSche
     self.nodeCapabilities = nodeCapabilities
     self.nodeSizeConstraints = nodeSizeConstraints
     self.snappingStrategy = snappingStrategy
+    self.connectionPolicy = connectionPolicy
     nodeDragAdmission = admitNodeDrag
     nodeResizeAdmission = admitNodeResize
     additiveSelectionState = isAdditiveSelectionActive

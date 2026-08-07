@@ -53,6 +53,7 @@ final class GraphCanvasShowcaseModel: ObservableObject {
   @Published private(set) var presentation: Presentation?
   @Published private(set) var content: Content?
   @Published private(set) var accessibilitySnapshot: AccessibilitySnapshot?
+  @Published private(set) var searchIndex: FlowingGraphCanvasSearchIndex<ElementID>?
   @Published private(set) var breadcrumb: [FlowingGraphBreadcrumbSegment<ShowcaseCanvasSchema>] = []
   @Published private(set) var layoutStyle = ShowcaseLayoutStyle.dag
   @Published private(set) var presentationStyle = ShowcasePresentationStyle.collapsed
@@ -71,6 +72,10 @@ final class GraphCanvasShowcaseModel: ObservableObject {
   ]
   private var placementOffsets: [ElementID: CGSize] = [:]
   private var nodeSizes: [ElementID: CGSize] = [:]
+  private var edgeEndpointOverrides:
+    [String: [String: FlowingGraphEdgeEndpoints<ShowcaseGraphSchema>]] = [:]
+  private var additionalEdges: [String: [FlowingGraphEdge<ShowcaseGraphSchema>]] = [:]
+  private var nextConnectionID = 1
   private var layoutStateRevision = FlowingLayoutRevision()
   private let layoutIdentities = ShowcaseLayoutIdentities()
 
@@ -90,6 +95,14 @@ final class GraphCanvasShowcaseModel: ObservableObject {
     externalPortOrder.map {
       ($0, bindings[$0].map(Self.endpointDescription))
     }
+  }
+
+  func search(_ query: String) -> [FlowingGraphCanvasSearchResult<ElementID>] {
+    searchIndex?.search(query, limit: 12) ?? []
+  }
+
+  func recordJump(to title: String) {
+    lastEvent = "Jumped to \(title)"
   }
 
   func selectLayout(_ style: ShowcaseLayoutStyle) {
@@ -252,10 +265,37 @@ final class GraphCanvasShowcaseModel: ObservableObject {
       layoutStateRevision = FlowingLayoutRevision()
       refreshLayout()
       lastEvent = "Applied node arrangement intent"
+    case .connectionCompleted(let connection):
+      apply(connection)
+    case .connectionCancelled(let cancellation):
+      switch cancellation.reason {
+      case .cancelled:
+        lastEvent = "Cancelled connection editing"
+      case .noTarget:
+        lastEvent = "Connection needs a target"
+      case .invalidTarget(let feedback):
+        lastEvent = feedback.message ?? "Connection target is unavailable"
+      }
     case .elementAction(let elementIntent):
       guard elementIntent.basePresentationSnapshotID == presentation?.snapshotID else { return }
       handleElementAction(elementIntent)
     }
+  }
+
+  func validateConnection(
+    _ request: FlowingGraphCanvasConnectionValidationRequest<ShowcaseCanvasSchema>
+  ) -> FlowingGraphCanvasConnectionValidation {
+    guard let target = definitionEndpoint(for: request.targetPortID) else {
+      return .invalid(.init(message: "Choose a visible port"))
+    }
+    let fixedElementID = request.origin.fixedElementID
+    guard fixedElementID != request.targetPortID,
+      let fixed = definitionEndpoint(for: fixedElementID),
+      fixed.graphID == target.graphID
+    else {
+      return .invalid(.init(message: "Choose another port in this graph"))
+    }
+    return .valid
   }
 
   func title(for segment: FlowingGraphBreadcrumbSegment<ShowcaseCanvasSchema>) -> String {
@@ -371,6 +411,60 @@ final class GraphCanvasShowcaseModel: ObservableObject {
     }
   }
 
+  private func apply(
+    _ intent: FlowingGraphCanvasConnectionCompletionIntent<ShowcaseCanvasSchema>
+  ) {
+    guard intent.basePresentationSnapshotID == presentation?.snapshotID,
+      intent.baseLayoutInputID == content?.id
+    else {
+      return
+    }
+    switch intent.operation {
+    case .create(let sourcePortID, let targetPortID):
+      guard let source = definitionEndpoint(for: sourcePortID),
+        let target = definitionEndpoint(for: targetPortID),
+        source.graphID == target.graphID
+      else {
+        return
+      }
+      let edgeID = "connection-\(nextConnectionID)"
+      nextConnectionID += 1
+      additionalEdges[source.graphID, default: []].append(
+        FlowingGraphEdge(
+          id: edgeID,
+          endpoints: .directed(source: source.endpoint, target: target.endpoint),
+          value: "Connection"
+        )
+      )
+      lastEvent = "Created connection"
+    case .reconnect(let edgeID, let endpoint, let targetPortID):
+      guard case .source(let address, _) = edgeID,
+        case .edge(let definitionEdgeID) = address.elementID,
+        let target = definitionEndpoint(for: targetPortID),
+        target.graphID == address.graphID,
+        let current = currentEndpoints(graphID: address.graphID, edgeID: definitionEdgeID)
+      else {
+        return
+      }
+      let next: FlowingGraphEdgeEndpoints<ShowcaseGraphSchema>
+      switch current {
+      case .directed(let source, let targetEndpoint):
+        next =
+          endpoint == .first
+          ? .directed(source: target.endpoint, target: targetEndpoint)
+          : .directed(source: source, target: target.endpoint)
+      case .undirected(let first, let second):
+        next =
+          endpoint == .first
+          ? .undirected(target.endpoint, second)
+          : .undirected(first, target.endpoint)
+      }
+      edgeEndpointOverrides[address.graphID, default: [:]][definitionEdgeID] = next
+      lastEvent = "Reconnected edge endpoint"
+    }
+    rebuildDocument()
+  }
+
   private func handleElementAction(
     _ intent: FlowingGraphCanvasElementActionIntent<ShowcaseCanvasSchema>
   ) {
@@ -426,9 +520,34 @@ final class GraphCanvasShowcaseModel: ObservableObject {
       externalPortOrder: externalPortOrder,
       externalPortValues: externalPortValues,
       bindingOrder: bindingOrder,
-      bindings: bindings
+      bindings: bindings,
+      edgeEndpointOverrides: edgeEndpointOverrides,
+      additionalEdges: additionalEdges
     )
     refreshProjection()
+  }
+
+  private func definitionEndpoint(
+    for elementID: ElementID
+  ) -> (graphID: String, endpoint: FlowingGraphEndpoint<ShowcaseGraphSchema>)? {
+    guard case .source(let address, _) = elementID else { return nil }
+    switch address.elementID {
+    case .node(let nodeID):
+      return (address.graphID, .node(nodeID))
+    case .port(let key):
+      return (address.graphID, .port(key))
+    case .edge:
+      return nil
+    }
+  }
+
+  private func currentEndpoints(
+    graphID: String,
+    edgeID: String
+  ) -> FlowingGraphEdgeEndpoints<ShowcaseGraphSchema>? {
+    edgeEndpointOverrides[graphID]?[edgeID]
+      ?? additionalEdges[graphID]?.first(where: { $0.id == edgeID })?.endpoints
+      ?? document.definitions.first(where: { $0.id == graphID })?.graph.edge(id: edgeID)?.endpoints
   }
 
   private func refreshProjection() {
@@ -506,9 +625,39 @@ final class GraphCanvasShowcaseModel: ObservableObject {
           )
         }
       )
+      searchIndex = try FlowingGraphCanvasSearchIndex(
+        items: presentation.nodes.map {
+          FlowingGraphCanvasSearchItem(
+            id: $0.id,
+            title: $0.value,
+            subtitle: "Node",
+            keywords: [String(describing: $0.address)],
+            category: "Node"
+          )
+        }
+          + presentation.ports.map {
+            FlowingGraphCanvasSearchItem(
+              id: $0.id,
+              title: $0.value,
+              subtitle: "Port",
+              keywords: [String(describing: $0.address)],
+              category: "Port"
+            )
+          }
+          + presentation.edges.map {
+            FlowingGraphCanvasSearchItem(
+              id: $0.id,
+              title: $0.value,
+              subtitle: "Connection",
+              keywords: [String(describing: $0.address)],
+              category: "Edge"
+            )
+          }
+      )
       errorMessage = nil
     } catch {
       accessibilitySnapshot = nil
+      searchIndex = nil
       fail(error)
     }
   }

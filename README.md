@@ -174,6 +174,7 @@ spatial index around the moving bounds and has an explicit candidate budget.
 let configuration = FlowingGraphCanvasConfiguration(
     nodeDraggingMode: .multiple,
     nodeResizing: .standard,
+    connectionEditing: .standard,
     snapping: FlowingGraphCanvasSnappingConfiguration(
         isEnabled: true,
         targets: [.alignment, .grid, .equalSpacing, .equalSize],
@@ -233,6 +234,34 @@ Node builders can place `FlowingGraphCanvasResizeHandle` around their own node d
 Resize gestures use transient node, port, and incident-edge geometry, then emit one
 snapshot-pinned resize intent when the gesture ends. Align and equal-gap distribute
 operations arrive through the session command channel and use the same intent boundary.
+
+Connection editing follows the same boundary. The canvas owns pointer and accessible
+interaction, previews, candidate feedback, and endpoint reconnection handles. A consumer
+validates candidates through `FlowingGraphCanvasConnectionPolicy`, then applies or rejects
+the emitted snapshot-pinned operation in its document reducer.
+
+For large graphs, build a `FlowingGraphCanvasSearchIndex` away from the main actor and
+present the results with the default panel or a custom row. Search results remain ordinary
+element identities; jumping is an explicit session command with configurable selection and
+zoom behavior:
+
+```swift
+let index = try FlowingGraphCanvasSearchIndex(
+    items: presentation.nodes.map {
+        FlowingGraphCanvasSearchItem(id: $0.id, title: String(describing: $0.value))
+    }
+)
+
+let results = index.search(query)
+if let result = results.first {
+    command = FlowingGraphCanvasNavigation.jumpCommand(
+        to: result.id,
+        in: sessionID,
+        selection: .replace,
+        zoom: 1.2
+    )
+}
+```
 
 Section footers align with the title and caption text inside their rows by default.
 

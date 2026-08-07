@@ -119,4 +119,42 @@ final class FlowingDayGraphCanvasExampleTests: XCTestCase {
       XCTAssertEqual(updatedContent.frame(for: node.localID), requestedFrames[node.id])
     }
   }
+
+  func testExampleValidatesAndAppliesConnectionIntent() throws {
+    let model = GraphCanvasShowcaseModel()
+    let presentation = try XCTUnwrap(model.presentation)
+    let content = try XCTUnwrap(model.content)
+    let source = try XCTUnwrap(presentation.ports.first(where: { $0.value == "Output" }))
+    let target = try XCTUnwrap(presentation.ports.first(where: { $0.value == "Input" }))
+    let request = FlowingGraphCanvasConnectionValidationRequest<ShowcaseCanvasSchema>(
+      origin: .new(sourcePortID: source.id),
+      targetPortID: target.id,
+      basePresentationSnapshotID: presentation.snapshotID,
+      baseLayoutInputID: content.id
+    )
+
+    XCTAssertEqual(model.validateConnection(request), .valid)
+    let edgeCount = presentation.edges.count
+    model.send(
+      .connectionCompleted(
+        FlowingGraphCanvasConnectionCompletionIntent(
+          operation: .create(sourcePortID: source.id, targetPortID: target.id),
+          basePresentationSnapshotID: presentation.snapshotID,
+          baseLayoutInputID: content.id
+        )
+      )
+    )
+
+    XCTAssertEqual(model.presentation?.edges.count, edgeCount + 1)
+    XCTAssertEqual(model.lastEvent, "Created connection")
+  }
+
+  func testExampleSearchesAcrossElementKindsAndRecordsJump() throws {
+    let model = GraphCanvasShowcaseModel()
+    let result = try XCTUnwrap(model.search("node b").first)
+
+    XCTAssertEqual(result.item.title, "Node B")
+    model.recordJump(to: result.item.title)
+    XCTAssertEqual(model.lastEvent, "Jumped to Node B")
+  }
 }

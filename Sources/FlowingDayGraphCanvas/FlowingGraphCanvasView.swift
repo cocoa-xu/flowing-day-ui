@@ -131,6 +131,7 @@ public struct FlowingGraphCanvas<
       session.marquee = nil
       session.transientNodeDrag = nil
       session.transientNodeResize = nil
+      session.transientConnection = nil
       rejectedNodeDragID = nil
     }
     .onChange(of: accessibilityFocusedNodeID) { nodeID in
@@ -140,6 +141,7 @@ public struct FlowingGraphCanvas<
     .focusable(configuration.keyboardNavigation.isEnabled)
     .focused($hasKeyboardFocus)
     .onMoveCommand(perform: moveKeyboardFocus)
+    .onExitCommand(perform: cancelConnection)
     .background {
       if configuration.accessibility.isEnabled, let accessibilitySnapshot {
         FlowingGraphCanvasAccessibilityHost(
@@ -222,6 +224,14 @@ public struct FlowingGraphCanvas<
         ForEach(slice.edgeIDs, id: \.self) { edgeID in
           edgeView(edgeID, context: context, surface: surface)
         }
+        if configuration.connectionEditing.rendersDefaultPreview,
+          let preview = activeConnection.map(FlowingGraphCanvasConnectionPreview.init)
+        {
+          FlowingGraphCanvasDefaultConnectionPreview(
+            preview: preview,
+            transform: surface.localTransform
+          )
+        }
         ForEach(slice.nodeIDs, id: \.self) { nodeID in
           nodeView(nodeID, context: context, surface: surface)
         }
@@ -243,7 +253,8 @@ public struct FlowingGraphCanvas<
             renderContext: context,
             surface: surface,
             guides: activeGuides,
-            selectionResize: selectionResizeContext(surface: surface)
+            selectionResize: selectionResizeContext(surface: surface),
+            connectionPreview: activeConnection.map(FlowingGraphCanvasConnectionPreview.init)
           )
         )
       }
@@ -355,16 +366,47 @@ public struct FlowingGraphCanvas<
         renderScale: surface.localTransform.zoom,
         isSelected: session.selection.contains(elementID),
         isHovered: session.hoveredElementID == elementID,
+        connectionState: connectionState(for: elementID),
         actions: actions(for: elementID)
       )
-      portContent(port, portContext)
-        .allowsHitTesting(session.tool == .select)
+      renderedPort(
+        portContent(port, portContext),
+        elementID: elementID,
+        anchor: anchor,
+        renderedPosition: renderedPosition
+      )
+    }
+  }
+
+  @ViewBuilder
+  private func renderedPort<Port: View>(
+    _ port: Port,
+    elementID: ElementID,
+    anchor: FlowingGraphCanvasAnchor,
+    renderedPosition: CGPoint
+  ) -> some View {
+    if session.tool == .select {
+      port
+        .padding(
+          configuration.connectionEditing.isEnabled
+            ? configuration.connectionEditing.sourceHitPadding
+            : 0
+        )
+        .contentShape(Rectangle())
+        .gesture(
+          portConnectionGesture(elementID: elementID, anchor: anchor),
+          including: configuration.connectionEditing.isEnabled ? .gesture : .none
+        )
         .onTapGesture {
           select(elementID, mode: nil)
         }
         .onHover { isHovering in
           setHovered(elementID, isHovering: isHovering)
         }
+        .position(renderedPosition)
+    } else {
+      port
+        .allowsHitTesting(false)
         .position(renderedPosition)
     }
   }
@@ -421,7 +463,12 @@ public struct FlowingGraphCanvas<
         isSelected: session.selection.contains(edge.id),
         isHovered: session.hoveredElementID == edge.id,
         isTransient: isTransient,
-        actions: actions(for: edge.id)
+        actions: actions(for: edge.id),
+        reconnectionActions: edgeReconnectionActions(
+          edge: edge,
+          anchors: resolvedAnchors,
+          renderedRoute: renderedRoute
+        )
       )
       edgeContent(edge, edgeContext)
         .frame(width: renderedFrame.width, height: renderedFrame.height)
@@ -506,12 +553,26 @@ public struct FlowingGraphCanvas<
     return resize
   }
 
+  private var activeConnection: FlowingGraphCanvasTransientConnection<Schema>? {
+    guard configuration.connectionEditing.isEnabled,
+      session.transientNodeDrag == nil,
+      session.transientNodeResize == nil,
+      let connection = session.transientConnection,
+      connection.basePresentationSnapshotID == content.presentation.snapshotID,
+      connection.baseLayoutInputID == content.id
+    else {
+      return nil
+    }
+    return connection
+  }
+
   private func selectionResizeContext(
     surface: FlowingCanvasRenderSurface
   ) -> FlowingGraphCanvasSelectionResizeContext<Schema>? {
     guard configuration.nodeResizing.isEnabled,
       session.tool == .select,
-      activeNodeDrag == nil
+      activeNodeDrag == nil,
+      activeConnection == nil
     else {
       return nil
     }
@@ -567,6 +628,7 @@ public struct FlowingGraphCanvas<
       .onChanged { value in
         guard session.tool == .select else { return }
         guard activeNodeResize == nil else { return }
+        guard activeConnection == nil else { return }
         guard rejectedNodeDragID != elementID else { return }
         if activeNodeDrag?.nodeID != elementID {
           guard
@@ -713,17 +775,275 @@ public struct FlowingGraphCanvas<
         select(elementID, mode: mode)
       },
       send: { action in
-        onIntent(
-          .elementAction(
-            FlowingGraphCanvasElementActionIntent(
-              action: action,
-              elementID: elementID,
-              basePresentationSnapshotID: content.presentation.snapshotID
-            )
+        handleElementAction(action, elementID: elementID)
+      }
+    )
+  }
+
+  private func handleElementAction(
+    _ action: FlowingGraphCanvasElementAction,
+    elementID: ElementID
+  ) {
+    if configuration.connectionEditing.isEnabled {
+      switch action {
+      case .beginConnection:
+        beginConnection(from: elementID)
+        return
+      case .completeConnection:
+        completeConnection(at: elementID)
+        return
+      case .cancelConnection:
+        cancelConnection()
+        return
+      case .collapse, .expand, .drillIn, .inspect:
+        break
+      }
+    }
+    onIntent(
+      .elementAction(
+        FlowingGraphCanvasElementActionIntent(
+          action: action,
+          elementID: elementID,
+          basePresentationSnapshotID: content.presentation.snapshotID
+        )
+      )
+    )
+  }
+
+  private func portConnectionGesture(
+    elementID: ElementID,
+    anchor: FlowingGraphCanvasAnchor
+  ) -> some Gesture {
+    DragGesture(minimumDistance: configuration.connectionEditing.minimumDragDistance)
+      .onChanged { value in
+        guard configuration.connectionEditing.isEnabled,
+          session.tool == .select
+        else {
+          return
+        }
+        let origin = FlowingGraphCanvasConnectionOrigin<Schema>.new(
+          sourcePortID: elementID
+        )
+        if activeConnection?.origin != origin {
+          beginConnection(from: elementID)
+        }
+        updateConnection(
+          at: CGPoint(
+            x: anchor.position.x + value.translation.width / session.viewport.transform.zoom,
+            y: anchor.position.y + value.translation.height / session.viewport.transform.zoom
           )
         )
       }
+      .onEnded { value in
+        guard activeConnection != nil else { return }
+        updateConnection(
+          at: CGPoint(
+            x: anchor.position.x + value.translation.width / session.viewport.transform.zoom,
+            y: anchor.position.y + value.translation.height / session.viewport.transform.zoom
+          )
+        )
+        finishConnection()
+      }
+  }
+
+  private func beginConnection(from portID: ElementID) {
+    guard configuration.connectionEditing.isEnabled,
+      let localID = content.localID(for: portID),
+      content.port(for: localID) != nil
+    else {
+      return
+    }
+    let origin = FlowingGraphCanvasConnectionOrigin<Schema>.new(sourcePortID: portID)
+    guard
+      let connection = FlowingGraphCanvasConnectionInteractionResolver.begin(
+        origin: origin,
+        content: content,
+        policy: interactionPolicy.connectionPolicy
+      )
+    else {
+      return
+    }
+    session.marquee = nil
+    session.transientNodeDrag = nil
+    session.transientNodeResize = nil
+    session.transientConnection = connection
+    session.focusedElementID = portID
+    hasKeyboardFocus = true
+  }
+
+  private func completeConnection(at portID: ElementID) {
+    guard let localID = content.localID(for: portID),
+      let anchor = content.anchor(for: localID),
+      activeConnection != nil
+    else {
+      return
+    }
+    updateConnection(at: anchor.position)
+    finishConnection()
+  }
+
+  private func updateConnection(at worldLocation: CGPoint) {
+    guard var connection = activeConnection else { return }
+    FlowingGraphCanvasConnectionInteractionResolver.update(
+      &connection,
+      worldLocation: worldLocation,
+      targetHitRadius: configuration.connectionEditing.targetHitRadius
+        / session.viewport.transform.zoom,
+      content: content,
+      policy: interactionPolicy.connectionPolicy
     )
+    session.transientConnection = connection
+  }
+
+  private func finishConnection() {
+    guard let connection = activeConnection else { return }
+    let resolution = FlowingGraphCanvasConnectionInteractionResolver.resolve(connection)
+    session.transientConnection = nil
+    switch resolution {
+    case .completed(let intent):
+      onIntent(.connectionCompleted(intent))
+    case .cancelled(let intent):
+      onIntent(.connectionCancelled(intent))
+    }
+  }
+
+  private func cancelConnection() {
+    guard let connection = activeConnection else { return }
+    session.transientConnection = nil
+    onIntent(
+      .connectionCancelled(
+        FlowingGraphCanvasConnectionInteractionResolver.cancel(connection)
+      )
+    )
+  }
+
+  private func connectionState(for portID: ElementID) -> FlowingGraphCanvasPortConnectionState {
+    guard let connection = activeConnection else { return .idle }
+    if connection.candidatePortID == portID, let validation = connection.validation {
+      return .target(validation: validation, isCandidate: true)
+    }
+    if connection.origin.fixedElementID == portID
+      || connection.origin.movingElementID == portID
+    {
+      return .source
+    }
+    let request = FlowingGraphCanvasConnectionValidationRequest(
+      origin: connection.origin,
+      targetPortID: portID,
+      basePresentationSnapshotID: connection.basePresentationSnapshotID,
+      baseLayoutInputID: connection.baseLayoutInputID
+    )
+    return .target(
+      validation: interactionPolicy.connectionPolicy.validate(request),
+      isCandidate: false
+    )
+  }
+
+  private func edgeReconnectionActions(
+    edge: FlowingGraphPresentationEdge<Schema>,
+    anchors: FlowingGraphCanvasEdgeAnchors,
+    renderedRoute: FlowingGraphEdgeRoute
+  ) -> FlowingGraphCanvasEdgeReconnectionActions<Schema> {
+    guard configuration.connectionEditing.isEnabled,
+      configuration.connectionEditing.allowsReconnection,
+      let endpointIDs = edgeEndpointIDs(edge)
+    else {
+      return .disabled
+    }
+    let firstPosition = renderedRoute.start
+    let secondPosition = renderedRoute.segments.last?.end ?? renderedRoute.start
+    let firstOrigin = FlowingGraphCanvasConnectionOrigin<Schema>.reconnect(
+      edgeID: edge.id,
+      endpoint: .first,
+      originalEndpointID: endpointIDs.first,
+      fixedEndpointID: endpointIDs.second
+    )
+    let secondOrigin = FlowingGraphCanvasConnectionOrigin<Schema>.reconnect(
+      edgeID: edge.id,
+      endpoint: .second,
+      originalEndpointID: endpointIDs.second,
+      fixedEndpointID: endpointIDs.first
+    )
+    return FlowingGraphCanvasEdgeReconnectionActions(
+      canReconnectFirst: interactionPolicy.connectionPolicy.canBegin(firstOrigin),
+      canReconnectSecond: interactionPolicy.connectionPolicy.canBegin(secondOrigin),
+      firstRenderedPosition: firstPosition,
+      secondRenderedPosition: secondPosition,
+      update: { endpoint, renderedTranslation in
+        updateReconnection(
+          edgeID: edge.id,
+          endpointIDs: endpointIDs,
+          endpoint: endpoint,
+          anchors: anchors,
+          renderedTranslation: renderedTranslation
+        )
+      },
+      end: { _ in
+        finishConnection()
+      },
+      cancel: cancelConnection
+    )
+  }
+
+  private func updateReconnection(
+    edgeID: ElementID,
+    endpointIDs: (first: ElementID, second: ElementID),
+    endpoint: FlowingGraphCanvasEdgeEndpoint,
+    anchors: FlowingGraphCanvasEdgeAnchors,
+    renderedTranslation: CGSize
+  ) {
+    let originalEndpointID = endpoint == .first ? endpointIDs.first : endpointIDs.second
+    let fixedEndpointID = endpoint == .first ? endpointIDs.second : endpointIDs.first
+    let origin = FlowingGraphCanvasConnectionOrigin<Schema>.reconnect(
+      edgeID: edgeID,
+      endpoint: endpoint,
+      originalEndpointID: originalEndpointID,
+      fixedEndpointID: fixedEndpointID
+    )
+    if activeConnection?.origin != origin {
+      guard
+        let connection = FlowingGraphCanvasConnectionInteractionResolver.begin(
+          origin: origin,
+          content: content,
+          policy: interactionPolicy.connectionPolicy
+        )
+      else {
+        return
+      }
+      session.marquee = nil
+      session.transientNodeDrag = nil
+      session.transientNodeResize = nil
+      session.transientConnection = connection
+      session.focusedElementID = edgeID
+      hasKeyboardFocus = true
+    }
+    let anchor = endpoint == .first ? anchors.first : anchors.second
+    updateConnection(
+      at: CGPoint(
+        x: anchor.position.x + renderedTranslation.width / session.viewport.transform.zoom,
+        y: anchor.position.y + renderedTranslation.height / session.viewport.transform.zoom
+      )
+    )
+  }
+
+  private func edgeEndpointIDs(
+    _ edge: FlowingGraphPresentationEdge<Schema>
+  ) -> (first: ElementID, second: ElementID)? {
+    switch edge.endpoints {
+    case .directed(let source, let target):
+      return (endpointID(source), endpointID(target))
+    case .undirected(let first, let second):
+      return (endpointID(first), endpointID(second))
+    }
+  }
+
+  private func endpointID(
+    _ endpoint: FlowingGraphPresentationEndpoint<Schema>
+  ) -> ElementID {
+    switch endpoint {
+    case .node(let elementID), .port(let elementID):
+      elementID
+    }
   }
 
   private func resizeActions(
@@ -760,6 +1080,7 @@ public struct FlowingGraphCanvas<
   ) {
     guard session.tool == .select,
       session.transientNodeDrag == nil,
+      session.transientConnection == nil,
       edges.isValid,
       interactionPolicy.nodeCapabilities.capabilities(for: elementID).contains(.resizable)
     else {
@@ -1122,15 +1443,7 @@ public struct FlowingGraphCanvas<
       )
     case .perform(let elementID, let action):
       guard content.contains(elementID) else { return false }
-      onIntent(
-        .elementAction(
-          FlowingGraphCanvasElementActionIntent(
-            action: action,
-            elementID: elementID,
-            basePresentationSnapshotID: content.presentation.snapshotID
-          )
-        )
-      )
+      handleElementAction(action, elementID: elementID)
       return true
     }
   }
@@ -1294,6 +1607,12 @@ public struct FlowingGraphCanvas<
     {
       session.transientNodeResize = nil
     }
+    if let connection = session.transientConnection,
+      connection.basePresentationSnapshotID != content.presentation.snapshotID
+        || connection.baseLayoutInputID != content.id
+    {
+      session.transientConnection = nil
+    }
   }
 
   private func handleCommand(_ command: FlowingGraphCanvasSessionCommand<Schema>?) {
@@ -1308,6 +1627,22 @@ public struct FlowingGraphCanvas<
     case .focus(let elementID, let zoom):
       guard let bounds = resolvedBounds(for: elementID) else { return }
       session.focusedElementID = elementID
+      canvasRequest = FlowingCanvasRequest(
+        id: command.id,
+        action: .focus(rect: bounds, zoom: zoom),
+        animated: command.animated
+      )
+    case .jumpToElement(let elementID, let selection, let zoom):
+      guard let bounds = resolvedBounds(for: elementID) else { return }
+      session.focusedElementID = elementID
+      switch selection {
+      case .preserve:
+        break
+      case .replace:
+        session.selection = [elementID]
+      case .add:
+        session.selection.insert(elementID)
+      }
       canvasRequest = FlowingCanvasRequest(
         id: command.id,
         action: .focus(rect: bounds, zoom: zoom),
@@ -1371,7 +1706,8 @@ public struct FlowingGraphCanvas<
     case .arrange(let action):
       guard configuration.allowsArrangementCommands,
         session.transientNodeDrag == nil,
-        session.transientNodeResize == nil
+        session.transientNodeResize == nil,
+        session.transientConnection == nil
       else {
         return
       }
@@ -1657,6 +1993,15 @@ private func squaredDistance(from point: CGPoint, to rect: CGRect) -> CGFloat {
   let dx = max(rect.minX - point.x, 0, point.x - rect.maxX)
   let dy = max(rect.minY - point.y, 0, point.y - rect.maxY)
   return dx * dx + dy * dy
+}
+
+extension FlowingGraphEdgePathSegment {
+  fileprivate var end: CGPoint {
+    switch self {
+    case .line(let end), .quadratic(_, let end), .cubic(_, _, let end):
+      end
+    }
+  }
 }
 
 private struct FlowingGraphCanvasNodeAccessibility: ViewModifier {

@@ -9,6 +9,7 @@ struct GraphCanvasShowcaseView: View {
   @StateObject private var model = GraphCanvasShowcaseModel()
   @State private var session = FlowingGraphCanvasSessionState<ShowcaseCanvasSchema>()
   @State private var command: FlowingGraphCanvasSessionCommand<ShowcaseCanvasSchema>?
+  @State private var searchQuery = ""
   @State private var usesGridSnapping = true
   @State private var viewportByPath:
     [FlowingGraphInstancePath<String, String>: FlowingCanvasTransform] = [:]
@@ -192,6 +193,7 @@ struct GraphCanvasShowcaseView: View {
           ),
           nodeDraggingMode: .multiple,
           nodeResizing: .standard,
+          connectionEditing: .standard,
           snapping: FlowingGraphCanvasSnappingConfiguration(
             isEnabled: true,
             grid: usesGridSnapping
@@ -204,6 +206,11 @@ struct GraphCanvasShowcaseView: View {
         ),
         accessibilitySnapshot: model.accessibilitySnapshot,
         command: command,
+        interactionPolicy: FlowingGraphCanvasInteractionPolicy(
+          connectionPolicy: FlowingGraphCanvasConnectionPolicy(
+            validate: model.validateConnection
+          )
+        ),
         onViewportChange: { viewport, phase in
           guard phase == .ended else { return }
           viewportByPath[model.projectionState.focusPath] = viewport.transform
@@ -247,6 +254,24 @@ struct GraphCanvasShowcaseView: View {
                   ]
                 )
               )
+            }
+            FlowingCanvasViewportOverlay(
+              alignment: .topLeading,
+              insets: EdgeInsets(top: 18, leading: 18, bottom: 0, trailing: 0)
+            ) {
+              FlowingGraphCanvasSearchPanel(
+                query: $searchQuery,
+                results: model.search(searchQuery),
+                focusesOnAppear: false
+              ) { result in
+                model.recordJump(to: result.item.title)
+                command = FlowingGraphCanvasNavigation.jumpCommand(
+                  to: result.id,
+                  in: sessionID,
+                  selection: .replace,
+                  zoom: 1.15
+                )
+              }
             }
           }
         }

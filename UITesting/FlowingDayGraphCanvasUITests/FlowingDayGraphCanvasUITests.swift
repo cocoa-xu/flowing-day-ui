@@ -45,6 +45,39 @@ final class FlowingDayGraphCanvasUITests: XCTestCase {
     XCTAssertTrue(waitForValue("Applied node resize intent", of: "showcase-last-intent", in: app))
   }
 
+  func testCompleteExampleCreatesAValidatedConnection() {
+    let app = launchApp(scenario: "graphCanvas")
+    let source = element("showcase-port-output", in: app)
+    let target = element("showcase-port-input", in: app)
+    XCTAssertTrue(source.waitForExistence(timeout: 5))
+    XCTAssertTrue(target.waitForExistence(timeout: 5))
+
+    source.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click(
+      forDuration: 0.05,
+      thenDragTo: target.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)),
+      withVelocity: .slow,
+      thenHoldForDuration: 0.05
+    )
+
+    XCTAssertTrue(waitForValue("Created connection", of: "showcase-last-intent", in: app))
+  }
+
+  func testCompleteExampleSearchesAndJumpsToElement() {
+    let app = launchApp(scenario: "graphCanvas")
+    let field = element("graph-canvas-search-field", in: app)
+    XCTAssertTrue(field.waitForExistence(timeout: 5))
+    field.click()
+    field.typeText("Node B")
+
+    let result = app.descendants(matching: .any).matching(
+      NSPredicate(format: "identifier BEGINSWITH %@", "graph-canvas-search-result-")
+    ).firstMatch
+    XCTAssertTrue(result.waitForExistence(timeout: 3))
+    result.click()
+
+    XCTAssertTrue(waitForValue("Jumped to Node B", of: "showcase-last-intent", in: app))
+  }
+
   private func launchApp(scenario: String) -> XCUIApplication {
     continueAfterFailure = false
     let app = XCUIApplication()

@@ -27,6 +27,11 @@ public struct FlowingGraphCanvasAutomationCommand<Schema: FlowingGraphCanvasSche
     switch action {
     case .focus(let elementID, _), .inspect(let elementID):
       return .elements([elementID])
+    case .jumpToElement(let elementID, let selection, _):
+      return FlowingAutomationSessionReadRequirement(
+        includesSessionState: selection == .add,
+        elementIDs: [elementID]
+      )
     case .pan(_, _, let zoom):
       return zoom == nil ? .sessionState : .none
     case .restoreViewport:
