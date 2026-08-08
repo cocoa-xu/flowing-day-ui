@@ -15,28 +15,53 @@ enum ExampleAppearance: Hashable {
   }
 }
 
-enum ExampleAccent: Hashable {
+enum ExampleAccent: CaseIterable, Hashable {
   case celadon
-  case copper
-  case iris
-  case moss
+  case yuzu
+  case glacier
+  case seafoam
+  case sage
+  case plum
+  case honey
+  case wisteria
   case custom
 
-  var color: Color {
+  static let palette = allCases.filter { $0 != .custom }
+
+  var title: String {
     switch self {
-    case .celadon, .custom: Color(red: 0.427, green: 0.620, blue: 0.647)
-    case .copper: Color(red: 0.706, green: 0.475, blue: 0.369)
-    case .iris: Color(red: 0.510, green: 0.525, blue: 0.769)
-    case .moss: Color(red: 0.494, green: 0.608, blue: 0.420)
+    case .celadon: "Celadon"
+    case .yuzu: "Yuzu"
+    case .glacier: "Glacier"
+    case .seafoam: "Seafoam"
+    case .sage: "Sage"
+    case .plum: "Plum"
+    case .honey: "Honey"
+    case .wisteria: "Wisteria"
+    case .custom: "Custom"
     }
   }
 
+  var color: Color {
+    preset?.fill ?? PreferencesAccent.celadon.fill
+  }
+
   func value(customColor: Color) -> PreferencesAccent {
-    if self == .celadon {
-      return .celadon
+    preset ?? PreferencesAccent(fill: customColor, foreground: customColor)
+  }
+
+  private var preset: PreferencesAccent? {
+    switch self {
+    case .celadon: .celadon
+    case .yuzu: .yuzu
+    case .glacier: .glacier
+    case .seafoam: .seafoam
+    case .sage: .sage
+    case .plum: .plum
+    case .honey: .honey
+    case .wisteria: .wisteria
+    case .custom: nil
     }
-    let color = self == .custom ? customColor : color
-    return PreferencesAccent(fill: color, foreground: color)
   }
 }
 

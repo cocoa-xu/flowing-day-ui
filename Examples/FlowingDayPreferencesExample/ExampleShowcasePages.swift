@@ -27,18 +27,13 @@ struct AppearanceShowcase: View {
           ]
         )
         separator
-        PreferencesSegmentedRow(
+        PreferencesPopupRow(
           symbol: "swatchpalette",
           title: "Accent",
-          controlWidth: 360,
           selection: $accent,
-          options: [
-            PreferencesPopupOption(.celadon, label: "Celadon"),
-            PreferencesPopupOption(.copper, label: "Copper"),
-            PreferencesPopupOption(.iris, label: "Iris"),
-            PreferencesPopupOption(.moss, label: "Moss"),
-            PreferencesPopupOption(.custom, label: "Custom"),
-          ]
+          options: ExampleAccent.allCases.map {
+            PreferencesPopupOption($0, label: $0.title)
+          }
         )
         separator
         PreferencesColorPickerRow(
@@ -302,12 +297,9 @@ struct ComponentsShowcase: View {
 
   private let selectableTags = ["fill", "foreground", "wash", "veil", "hairline"]
 
-  private let accentChips = [
-    ExampleAccentChip(id: "Celadon", accent: .celadon),
-    ExampleAccentChip(id: "Copper", accent: .copper),
-    ExampleAccentChip(id: "Iris", accent: .iris),
-    ExampleAccentChip(id: "Moss", accent: .moss),
-  ]
+  private let accentChips = ExampleAccent.palette.map {
+    ExampleAccentChip(id: $0.title, accent: $0)
+  }
 
   var body: some View {
     PreferencesPaneStack {
@@ -465,13 +457,13 @@ struct ComponentsShowcase: View {
         PreferencesIconSelectionButton(
           symbol: "bolt",
           title: "Bolt",
-          tint: ExampleAccent.iris.color,
+          tint: ExampleAccent.plum.color,
           isSelected: $boltSelected
         )
         PreferencesIconSelectionButton(
           symbol: "hare",
           title: "Hare",
-          tint: ExampleAccent.moss.color,
+          tint: ExampleAccent.sage.color,
           isSelected: $hareSelected
         )
       }
@@ -516,6 +508,7 @@ struct ComponentsShowcase: View {
         PreferencesChip(item.id) {
           accent = item.accent
         }
+        .preferencesAccent(item.accent.value(customColor: colorValue))
       }
     }
   }

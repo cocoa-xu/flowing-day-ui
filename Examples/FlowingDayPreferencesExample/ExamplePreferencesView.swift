@@ -150,7 +150,7 @@ struct ExamplePreferencesView: View {
       title: "Icons",
       subtitle: "SF Symbols and page-level accents",
       icon: .system("sparkles"),
-      accent: ExampleAccent.iris.value(customColor: customAccent)
+      accent: ExampleAccent.wisteria.value(customColor: customAccent)
     ) {
       IconsShowcase()
     }

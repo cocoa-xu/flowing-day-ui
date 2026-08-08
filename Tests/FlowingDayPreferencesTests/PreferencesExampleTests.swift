@@ -25,4 +25,20 @@ final class PreferencesExampleTests: XCTestCase {
     XCTAssertEqual(ExampleDensity.standard.rowInset, 18)
     XCTAssertEqual(ExampleDensity.standard.sectionSpacing, 20)
   }
+
+  func testExamplePresentsEveryNamedAccentInPaletteOrder() {
+    XCTAssertEqual(
+      ExampleAccent.palette.map(\.title),
+      [
+        "Celadon",
+        "Yuzu",
+        "Glacier",
+        "Seafoam",
+        "Sage",
+        "Plum",
+        "Honey",
+        "Wisteria",
+      ]
+    )
+  }
 }
