@@ -19,8 +19,8 @@ enum ExampleAccent: CaseIterable, Hashable {
   case coral
   case rose
   case berry
-  case blush
   case fuchsia
+  case crimson
   case apricot
   case yuzu
   case honey
@@ -35,7 +35,8 @@ enum ExampleAccent: CaseIterable, Hashable {
   case periwinkle
   case plum
   case wisteria
-  case dusk
+  case violet
+  case lilac
   case custom
 
   static let palette = allCases.filter { $0 != .custom }
@@ -45,8 +46,8 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .coral: "Coral"
     case .rose: "Rose"
     case .berry: "Berry"
-    case .blush: "Blush"
     case .fuchsia: "Fuchsia"
+    case .crimson: "Crimson"
     case .apricot: "Apricot"
     case .yuzu: "Yuzu"
     case .honey: "Honey"
@@ -61,7 +62,8 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .periwinkle: "Periwinkle"
     case .plum: "Plum"
     case .wisteria: "Wisteria"
-    case .dusk: "Dusk"
+    case .violet: "Violet"
+    case .lilac: "Lilac"
     case .custom: "Custom"
     }
   }
@@ -79,8 +81,8 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .coral: .coral
     case .rose: .rose
     case .berry: .berry
-    case .blush: .blush
     case .fuchsia: .fuchsia
+    case .crimson: .crimson
     case .apricot: .apricot
     case .yuzu: .yuzu
     case .honey: .honey
@@ -95,7 +97,8 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .periwinkle: .periwinkle
     case .plum: .plum
     case .wisteria: .wisteria
-    case .dusk: .dusk
+    case .violet: .violet
+    case .lilac: .lilac
     case .custom: nil
     }
   }
@@ -228,13 +231,13 @@ enum ExampleAccentFamily: CaseIterable, Identifiable {
 
   var accents: [ExampleAccent] {
     switch self {
-    case .red: [.coral, .rose, .berry, .blush, .fuchsia]
+    case .red: [.coral, .rose, .berry, .fuchsia, .crimson]
     case .orange: [.apricot]
     case .yellow: [.yuzu, .honey, .butter]
     case .green: [.sage]
     case .cyan: [.celadon, .seafoam, .mist, .dew]
     case .blue: [.glacier, .sky, .periwinkle]
-    case .purple: [.plum, .wisteria, .dusk]
+    case .purple: [.plum, .wisteria, .violet, .lilac]
     }
   }
 }

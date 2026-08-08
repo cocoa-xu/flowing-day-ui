@@ -2,8 +2,8 @@ enum PreferencesNamedAccentBase {
   static let coral: UInt32 = 0xC87F69
   static let rose: UInt32 = 0xC67B8D
   static let berry: UInt32 = 0xDD62A7
-  static let blush: UInt32 = 0xA08F92
   static let fuchsia: UInt32 = 0xBD7BAC
+  static let crimson: UInt32 = 0xDF6B6F
   static let apricot: UInt32 = 0xB18D62
   static let yuzu: UInt32 = 0x939D37
   static let honey: UInt32 = 0xAC9326
@@ -17,15 +17,16 @@ enum PreferencesNamedAccentBase {
   static let periwinkle: UInt32 = 0x738AF9
   static let plum: UInt32 = 0xA187BE
   static let wisteria: UInt32 = 0x968AC7
-  static let dusk: UInt32 = 0x9290B0
+  static let violet: UInt32 = 0xC26ECE
+  static let lilac: UInt32 = 0xA18CA4
 }
 
 extension PreferencesAccent {
   public static let coral = named(base: PreferencesNamedAccentBase.coral)
   public static let rose = named(base: PreferencesNamedAccentBase.rose)
   public static let berry = named(base: PreferencesNamedAccentBase.berry)
-  public static let blush = named(base: PreferencesNamedAccentBase.blush)
   public static let fuchsia = named(base: PreferencesNamedAccentBase.fuchsia)
+  public static let crimson = named(base: PreferencesNamedAccentBase.crimson)
   public static let apricot = named(base: PreferencesNamedAccentBase.apricot)
   public static let yuzu = named(base: PreferencesNamedAccentBase.yuzu)
   public static let honey = named(base: PreferencesNamedAccentBase.honey)
@@ -39,7 +40,8 @@ extension PreferencesAccent {
   public static let periwinkle = named(base: PreferencesNamedAccentBase.periwinkle)
   public static let plum = named(base: PreferencesNamedAccentBase.plum)
   public static let wisteria = named(base: PreferencesNamedAccentBase.wisteria)
-  public static let dusk = named(base: PreferencesNamedAccentBase.dusk)
+  public static let violet = named(base: PreferencesNamedAccentBase.violet)
+  public static let lilac = named(base: PreferencesNamedAccentBase.lilac)
 
   private static func named(base: UInt32) -> PreferencesAccent {
     PreferencesAccent.derived(

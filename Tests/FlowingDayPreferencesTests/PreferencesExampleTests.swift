@@ -43,8 +43,8 @@ final class PreferencesExampleTests: XCTestCase {
         "Coral",
         "Rose",
         "Berry",
-        "Blush",
         "Fuchsia",
+        "Crimson",
         "Apricot",
         "Yuzu",
         "Honey",
@@ -59,7 +59,8 @@ final class PreferencesExampleTests: XCTestCase {
         "Periwinkle",
         "Plum",
         "Wisteria",
-        "Dusk",
+        "Violet",
+        "Lilac",
       ]
     )
   }
@@ -80,13 +81,13 @@ final class PreferencesExampleTests: XCTestCase {
     XCTAssertEqual(
       ExampleAccentFamily.allCases.map(\.accents),
       [
-        [.coral, .rose, .berry, .blush, .fuchsia],
+        [.coral, .rose, .berry, .fuchsia, .crimson],
         [.apricot],
         [.yuzu, .honey, .butter],
         [.sage],
         [.celadon, .seafoam, .mist, .dew],
         [.glacier, .sky, .periwinkle],
-        [.plum, .wisteria, .dusk],
+        [.plum, .wisteria, .violet, .lilac],
       ]
     )
     XCTAssertEqual(ExampleAccentFamily.capacity, 5)
