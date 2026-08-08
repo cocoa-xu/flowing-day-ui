@@ -499,7 +499,7 @@ struct ComponentsShowcase: View {
     PreferencesSection(
       "Grid",
       footer:
-        "Named accents are arranged in seven color families with room for five accents in each family."
+        "Named accents are grouped into seven families with up to ten candidates across five columns."
     ) {
       VStack(spacing: 0) {
         ForEach(ExampleAccentFamily.allCases) { family in
@@ -531,7 +531,7 @@ private struct ExampleAccentFamilyGrid: View {
 
   private let columns = Array(
     repeating: GridItem(.flexible(), spacing: 7),
-    count: ExampleAccentFamily.capacity
+    count: ExampleAccentFamily.columnCount
   )
 
   var body: some View {
@@ -543,7 +543,7 @@ private struct ExampleAccentFamilyGrid: View {
         .padding(.top, 11)
 
       LazyVGrid(columns: columns, spacing: 7) {
-        ForEach(0..<ExampleAccentFamily.capacity, id: \.self) { index in
+        ForEach(0..<family.displaySlotCount, id: \.self) { index in
           if family.accents.indices.contains(index) {
             let accent = family.accents[index]
             PreferencesChip(accent.title) {

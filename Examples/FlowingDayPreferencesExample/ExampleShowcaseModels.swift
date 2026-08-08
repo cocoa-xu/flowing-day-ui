@@ -205,7 +205,8 @@ struct ExampleLabel: Identifiable {
 }
 
 enum ExampleAccentFamily: CaseIterable, Identifiable {
-  static let capacity = 5
+  static let candidateCapacity = 10
+  static let columnCount = 5
 
   case red
   case orange
@@ -239,6 +240,12 @@ enum ExampleAccentFamily: CaseIterable, Identifiable {
     case .blue: [.glacier, .sky, .periwinkle]
     case .purple: [.plum, .wisteria, .violet, .lilac]
     }
+  }
+
+  var displaySlotCount: Int {
+    let boundedCount = min(accents.count, Self.candidateCapacity)
+    let rowCount = max(1, (boundedCount + Self.columnCount - 1) / Self.columnCount)
+    return rowCount * Self.columnCount
   }
 }
 

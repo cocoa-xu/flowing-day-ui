@@ -90,6 +90,12 @@ final class PreferencesExampleTests: XCTestCase {
         [.plum, .wisteria, .violet, .lilac],
       ]
     )
-    XCTAssertEqual(ExampleAccentFamily.capacity, 5)
+    XCTAssertEqual(ExampleAccentFamily.candidateCapacity, 10)
+    XCTAssertEqual(ExampleAccentFamily.columnCount, 5)
+    XCTAssertTrue(
+      ExampleAccentFamily.allCases.allSatisfy {
+        $0.accents.count <= ExampleAccentFamily.candidateCapacity
+      }
+    )
   }
 }
