@@ -1,4 +1,5 @@
 import AppKit
+import FlowingDayGraphCanvas
 import FlowingDayGraphLayout
 import MetalKit
 import SwiftUI
@@ -653,6 +654,7 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
       invalidateRenderInstances()
     }
   }
+  private var marqueeSelectionState: FlowingGraphCanvasMarqueeSelectionState<Int>?
   private var mouseDownViewportPoint: CGPoint?
   private var mouseDownWorldPoint: CGPoint?
   private var mouseDownCameraOffset: CGSize?
@@ -817,6 +819,7 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
 
   override func mouseDown(with event: NSEvent) {
     window?.makeFirstResponder(self)
+    marqueeSelectionState = nil
     let viewportPoint = convert(event.locationInWindow, from: nil)
     let worldPoint = camera.worldPoint(for: viewportPoint)
     mouseDownViewportPoint = viewportPoint
@@ -848,6 +851,10 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
     } else {
       startsMarquee = true
       dragOrigins = [:]
+      marqueeSelectionState = FlowingGraphCanvasMarqueeSelectionState(
+        initialSelection: selectedNodeIDs,
+        mode: addsToSelection ? .additive : .replace
+      )
       if !addsToSelection {
         selectedNodeIDs.removeAll()
         publishSelection()
@@ -875,6 +882,16 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
     )
     if startsMarquee {
       marqueeWorldRect = Self.rect(from: startWorldPoint, to: worldPoint)
+      guard var marqueeSelectionState, let marqueeWorldRect else { return }
+      let selection = marqueeSelectionState.update(
+        candidates: scene.nodeIDs(intersecting: marqueeWorldRect),
+        hasExceededMinimumDistance: true
+      )
+      self.marqueeSelectionState = marqueeSelectionState
+      if selectedNodeIDs != selection {
+        selectedNodeIDs = selection
+        publishSelection()
+      }
     } else {
       scene.moveNodes(from: dragOrigins, by: translation)
       invalidateRenderInstances()
@@ -884,14 +901,15 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
   override func mouseUp(with event: NSEvent) {
     if tool == .pan {
       NSCursor.openHand.set()
-    } else if let marqueeWorldRect {
-      let marqueeSelection = scene.nodeIDs(intersecting: marqueeWorldRect)
-      if addsToSelection {
-        selectedNodeIDs.formUnion(marqueeSelection)
-      } else {
-        selectedNodeIDs = marqueeSelection
+    } else if let marqueeWorldRect, var marqueeSelectionState {
+      let selection = marqueeSelectionState.update(
+        candidates: scene.nodeIDs(intersecting: marqueeWorldRect),
+        hasExceededMinimumDistance: true
+      )
+      if selectedNodeIDs != selection {
+        selectedNodeIDs = selection
+        publishSelection()
       }
-      publishSelection()
     }
     scheduleRenderIndexCommit()
     mouseDownViewportPoint = nil
@@ -899,6 +917,7 @@ final class MetalCanvasSpikeMTKView: MTKView, MTKViewDelegate {
     mouseDownCameraOffset = nil
     dragOrigins = [:]
     marqueeWorldRect = nil
+    marqueeSelectionState = nil
     startsMarquee = false
   }
 

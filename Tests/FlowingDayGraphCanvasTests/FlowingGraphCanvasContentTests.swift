@@ -322,6 +322,81 @@ final class FlowingGraphCanvasContentTests: XCTestCase {
     XCTAssertTrue(selection.isEmpty)
   }
 
+  func testMarqueeSelectionTracksCurrentCandidatesInsteadOfAccumulatingPastCandidates() throws {
+    let ids: [CanvasElementID] = try makeFixture().presentation.nodes.map(\.id)
+    let baseSelection: Set<CanvasElementID> = [ids[0]]
+    var selectionState = FlowingGraphCanvasMarqueeSelectionState(
+      initialSelection: baseSelection,
+      mode: .replace
+    )
+
+    let firstSelection = selectionState.update(
+      candidates: [ids[0], ids[1]],
+      hasExceededMinimumDistance: true
+    )
+    let updatedSelection = selectionState.update(
+      candidates: [ids[1]],
+      hasExceededMinimumDistance: false
+    )
+
+    XCTAssertEqual(firstSelection, Set([ids[0], ids[1]]))
+    XCTAssertEqual(updatedSelection, Set([ids[1]]))
+  }
+
+  func testAdditiveMarqueeSelectionAlwaysUsesDragStartSelection() throws {
+    let ids: [CanvasElementID] = try makeFixture().presentation.nodes.map(\.id)
+    let baseSelection: Set<CanvasElementID> = [ids[0]]
+    var selectionState = FlowingGraphCanvasMarqueeSelectionState(
+      initialSelection: baseSelection,
+      mode: .additive
+    )
+
+    let firstSelection = selectionState.update(
+      candidates: [ids[1]],
+      hasExceededMinimumDistance: true
+    )
+    let updatedSelection = selectionState.update(
+      candidates: [],
+      hasExceededMinimumDistance: false
+    )
+
+    XCTAssertEqual(firstSelection, Set([ids[0], ids[1]]))
+    XCTAssertEqual(updatedSelection, baseSelection)
+  }
+
+  func testToggleMarqueeSelectionIsResolvedAgainstDragStartSelection() throws {
+    let ids: [CanvasElementID] = try makeFixture().presentation.nodes.map(\.id)
+    let baseSelection: Set<CanvasElementID> = [ids[0], ids[1]]
+    var selectionState = FlowingGraphCanvasMarqueeSelectionState(
+      initialSelection: baseSelection,
+      mode: .toggle
+    )
+
+    let selection = selectionState.update(
+      candidates: [ids[1]],
+      hasExceededMinimumDistance: true
+    )
+
+    XCTAssertEqual(selection, Set([ids[0]]))
+  }
+
+  func testMarqueeSelectionDoesNotChangeBeforeMinimumDragDistance() throws {
+    let ids: [CanvasElementID] = try makeFixture().presentation.nodes.map(\.id)
+    let baseSelection: Set<CanvasElementID> = [ids[0]]
+    var selectionState = FlowingGraphCanvasMarqueeSelectionState(
+      initialSelection: baseSelection,
+      mode: .replace
+    )
+
+    let selection = selectionState.update(
+      candidates: [ids[1]],
+      hasExceededMinimumDistance: false
+    )
+
+    XCTAssertEqual(selection, baseSelection)
+    XCTAssertFalse(selectionState.isActive)
+  }
+
   func testMultiNodeDragRequestUsesStableNodeOrderAndCapabilities() throws {
     let presentation = try makeFixture().presentation
     let nodeIDs = presentation.nodes.map(\.id)

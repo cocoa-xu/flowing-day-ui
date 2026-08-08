@@ -43,6 +43,7 @@ public struct FlowingGraphCanvas<
   @State private var canvasRequest: FlowingCanvasRequest?
   @State private var handledCommandID: UUID?
   @State private var rejectedNodeDragID: ElementID?
+  @State private var marqueeSelectionState: FlowingGraphCanvasMarqueeSelectionState<ElementID>?
   @FocusState private var hasKeyboardFocus: Bool
   @AccessibilityFocusState private var accessibilityFocusedNodeID: ElementID?
 
@@ -122,13 +123,14 @@ public struct FlowingGraphCanvas<
       handleCommand(command)
     }
     .onChange(of: content.id) { _ in
+      cancelMarqueeSelection()
       reconcileSession()
     }
     .onChange(of: command) { newCommand in
       handleCommand(newCommand)
     }
     .onChange(of: session.tool) { _ in
-      session.marquee = nil
+      cancelMarqueeSelection()
       session.transientNodeDrag = nil
       session.transientNodeResize = nil
       session.transientConnection = nil
@@ -724,13 +726,42 @@ public struct FlowingGraphCanvas<
       startLocation: context.startLocation,
       location: context.location
     )
+    var selectionState =
+      marqueeSelectionState
+      ?? FlowingGraphCanvasMarqueeSelectionState(
+        initialSelection: session.selection,
+        mode: interactionPolicy.isAdditiveSelectionActive ? .additive : .replace
+      )
+    let distance = hypot(context.translation.width, context.translation.height)
+    let hasExceededMinimumDistance =
+      distance >= configuration.marqueeMinimumDistance
+    let candidates: Set<ElementID>
+    if selectionState.isActive || hasExceededMinimumDistance {
+      candidates = Set(
+        content.nodeLocalIDs(intersecting: marqueeWorldRect(for: context)).compactMap(
+          content.elementID
+        )
+      )
+    } else {
+      candidates = []
+    }
+    let selection = selectionState.update(
+      candidates: candidates,
+      hasExceededMinimumDistance: hasExceededMinimumDistance
+    )
+    marqueeSelectionState = selectionState
+    if session.selection != selection {
+      session.selection = selection
+    }
   }
 
   private func commitMarquee(_ context: FlowingCanvasDragContext) {
     hasKeyboardFocus = true
-    defer { session.marquee = nil }
-    let distance = hypot(context.translation.width, context.translation.height)
-    guard distance >= configuration.marqueeMinimumDistance else { return }
+    updateMarquee(context)
+    finishMarqueeSelection()
+  }
+
+  private func marqueeWorldRect(for context: FlowingCanvasDragContext) -> CGRect {
     var worldRect = CGRect(
       x: min(context.worldStartLocation.x, context.worldLocation.x),
       y: min(context.worldStartLocation.y, context.worldLocation.y),
@@ -744,12 +775,19 @@ public struct FlowingGraphCanvas<
     if worldRect.height == 0 {
       worldRect = worldRect.insetBy(dx: 0, dy: -minimumWorldDimension / 2)
     }
-    let elementIDs = Set(
-      content.nodeLocalIDs(intersecting: worldRect).compactMap(content.elementID)
-    )
-    let command: FlowingGraphCanvasSelectionCommand<Schema> =
-      interactionPolicy.isAdditiveSelectionActive ? .add(elementIDs) : .replace(elementIDs)
-    FlowingGraphCanvasSessionReducer.apply(command, to: &session.selection)
+    return worldRect
+  }
+
+  private func finishMarqueeSelection() {
+    session.marquee = nil
+    marqueeSelectionState = nil
+  }
+
+  private func cancelMarqueeSelection() {
+    if let marqueeSelectionState, marqueeSelectionState.isActive {
+      session.selection = marqueeSelectionState.initialSelection
+    }
+    finishMarqueeSelection()
   }
 
   private func handleSmartMagnify(

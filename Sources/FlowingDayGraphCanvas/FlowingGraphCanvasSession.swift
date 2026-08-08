@@ -24,6 +24,62 @@ public enum FlowingGraphCanvasSelectionMode: Hashable, Sendable {
   case toggle
 }
 
+public enum FlowingGraphCanvasMarqueeSelectionResolver {
+  public static func selection<ElementID: Hashable & Sendable>(
+    from baseSelection: Set<ElementID>,
+    candidates: Set<ElementID>,
+    mode: FlowingGraphCanvasSelectionMode
+  ) -> Set<ElementID> {
+    switch mode {
+    case .replace:
+      candidates
+    case .additive:
+      baseSelection.union(candidates)
+    case .toggle:
+      baseSelection.symmetricDifference(candidates)
+    }
+  }
+}
+
+public struct FlowingGraphCanvasMarqueeSelectionState<ElementID: Hashable & Sendable>:
+  Equatable, Sendable
+{
+  public let initialSelection: Set<ElementID>
+  public let mode: FlowingGraphCanvasSelectionMode
+  public private(set) var candidates: Set<ElementID>
+  public private(set) var isActive: Bool
+
+  public init(
+    initialSelection: Set<ElementID>,
+    mode: FlowingGraphCanvasSelectionMode
+  ) {
+    self.initialSelection = initialSelection
+    self.mode = mode
+    candidates = []
+    isActive = false
+  }
+
+  @discardableResult
+  public mutating func update(
+    candidates: Set<ElementID>,
+    hasExceededMinimumDistance: Bool
+  ) -> Set<ElementID> {
+    isActive = isActive || hasExceededMinimumDistance
+    guard isActive else { return initialSelection }
+    self.candidates = candidates
+    return selection
+  }
+
+  public var selection: Set<ElementID> {
+    guard isActive else { return initialSelection }
+    return FlowingGraphCanvasMarqueeSelectionResolver.selection(
+      from: initialSelection,
+      candidates: candidates,
+      mode: mode
+    )
+  }
+}
+
 public struct FlowingGraphCanvasMarquee: Equatable, Sendable {
   public let startLocation: CGPoint
   public let location: CGPoint
