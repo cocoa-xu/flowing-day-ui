@@ -297,10 +297,6 @@ struct ComponentsShowcase: View {
 
   private let selectableTags = ["fill", "foreground", "wash", "veil", "hairline"]
 
-  private let accentChips = ExampleAccent.palette.map {
-    ExampleAccentChip(id: $0.title, accent: $0)
-  }
-
   var body: some View {
     PreferencesPaneStack {
       rowComponents
@@ -502,13 +498,17 @@ struct ComponentsShowcase: View {
   private var gridComponents: some View {
     PreferencesSection(
       "Grid",
-      footer: "PreferencesGrid creates adaptive equal-width columns; each chip retints the window."
+      footer:
+        "Named accents are arranged in seven color families with room for five accents in each family."
     ) {
-      PreferencesGrid(items: accentChips) { item in
-        PreferencesChip(item.id) {
-          accent = item.accent
+      VStack(spacing: 0) {
+        ForEach(ExampleAccentFamily.allCases) { family in
+          ExampleAccentFamilyGrid(
+            family: family,
+            selection: $accent,
+            customColor: colorValue
+          )
         }
-        .preferencesAccent(item.accent.value(customColor: colorValue))
       }
     }
   }
@@ -519,6 +519,47 @@ struct ComponentsShowcase: View {
       PreferencesPopupOption(.second, label: "Two"),
       PreferencesPopupOption(.third, label: "Three"),
     ]
+  }
+}
+
+private struct ExampleAccentFamilyGrid: View {
+  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.preferencesTypography) private var typography
+  let family: ExampleAccentFamily
+  @Binding var selection: ExampleAccent
+  let customColor: Color
+
+  private let columns = Array(
+    repeating: GridItem(.flexible(), spacing: 7),
+    count: ExampleAccentFamily.capacity
+  )
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      Text(family.title.uppercased())
+        .font(typography.sectionHeader.font)
+        .foregroundStyle(PreferencesPalette.faint)
+        .padding(.horizontal, metrics.rowInset)
+        .padding(.top, 11)
+
+      LazyVGrid(columns: columns, spacing: 7) {
+        ForEach(0..<ExampleAccentFamily.capacity, id: \.self) { index in
+          if family.accents.indices.contains(index) {
+            let accent = family.accents[index]
+            PreferencesChip(accent.title) {
+              selection = accent
+            }
+            .preferencesAccent(accent.value(customColor: customColor))
+          } else {
+            Color.clear
+              .frame(height: 30)
+              .accessibilityHidden(true)
+          }
+        }
+      }
+      .padding(.horizontal, metrics.rowInset)
+      .padding(.vertical, 13)
+    }
   }
 }
 

@@ -51,4 +51,32 @@ final class PreferencesExampleTests: XCTestCase {
       ]
     )
   }
+
+  func testExampleGroupsRelatedAccentsIntoColorFamilies() {
+    XCTAssertEqual(
+      ExampleAccentFamily.allCases.map(\.title),
+      [
+        "Red",
+        "Orange",
+        "Yellow",
+        "Green",
+        "Cyan",
+        "Blue",
+        "Purple",
+      ]
+    )
+    XCTAssertEqual(
+      ExampleAccentFamily.allCases.map(\.accents),
+      [
+        [],
+        [],
+        [.yuzu, .honey],
+        [.sage],
+        [.celadon, .seafoam],
+        [.glacier],
+        [.plum, .wisteria],
+      ]
+    )
+    XCTAssertEqual(ExampleAccentFamily.capacity, 5)
+  }
 }

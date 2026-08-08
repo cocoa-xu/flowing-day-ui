@@ -165,9 +165,41 @@ struct ExampleLabel: Identifiable {
   }
 }
 
-struct ExampleAccentChip: Identifiable {
-  let id: String
-  let accent: ExampleAccent
+enum ExampleAccentFamily: CaseIterable, Identifiable {
+  static let capacity = 5
+
+  case red
+  case orange
+  case yellow
+  case green
+  case cyan
+  case blue
+  case purple
+
+  var id: Self { self }
+
+  var title: String {
+    switch self {
+    case .red: "Red"
+    case .orange: "Orange"
+    case .yellow: "Yellow"
+    case .green: "Green"
+    case .cyan: "Cyan"
+    case .blue: "Blue"
+    case .purple: "Purple"
+    }
+  }
+
+  var accents: [ExampleAccent] {
+    switch self {
+    case .red, .orange: []
+    case .yellow: [.yuzu, .honey]
+    case .green: [.sage]
+    case .cyan: [.celadon, .seafoam]
+    case .blue: [.glacier]
+    case .purple: [.plum, .wisteria]
+    }
+  }
 }
 
 extension PreferencesTypography {
