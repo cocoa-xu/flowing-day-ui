@@ -14,6 +14,7 @@ export const selectionStyles: CSSResult = css`
   }
 
   .segment {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -60,6 +61,58 @@ export const selectionStyles: CSSResult = css`
   .segment[disabled] {
     opacity: 0.4;
     cursor: default;
+  }
+
+  .strip[data-connected] {
+    gap: 0;
+    box-sizing: border-box;
+    padding: 2px;
+    border-radius: var(--_fd-metric-control-radius);
+    background: var(--_fd-surface-control);
+    box-shadow: inset 0 0 0 1px var(--_fd-palette-hairline);
+  }
+
+  .strip[data-connected] .segment {
+    padding-block: 6px;
+    padding-inline: 9px;
+    border-radius: max(0px, calc(var(--_fd-metric-control-radius) - 2px));
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .strip[data-connected] .segment:not(:last-child)::after {
+    position: absolute;
+    top: 50%;
+    inset-inline-end: 0;
+    width: 1px;
+    height: 14px;
+    background: var(--_fd-palette-hairline);
+    content: '';
+    opacity: 1;
+    transform: translateY(-50%);
+    transition: opacity var(--_fd-motion-default) ease-in-out;
+  }
+
+  .strip[data-connected] .segment[data-hide-divider]::after {
+    opacity: 0;
+  }
+
+  .strip[data-connected] .segment:not([data-selected]):not([disabled]):hover {
+    background: var(--_fd-accent-veil);
+  }
+
+  .strip[data-connected] .segment:not([data-selected]):not([disabled]):active {
+    background: var(--_fd-accent-wash);
+  }
+
+  .strip[data-connected] .segment[data-selected] {
+    background: var(--_fd-accent-wash);
+    box-shadow: inset 0 0 0 1px
+      color-mix(in srgb, var(--_fd-accent-foreground) 22%, transparent);
+  }
+
+  .strip[data-connected] .segment:focus-visible {
+    outline-offset: -2px;
   }
 
   .segment-label {

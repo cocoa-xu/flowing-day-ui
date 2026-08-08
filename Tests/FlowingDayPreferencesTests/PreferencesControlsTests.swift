@@ -96,6 +96,62 @@ final class PreferencesControlsTests: XCTestCase {
     )
   }
 
+  func testConnectedSegmentNavigationWrapsInBothDirections() {
+    let values = ["first", "second", "third"]
+
+    XCTAssertEqual(
+      PreferencesConnectedSegmentedControlNavigation.destination(
+        in: values,
+        from: "third",
+        offset: 1
+      ),
+      "first"
+    )
+    XCTAssertEqual(
+      PreferencesConnectedSegmentedControlNavigation.destination(
+        in: values,
+        from: "first",
+        offset: -1
+      ),
+      "third"
+    )
+  }
+
+  func testConnectedSegmentNavigationStartsAtTheNearestBoundaryForAnUnknownSelection() {
+    XCTAssertEqual(
+      PreferencesConnectedSegmentedControlNavigation.destination(
+        in: ["first", "second", "third"],
+        from: "unknown",
+        offset: 1
+      ),
+      "first"
+    )
+    XCTAssertEqual(
+      PreferencesConnectedSegmentedControlNavigation.destination(
+        in: ["first", "second", "third"],
+        from: "unknown",
+        offset: -1
+      ),
+      "third"
+    )
+  }
+
+  @MainActor
+  func testConnectedSegmentedRowUsesCompactRowHeight() {
+    let height = fittingHeight(
+      PreferencesConnectedSegmentedRow(
+        title: "Layout",
+        selection: .constant("first"),
+        options: [
+          PreferencesPopupOption("first", label: "First"),
+          PreferencesPopupOption("second", label: "Second"),
+        ]
+      )
+    )
+
+    XCTAssertEqual(height, PreferencesRowLayout.minimumHeight)
+  }
+
   @MainActor
   func testMultiSelectOptionTogglesItsBinding() {
     let state = BooleanState(false)

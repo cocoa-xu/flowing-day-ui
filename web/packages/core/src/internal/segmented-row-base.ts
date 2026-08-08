@@ -5,8 +5,8 @@ import { type CollectedOption, collectOptions } from './options.js'
 import { selectionStyles } from './selection.js'
 
 /**
- * Shared by `fd-segmented-row` and `fd-symbol-segmented-row`, which differ only in what
- * a segment draws. Both are single-select strips of equal-width pills inside an `fd-row`.
+ * Shared by the segmented row variants, which differ in content and whether the segments
+ * share one connected surface. Every variant is a single-select strip inside an `fd-row`.
  *
  * Exposed as a radio group rather than as the plain buttons the SwiftUI original uses:
  * on the web that carries the roving tab stop and arrow-key navigation people expect
@@ -94,6 +94,10 @@ export abstract class FdSegmentedRowBase extends FdElement {
     return null
   }
 
+  protected get connected(): boolean {
+    return false
+  }
+
   #onSlotChange = (event: Event): void => {
     this.options = collectOptions(event.target as HTMLSlotElement)
   }
@@ -124,14 +128,29 @@ export abstract class FdSegmentedRowBase extends FdElement {
     if (offset === 0) return
 
     event.preventDefault()
-    const current = this.selectedIndex >= 0 ? this.selectedIndex : 0
-    const next = (current + offset + count) % count
+    const selectedIndex = this.selectedIndex
+    const current = selectedIndex >= 0 ? selectedIndex : offset > 0 ? -1 : 0
+    const next = this.#nextEnabledIndex(current, offset)
+    if (next < 0) return
     this.#select(next)
     this.renderRoot.querySelectorAll<HTMLButtonElement>('.segment')[next]?.focus()
   }
 
+  #nextEnabledIndex(current: number, offset: number): number {
+    let candidate = current
+    for (let visited = 0; visited < this.options.length; visited += 1) {
+      candidate = (candidate + offset + this.options.length) % this.options.length
+      if (!this.options[candidate]?.disabled) return candidate
+    }
+    return -1
+  }
+
   override render() {
     const selectedIndex = this.selectedIndex
+    const tabStopIndex =
+      selectedIndex >= 0 && !this.options[selectedIndex]?.disabled
+        ? selectedIndex
+        : this.options.findIndex((option) => !option.disabled)
 
     return html`
       <fd-row symbol=${this.symbol ?? ''} label=${this.label} caption=${this.caption ?? ''}>
@@ -140,6 +159,7 @@ export abstract class FdSegmentedRowBase extends FdElement {
           slot="trailing"
           role="radiogroup"
           aria-label=${this.label}
+          ?data-connected=${this.connected}
           @keydown=${this.#onKeydown}
         >
           ${this.options.map((option, index) => {
@@ -155,8 +175,9 @@ export abstract class FdSegmentedRowBase extends FdElement {
                 ?data-compact=${this.segmentModifier === 'compact'}
                 ?data-symbol=${this.segmentModifier === 'symbol'}
                 ?disabled=${this.disabled || option.disabled}
+                ?data-hide-divider=${this.connected && (selected || index + 1 === selectedIndex)}
                 title=${this.segmentTitle(option) ?? ''}
-                tabindex=${selected || (selectedIndex < 0 && index === 0) ? 0 : -1}
+                tabindex=${index === tabStopIndex ? 0 : -1}
                 @click=${() => this.#select(index)}
               >
                 ${this.renderSegmentContent(option, selected)}

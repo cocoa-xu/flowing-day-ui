@@ -427,6 +427,13 @@ struct ComponentsShowcase: View {
         options: selectionOptions
       )
       PreferencesRowSeparator()
+      PreferencesConnectedSegmentedRow(
+        title: "PreferencesConnectedSegmentedRow",
+        controlWidth: 240,
+        selection: $segmentedValue,
+        options: selectionOptions
+      )
+      PreferencesRowSeparator()
       PreferencesSymbolSegmentedRow(
         title: "PreferencesSymbolSegmentedRow",
         controlWidth: 180,
