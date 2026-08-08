@@ -297,6 +297,24 @@ final class PreferencesThemeTests: XCTestCase {
           foregroundDark: 0xFA8EFF
         )
       ),
+      (
+        PreferencesNamedAccentBase.petal,
+        PreferencesAccentHexValues(
+          fillLight: 0xD67084,
+          fillDark: 0xFF99AC,
+          foregroundLight: 0xAF4E63,
+          foregroundDark: 0xFFA2B5
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.leaf,
+        PreferencesAccentHexValues(
+          fillLight: 0x74A629,
+          fillDark: 0x9CD059,
+          foregroundLight: 0x538300,
+          foregroundDark: 0xA5DA63
+        )
+      ),
     ]
 
     for (base, expected) in expectations {
