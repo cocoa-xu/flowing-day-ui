@@ -125,6 +125,13 @@ interface RawGroup {
   readonly tokens?: Readonly<Record<string, RawToken>>
 }
 
+type Values<T> = T[keyof T]
+type KeysOfUnion<T> = T extends unknown ? keyof T : never
+type RawNamedAccentFamilies = typeof raw.namedAccents.families
+
+export type NamedAccentFamilyName = Extract<keyof RawNamedAccentFamilies, string>
+export type NamedAccentName = Extract<KeysOfUnion<Values<RawNamedAccentFamilies>>, string>
+
 const isPaired = <T>(value: Paired<T>): value is { light: T; dark: T } =>
   typeof value === 'object' && value !== null && 'light' in value
 
@@ -155,6 +162,27 @@ const toTokenValue = (token: RawToken): TokenValue =>
     ? { light: resolve(token, 'light'), dark: resolve(token, 'dark') }
     : resolve(token, 'light')
 
+const rawNamedAccentFamilies = raw.namedAccents.families as Readonly<
+  Record<NamedAccentFamilyName, Readonly<Record<NamedAccentName, RawToken>>>
+>
+
+const namedAccentEntries = Object.values(rawNamedAccentFamilies).flatMap((family) =>
+  Object.entries(family),
+)
+
+export const namedAccents = Object.freeze(
+  Object.fromEntries(namedAccentEntries.map(([name, token]) => [name, resolve(token, 'light')])),
+) as Readonly<Record<NamedAccentName, string>>
+
+export const namedAccentFamilies = Object.freeze(
+  Object.fromEntries(
+    Object.entries(rawNamedAccentFamilies).map(([family, accents]) => [
+      family,
+      Object.freeze(Object.keys(accents)) as readonly NamedAccentName[],
+    ]),
+  ),
+) as Readonly<Record<NamedAccentFamilyName, readonly NamedAccentName[]>>
+
 /** Expands the 17 roles of `PreferencesTypography` into their four token reads each. */
 function textStyleTokens(): Array<readonly [string, TokenValue]> {
   return Object.entries(raw.typography.roles as Readonly<Record<string, RawTextStyle>>).flatMap(
@@ -167,14 +195,21 @@ function textStyleTokens(): Array<readonly [string, TokenValue]> {
   )
 }
 
+function expandedTokens(group: RawGroup): ReadonlyArray<readonly [string, TokenValue]> {
+  if (group.expand === 'typography') return textStyleTokens()
+  if (group.expand === 'namedAccents') {
+    return namedAccentEntries.map(
+      ([name, token]) => [`accent-${name}`, toTokenValue(token)] as const,
+    )
+  }
+  return Object.entries(group.tokens ?? {}).map(
+    ([name, token]) => [name, toTokenValue(token)] as const,
+  )
+}
+
 const expandGroup = (group: RawGroup): TokenGroup => ({
   title: group.title,
-  tokens:
-    group.expand === 'typography'
-      ? textStyleTokens()
-      : Object.entries(group.tokens ?? {}).map(
-          ([name, token]) => [name, toTokenValue(token)] as const,
-        ),
+  tokens: expandedTokens(group),
 })
 
 export const tokenGroups: readonly TokenGroup[] = (raw.groups as readonly RawGroup[]).map(
