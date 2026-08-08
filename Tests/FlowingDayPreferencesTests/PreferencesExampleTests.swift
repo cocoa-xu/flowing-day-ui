@@ -1,8 +1,18 @@
+import AppKit
 import XCTest
 
 @testable import FlowingDayPreferencesExample
 
 final class PreferencesExampleTests: XCTestCase {
+  @MainActor
+  func testExampleStaysOpenWhenATransientPanelCloses() {
+    let application = FlowingDayPreferencesExampleApp()
+
+    XCTAssertFalse(
+      application.applicationShouldTerminateAfterLastWindowClosed(NSApplication.shared)
+    )
+  }
+
   func testExampleNavigationIsAComponentShowcase() {
     XCTAssertEqual(
       ExamplePage.allCases.map(\.rawValue),
