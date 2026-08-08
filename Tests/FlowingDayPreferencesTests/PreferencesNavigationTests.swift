@@ -6,6 +6,13 @@ import XCTest
 
 @MainActor
 final class PreferencesNavigationTests: XCTestCase {
+  func testRoundedScrollIndicatorsStayInsideTheCornerSafeArea() {
+    XCTAssertEqual(PreferencesRoundedScrollGeometry.indicatorInset(cornerRadius: 18), 9)
+    XCTAssertEqual(PreferencesRoundedScrollGeometry.indicatorInset(cornerRadius: 0), 0)
+    XCTAssertEqual(PreferencesRoundedScrollGeometry.indicatorInset(cornerRadius: -12), 0)
+    XCTAssertEqual(PreferencesRoundedScrollGeometry.indicatorInset(cornerRadius: .infinity), 0)
+  }
+
   func testPreferencesViewUsesCenteredContentByDefault() {
     let configuration = PreferencesViewConfiguration(applicationName: "Example")
 
