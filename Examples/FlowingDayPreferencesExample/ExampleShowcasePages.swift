@@ -72,13 +72,14 @@ struct AppearanceShowcase: View {
   @ViewBuilder
   private var separator: some View {
     if showsSeparators {
-      PreferencesRowSeparator(isIndented: true)
+      PreferencesRowSeparator(leadingEdge: .iconText)
     }
   }
 }
 
 struct LayoutShowcase: View {
   @Binding var density: ExampleDensity
+  @Binding var contentLayout: ExampleContentLayout
   @Binding var contentWidth: ExampleContentWidth
   @Binding var sidebarWidth: Double
 
@@ -102,19 +103,30 @@ struct LayoutShowcase: View {
 
       PreferencesSection(
         "Measure",
-        footer: "Both controls resize the Preferences view while you interact with them."
+        footer: "Content can fill the window or remain centered at a maximum width."
       ) {
         PreferencesSegmentedRow(
-          symbol: "arrow.left.and.right",
-          title: "Content Width",
+          symbol: "rectangle.center.inset.filled",
+          title: "Content Layout",
           controlWidth: 240,
-          selection: $contentWidth,
+          selection: $contentLayout,
           options: [
-            PreferencesPopupOption(.narrow, label: "560"),
-            PreferencesPopupOption(.standard, label: "720"),
-            PreferencesPopupOption(.wide, label: "860"),
+            PreferencesPopupOption(.centered, label: "Centered"),
+            PreferencesPopupOption(.fluid, label: "Fluid"),
           ]
         )
+        PreferencesDependentRows(isVisible: contentLayout == .centered) {
+          PreferencesSegmentedRow(
+            title: "Maximum Width",
+            controlWidth: 240,
+            selection: $contentWidth,
+            options: [
+              PreferencesPopupOption(.narrow, label: "560"),
+              PreferencesPopupOption(.standard, label: "720"),
+              PreferencesPopupOption(.wide, label: "860"),
+            ]
+          )
+        }
         PreferencesRowSeparator()
         PreferencesSliderRow(
           title: "Sidebar Width",
@@ -189,7 +201,7 @@ struct MotionShowcase: View {
             title: "PreferencesDependentRows",
             caption: "Height, opacity, and offset animate together."
           )
-          PreferencesRowSeparator(isIndented: true)
+          PreferencesRowSeparator(leadingEdge: .iconText)
           PreferencesMultiSelectRow(
             title: "Transition",
             controlWidth: 300,
@@ -236,7 +248,7 @@ struct IconsShowcase: View {
           title: "Symbol Gutter",
           caption: "Pass symbol: to any component that supports a leading icon."
         )
-        PreferencesRowSeparator(isIndented: true)
+        PreferencesRowSeparator(leadingEdge: .iconText)
         PreferencesRow(
           symbol: "app.dashed",
           title: "Page Icons",
@@ -316,7 +328,7 @@ struct ComponentsShowcase: View {
         title: "PreferencesRow",
         caption: "Symbol gutter, title, caption, and a trailing view."
       )
-      PreferencesRowSeparator(isIndented: true)
+      PreferencesRowSeparator(leadingEdge: .iconText)
       PreferencesSwitchRow(title: "PreferencesSwitchRow", isOn: $switchValue)
       PreferencesRowSeparator()
       PreferencesPopupRow(
@@ -339,7 +351,7 @@ struct ComponentsShowcase: View {
         title: "PreferencesValueRow",
         value: "Pressed \(pressCount) times"
       )
-      PreferencesRowSeparator(isIndented: true)
+      PreferencesRowSeparator(leadingEdge: .iconText)
       PreferencesButtonRow(
         title: "PreferencesButtonRow",
         caption: "Invokes the action supplied by its owner.",
@@ -523,7 +535,6 @@ struct ComponentsShowcase: View {
 
 private struct ExampleAccentFamilyGrid: View {
   @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesTypography) private var typography
   let family: ExampleAccentFamily
   @Binding var selection: ExampleAccent
   let customColor: Color
@@ -534,31 +545,25 @@ private struct ExampleAccentFamilyGrid: View {
   )
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      Text(family.title.uppercased())
-        .font(typography.sectionHeader.font)
-        .foregroundStyle(PreferencesPalette.faint)
-        .padding(.horizontal, metrics.rowInset)
-        .padding(.top, 11)
-
-      LazyVGrid(columns: columns, spacing: 7) {
-        ForEach(0..<family.displaySlotCount, id: \.self) { index in
-          if family.accents.indices.contains(index) {
-            let accent = family.accents[index]
-            PreferencesChip(accent.title) {
-              selection = accent
-            }
-            .preferencesAccent(accent.value(customColor: customColor))
-          } else {
-            Color.clear
-              .frame(height: 30)
-              .accessibilityHidden(true)
+    LazyVGrid(columns: columns, spacing: 7) {
+      ForEach(0..<family.displaySlotCount, id: \.self) { index in
+        if family.accents.indices.contains(index) {
+          let accent = family.accents[index]
+          PreferencesChip(accent.title) {
+            selection = accent
           }
+          .preferencesAccent(accent.value(customColor: customColor))
+        } else {
+          Color.clear
+            .frame(height: 30)
+            .accessibilityHidden(true)
         }
       }
-      .padding(.horizontal, metrics.rowInset)
-      .padding(.vertical, 13)
     }
+    .padding(.horizontal, metrics.rowInset)
+    .padding(.vertical, 7)
+    .accessibilityElement(children: .contain)
+    .accessibilityLabel(family.title)
   }
 }
 
@@ -571,7 +576,7 @@ struct AboutShowcase: View {
           title: "Package",
           value: "FlowingDayPreferences"
         )
-        PreferencesRowSeparator(isIndented: true)
+        PreferencesRowSeparator(leadingEdge: .iconText)
         PreferencesValueRow(title: "License", value: "Apache-2.0")
         PreferencesRowSeparator()
         PreferencesValueRow(title: "Built With", value: "SwiftUI + AppKit")

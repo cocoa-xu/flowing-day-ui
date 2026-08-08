@@ -275,6 +275,18 @@ enum ExampleContentWidth: Hashable {
   }
 }
 
+enum ExampleContentLayout: Hashable {
+  case centered
+  case fluid
+
+  var policy: PreferencesContentWidthPolicy {
+    switch self {
+    case .centered: .centered()
+    case .fluid: .fluid
+    }
+  }
+}
+
 enum ExampleTextScale: Hashable {
   case small
   case standard
@@ -311,7 +323,7 @@ struct ExampleLabel: Identifiable {
 
 enum ExampleAccentFamily: CaseIterable, Identifiable {
   static let candidateCapacity = 7
-  static let columnCount = 5
+  static let columnCount = 7
 
   case red
   case orange

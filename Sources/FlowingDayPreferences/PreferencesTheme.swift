@@ -146,6 +146,22 @@ public struct PreferencesSurfaces: Equatable, Sendable {
   public static let standard = PreferencesSurfaces()
 }
 
+public enum PreferencesContentWidthPolicy: Equatable, Sendable {
+  case fluid
+  case centered(maximumWidth: CGFloat? = nil)
+
+  func resolvedMaximumWidth(defaultWidth: CGFloat) -> CGFloat? {
+    switch self {
+    case .fluid:
+      return nil
+    case .centered(let maximumWidth):
+      let fallback = defaultWidth.isFinite && defaultWidth > 0 ? defaultWidth : 1
+      guard let maximumWidth else { return fallback }
+      return maximumWidth.isFinite && maximumWidth > 0 ? maximumWidth : fallback
+    }
+  }
+}
+
 public struct PreferencesViewConfiguration {
   public var applicationName: String
   public var preferencesTitle: String
@@ -156,6 +172,7 @@ public struct PreferencesViewConfiguration {
   public var metrics: PreferencesMetrics
   public var typography: PreferencesTypography
   public var surfaces: PreferencesSurfaces
+  public var contentWidthPolicy: PreferencesContentWidthPolicy
   public var sidebarWidth: CGFloat
   public var cornerRadius: CGFloat
 
@@ -169,6 +186,7 @@ public struct PreferencesViewConfiguration {
     metrics: PreferencesMetrics = .standard,
     typography: PreferencesTypography = .standard,
     surfaces: PreferencesSurfaces = .standard,
+    contentWidthPolicy: PreferencesContentWidthPolicy = .centered(),
     sidebarWidth: CGFloat = 224,
     cornerRadius: CGFloat = 18
   ) {
@@ -181,6 +199,7 @@ public struct PreferencesViewConfiguration {
     self.metrics = metrics
     self.typography = typography
     self.surfaces = surfaces
+    self.contentWidthPolicy = contentWidthPolicy
     self.sidebarWidth = sidebarWidth
     self.cornerRadius = cornerRadius
   }

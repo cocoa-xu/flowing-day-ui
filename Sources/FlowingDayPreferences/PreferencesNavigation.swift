@@ -175,13 +175,19 @@ public struct PreferencesView<ID: Hashable>: View {
           selectedPage.content
         }
       }
-      .frame(maxWidth: configuration.metrics.contentWidth, alignment: .leading)
+      .frame(maxWidth: contentMaximumWidth, alignment: .leading)
       .padding(.horizontal, 34)
       .padding(.top, 38)
       .padding(.bottom, 40)
-      .frame(maxWidth: .infinity, alignment: .leading)
+      .frame(maxWidth: .infinity, alignment: .center)
     }
     .background(configuration.surfaces.canvas)
+  }
+
+  private var contentMaximumWidth: CGFloat {
+    configuration.contentWidthPolicy.resolvedMaximumWidth(
+      defaultWidth: configuration.metrics.contentWidth
+    ) ?? .infinity
   }
 
   private func reconcileSelection() {

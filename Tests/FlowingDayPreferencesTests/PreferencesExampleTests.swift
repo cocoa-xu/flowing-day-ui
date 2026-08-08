@@ -4,6 +4,11 @@ import XCTest
 @testable import FlowingDayPreferencesExample
 
 final class PreferencesExampleTests: XCTestCase {
+  func testExampleExposesBothContentWidthPolicies() {
+    XCTAssertEqual(ExampleContentLayout.centered.policy, .centered())
+    XCTAssertEqual(ExampleContentLayout.fluid.policy, .fluid)
+  }
+
   @MainActor
   func testExampleStaysOpenWhenATransientPanelCloses() {
     let application = FlowingDayPreferencesExampleApp()
@@ -126,7 +131,7 @@ final class PreferencesExampleTests: XCTestCase {
     )
     XCTAssertTrue(ExampleAccentFamily.allCases.allSatisfy { $0.accents.count == 7 })
     XCTAssertEqual(ExampleAccentFamily.candidateCapacity, 7)
-    XCTAssertEqual(ExampleAccentFamily.columnCount, 5)
+    XCTAssertEqual(ExampleAccentFamily.columnCount, 7)
     XCTAssertTrue(
       ExampleAccentFamily.allCases.allSatisfy {
         $0.accents.count <= ExampleAccentFamily.candidateCapacity

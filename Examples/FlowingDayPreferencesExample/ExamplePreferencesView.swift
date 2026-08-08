@@ -18,6 +18,7 @@ struct ExamplePreferencesView: View {
   @State private var customAccent = ExampleAccent.celadon.color
   @State private var corners = ExampleCorners.soft
   @State private var density = ExampleDensity.standard
+  @State private var contentLayout = ExampleContentLayout.centered
   @State private var contentWidth = ExampleContentWidth.standard
   @State private var sidebarWidth = 224.0
   @State private var textScale = ExampleTextScale.standard
@@ -40,6 +41,7 @@ struct ExamplePreferencesView: View {
       defaultAccent: accent.value(customColor: customAccent),
       metrics: metrics,
       typography: typography,
+      contentWidthPolicy: contentLayout.policy,
       sidebarWidth: sidebarWidth,
       cornerRadius: corners.windowRadius
     )
@@ -116,6 +118,7 @@ struct ExamplePreferencesView: View {
     ) {
       LayoutShowcase(
         density: $density,
+        contentLayout: $contentLayout,
         contentWidth: $contentWidth,
         sidebarWidth: $sidebarWidth
       )
