@@ -15,10 +15,12 @@ enum PreferencesNamedAccentBase {
   static let glacier: UInt32 = 0x5AA0B1
   static let sky: UInt32 = 0x769BAB
   static let periwinkle: UInt32 = 0x738AF9
+  static let breeze: UInt32 = 0x6F92DE
   static let plum: UInt32 = 0xA187BE
   static let wisteria: UInt32 = 0x968AC7
   static let violet: UInt32 = 0xC26ECE
   static let lilac: UInt32 = 0xA18CA4
+  static let bloom: UInt32 = 0x9F82D5
 }
 
 extension PreferencesAccent {
@@ -38,10 +40,12 @@ extension PreferencesAccent {
   public static let glacier = named(base: PreferencesNamedAccentBase.glacier)
   public static let sky = named(base: PreferencesNamedAccentBase.sky)
   public static let periwinkle = named(base: PreferencesNamedAccentBase.periwinkle)
+  public static let breeze = named(base: PreferencesNamedAccentBase.breeze)
   public static let plum = named(base: PreferencesNamedAccentBase.plum)
   public static let wisteria = named(base: PreferencesNamedAccentBase.wisteria)
   public static let violet = named(base: PreferencesNamedAccentBase.violet)
   public static let lilac = named(base: PreferencesNamedAccentBase.lilac)
+  public static let bloom = named(base: PreferencesNamedAccentBase.bloom)
 
   private static func named(base: UInt32) -> PreferencesAccent {
     PreferencesAccent.derived(

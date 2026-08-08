@@ -33,10 +33,12 @@ enum ExampleAccent: CaseIterable, Hashable {
   case glacier
   case sky
   case periwinkle
+  case breeze
   case plum
   case wisteria
   case violet
   case lilac
+  case bloom
   case custom
 
   static let palette = allCases.filter { $0 != .custom }
@@ -60,10 +62,12 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .glacier: "Glacier"
     case .sky: "Sky"
     case .periwinkle: "Periwinkle"
+    case .breeze: "Breeze"
     case .plum: "Plum"
     case .wisteria: "Wisteria"
     case .violet: "Violet"
     case .lilac: "Lilac"
+    case .bloom: "Bloom"
     case .custom: "Custom"
     }
   }
@@ -95,10 +99,12 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .glacier: .glacier
     case .sky: .sky
     case .periwinkle: .periwinkle
+    case .breeze: .breeze
     case .plum: .plum
     case .wisteria: .wisteria
     case .violet: .violet
     case .lilac: .lilac
+    case .bloom: .bloom
     case .custom: nil
     }
   }
@@ -237,8 +243,8 @@ enum ExampleAccentFamily: CaseIterable, Identifiable {
     case .yellow: [.yuzu, .honey, .butter]
     case .green: [.sage]
     case .cyan: [.celadon, .seafoam, .mist, .dew]
-    case .blue: [.glacier, .sky, .periwinkle]
-    case .purple: [.plum, .wisteria, .violet, .lilac]
+    case .blue: [.glacier, .sky, .periwinkle, .breeze]
+    case .purple: [.plum, .wisteria, .violet, .lilac, .bloom]
     }
   }
 

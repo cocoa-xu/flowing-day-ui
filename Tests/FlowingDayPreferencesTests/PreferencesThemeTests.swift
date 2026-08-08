@@ -145,6 +145,15 @@ final class PreferencesThemeTests: XCTestCase {
         )
       ),
       (
+        PreferencesNamedAccentBase.breeze,
+        PreferencesAccentHexValues(
+          fillLight: 0x6F92DE,
+          fillDark: 0x96BBFF,
+          foregroundLight: 0x4F6FB8,
+          foregroundDark: 0x9FC5FF
+        )
+      ),
+      (
         PreferencesNamedAccentBase.sage,
         PreferencesAccentHexValues(
           fillLight: 0x76A454,
@@ -196,6 +205,15 @@ final class PreferencesThemeTests: XCTestCase {
           fillDark: 0xCAB4CE,
           foregroundLight: 0x7E6A81,
           foregroundDark: 0xD4BED8
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.bloom,
+        PreferencesAccentHexValues(
+          fillLight: 0x9F82D5,
+          fillDark: 0xC8ABFF,
+          foregroundLight: 0x7D60B0,
+          foregroundDark: 0xD2B5FF
         )
       ),
     ]
