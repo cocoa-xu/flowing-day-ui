@@ -44,7 +44,7 @@
                   <fd-option value="light">Light</fd-option>
                   <fd-option value="dark">Dark</fd-option>
                 </fd-segmented-row>
-                <fd-separator indented></fd-separator>
+                <fd-separator leading-edge="icon-text"></fd-separator>
                 <fd-segmented-row
                   id="accent"
                   symbol="swatchpalette"
@@ -53,11 +53,11 @@
                   control-width="280"
                 >
                   <fd-option value="celadon">Celadon</fd-option>
-                  <fd-option value="copper">Copper</fd-option>
-                  <fd-option value="iris">Iris</fd-option>
-                  <fd-option value="moss">Moss</fd-option>
+                  <fd-option value="poppy">Poppy</fd-option>
+                  <fd-option value="bloom">Bloom</fd-option>
+                  <fd-option value="leaf">Leaf</fd-option>
                 </fd-segmented-row>
-                <fd-separator indented></fd-separator>
+                <fd-separator leading-edge="icon-text"></fd-separator>
                 <fd-search-picker-row
                   id="accent-library"
                   symbol="swatchpalette"
@@ -65,25 +65,8 @@
                   caption="Too long for a popup menu, so it expands into a searchable list."
                   value="#6D9EA5"
                   max-visible-options="6"
-                >
-                  <fd-option value="#C09A4E" label="Amber"></fd-option>
-                  <fd-option value="#6D9EA5" label="Celadon"></fd-option>
-                  <fd-option value="#5C7FC0" label="Cobalt"></fd-option>
-                  <fd-option value="#B4795E" label="Copper"></fd-option>
-                  <fd-option value="#C46F6A" label="Coral"></fd-option>
-                  <fd-option value="#B96A93" label="Cyclamen"></fd-option>
-                  <fd-option value="#6FA37A" label="Fern"></fd-option>
-                  <fd-option value="#7C8188" label="Graphite"></fd-option>
-                  <fd-option value="#6C6BB0" label="Indigo"></fd-option>
-                  <fd-option value="#8286C4" label="Iris"></fd-option>
-                  <fd-option value="#A180C2" label="Lilac"></fd-option>
-                  <fd-option value="#7E9B6B" label="Moss"></fd-option>
-                  <fd-option value="#B08850" label="Ochre"></fd-option>
-                  <fd-option value="#C6903F" label="Saffron"></fd-option>
-                  <fd-option value="#6E8391" label="Slate"></fd-option>
-                  <fd-option value="#4F9B95" label="Teal"></fd-option>
-                </fd-search-picker-row>
-                <fd-separator indented></fd-separator>
+                ></fd-search-picker-row>
+                <fd-separator leading-edge="icon-text"></fd-separator>
                 <fd-color-picker-row
                   id="custom-accent"
                   symbol="circle"
@@ -138,19 +121,30 @@
 
               <fd-section
                 label="Measure"
-                footer="Both are live: the pane you are reading resizes as you choose."
+                footer="Content can fill the pane or remain centered at a maximum width."
               >
-                <fd-segmented-row
-                  id="content-width"
+                <fd-connected-segmented-row
+                  id="content-layout"
                   symbol="arrow"
-                  label="Content width"
-                  value="720"
+                  label="Content layout"
+                  value="centered"
                   control-width="240"
                 >
-                  <fd-option value="560">560</fd-option>
-                  <fd-option value="720">720</fd-option>
-                  <fd-option value="860">860</fd-option>
-                </fd-segmented-row>
+                  <fd-option value="centered">Centered</fd-option>
+                  <fd-option value="fluid">Fluid</fd-option>
+                </fd-connected-segmented-row>
+                <fd-dependent-rows id="content-maximum-width" visible>
+                  <fd-segmented-row
+                    id="content-width"
+                    label="Maximum width"
+                    value="720"
+                    control-width="240"
+                  >
+                    <fd-option value="560">560</fd-option>
+                    <fd-option value="720">720</fd-option>
+                    <fd-option value="860">860</fd-option>
+                  </fd-segmented-row>
+                </fd-dependent-rows>
                 <fd-separator></fd-separator>
                 <fd-slider-row
                   id="sidebar-width"
@@ -232,7 +226,7 @@
                     label="A dependent row"
                     caption="Height, opacity and offset animate together."
                   ></fd-row>
-                  <fd-separator indented></fd-separator>
+                  <fd-separator leading-edge="icon-text"></fd-separator>
                   <fd-multi-select-row label="And another" control-width="300">
                     <fd-option value="a" selected>Fade</fd-option>
                     <fd-option value="b" selected>Offset</fd-option>
@@ -315,7 +309,7 @@
                   label="fd-row"
                   caption="Symbol gutter, title, caption and a trailing slot."
                 ></fd-row>
-                <fd-separator indented></fd-separator>
+                <fd-separator leading-edge="icon-text"></fd-separator>
                 <fd-switch-row label="fd-switch-row" checked></fd-switch-row>
                 <fd-separator></fd-separator>
                 <fd-popup-row label="fd-popup-row" value="two" min-width="180">
@@ -339,7 +333,7 @@
                   label="fd-value-row"
                   value="#6D9EA5"
                 ></fd-value-row>
-                <fd-separator indented></fd-separator>
+                <fd-separator leading-edge="icon-text"></fd-separator>
                 <fd-button-row
                   id="restore"
                   label="fd-button-row"
@@ -468,18 +462,9 @@
 
               <fd-section
                 label="Grid"
-                footer="fd-grid fits as many equal columns of at least 96px as the pane allows, so the count follows the content width you set on the Layout page. Each chip retints the window."
+                footer="Forty-nine named accents share the same seven-family order as Swift. Each chip retints the window."
               >
-                <fd-grid id="accent-chips">
-                  <fd-chip value="#6D9EA5">Celadon</fd-chip>
-                  <fd-chip value="#B4795E">Copper</fd-chip>
-                  <fd-chip value="#8286C4">Iris</fd-chip>
-                  <fd-chip value="#7E9B6B">Moss</fd-chip>
-                  <fd-chip value="#C46F6A">Coral</fd-chip>
-                  <fd-chip value="#5C7FC0">Cobalt</fd-chip>
-                  <fd-chip value="#C09A4E">Amber</fd-chip>
-                  <fd-chip value="#4F9B95">Teal</fd-chip>
-                </fd-grid>
+                <fd-grid id="accent-chips"></fd-grid>
               </fd-section>
             </fd-pane-stack>
           </fd-page>
