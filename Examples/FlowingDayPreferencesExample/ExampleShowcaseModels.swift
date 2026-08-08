@@ -15,28 +15,197 @@ enum ExampleAppearance: Hashable {
   }
 }
 
-enum ExampleAccent: Hashable {
+enum ExampleAccent: CaseIterable, Hashable {
+  case coral
+  case poppy
+  case crimson
+  case cherry
+  case petal
+  case rose
+  case berry
+
+  case peach
+  case citrus
+  case tangerine
+  case nectar
+  case apricot
+  case amber
+  case marigold
+
+  case butter
+  case honey
+  case pollen
+  case sunbeam
+  case daffodil
+  case yuzu
+  case lemon
+
+  case leaf
+  case sage
+  case sprout
+  case meadow
+  case clover
+  case fern
+  case mint
+
+  case dew
+  case seafoam
+  case lagoon
+  case tide
   case celadon
-  case copper
+  case ripple
+  case mist
+
+  case glacier
+  case brook
+  case sky
+  case rain
+  case breeze
+  case bluebell
+  case evening
+
+  case wisteria
+  case bloom
+  case plum
   case iris
-  case moss
+  case lilac
+  case violet
+  case fuchsia
+
   case custom
 
-  var color: Color {
+  static let palette = allCases.filter { $0 != .custom }
+
+  var title: String {
     switch self {
-    case .celadon, .custom: Color(red: 0.427, green: 0.620, blue: 0.647)
-    case .copper: Color(red: 0.706, green: 0.475, blue: 0.369)
-    case .iris: Color(red: 0.510, green: 0.525, blue: 0.769)
-    case .moss: Color(red: 0.494, green: 0.608, blue: 0.420)
+    case .coral: "Coral"
+    case .poppy: "Poppy"
+    case .crimson: "Crimson"
+    case .cherry: "Cherry"
+    case .petal: "Petal"
+    case .rose: "Rose"
+    case .berry: "Berry"
+
+    case .peach: "Peach"
+    case .citrus: "Citrus"
+    case .tangerine: "Tangerine"
+    case .nectar: "Nectar"
+    case .apricot: "Apricot"
+    case .amber: "Amber"
+    case .marigold: "Marigold"
+
+    case .butter: "Butter"
+    case .honey: "Honey"
+    case .pollen: "Pollen"
+    case .sunbeam: "Sunbeam"
+    case .daffodil: "Daffodil"
+    case .yuzu: "Yuzu"
+    case .lemon: "Lemon"
+
+    case .leaf: "Leaf"
+    case .sage: "Sage"
+    case .sprout: "Sprout"
+    case .meadow: "Meadow"
+    case .clover: "Clover"
+    case .fern: "Fern"
+    case .mint: "Mint"
+
+    case .dew: "Dew"
+    case .seafoam: "Seafoam"
+    case .lagoon: "Lagoon"
+    case .tide: "Tide"
+    case .celadon: "Celadon"
+    case .ripple: "Ripple"
+    case .mist: "Mist"
+
+    case .glacier: "Glacier"
+    case .brook: "Brook"
+    case .sky: "Sky"
+    case .rain: "Rain"
+    case .breeze: "Breeze"
+    case .bluebell: "Bluebell"
+    case .evening: "Evening"
+
+    case .wisteria: "Wisteria"
+    case .bloom: "Bloom"
+    case .plum: "Plum"
+    case .iris: "Iris"
+    case .lilac: "Lilac"
+    case .violet: "Violet"
+    case .fuchsia: "Fuchsia"
+
+    case .custom: "Custom"
     }
   }
 
+  var color: Color {
+    preset?.fill ?? PreferencesAccent.celadon.fill
+  }
+
   func value(customColor: Color) -> PreferencesAccent {
-    if self == .celadon {
-      return .celadon
+    preset ?? PreferencesAccent(fill: customColor, foreground: customColor)
+  }
+
+  private var preset: PreferencesAccent? {
+    switch self {
+    case .coral: .coral
+    case .poppy: .poppy
+    case .crimson: .crimson
+    case .cherry: .cherry
+    case .petal: .petal
+    case .rose: .rose
+    case .berry: .berry
+
+    case .peach: .peach
+    case .citrus: .citrus
+    case .tangerine: .tangerine
+    case .nectar: .nectar
+    case .apricot: .apricot
+    case .amber: .amber
+    case .marigold: .marigold
+
+    case .butter: .butter
+    case .honey: .honey
+    case .pollen: .pollen
+    case .sunbeam: .sunbeam
+    case .daffodil: .daffodil
+    case .yuzu: .yuzu
+    case .lemon: .lemon
+
+    case .leaf: .leaf
+    case .sage: .sage
+    case .sprout: .sprout
+    case .meadow: .meadow
+    case .clover: .clover
+    case .fern: .fern
+    case .mint: .mint
+
+    case .dew: .dew
+    case .seafoam: .seafoam
+    case .lagoon: .lagoon
+    case .tide: .tide
+    case .celadon: .celadon
+    case .ripple: .ripple
+    case .mist: .mist
+
+    case .glacier: .glacier
+    case .brook: .brook
+    case .sky: .sky
+    case .rain: .rain
+    case .breeze: .breeze
+    case .bluebell: .bluebell
+    case .evening: .evening
+
+    case .wisteria: .wisteria
+    case .bloom: .bloom
+    case .plum: .plum
+    case .iris: .iris
+    case .lilac: .lilac
+    case .violet: .violet
+    case .fuchsia: .fuchsia
+
+    case .custom: nil
     }
-    let color = self == .custom ? customColor : color
-    return PreferencesAccent(fill: color, foreground: color)
   }
 }
 
@@ -106,6 +275,18 @@ enum ExampleContentWidth: Hashable {
   }
 }
 
+enum ExampleContentLayout: Hashable {
+  case centered
+  case fluid
+
+  var policy: PreferencesContentWidthPolicy {
+    switch self {
+    case .centered: .centered()
+    case .fluid: .fluid
+    }
+  }
+}
+
 enum ExampleTextScale: Hashable {
   case small
   case standard
@@ -140,9 +321,49 @@ struct ExampleLabel: Identifiable {
   }
 }
 
-struct ExampleAccentChip: Identifiable {
-  let id: String
-  let accent: ExampleAccent
+enum ExampleAccentFamily: CaseIterable, Identifiable {
+  static let candidateCapacity = 7
+  static let columnCount = 7
+
+  case red
+  case orange
+  case yellow
+  case green
+  case cyan
+  case blue
+  case purple
+
+  var id: Self { self }
+
+  var title: String {
+    switch self {
+    case .red: "Red"
+    case .orange: "Orange"
+    case .yellow: "Yellow"
+    case .green: "Green"
+    case .cyan: "Cyan"
+    case .blue: "Blue"
+    case .purple: "Purple"
+    }
+  }
+
+  var accents: [ExampleAccent] {
+    switch self {
+    case .red: [.coral, .poppy, .crimson, .cherry, .petal, .rose, .berry]
+    case .orange: [.peach, .citrus, .tangerine, .nectar, .apricot, .amber, .marigold]
+    case .yellow: [.butter, .honey, .pollen, .sunbeam, .daffodil, .yuzu, .lemon]
+    case .green: [.leaf, .sage, .sprout, .meadow, .clover, .fern, .mint]
+    case .cyan: [.dew, .seafoam, .lagoon, .tide, .celadon, .ripple, .mist]
+    case .blue: [.glacier, .brook, .sky, .rain, .breeze, .bluebell, .evening]
+    case .purple: [.wisteria, .bloom, .plum, .iris, .lilac, .violet, .fuchsia]
+    }
+  }
+
+  var displaySlotCount: Int {
+    let boundedCount = min(accents.count, Self.candidateCapacity)
+    let rowCount = max(1, (boundedCount + Self.columnCount - 1) / Self.columnCount)
+    return rowCount * Self.columnCount
+  }
 }
 
 extension PreferencesTypography {

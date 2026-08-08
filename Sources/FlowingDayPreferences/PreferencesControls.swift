@@ -5,9 +5,51 @@ enum PreferencesRowLayout {
   static let compactVerticalPadding: CGFloat = 6
   static let detailedVerticalPadding: CGFloat = 11
   static let minimumHeight: CGFloat = 42
+  static let symbolWidth: CGFloat = 20
+  static let symbolSpacing: CGFloat = 14
+  static let iconTextLeadingOffset = symbolWidth + symbolSpacing
 
   static func verticalPadding(hasCaption: Bool) -> CGFloat {
     hasCaption ? detailedVerticalPadding : compactVerticalPadding
+  }
+}
+
+public enum PreferencesRowSeparatorLeadingEdge: Equatable, Sendable {
+  case content
+  case iconText
+}
+
+private struct PreferencesRowSeparatorLeadingEdgeKey: EnvironmentKey {
+  static let defaultValue = PreferencesRowSeparatorLeadingEdge.content
+}
+
+extension EnvironmentValues {
+  fileprivate var preferencesRowSeparatorLeadingEdge: PreferencesRowSeparatorLeadingEdge {
+    get { self[PreferencesRowSeparatorLeadingEdgeKey.self] }
+    set { self[PreferencesRowSeparatorLeadingEdgeKey.self] = newValue }
+  }
+}
+
+private struct PreferencesRowIconPresenceKey: PreferenceKey {
+  static let defaultValue: Set<Bool> = []
+
+  static func reduce(value: inout Set<Bool>, nextValue: () -> Set<Bool>) {
+    value.formUnion(nextValue())
+  }
+}
+
+enum PreferencesSectionSeparatorResolver {
+  static func resolve(
+    iconPresence: Set<Bool>,
+    mixedRows: PreferencesRowSeparatorLeadingEdge
+  ) -> PreferencesRowSeparatorLeadingEdge {
+    if iconPresence == Set([true]) {
+      return .iconText
+    }
+    if iconPresence == Set([false]) {
+      return .content
+    }
+    return mixedRows
   }
 }
 
@@ -53,17 +95,25 @@ public struct PreferencesCard<Content: View>: View {
 
 public struct PreferencesRowSeparator: View {
   @Environment(\.preferencesMetrics) private var metrics
-  private let isIndented: Bool
+  @Environment(\.preferencesRowSeparatorLeadingEdge) private var sectionLeadingEdge
+  private let leadingEdge: PreferencesRowSeparatorLeadingEdge?
 
-  public init(isIndented: Bool = false) {
-    self.isIndented = isIndented
+  public init(leadingEdge: PreferencesRowSeparatorLeadingEdge? = nil) {
+    self.leadingEdge = leadingEdge
   }
 
   public var body: some View {
     Rectangle()
       .fill(PreferencesPalette.hairline)
       .frame(height: 1)
-      .padding(.leading, metrics.rowInset + (isIndented ? 34 : 0))
+      .padding(.leading, metrics.rowInset + additionalLeadingInset)
+  }
+
+  private var additionalLeadingInset: CGFloat {
+    switch leadingEdge ?? sectionLeadingEdge {
+    case .content: 0
+    case .iconText: PreferencesRowLayout.iconTextLeadingOffset
+    }
   }
 }
 
@@ -85,17 +135,21 @@ public struct PreferencesPaneStack<Content: View>: View {
 public struct PreferencesSection<Content: View>: View {
   @Environment(\.preferencesMetrics) private var metrics
   @Environment(\.preferencesTypography) private var typography
+  @State private var rowIconPresence: Set<Bool> = []
   private let title: String
   private let footer: String?
+  private let mixedRowSeparatorLeadingEdge: PreferencesRowSeparatorLeadingEdge
   private let content: Content
 
   public init(
     _ title: String,
     footer: String? = nil,
+    mixedRowSeparatorLeadingEdge: PreferencesRowSeparatorLeadingEdge = .content,
     @ViewBuilder content: () -> Content
   ) {
     self.title = title
     self.footer = footer
+    self.mixedRowSeparatorLeadingEdge = mixedRowSeparatorLeadingEdge
     self.content = content()
   }
 
@@ -103,6 +157,10 @@ public struct PreferencesSection<Content: View>: View {
     VStack(alignment: .leading, spacing: 0) {
       PreferencesSectionHeader(title)
       PreferencesCard { content }
+        .environment(\.preferencesRowSeparatorLeadingEdge, separatorLeadingEdge)
+        .onPreferenceChange(PreferencesRowIconPresenceKey.self) {
+          rowIconPresence = $0
+        }
       if let footer {
         Text(footer)
           .font(typography.rowCaption.font)
@@ -113,6 +171,13 @@ public struct PreferencesSection<Content: View>: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  private var separatorLeadingEdge: PreferencesRowSeparatorLeadingEdge {
+    PreferencesSectionSeparatorResolver.resolve(
+      iconPresence: rowIconPresence,
+      mixedRows: mixedRowSeparatorLeadingEdge
+    )
   }
 }
 
@@ -137,12 +202,12 @@ public struct PreferencesRow<Trailing: View>: View {
   }
 
   public var body: some View {
-    HStack(alignment: .center, spacing: 14) {
+    HStack(alignment: .center, spacing: PreferencesRowLayout.symbolSpacing) {
       if let symbol {
         Image(systemName: symbol)
           .font(.system(size: 13, weight: .medium))
           .foregroundStyle(PreferencesPalette.muted)
-          .frame(width: 20)
+          .frame(width: PreferencesRowLayout.symbolWidth)
       }
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
@@ -161,6 +226,7 @@ public struct PreferencesRow<Trailing: View>: View {
     .padding(.horizontal, metrics.rowInset)
     .padding(.vertical, PreferencesRowLayout.verticalPadding(hasCaption: caption != nil))
     .frame(minHeight: PreferencesRowLayout.minimumHeight)
+    .preference(key: PreferencesRowIconPresenceKey.self, value: Set([symbol != nil]))
   }
 }
 
@@ -351,18 +417,18 @@ public struct PreferencesDependentRows<Content: View>: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   private let isVisible: Bool
   private let showsSeparator: Bool
-  private let isSeparatorIndented: Bool
+  private let separatorLeadingEdge: PreferencesRowSeparatorLeadingEdge?
   private let content: Content
 
   public init(
     isVisible: Bool,
     showsSeparator: Bool = true,
-    isSeparatorIndented: Bool = true,
+    separatorLeadingEdge: PreferencesRowSeparatorLeadingEdge? = nil,
     @ViewBuilder content: () -> Content
   ) {
     self.isVisible = isVisible
     self.showsSeparator = showsSeparator
-    self.isSeparatorIndented = isSeparatorIndented
+    self.separatorLeadingEdge = separatorLeadingEdge
     self.content = content()
   }
 
@@ -371,7 +437,7 @@ public struct PreferencesDependentRows<Content: View>: View {
       if isVisible {
         VStack(spacing: 0) {
           if showsSeparator {
-            PreferencesRowSeparator(isIndented: isSeparatorIndented)
+            PreferencesRowSeparator(leadingEdge: separatorLeadingEdge)
           }
           content
         }
@@ -391,7 +457,7 @@ public struct PreferencesSwitchGroup<Content: View>: View {
   private let title: String
   private let caption: String?
   private let showsSeparator: Bool
-  private let isSeparatorIndented: Bool
+  private let separatorLeadingEdge: PreferencesRowSeparatorLeadingEdge?
   @Binding private var isOn: Bool
   private let content: Content
 
@@ -401,7 +467,7 @@ public struct PreferencesSwitchGroup<Content: View>: View {
     caption: String? = nil,
     isOn: Binding<Bool>,
     showsSeparator: Bool = true,
-    isSeparatorIndented: Bool = true,
+    separatorLeadingEdge: PreferencesRowSeparatorLeadingEdge? = nil,
     @ViewBuilder content: () -> Content
   ) {
     self.symbol = symbol
@@ -409,7 +475,7 @@ public struct PreferencesSwitchGroup<Content: View>: View {
     self.caption = caption
     _isOn = isOn
     self.showsSeparator = showsSeparator
-    self.isSeparatorIndented = isSeparatorIndented
+    self.separatorLeadingEdge = separatorLeadingEdge
     self.content = content()
   }
 
@@ -424,7 +490,7 @@ public struct PreferencesSwitchGroup<Content: View>: View {
       PreferencesDependentRows(
         isVisible: isOn,
         showsSeparator: showsSeparator,
-        isSeparatorIndented: isSeparatorIndented
+        separatorLeadingEdge: separatorLeadingEdge
       ) {
         content
       }
@@ -786,6 +852,7 @@ public struct PreferencesSearchPickerRow<Value: Hashable>: View {
       .clipped()
     }
     .animation(reduceMotion ? nil : .easeOut(duration: PreferencesMotion.expand), value: isExpanded)
+    .preference(key: PreferencesRowIconPresenceKey.self, value: Set([symbol != nil]))
   }
 
   private var selectedLabel: String {
@@ -803,12 +870,12 @@ public struct PreferencesSearchPickerRow<Value: Hashable>: View {
         query = ""
       }
     } label: {
-      HStack(spacing: 14) {
+      HStack(spacing: PreferencesRowLayout.symbolSpacing) {
         if let symbol {
           Image(systemName: symbol)
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(PreferencesPalette.muted)
-            .frame(width: 20)
+            .frame(width: PreferencesRowLayout.symbolWidth)
         }
         VStack(alignment: .leading, spacing: 2) {
           Text(title)
@@ -1333,12 +1400,12 @@ public struct PreferencesExpandableRow: View {
     Button {
       isExpanded.toggle()
     } label: {
-      HStack(alignment: .center, spacing: 14) {
+      HStack(alignment: .center, spacing: PreferencesRowLayout.symbolSpacing) {
         if let symbol {
           Image(systemName: symbol)
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(PreferencesPalette.muted)
-            .frame(width: 20)
+            .frame(width: PreferencesRowLayout.symbolWidth)
         }
         VStack(alignment: .leading, spacing: 2) {
           Text(title)
@@ -1365,6 +1432,7 @@ public struct PreferencesExpandableRow: View {
     .buttonStyle(.plain)
     .animation(reduceMotion ? nil : .easeOut(duration: PreferencesMotion.expand), value: isExpanded)
     .accessibilityValue(isExpanded ? strings.expanded : strings.collapsed)
+    .preference(key: PreferencesRowIconPresenceKey.self, value: Set([symbol != nil]))
   }
 }
 
@@ -1420,9 +1488,10 @@ public struct PreferencesEmptyRow: View {
   }
 
   public var body: some View {
-    HStack(alignment: .firstTextBaseline, spacing: 8) {
+    HStack(alignment: .firstTextBaseline, spacing: PreferencesRowLayout.symbolSpacing) {
       if let symbol {
         Image(systemName: symbol)
+          .frame(width: PreferencesRowLayout.symbolWidth)
       }
       Text(message)
         .fixedSize(horizontal: false, vertical: true)
@@ -1432,6 +1501,7 @@ public struct PreferencesEmptyRow: View {
     .padding(.horizontal, metrics.rowInset)
     .padding(.vertical, 14)
     .frame(maxWidth: .infinity, alignment: .leading)
+    .preference(key: PreferencesRowIconPresenceKey.self, value: Set([symbol != nil]))
   }
 }
 

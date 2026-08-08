@@ -1,6 +1,27 @@
 import AppKit
 import SwiftUI
 
+enum PreferencesRoundedScrollGeometry {
+  static func indicatorInset(cornerRadius: CGFloat) -> CGFloat {
+    guard cornerRadius.isFinite else { return 0 }
+    return max(cornerRadius, 0) / 2
+  }
+}
+
+private struct PreferencesRoundedScrollIndicatorMargins: ViewModifier {
+  let cornerRadius: CGFloat
+
+  @ViewBuilder
+  func body(content: Content) -> some View {
+    let inset = PreferencesRoundedScrollGeometry.indicatorInset(cornerRadius: cornerRadius)
+    if #available(macOS 14.0, *) {
+      content.contentMargins(.vertical, inset, for: .scrollIndicators)
+    } else {
+      content.padding(.vertical, inset)
+    }
+  }
+}
+
 public enum PreferencesPageIcon {
   case system(String)
   case application
@@ -175,13 +196,22 @@ public struct PreferencesView<ID: Hashable>: View {
           selectedPage.content
         }
       }
-      .frame(maxWidth: configuration.metrics.contentWidth, alignment: .leading)
+      .frame(maxWidth: contentMaximumWidth, alignment: .leading)
       .padding(.horizontal, 34)
       .padding(.top, 38)
       .padding(.bottom, 40)
-      .frame(maxWidth: .infinity, alignment: .leading)
+      .frame(maxWidth: .infinity, alignment: .center)
     }
+    .modifier(
+      PreferencesRoundedScrollIndicatorMargins(cornerRadius: configuration.cornerRadius)
+    )
     .background(configuration.surfaces.canvas)
+  }
+
+  private var contentMaximumWidth: CGFloat {
+    configuration.contentWidthPolicy.resolvedMaximumWidth(
+      defaultWidth: configuration.metrics.contentWidth
+    ) ?? .infinity
   }
 
   private func reconcileSelection() {

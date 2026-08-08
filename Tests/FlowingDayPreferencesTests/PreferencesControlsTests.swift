@@ -4,6 +4,42 @@ import XCTest
 @testable import FlowingDayPreferences
 
 final class PreferencesControlsTests: XCTestCase {
+  func testSectionSeparatorsFollowHomogeneousRowIconPresence() {
+    XCTAssertEqual(
+      PreferencesSectionSeparatorResolver.resolve(
+        iconPresence: Set([true]),
+        mixedRows: .content
+      ),
+      .iconText
+    )
+    XCTAssertEqual(
+      PreferencesSectionSeparatorResolver.resolve(
+        iconPresence: Set([false]),
+        mixedRows: .iconText
+      ),
+      .content
+    )
+  }
+
+  func testMixedSectionSeparatorsUseTheConfiguredLeadingEdge() {
+    let mixedRows = Set([true, false])
+
+    XCTAssertEqual(
+      PreferencesSectionSeparatorResolver.resolve(
+        iconPresence: mixedRows,
+        mixedRows: .content
+      ),
+      .content
+    )
+    XCTAssertEqual(
+      PreferencesSectionSeparatorResolver.resolve(
+        iconPresence: mixedRows,
+        mixedRows: .iconText
+      ),
+      .iconText
+    )
+  }
+
   func testDefaultThemeMatchesPreferencesVisualHierarchy() {
     let typography = PreferencesTypography.standard
     let surfaces = PreferencesSurfaces.standard

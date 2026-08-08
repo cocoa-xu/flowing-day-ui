@@ -6,6 +6,50 @@ import XCTest
 
 @MainActor
 final class PreferencesNavigationTests: XCTestCase {
+  func testRoundedScrollIndicatorsStayInsideTheCornerSafeArea() {
+    XCTAssertEqual(PreferencesRoundedScrollGeometry.indicatorInset(cornerRadius: 18), 9)
+    XCTAssertEqual(PreferencesRoundedScrollGeometry.indicatorInset(cornerRadius: 0), 0)
+    XCTAssertEqual(PreferencesRoundedScrollGeometry.indicatorInset(cornerRadius: -12), 0)
+    XCTAssertEqual(PreferencesRoundedScrollGeometry.indicatorInset(cornerRadius: .infinity), 0)
+  }
+
+  func testPreferencesViewUsesCenteredContentByDefault() {
+    let configuration = PreferencesViewConfiguration(applicationName: "Example")
+
+    XCTAssertEqual(configuration.contentWidthPolicy, .centered())
+  }
+
+  func testContentWidthPolicyResolvesFluidAndCenteredLayouts() {
+    XCTAssertNil(
+      PreferencesContentWidthPolicy.fluid.resolvedMaximumWidth(defaultWidth: 720)
+    )
+    XCTAssertEqual(
+      PreferencesContentWidthPolicy.centered().resolvedMaximumWidth(defaultWidth: 720),
+      720
+    )
+    XCTAssertEqual(
+      PreferencesContentWidthPolicy.centered(maximumWidth: 860).resolvedMaximumWidth(
+        defaultWidth: 720
+      ),
+      860
+    )
+  }
+
+  func testCenteredContentWidthRejectsInvalidValues() {
+    XCTAssertEqual(
+      PreferencesContentWidthPolicy.centered(maximumWidth: -.infinity).resolvedMaximumWidth(
+        defaultWidth: 720
+      ),
+      720
+    )
+    XCTAssertEqual(
+      PreferencesContentWidthPolicy.centered(maximumWidth: 0).resolvedMaximumWidth(
+        defaultWidth: 720
+      ),
+      720
+    )
+  }
+
   func testPageGroupsPreserveApplicationMetadata() {
     let page = PreferencesPage(
       id: "general",
