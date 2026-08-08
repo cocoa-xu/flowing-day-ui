@@ -17,20 +17,20 @@ enum PreferencesNamedAccentBase {
   static let meadow: UInt32 = 0x7BA073
   static let clover: UInt32 = 0x28B051
   static let mint: UInt32 = 0x73A08D
-  static let dew: UInt32 = 0x849A97
+  static let dew: UInt32 = 0x719F99
   static let seafoam: UInt32 = 0x4DA5A0
   static let mist: UInt32 = 0x759CA2
   static let glacier: UInt32 = 0x5AA0B1
   static let brook: UInt32 = 0x29A3C5
   static let sky: UInt32 = 0x769BAB
+  static let rain: UInt32 = 0x6999C8
   static let breeze: UInt32 = 0x6F92DE
   static let bluebell: UInt32 = 0x5784FF
-  static let periwinkle: UInt32 = 0x738AF9
   static let wisteria: UInt32 = 0x968AC7
   static let bloom: UInt32 = 0x9F82D5
   static let plum: UInt32 = 0xA187BE
   static let iris: UInt32 = 0xC558FC
-  static let lilac: UInt32 = 0xA18CA4
+  static let lilac: UInt32 = 0xA986AE
   static let violet: UInt32 = 0xC26ECE
 }
 
@@ -59,9 +59,9 @@ extension PreferencesAccent {
   public static let glacier = named(base: PreferencesNamedAccentBase.glacier)
   public static let brook = named(base: PreferencesNamedAccentBase.brook)
   public static let sky = named(base: PreferencesNamedAccentBase.sky)
+  public static let rain = named(base: PreferencesNamedAccentBase.rain)
   public static let breeze = named(base: PreferencesNamedAccentBase.breeze)
   public static let bluebell = named(base: PreferencesNamedAccentBase.bluebell)
-  public static let periwinkle = named(base: PreferencesNamedAccentBase.periwinkle)
   public static let wisteria = named(base: PreferencesNamedAccentBase.wisteria)
   public static let bloom = named(base: PreferencesNamedAccentBase.bloom)
   public static let plum = named(base: PreferencesNamedAccentBase.plum)

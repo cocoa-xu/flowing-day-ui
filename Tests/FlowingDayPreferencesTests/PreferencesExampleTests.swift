@@ -65,9 +65,9 @@ final class PreferencesExampleTests: XCTestCase {
         "Glacier",
         "Brook",
         "Sky",
+        "Rain",
         "Breeze",
         "Bluebell",
-        "Periwinkle",
         "Wisteria",
         "Bloom",
         "Plum",
@@ -99,7 +99,7 @@ final class PreferencesExampleTests: XCTestCase {
         [.butter, .honey, .sunbeam, .yuzu],
         [.leaf, .sage, .sprout, .meadow, .clover, .mint],
         [.dew, .seafoam, .celadon, .mist],
-        [.glacier, .brook, .sky, .breeze, .bluebell, .periwinkle],
+        [.glacier, .brook, .sky, .rain, .breeze, .bluebell],
         [.wisteria, .bloom, .plum, .iris, .lilac, .violet],
       ]
     )

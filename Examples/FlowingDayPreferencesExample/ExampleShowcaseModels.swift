@@ -41,9 +41,9 @@ enum ExampleAccent: CaseIterable, Hashable {
   case glacier
   case brook
   case sky
+  case rain
   case breeze
   case bluebell
-  case periwinkle
   case wisteria
   case bloom
   case plum
@@ -81,9 +81,9 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .glacier: "Glacier"
     case .brook: "Brook"
     case .sky: "Sky"
+    case .rain: "Rain"
     case .breeze: "Breeze"
     case .bluebell: "Bluebell"
-    case .periwinkle: "Periwinkle"
     case .wisteria: "Wisteria"
     case .bloom: "Bloom"
     case .plum: "Plum"
@@ -129,9 +129,9 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .glacier: .glacier
     case .brook: .brook
     case .sky: .sky
+    case .rain: .rain
     case .breeze: .breeze
     case .bluebell: .bluebell
-    case .periwinkle: .periwinkle
     case .wisteria: .wisteria
     case .bloom: .bloom
     case .plum: .plum
@@ -276,7 +276,7 @@ enum ExampleAccentFamily: CaseIterable, Identifiable {
     case .yellow: [.butter, .honey, .sunbeam, .yuzu]
     case .green: [.leaf, .sage, .sprout, .meadow, .clover, .mint]
     case .cyan: [.dew, .seafoam, .celadon, .mist]
-    case .blue: [.glacier, .brook, .sky, .breeze, .bluebell, .periwinkle]
+    case .blue: [.glacier, .brook, .sky, .rain, .breeze, .bluebell]
     case .purple: [.wisteria, .bloom, .plum, .iris, .lilac, .violet]
     }
   }

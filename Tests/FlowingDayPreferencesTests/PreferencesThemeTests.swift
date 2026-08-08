@@ -129,10 +129,10 @@ final class PreferencesThemeTests: XCTestCase {
       (
         PreferencesNamedAccentBase.dew,
         PreferencesAccentHexValues(
-          fillLight: 0x849A97,
-          fillDark: 0xACC3C0,
-          foregroundLight: 0x637875,
-          foregroundDark: 0xB5CDCA
+          fillLight: 0x719F99,
+          fillDark: 0x99C8C2,
+          foregroundLight: 0x4F7D77,
+          foregroundDark: 0xA2D2CC
         )
       ),
       (
@@ -142,15 +142,6 @@ final class PreferencesThemeTests: XCTestCase {
           fillDark: 0x9EC4D5,
           foregroundLight: 0x557988,
           foregroundDark: 0xA7CEDF
-        )
-      ),
-      (
-        PreferencesNamedAccentBase.periwinkle,
-        PreferencesAccentHexValues(
-          fillLight: 0x738AF9,
-          fillDark: 0x9AB4FF,
-          foregroundLight: 0x5466D2,
-          foregroundDark: 0xA3BEFF
         )
       ),
       (
@@ -228,10 +219,10 @@ final class PreferencesThemeTests: XCTestCase {
       (
         PreferencesNamedAccentBase.lilac,
         PreferencesAccentHexValues(
-          fillLight: 0xA18CA4,
-          fillDark: 0xCAB4CE,
-          foregroundLight: 0x7E6A81,
-          foregroundDark: 0xD4BED8
+          fillLight: 0xA986AE,
+          fillDark: 0xD3AED8,
+          foregroundLight: 0x86648B,
+          foregroundDark: 0xDDB7E2
         )
       ),
       (
@@ -313,6 +304,15 @@ final class PreferencesThemeTests: XCTestCase {
           fillDark: 0x9CD059,
           foregroundLight: 0x538300,
           foregroundDark: 0xA5DA63
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.rain,
+        PreferencesAccentHexValues(
+          fillLight: 0x6999C8,
+          fillDark: 0x91C2F3,
+          foregroundLight: 0x4876A3,
+          foregroundDark: 0x9ACCFD
         )
       ),
     ]
