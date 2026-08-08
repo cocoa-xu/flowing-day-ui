@@ -1,10 +1,10 @@
 enum PreferencesNamedAccentBase {
-  static let yuzu: UInt32 = 0x939B50
+  static let yuzu: UInt32 = 0x939D37
   static let glacier: UInt32 = 0x5AA0B1
   static let seafoam: UInt32 = 0x4DA5A0
-  static let sage: UInt32 = 0x839E72
+  static let sage: UInt32 = 0x76A454
   static let plum: UInt32 = 0xA187BE
-  static let honey: UInt32 = 0xA89441
+  static let honey: UInt32 = 0xAC9326
   static let wisteria: UInt32 = 0x968AC7
 }
 
