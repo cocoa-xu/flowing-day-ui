@@ -16,10 +16,13 @@ enum ExampleAppearance: Hashable {
 }
 
 enum ExampleAccent: CaseIterable, Hashable {
+  case coral
+  case apricot
   case celadon
   case yuzu
   case glacier
   case seafoam
+  case mist
   case sage
   case plum
   case honey
@@ -30,10 +33,13 @@ enum ExampleAccent: CaseIterable, Hashable {
 
   var title: String {
     switch self {
+    case .coral: "Coral"
+    case .apricot: "Apricot"
     case .celadon: "Celadon"
     case .yuzu: "Yuzu"
     case .glacier: "Glacier"
     case .seafoam: "Seafoam"
+    case .mist: "Mist"
     case .sage: "Sage"
     case .plum: "Plum"
     case .honey: "Honey"
@@ -52,10 +58,13 @@ enum ExampleAccent: CaseIterable, Hashable {
 
   private var preset: PreferencesAccent? {
     switch self {
+    case .coral: .coral
+    case .apricot: .apricot
     case .celadon: .celadon
     case .yuzu: .yuzu
     case .glacier: .glacier
     case .seafoam: .seafoam
+    case .mist: .mist
     case .sage: .sage
     case .plum: .plum
     case .honey: .honey
@@ -192,10 +201,11 @@ enum ExampleAccentFamily: CaseIterable, Identifiable {
 
   var accents: [ExampleAccent] {
     switch self {
-    case .red, .orange: []
+    case .red: [.coral]
+    case .orange: [.apricot]
     case .yellow: [.yuzu, .honey]
     case .green: [.sage]
-    case .cyan: [.celadon, .seafoam]
+    case .cyan: [.celadon, .seafoam, .mist]
     case .blue: [.glacier]
     case .purple: [.plum, .wisteria]
     }

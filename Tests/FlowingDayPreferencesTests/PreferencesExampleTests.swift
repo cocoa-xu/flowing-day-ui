@@ -40,10 +40,13 @@ final class PreferencesExampleTests: XCTestCase {
     XCTAssertEqual(
       ExampleAccent.palette.map(\.title),
       [
+        "Coral",
+        "Apricot",
         "Celadon",
         "Yuzu",
         "Glacier",
         "Seafoam",
+        "Mist",
         "Sage",
         "Plum",
         "Honey",
@@ -68,11 +71,11 @@ final class PreferencesExampleTests: XCTestCase {
     XCTAssertEqual(
       ExampleAccentFamily.allCases.map(\.accents),
       [
-        [],
-        [],
+        [.coral],
+        [.apricot],
         [.yuzu, .honey],
         [.sage],
-        [.celadon, .seafoam],
+        [.celadon, .seafoam, .mist],
         [.glacier],
         [.plum, .wisteria],
       ]

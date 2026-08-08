@@ -19,6 +19,24 @@ final class PreferencesThemeTests: XCTestCase {
   func testNamedAccentsShareTheSameAppearanceLogic() {
     let expectations: [(UInt32, PreferencesAccentHexValues)] = [
       (
+        PreferencesNamedAccentBase.coral,
+        PreferencesAccentHexValues(
+          fillLight: 0xC87F69,
+          fillDark: 0xF4A890,
+          foregroundLight: 0xA35D48,
+          foregroundDark: 0xFEB299
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.apricot,
+        PreferencesAccentHexValues(
+          fillLight: 0xB18D62,
+          fillDark: 0xDBB689,
+          foregroundLight: 0x8E6B41,
+          foregroundDark: 0xE5C092
+        )
+      ),
+      (
         PreferencesNamedAccentBase.yuzu,
         PreferencesAccentHexValues(
           fillLight: 0x939D37,
@@ -43,6 +61,15 @@ final class PreferencesThemeTests: XCTestCase {
           fillDark: 0x78CFC9,
           foregroundLight: 0x24827E,
           foregroundDark: 0x82D9D3
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.mist,
+        PreferencesAccentHexValues(
+          fillLight: 0x759CA2,
+          fillDark: 0x9DC5CB,
+          foregroundLight: 0x547A7F,
+          foregroundDark: 0xA6CFD5
         )
       ),
       (
