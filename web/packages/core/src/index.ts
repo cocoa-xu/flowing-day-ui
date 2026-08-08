@@ -57,13 +57,22 @@ export { FdPageGroup } from './components/page/fd-page-group.js'
 export { FdPaneStack } from './components/pane-stack/fd-pane-stack.js'
 export { FdPopup, type FdPopupOption } from './components/popup/fd-popup.js'
 export { FdPopupRow } from './components/popup-row/fd-popup-row.js'
-export { FdPreferencesWindow } from './components/preferences-window/fd-preferences-window.js'
+export {
+  type FdPreferencesContentLayout,
+  FdPreferencesWindow,
+} from './components/preferences-window/fd-preferences-window.js'
 export { FdRow } from './components/row/fd-row.js'
 export { FdSearchPickerRow } from './components/search-picker-row/fd-search-picker-row.js'
-export { FdSection } from './components/section/fd-section.js'
+export {
+  type FdMixedRowSeparatorLeadingEdge,
+  FdSection,
+} from './components/section/fd-section.js'
 export { FdSegmentedRow } from './components/segmented-row/fd-segmented-row.js'
 export { FdSelectableTag } from './components/selectable-tag/fd-selectable-tag.js'
-export { FdSeparator } from './components/separator/fd-separator.js'
+export {
+  FdSeparator,
+  type FdSeparatorLeadingEdge,
+} from './components/separator/fd-separator.js'
 export { FdSlider } from './components/slider/fd-slider.js'
 export { FdSliderRow } from './components/slider-row/fd-slider-row.js'
 export { FdSwitch } from './components/switch/fd-switch.js'

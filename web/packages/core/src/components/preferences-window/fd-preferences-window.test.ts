@@ -205,6 +205,45 @@ describe('fd-preferences-window page header', () => {
     expect(style.paddingLeft).toBe('34px')
     expect(style.paddingBottom).toBe('40px')
   })
+
+  it('centers the content column after it reaches its maximum width', async () => {
+    const element = await mount()
+    element.style.width = '1160px'
+    const content = element.shadowRoot?.querySelector('.content') as HTMLElement
+    const inner = element.shadowRoot?.querySelector('.content-inner') as HTMLElement
+    const contentRect = content.getBoundingClientRect()
+    const innerRect = inner.getBoundingClientRect()
+
+    expect(element.contentLayout).toBe('centered')
+    expect(innerRect.left - contentRect.left).toBeCloseTo(
+      (contentRect.width - innerRect.width) / 2,
+      1,
+    )
+  })
+
+  it('can let the content column fill the available width', async () => {
+    const element = await mount(
+      MARKUP.replace('app-name="Afloat"', 'app-name="Afloat" content-layout="fluid"'),
+    )
+    element.style.width = '1160px'
+    const content = element.shadowRoot?.querySelector('.content') as HTMLElement
+    const inner = element.shadowRoot?.querySelector('.content-inner') as HTMLElement
+
+    expect(element.contentLayout).toBe('fluid')
+    expect(inner.getBoundingClientRect().width).toBeCloseTo(
+      content.getBoundingClientRect().width,
+      1,
+    )
+  })
+
+  it('accepts an application-defined centered content width', async () => {
+    const element = await mount()
+    element.style.width = '1160px'
+    element.style.setProperty('--fd-preferences-content-max-width', '860px')
+    const inner = element.shadowRoot?.querySelector('.content-inner') as HTMLElement
+
+    expect(getComputedStyle(inner).maxWidth).toBe('860px')
+  })
 })
 
 describe('fd-preferences-window accent', () => {
