@@ -28,6 +28,24 @@ final class PreferencesThemeTests: XCTestCase {
         )
       ),
       (
+        PreferencesNamedAccentBase.rose,
+        PreferencesAccentHexValues(
+          fillLight: 0xC67B8D,
+          fillDark: 0xF2A3B5,
+          foregroundLight: 0xA1596B,
+          foregroundDark: 0xFCACBF
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.berry,
+        PreferencesAccentHexValues(
+          fillLight: 0xDD62A7,
+          fillDark: 0xFF8CD1,
+          foregroundLight: 0xB63E84,
+          foregroundDark: 0xFF96DB
+        )
+      ),
+      (
         PreferencesNamedAccentBase.apricot,
         PreferencesAccentHexValues(
           fillLight: 0xB18D62,
@@ -43,6 +61,15 @@ final class PreferencesThemeTests: XCTestCase {
           fillDark: 0xBBC763,
           foregroundLight: 0x727A00,
           foregroundDark: 0xC5D16D
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.butter,
+        PreferencesAccentHexValues(
+          fillLight: 0xA3936D,
+          fillDark: 0xCCBC95,
+          foregroundLight: 0x80714C,
+          foregroundDark: 0xD6C69E
         )
       ),
       (
@@ -70,6 +97,33 @@ final class PreferencesThemeTests: XCTestCase {
           fillDark: 0x9DC5CB,
           foregroundLight: 0x547A7F,
           foregroundDark: 0xA6CFD5
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.dew,
+        PreferencesAccentHexValues(
+          fillLight: 0x849A97,
+          fillDark: 0xACC3C0,
+          foregroundLight: 0x637875,
+          foregroundDark: 0xB5CDCA
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.sky,
+        PreferencesAccentHexValues(
+          fillLight: 0x769BAB,
+          fillDark: 0x9EC4D5,
+          foregroundLight: 0x557988,
+          foregroundDark: 0xA7CEDF
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.periwinkle,
+        PreferencesAccentHexValues(
+          fillLight: 0x738AF9,
+          fillDark: 0x9AB4FF,
+          foregroundLight: 0x5466D2,
+          foregroundDark: 0xA3BEFF
         )
       ),
       (

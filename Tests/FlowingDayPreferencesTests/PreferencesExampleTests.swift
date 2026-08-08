@@ -41,15 +41,21 @@ final class PreferencesExampleTests: XCTestCase {
       ExampleAccent.palette.map(\.title),
       [
         "Coral",
+        "Rose",
+        "Berry",
         "Apricot",
-        "Celadon",
         "Yuzu",
-        "Glacier",
+        "Honey",
+        "Butter",
+        "Sage",
+        "Celadon",
         "Seafoam",
         "Mist",
-        "Sage",
+        "Dew",
+        "Glacier",
+        "Sky",
+        "Periwinkle",
         "Plum",
-        "Honey",
         "Wisteria",
       ]
     )
@@ -71,12 +77,12 @@ final class PreferencesExampleTests: XCTestCase {
     XCTAssertEqual(
       ExampleAccentFamily.allCases.map(\.accents),
       [
-        [.coral],
+        [.coral, .rose, .berry],
         [.apricot],
-        [.yuzu, .honey],
+        [.yuzu, .honey, .butter],
         [.sage],
-        [.celadon, .seafoam, .mist],
-        [.glacier],
+        [.celadon, .seafoam, .mist, .dew],
+        [.glacier, .sky, .periwinkle],
         [.plum, .wisteria],
       ]
     )

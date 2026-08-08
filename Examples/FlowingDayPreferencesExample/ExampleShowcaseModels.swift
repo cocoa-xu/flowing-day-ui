@@ -17,15 +17,21 @@ enum ExampleAppearance: Hashable {
 
 enum ExampleAccent: CaseIterable, Hashable {
   case coral
+  case rose
+  case berry
   case apricot
-  case celadon
   case yuzu
-  case glacier
+  case honey
+  case butter
+  case sage
+  case celadon
   case seafoam
   case mist
-  case sage
+  case dew
+  case glacier
+  case sky
+  case periwinkle
   case plum
-  case honey
   case wisteria
   case custom
 
@@ -34,15 +40,21 @@ enum ExampleAccent: CaseIterable, Hashable {
   var title: String {
     switch self {
     case .coral: "Coral"
+    case .rose: "Rose"
+    case .berry: "Berry"
     case .apricot: "Apricot"
-    case .celadon: "Celadon"
     case .yuzu: "Yuzu"
-    case .glacier: "Glacier"
+    case .honey: "Honey"
+    case .butter: "Butter"
+    case .sage: "Sage"
+    case .celadon: "Celadon"
     case .seafoam: "Seafoam"
     case .mist: "Mist"
-    case .sage: "Sage"
+    case .dew: "Dew"
+    case .glacier: "Glacier"
+    case .sky: "Sky"
+    case .periwinkle: "Periwinkle"
     case .plum: "Plum"
-    case .honey: "Honey"
     case .wisteria: "Wisteria"
     case .custom: "Custom"
     }
@@ -59,15 +71,21 @@ enum ExampleAccent: CaseIterable, Hashable {
   private var preset: PreferencesAccent? {
     switch self {
     case .coral: .coral
+    case .rose: .rose
+    case .berry: .berry
     case .apricot: .apricot
-    case .celadon: .celadon
     case .yuzu: .yuzu
-    case .glacier: .glacier
+    case .honey: .honey
+    case .butter: .butter
+    case .sage: .sage
+    case .celadon: .celadon
     case .seafoam: .seafoam
     case .mist: .mist
-    case .sage: .sage
+    case .dew: .dew
+    case .glacier: .glacier
+    case .sky: .sky
+    case .periwinkle: .periwinkle
     case .plum: .plum
-    case .honey: .honey
     case .wisteria: .wisteria
     case .custom: nil
     }
@@ -201,12 +219,12 @@ enum ExampleAccentFamily: CaseIterable, Identifiable {
 
   var accents: [ExampleAccent] {
     switch self {
-    case .red: [.coral]
+    case .red: [.coral, .rose, .berry]
     case .orange: [.apricot]
-    case .yellow: [.yuzu, .honey]
+    case .yellow: [.yuzu, .honey, .butter]
     case .green: [.sage]
-    case .cyan: [.celadon, .seafoam, .mist]
-    case .blue: [.glacier]
+    case .cyan: [.celadon, .seafoam, .mist, .dew]
+    case .blue: [.glacier, .sky, .periwinkle]
     case .purple: [.plum, .wisteria]
     }
   }
