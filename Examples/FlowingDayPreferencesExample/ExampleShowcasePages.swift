@@ -498,8 +498,7 @@ struct ComponentsShowcase: View {
   private var gridComponents: some View {
     PreferencesSection(
       "Grid",
-      footer:
-        "Named accents are grouped into seven families with up to ten candidates across five columns."
+      footer: "Named accents are grouped into seven families with seven candidates each."
     ) {
       VStack(spacing: 0) {
         ForEach(ExampleAccentFamily.allCases) { family in

@@ -43,37 +43,58 @@ final class PreferencesExampleTests: XCTestCase {
         "Coral",
         "Poppy",
         "Crimson",
+        "Cherry",
         "Petal",
         "Rose",
         "Berry",
-        "Fuchsia",
+
+        "Peach",
+        "Citrus",
+        "Tangerine",
+        "Nectar",
         "Apricot",
+        "Amber",
+        "Marigold",
+
         "Butter",
         "Honey",
+        "Pollen",
         "Sunbeam",
+        "Daffodil",
         "Yuzu",
+        "Lemon",
+
         "Leaf",
         "Sage",
         "Sprout",
         "Meadow",
         "Clover",
+        "Fern",
         "Mint",
+
         "Dew",
         "Seafoam",
+        "Lagoon",
+        "Tide",
         "Celadon",
+        "Ripple",
         "Mist",
+
         "Glacier",
         "Brook",
         "Sky",
         "Rain",
         "Breeze",
         "Bluebell",
+        "Evening",
+
         "Wisteria",
         "Bloom",
         "Plum",
         "Iris",
         "Lilac",
         "Violet",
+        "Fuchsia",
       ]
     )
   }
@@ -94,16 +115,17 @@ final class PreferencesExampleTests: XCTestCase {
     XCTAssertEqual(
       ExampleAccentFamily.allCases.map(\.accents),
       [
-        [.coral, .poppy, .crimson, .petal, .rose, .berry, .fuchsia],
-        [.apricot],
-        [.butter, .honey, .sunbeam, .yuzu],
-        [.leaf, .sage, .sprout, .meadow, .clover, .mint],
-        [.dew, .seafoam, .celadon, .mist],
-        [.glacier, .brook, .sky, .rain, .breeze, .bluebell],
-        [.wisteria, .bloom, .plum, .iris, .lilac, .violet],
+        [.coral, .poppy, .crimson, .cherry, .petal, .rose, .berry],
+        [.peach, .citrus, .tangerine, .nectar, .apricot, .amber, .marigold],
+        [.butter, .honey, .pollen, .sunbeam, .daffodil, .yuzu, .lemon],
+        [.leaf, .sage, .sprout, .meadow, .clover, .fern, .mint],
+        [.dew, .seafoam, .lagoon, .tide, .celadon, .ripple, .mist],
+        [.glacier, .brook, .sky, .rain, .breeze, .bluebell, .evening],
+        [.wisteria, .bloom, .plum, .iris, .lilac, .violet, .fuchsia],
       ]
     )
-    XCTAssertEqual(ExampleAccentFamily.candidateCapacity, 10)
+    XCTAssertTrue(ExampleAccentFamily.allCases.allSatisfy { $0.accents.count == 7 })
+    XCTAssertEqual(ExampleAccentFamily.candidateCapacity, 7)
     XCTAssertEqual(ExampleAccentFamily.columnCount, 5)
     XCTAssertTrue(
       ExampleAccentFamily.allCases.allSatisfy {
