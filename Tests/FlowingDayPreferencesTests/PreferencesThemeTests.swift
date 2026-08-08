@@ -243,6 +243,60 @@ final class PreferencesThemeTests: XCTestCase {
           foregroundDark: 0xD2B5FF
         )
       ),
+      (
+        PreferencesNamedAccentBase.poppy,
+        PreferencesAccentHexValues(
+          fillLight: 0xE96452,
+          fillDark: 0xFF8E7A,
+          foregroundLight: 0xC13F30,
+          foregroundDark: 0xFF9883
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.sprout,
+        PreferencesAccentHexValues(
+          fillLight: 0x56AD16,
+          fillDark: 0x7FD84F,
+          foregroundLight: 0x318900,
+          foregroundDark: 0x89E25A
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.clover,
+        PreferencesAccentHexValues(
+          fillLight: 0x28B051,
+          fillDark: 0x5DDB7A,
+          foregroundLight: 0x008C2D,
+          foregroundDark: 0x68E583
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.brook,
+        PreferencesAccentHexValues(
+          fillLight: 0x29A3C5,
+          fillDark: 0x5DCDF0,
+          foregroundLight: 0x0080A1,
+          foregroundDark: 0x68D7FA
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.bluebell,
+        PreferencesAccentHexValues(
+          fillLight: 0x5784FF,
+          fillDark: 0x7DAEFF,
+          foregroundLight: 0x3860D7,
+          foregroundDark: 0x86B8FF
+        )
+      ),
+      (
+        PreferencesNamedAccentBase.iris,
+        PreferencesAccentHexValues(
+          fillLight: 0xC558FC,
+          fillDark: 0xF084FF,
+          foregroundLight: 0xA02DD5,
+          foregroundDark: 0xFA8EFF
+        )
+      ),
     ]
 
     for (base, expected) in expectations {

@@ -45,6 +45,7 @@ final class PreferencesExampleTests: XCTestCase {
         "Berry",
         "Fuchsia",
         "Crimson",
+        "Poppy",
         "Apricot",
         "Yuzu",
         "Honey",
@@ -53,6 +54,8 @@ final class PreferencesExampleTests: XCTestCase {
         "Sage",
         "Meadow",
         "Mint",
+        "Sprout",
+        "Clover",
         "Celadon",
         "Seafoam",
         "Mist",
@@ -61,11 +64,14 @@ final class PreferencesExampleTests: XCTestCase {
         "Sky",
         "Periwinkle",
         "Breeze",
+        "Brook",
+        "Bluebell",
         "Plum",
         "Wisteria",
         "Violet",
         "Lilac",
         "Bloom",
+        "Iris",
       ]
     )
   }
@@ -86,13 +92,13 @@ final class PreferencesExampleTests: XCTestCase {
     XCTAssertEqual(
       ExampleAccentFamily.allCases.map(\.accents),
       [
-        [.coral, .rose, .berry, .fuchsia, .crimson],
+        [.coral, .rose, .berry, .fuchsia, .crimson, .poppy],
         [.apricot],
         [.yuzu, .honey, .butter, .sunbeam],
-        [.sage, .meadow, .mint],
+        [.sage, .meadow, .mint, .sprout, .clover],
         [.celadon, .seafoam, .mist, .dew],
-        [.glacier, .sky, .periwinkle, .breeze],
-        [.plum, .wisteria, .violet, .lilac, .bloom],
+        [.glacier, .sky, .periwinkle, .breeze, .brook, .bluebell],
+        [.plum, .wisteria, .violet, .lilac, .bloom, .iris],
       ]
     )
     XCTAssertEqual(ExampleAccentFamily.candidateCapacity, 10)

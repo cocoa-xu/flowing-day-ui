@@ -21,6 +21,7 @@ enum ExampleAccent: CaseIterable, Hashable {
   case berry
   case fuchsia
   case crimson
+  case poppy
   case apricot
   case yuzu
   case honey
@@ -29,6 +30,8 @@ enum ExampleAccent: CaseIterable, Hashable {
   case sage
   case meadow
   case mint
+  case sprout
+  case clover
   case celadon
   case seafoam
   case mist
@@ -37,11 +40,14 @@ enum ExampleAccent: CaseIterable, Hashable {
   case sky
   case periwinkle
   case breeze
+  case brook
+  case bluebell
   case plum
   case wisteria
   case violet
   case lilac
   case bloom
+  case iris
   case custom
 
   static let palette = allCases.filter { $0 != .custom }
@@ -53,6 +59,7 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .berry: "Berry"
     case .fuchsia: "Fuchsia"
     case .crimson: "Crimson"
+    case .poppy: "Poppy"
     case .apricot: "Apricot"
     case .yuzu: "Yuzu"
     case .honey: "Honey"
@@ -61,6 +68,8 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .sage: "Sage"
     case .meadow: "Meadow"
     case .mint: "Mint"
+    case .sprout: "Sprout"
+    case .clover: "Clover"
     case .celadon: "Celadon"
     case .seafoam: "Seafoam"
     case .mist: "Mist"
@@ -69,11 +78,14 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .sky: "Sky"
     case .periwinkle: "Periwinkle"
     case .breeze: "Breeze"
+    case .brook: "Brook"
+    case .bluebell: "Bluebell"
     case .plum: "Plum"
     case .wisteria: "Wisteria"
     case .violet: "Violet"
     case .lilac: "Lilac"
     case .bloom: "Bloom"
+    case .iris: "Iris"
     case .custom: "Custom"
     }
   }
@@ -93,6 +105,7 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .berry: .berry
     case .fuchsia: .fuchsia
     case .crimson: .crimson
+    case .poppy: .poppy
     case .apricot: .apricot
     case .yuzu: .yuzu
     case .honey: .honey
@@ -101,6 +114,8 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .sage: .sage
     case .meadow: .meadow
     case .mint: .mint
+    case .sprout: .sprout
+    case .clover: .clover
     case .celadon: .celadon
     case .seafoam: .seafoam
     case .mist: .mist
@@ -109,11 +124,14 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .sky: .sky
     case .periwinkle: .periwinkle
     case .breeze: .breeze
+    case .brook: .brook
+    case .bluebell: .bluebell
     case .plum: .plum
     case .wisteria: .wisteria
     case .violet: .violet
     case .lilac: .lilac
     case .bloom: .bloom
+    case .iris: .iris
     case .custom: nil
     }
   }
@@ -247,13 +265,13 @@ enum ExampleAccentFamily: CaseIterable, Identifiable {
 
   var accents: [ExampleAccent] {
     switch self {
-    case .red: [.coral, .rose, .berry, .fuchsia, .crimson]
+    case .red: [.coral, .rose, .berry, .fuchsia, .crimson, .poppy]
     case .orange: [.apricot]
     case .yellow: [.yuzu, .honey, .butter, .sunbeam]
-    case .green: [.sage, .meadow, .mint]
+    case .green: [.sage, .meadow, .mint, .sprout, .clover]
     case .cyan: [.celadon, .seafoam, .mist, .dew]
-    case .blue: [.glacier, .sky, .periwinkle, .breeze]
-    case .purple: [.plum, .wisteria, .violet, .lilac, .bloom]
+    case .blue: [.glacier, .sky, .periwinkle, .breeze, .brook, .bluebell]
+    case .purple: [.plum, .wisteria, .violet, .lilac, .bloom, .iris]
     }
   }
 
