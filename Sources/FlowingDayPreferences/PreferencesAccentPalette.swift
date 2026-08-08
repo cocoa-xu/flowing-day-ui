@@ -8,7 +8,10 @@ enum PreferencesNamedAccentBase {
   static let yuzu: UInt32 = 0x939D37
   static let honey: UInt32 = 0xAC9326
   static let butter: UInt32 = 0xA3936D
+  static let sunbeam: UInt32 = 0x99985D
   static let sage: UInt32 = 0x76A454
+  static let meadow: UInt32 = 0x7BA073
+  static let mint: UInt32 = 0x73A08D
   static let seafoam: UInt32 = 0x4DA5A0
   static let mist: UInt32 = 0x759CA2
   static let dew: UInt32 = 0x849A97
@@ -33,7 +36,10 @@ extension PreferencesAccent {
   public static let yuzu = named(base: PreferencesNamedAccentBase.yuzu)
   public static let honey = named(base: PreferencesNamedAccentBase.honey)
   public static let butter = named(base: PreferencesNamedAccentBase.butter)
+  public static let sunbeam = named(base: PreferencesNamedAccentBase.sunbeam)
   public static let sage = named(base: PreferencesNamedAccentBase.sage)
+  public static let meadow = named(base: PreferencesNamedAccentBase.meadow)
+  public static let mint = named(base: PreferencesNamedAccentBase.mint)
   public static let seafoam = named(base: PreferencesNamedAccentBase.seafoam)
   public static let mist = named(base: PreferencesNamedAccentBase.mist)
   public static let dew = named(base: PreferencesNamedAccentBase.dew)

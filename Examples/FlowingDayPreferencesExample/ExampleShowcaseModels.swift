@@ -25,7 +25,10 @@ enum ExampleAccent: CaseIterable, Hashable {
   case yuzu
   case honey
   case butter
+  case sunbeam
   case sage
+  case meadow
+  case mint
   case celadon
   case seafoam
   case mist
@@ -54,7 +57,10 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .yuzu: "Yuzu"
     case .honey: "Honey"
     case .butter: "Butter"
+    case .sunbeam: "Sunbeam"
     case .sage: "Sage"
+    case .meadow: "Meadow"
+    case .mint: "Mint"
     case .celadon: "Celadon"
     case .seafoam: "Seafoam"
     case .mist: "Mist"
@@ -91,7 +97,10 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .yuzu: .yuzu
     case .honey: .honey
     case .butter: .butter
+    case .sunbeam: .sunbeam
     case .sage: .sage
+    case .meadow: .meadow
+    case .mint: .mint
     case .celadon: .celadon
     case .seafoam: .seafoam
     case .mist: .mist
@@ -240,8 +249,8 @@ enum ExampleAccentFamily: CaseIterable, Identifiable {
     switch self {
     case .red: [.coral, .rose, .berry, .fuchsia, .crimson]
     case .orange: [.apricot]
-    case .yellow: [.yuzu, .honey, .butter]
-    case .green: [.sage]
+    case .yellow: [.yuzu, .honey, .butter, .sunbeam]
+    case .green: [.sage, .meadow, .mint]
     case .cyan: [.celadon, .seafoam, .mist, .dew]
     case .blue: [.glacier, .sky, .periwinkle, .breeze]
     case .purple: [.plum, .wisteria, .violet, .lilac, .bloom]
