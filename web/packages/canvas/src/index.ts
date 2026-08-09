@@ -1,4 +1,5 @@
 import './events.js'
+import './accessibility/events.js'
 import './graph/events.js'
 import './graph/minimap-events.js'
 import './components/canvas/fd-canvas.js'

@@ -75,6 +75,10 @@ export class FdGraphAccessibilitySnapshot {
     return index === undefined ? undefined : this.items[index]
   }
 
+  indexOf(key: string): number | undefined {
+    return this.indexByKey.get(key)
+  }
+
   reconciledFocus(preferredKey: string | undefined): string | undefined {
     return preferredKey && this.contains(preferredKey) ? preferredKey : this.firstElementKey
   }

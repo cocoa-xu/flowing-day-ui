@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import type { FdGraphAccessibilityActionDetail } from '../../accessibility/events.js'
 import type { FdCanvasPoint } from '../../geometry.js'
 import type {
   FdGraphFocusChangeDetail,
@@ -210,11 +211,15 @@ describe('fd-graph-canvas rendering boundary', () => {
       })),
       edges: [],
     }
-    await mount(snapshot, backend)
+    const element = await mount(snapshot, backend)
 
     const visibleCount = backend.frames.at(-1)?.nodes.length ?? 0
     expect(visibleCount).toBeGreaterThan(0)
     expect(visibleCount).toBeLessThan(20_000)
+    expect(element.shadowRoot?.querySelectorAll('.accessibility-item')).toHaveLength(64)
+    expect(
+      element.shadowRoot?.querySelector('.accessibility-surface')?.getAttribute('aria-rowcount'),
+    ).toBe('100000')
   })
 })
 
@@ -505,6 +510,115 @@ describe('fd-graph-canvas keyboard editing', () => {
     await element.updateComplete
 
     expect(element.focusedNodeID).toBe(undefined)
+  })
+})
+
+describe('fd-graph-canvas accessibility', () => {
+  it('uses one composite tab stop with a bounded active-descendant window', async () => {
+    const element = await mount()
+    const canvas = element.shadowRoot?.querySelector('fd-canvas')
+    const viewport = canvas?.shadowRoot?.querySelector('.viewport')
+    const surface = element.shadowRoot?.querySelector<HTMLElement>('.accessibility-surface')
+
+    expect(viewport?.getAttribute('tabindex')).toBe('-1')
+    expect(surface?.tabIndex).toBe(0)
+    expect(surface?.getAttribute('role')).toBe('grid')
+    expect(surface?.getAttribute('aria-rowcount')).toBe('3')
+    expect(element.shadowRoot?.querySelectorAll('.accessibility-item')).toHaveLength(3)
+
+    surface?.focus()
+    expect(surface?.getAttribute('aria-activedescendant')).toContain('node%3As%3Asource')
+    dispatchKey(surface ?? element, 'ArrowDown')
+    expect(surface?.getAttribute('aria-activedescendant')).toContain('node%3As%3Atarget')
+    dispatchKey(surface ?? element, 'ArrowDown')
+    await nextFrame()
+    expect(
+      element.shadowRoot
+        ?.querySelector('[data-fd-graph-edge="s:connection"]')
+        ?.hasAttribute('data-focused'),
+    ).toBe(true)
+  })
+
+  it('keeps consumer semantics and capabilities independent from mechanics', async () => {
+    const element = document.createElement('fd-graph-canvas')
+    element.style.width = '800px'
+    element.style.height = '600px'
+    element.snapshot = graphSnapshot()
+    element.accessibilityConfiguration = {
+      canvasLabel: 'Workflow surface',
+      maximumExposedElementCount: 2,
+      capabilities: { movement: false },
+      nodeRepresentation: (node) => ({
+        kind: 'element',
+        description: { label: `Step ${String(node.id)}`, hint: 'Consumer-provided hint' },
+      }),
+      portRepresentation: () => ({ kind: 'hidden' }),
+      edgeRepresentation: () => ({ kind: 'hidden' }),
+    }
+    document.body.append(element)
+    await element.updateComplete
+    await nextFrame()
+    const surface = element.shadowRoot?.querySelector('.accessibility-surface')
+
+    expect(surface?.getAttribute('aria-label')).toBe('Workflow surface')
+    expect(surface?.getAttribute('aria-readonly')).toBe('true')
+    expect(element.shadowRoot?.querySelectorAll('.accessibility-item')).toHaveLength(2)
+    expect(
+      element.shadowRoot?.querySelector('.accessibility-item')?.getAttribute('aria-label'),
+    ).toBe('Step source')
+    expect(
+      element.shadowRoot?.querySelector('.accessibility-item')?.getAttribute('aria-description'),
+    ).toBe('Consumer-provided hint')
+  })
+
+  it('supports selection, activation, and keyboard movement without a pointer', async () => {
+    const element = await mount()
+    const surface = element.shadowRoot?.querySelector<HTMLElement>('.accessibility-surface')
+    const actions: FdGraphAccessibilityActionDetail[] = []
+    element.interactionConfiguration = { frameUpdates: 'local' }
+    element.addEventListener('fd-graph-accessibility-action', (event) => actions.push(event.detail))
+    await element.updateComplete
+
+    surface?.focus()
+    dispatchKey(surface ?? element, ' ')
+    expect(element.selectedNodeIDs).toEqual(new Set(['source']))
+    dispatchKey(surface ?? element, 'ArrowRight', { ctrlKey: true })
+    expect(element.snapshot.nodes[0]?.frame.x).toBe(41)
+    dispatchKey(surface ?? element, 'Enter')
+
+    expect(actions.map(({ action }) => action.kind)).toEqual([
+      'focus',
+      'select',
+      'move',
+      'activate',
+    ])
+  })
+
+  it('lets consumers replace accessibility commands and opt out completely', async () => {
+    const element = await mount()
+    const surface = element.shadowRoot?.querySelector<HTMLElement>('.accessibility-surface')
+    element.accessibilityConfiguration = {
+      resolveCommand: (event) => (event.key === 'j' ? { kind: 'focusNext' } : undefined),
+    }
+    await element.updateComplete
+    surface?.focus()
+    const first = surface?.getAttribute('aria-activedescendant')
+
+    dispatchKey(surface ?? element, 'ArrowDown')
+    expect(surface?.getAttribute('aria-activedescendant')).toBe(first)
+    dispatchKey(surface ?? element, 'j')
+    expect(surface?.getAttribute('aria-activedescendant')).not.toBe(first)
+
+    element.accessibilityConfiguration = { enabled: false }
+    await element.updateComplete
+    expect(surface?.tabIndex).toBe(-1)
+    expect(
+      element.shadowRoot
+        ?.querySelector('fd-canvas')
+        ?.shadowRoot?.querySelector('.viewport')
+        ?.getAttribute('tabindex'),
+    ).toBe('0')
+    expect(element.shadowRoot?.querySelectorAll('.accessibility-item')).toHaveLength(0)
   })
 })
 

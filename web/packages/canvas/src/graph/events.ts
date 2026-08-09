@@ -2,7 +2,7 @@ import type { FdCanvasRect } from '../geometry.js'
 import type { FdGraphElementID } from './model.js'
 
 export type FdGraphInteractionPhase = 'continuous' | 'ended'
-export type FdGraphSelectionSource = 'pointer' | 'keyboard' | 'programmatic'
+export type FdGraphSelectionSource = 'pointer' | 'keyboard' | 'accessibility' | 'programmatic'
 export type FdGraphNodeFrameChangeKind = 'drag' | 'resize' | 'keyboard'
 export type FdGraphFocusSource = 'pointer' | 'keyboard' | 'accessibility' | 'programmatic'
 

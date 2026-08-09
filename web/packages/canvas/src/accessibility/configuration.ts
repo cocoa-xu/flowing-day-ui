@@ -1,4 +1,5 @@
 import type { FdAnyGraphEdge, FdAnyGraphNode, FdGraphPort } from '../graph/model.js'
+import type { FdGraphNavigationDirection } from '../interactions/keyboard.js'
 
 export interface FdGraphAccessibilityCapabilities {
   readonly focusNavigation?: boolean
@@ -23,12 +24,30 @@ export interface FdGraphAccessibilityPortContext {
   readonly port: FdGraphPort
 }
 
+export type FdGraphAccessibilityCommand =
+  | { readonly kind: 'focusPrevious' }
+  | { readonly kind: 'focusNext' }
+  | { readonly kind: 'focusFirst' }
+  | { readonly kind: 'focusLast' }
+  | { readonly kind: 'select' }
+  | { readonly kind: 'activate' }
+  | {
+      readonly kind: 'move'
+      readonly direction: FdGraphNavigationDirection
+      readonly large: boolean
+    }
+
+export type FdGraphAccessibilityCommandResolver = (
+  event: KeyboardEvent,
+) => FdGraphAccessibilityCommand | undefined
+
 export interface FdGraphCanvasAccessibilityConfiguration {
   readonly enabled?: boolean
   readonly canvasLabel?: string
   readonly maximumExposedElementCount?: number
   readonly keepsFocusedElementVisible?: boolean
   readonly capabilities?: FdGraphAccessibilityCapabilities
+  readonly resolveCommand?: FdGraphAccessibilityCommandResolver
   readonly nodeRepresentation?: (node: FdAnyGraphNode) => FdGraphAccessibilityRepresentation
   readonly portRepresentation?: (
     context: FdGraphAccessibilityPortContext,
@@ -49,6 +68,7 @@ export interface FdResolvedGraphCanvasAccessibilityConfiguration {
   readonly maximumExposedElementCount: number
   readonly keepsFocusedElementVisible: boolean
   readonly capabilities: FdResolvedGraphAccessibilityCapabilities
+  readonly resolveCommand: FdGraphAccessibilityCommandResolver
   readonly nodeRepresentation: (node: FdAnyGraphNode) => FdGraphAccessibilityRepresentation
   readonly portRepresentation: (
     context: FdGraphAccessibilityPortContext,
@@ -74,6 +94,31 @@ const defaultEdgeRepresentation = (edge: FdAnyGraphEdge): FdGraphAccessibilityRe
   return label ? element(label) : { kind: 'hidden' }
 }
 
+const directions: Readonly<Record<string, FdGraphNavigationDirection>> = {
+  ArrowUp: 'up',
+  ArrowDown: 'down',
+  ArrowLeft: 'left',
+  ArrowRight: 'right',
+}
+
+export const defaultGraphAccessibilityCommandResolver: FdGraphAccessibilityCommandResolver = (
+  event,
+) => {
+  if (event.isComposing || event.altKey) return undefined
+  const direction = directions[event.key]
+  const primaryModifier = event.metaKey || event.ctrlKey
+  if (direction && primaryModifier) return { kind: 'move', direction, large: event.shiftKey }
+  if (direction && !event.shiftKey) {
+    return { kind: direction === 'up' || direction === 'left' ? 'focusPrevious' : 'focusNext' }
+  }
+  if (primaryModifier) return undefined
+  if (event.key === 'Home' && !event.shiftKey) return { kind: 'focusFirst' }
+  if (event.key === 'End' && !event.shiftKey) return { kind: 'focusLast' }
+  if (event.key === ' ') return { kind: 'select' }
+  if (event.key === 'Enter') return { kind: 'activate' }
+  return undefined
+}
+
 export function resolveGraphCanvasAccessibilityConfiguration(
   configuration: FdGraphCanvasAccessibilityConfiguration = {},
 ): FdResolvedGraphCanvasAccessibilityConfiguration {
@@ -93,6 +138,7 @@ export function resolveGraphCanvasAccessibilityConfiguration(
       movement: configuration.capabilities?.movement ?? true,
       activation: configuration.capabilities?.activation ?? true,
     },
+    resolveCommand: configuration.resolveCommand ?? defaultGraphAccessibilityCommandResolver,
     nodeRepresentation: configuration.nodeRepresentation ?? defaultNodeRepresentation,
     portRepresentation: configuration.portRepresentation ?? defaultPortRepresentation,
     edgeRepresentation: configuration.edgeRepresentation ?? defaultEdgeRepresentation,

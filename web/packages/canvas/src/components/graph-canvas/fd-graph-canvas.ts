@@ -1,5 +1,17 @@
 import { type CSSResultGroup, css, html, LitElement, nothing, type PropertyValues } from 'lit'
 import { customElement, property, query } from 'lit/decorators.js'
+import {
+  type FdGraphAccessibilityCommand,
+  type FdGraphCanvasAccessibilityConfiguration,
+  type FdResolvedGraphCanvasAccessibilityConfiguration,
+  resolveGraphCanvasAccessibilityConfiguration,
+} from '../../accessibility/configuration.js'
+import type { FdGraphAccessibilityActionDetail } from '../../accessibility/events.js'
+import {
+  createGraphAccessibilitySnapshot,
+  FdGraphAccessibilitySnapshot,
+  graphNodeAccessibilityKey,
+} from '../../accessibility/snapshot.js'
 import type {
   FdCanvasConfiguration,
   FdCanvasContentChangeBehavior,
@@ -62,6 +74,7 @@ import type { FdCanvas, FdCanvasTransformOptions } from '../canvas/fd-canvas.js'
 import '../canvas/fd-canvas.js'
 import type { FdGraphMiniMap } from '../graph-minimap/fd-graph-minimap.js'
 import '../graph-minimap/fd-graph-minimap.js'
+import { FdGraphCanvasAccessibilityBridge } from './accessibility-bridge.js'
 import {
   FdGraphCanvasInteractionController,
   type FdGraphCanvasInteractionDelegate,
@@ -134,6 +147,10 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
 
     .graph-edge[data-dashed] {
       stroke-dasharray: 7 6;
+    }
+
+    .graph-edge[data-focused] {
+      stroke: var(--fd-graph-focus-color, var(--fd-canvas-focus-color, Highlight));
     }
 
     .graph-edge-label {
@@ -369,6 +386,27 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     .consumer-overlay ::slotted(*) {
       pointer-events: auto;
     }
+
+    .accessibility-surface {
+      position: absolute;
+      z-index: 4;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .accessibility-surface:focus-visible {
+      outline: 2px solid var(--fd-graph-focus-color, var(--fd-canvas-focus-color, Highlight));
+      outline-offset: -2px;
+    }
+
+    .accessibility-items {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
   `
 
   @property({ attribute: false }) snapshot: FdAnyGraphSnapshot = emptySnapshot
@@ -387,6 +425,8 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   @property({ attribute: false }) interactionConfiguration: FdGraphCanvasInteractionConfiguration =
     {}
   @property({ attribute: false }) keyboardConfiguration: FdGraphCanvasKeyboardConfiguration = {}
+  @property({ attribute: false })
+  accessibilityConfiguration: FdGraphCanvasAccessibilityConfiguration = {}
   @property({ attribute: false }) miniMapConfiguration: FdGraphMiniMapConfiguration | undefined
   @property({ attribute: false })
   get selectedNodeIDs(): ReadonlySet<FdGraphElementID> {
@@ -408,6 +448,10 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     const previous = this.focusedNodeValue
     if (previous === value) return
     this.focusedNodeValue = value
+    if (value !== undefined) {
+      const key = graphNodeAccessibilityKey(value)
+      if (this.accessibilitySnapshot.contains(key)) this.accessibilityFocusedElementKey = key
+    }
     this.requestUpdate('focusedNodeID', previous)
   }
 
@@ -418,6 +462,8 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   @query('.selection-bounds') private selectionBoundsElement!: HTMLElement
   @query('.selection-marquee') private marqueeElement!: HTMLElement
   @query('.guide-layer') private guideLayer!: HTMLElement
+  @query('.accessibility-surface') private accessibilitySurface!: HTMLElement
+  @query('.accessibility-items') private accessibilityItems!: HTMLElement
   @query('fd-graph-minimap') private miniMap: FdGraphMiniMap | undefined
 
   private index = new FdGraphSnapshotIndex(emptySnapshot)
@@ -436,6 +482,11 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   private resolvedInteractionConfiguration = resolveGraphCanvasInteractionConfiguration({})
   private resolvedKeyboardConfiguration: FdResolvedGraphCanvasKeyboardConfiguration =
     resolveGraphCanvasKeyboardConfiguration()
+  private resolvedAccessibilityConfiguration: FdResolvedGraphCanvasAccessibilityConfiguration =
+    resolveGraphCanvasAccessibilityConfiguration()
+  private accessibilitySnapshot = new FdGraphAccessibilitySnapshot([])
+  private accessibilityBridge: FdGraphCanvasAccessibilityBridge | undefined
+  private accessibilityFocusedElementKey: string | undefined
   private keyboardCandidates: readonly FdGraphKeyboardNavigationCandidate[] = []
   private selectionValue: ReadonlySet<FdGraphElementID> = new Set()
   private focusedNodeValue: FdGraphElementID | undefined
@@ -480,6 +531,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
         .contentInsets=${this.contentInsets}
         .contentChangeBehavior=${this.contentChangeBehavior}
         .request=${this.request}
+        .viewportTabIndex=${this.resolvedAccessibilityConfiguration.enabled ? -1 : 0}
         @fd-render-world-rect-change=${this.handleRenderWorldRectChange}
         @fd-viewport-change=${this.handleViewportChange}
         @focusin=${this.handleKeyboardFocusIn}
@@ -522,17 +574,42 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
             : nothing
         }
       </fd-canvas>
+      <div
+        class="accessibility-surface"
+        role="grid"
+        @focusin=${this.handleAccessibilityFocusIn}
+        @keydown=${this.handleAccessibilityKeyDown}
+      >
+        <div class="accessibility-items" role="rowgroup"></div>
+      </div>
     `
   }
 
   override firstUpdated(): void {
     this.interactionController = new FdGraphCanvasInteractionController(this)
+    this.accessibilityBridge = new FdGraphCanvasAccessibilityBridge(
+      this.accessibilitySurface,
+      this.accessibilityItems,
+    )
     this.canvas.addEventListener('pointerdown', this.handleGraphPointerDown, { capture: true })
     this.canvas.addEventListener('pointermove', this.handleGraphPointerMove, { capture: true })
     this.canvas.addEventListener('pointerup', this.handleGraphPointerEnd, { capture: true })
     this.canvas.addEventListener('pointercancel', this.handleGraphPointerCancel, { capture: true })
     this.activateBackend()
     this.rebuildSnapshot()
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    if (changed.has('keyboardConfiguration')) {
+      this.resolvedKeyboardConfiguration = resolveGraphCanvasKeyboardConfiguration(
+        this.keyboardConfiguration,
+      )
+    }
+    if (changed.has('accessibilityConfiguration')) {
+      this.resolvedAccessibilityConfiguration = resolveGraphCanvasAccessibilityConfiguration(
+        this.accessibilityConfiguration,
+      )
+    }
   }
 
   protected override updated(changed: PropertyValues<this>): void {
@@ -551,22 +628,23 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       this.interactionController?.cancel()
       this.refreshResizeHandleVisibility()
       this.syncInteractionOverlay()
+      this.syncAccessibilityBridge()
     }
-    if (changed.has('keyboardConfiguration')) {
-      this.resolvedKeyboardConfiguration = resolveGraphCanvasKeyboardConfiguration(
-        this.keyboardConfiguration,
-      )
+    if (changed.has('accessibilityConfiguration') && !changed.has('snapshot')) {
+      this.rebuildAccessibilitySnapshot()
     }
     if (changed.has('selectedNodeIDs')) {
       this.reconcileSelection()
       this.refreshResizeHandleVisibility()
       this.presentationRevision += 1
       this.syncInteractionOverlay()
+      this.syncAccessibilityBridge()
       this.scheduleRenderFrame()
     }
     if (changed.has('focusedNodeID')) {
       this.reconcileKeyboardFocus()
       this.presentationRevision += 1
+      this.syncAccessibilityBridge()
       this.scheduleRenderFrame()
     }
     if (changed.has('tool')) this.interactionController?.cancel()
@@ -694,6 +772,9 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     const key = nodeElement?.dataset.fdGraphNode
     const nodeID = key ? graphElementIDFromKey(key) : undefined
     if (nodeID !== undefined) this.setFocusedNode(nodeID, 'pointer', false)
+    if (this.resolvedAccessibilityConfiguration.enabled) {
+      this.accessibilitySurface.focus({ preventScroll: true })
+    }
     event.preventDefault()
     this.canvas.setPointerCapture(event.pointerId)
   }
@@ -743,9 +824,11 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     )
     this.reconcileSelection()
     this.reconcileKeyboardFocus()
+    this.rebuildAccessibilitySnapshot()
     this.refreshResizeHandleVisibility()
     this.syncInteractionOverlay()
     this.syncMiniMap()
+    this.syncAccessibilityBridge()
     if (!this.canvas) return
     this.canvas.contentRect = this.index.contentBounds
     this.refreshVisibleElements(this.canvas.renderWorldRect)
@@ -785,6 +868,156 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     const node = this.index.nodes.get(this.focusedNodeID)
     if (node && node.capabilities?.keyboardNavigable !== false) return
     this.focusedNodeValue = undefined
+  }
+
+  private rebuildAccessibilitySnapshot(): void {
+    this.accessibilitySnapshot = createGraphAccessibilitySnapshot(
+      this.snapshot,
+      this.resolvedAccessibilityConfiguration,
+    )
+    const focusedNodeKey =
+      this.focusedNodeID === undefined ? undefined : graphNodeAccessibilityKey(this.focusedNodeID)
+    this.accessibilityFocusedElementKey = this.accessibilitySnapshot.reconciledFocus(
+      focusedNodeKey ?? this.accessibilityFocusedElementKey,
+    )
+    this.syncAccessibilityBridge()
+  }
+
+  private syncAccessibilityBridge(): void {
+    this.accessibilityBridge?.update({
+      snapshot: this.accessibilitySnapshot,
+      configuration: this.resolvedAccessibilityConfiguration,
+      selectedNodeIDs: this.selectedNodeIDs,
+      allowsMultipleSelection: this.resolvedInteractionConfiguration.selection === 'multiple',
+      ...(this.accessibilityFocusedElementKey
+        ? { focusedElementKey: this.accessibilityFocusedElementKey }
+        : {}),
+    })
+  }
+
+  private handleAccessibilityFocusIn = (): void => {
+    if (!this.resolvedAccessibilityConfiguration.enabled) return
+    const key = this.accessibilitySnapshot.reconciledFocus(
+      this.accessibilityFocusedElementKey ??
+        (this.focusedNodeID === undefined
+          ? undefined
+          : graphNodeAccessibilityKey(this.focusedNodeID)),
+    )
+    if (key) this.focusAccessibilityElement(key)
+  }
+
+  private handleAccessibilityKeyDown = (event: KeyboardEvent): void => {
+    if (!this.resolvedAccessibilityConfiguration.enabled) return
+    const command = this.resolvedAccessibilityConfiguration.resolveCommand(event)
+    if (!command || !this.performAccessibilityCommand(command)) return
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  private performAccessibilityCommand(command: FdGraphAccessibilityCommand): boolean {
+    const currentKey = this.accessibilityFocusedElementKey
+    switch (command.kind) {
+      case 'focusPrevious':
+        return currentKey
+          ? this.focusAccessibilityElement(this.accessibilitySnapshot.elementKeyBefore(currentKey))
+          : this.focusAccessibilityElement(this.accessibilitySnapshot.firstElementKey)
+      case 'focusNext':
+        return currentKey
+          ? this.focusAccessibilityElement(this.accessibilitySnapshot.elementKeyAfter(currentKey))
+          : this.focusAccessibilityElement(this.accessibilitySnapshot.firstElementKey)
+      case 'focusFirst':
+        return this.focusAccessibilityElement(this.accessibilitySnapshot.firstElementKey)
+      case 'focusLast':
+        return this.focusAccessibilityElement(this.accessibilitySnapshot.lastElementKey)
+      case 'select':
+        return this.selectAccessibilityElement(currentKey)
+      case 'activate':
+        return this.activateAccessibilityElement(currentKey)
+      case 'move':
+        return this.moveAccessibilityElement(currentKey, command.direction, command.large)
+    }
+  }
+
+  private focusAccessibilityElement(key: string | undefined): boolean {
+    if (!key || !this.resolvedAccessibilityConfiguration.capabilities.focusNavigation) return false
+    const item = this.accessibilitySnapshot.item(key)
+    if (!item) return false
+    if (!this.dispatchAccessibilityAction(item.reference, { kind: 'focus' })) return true
+    this.accessibilityFocusedElementKey = key
+    this.presentationRevision += 1
+    if (item.kind === 'node' && item.reference.nodeID !== undefined) {
+      this.setFocusedNode(
+        item.reference.nodeID,
+        'accessibility',
+        false,
+        this.resolvedAccessibilityConfiguration.keepsFocusedElementVisible,
+      )
+    } else if (
+      this.resolvedAccessibilityConfiguration.keepsFocusedElementVisible &&
+      !canvasRectContains(this.canvas.viewport.visibleWorldRect, item.frame)
+    ) {
+      this.canvas.focusRect(item.frame, this.canvas.viewport.transform.zoom)
+    }
+    this.syncAccessibilityBridge()
+    this.scheduleRenderFrame()
+    return true
+  }
+
+  private selectAccessibilityElement(key: string | undefined): boolean {
+    if (!key || !this.resolvedAccessibilityConfiguration.capabilities.selection) return false
+    const item = this.accessibilitySnapshot.item(key)
+    const nodeID = item?.reference.nodeID
+    if (item?.kind !== 'node' || nodeID === undefined) return false
+    if (!this.dispatchAccessibilityAction(item.reference, { kind: 'select' })) return true
+    if (this.index.nodes.get(nodeID)?.capabilities?.selectable === false) return false
+    const selection = new Set(this.selectedNodeIDs)
+    if (this.resolvedInteractionConfiguration.selection === 'none') return false
+    if (this.resolvedInteractionConfiguration.selection === 'single') selection.clear()
+    if (selection.has(nodeID)) selection.delete(nodeID)
+    else selection.add(nodeID)
+    this.setSelection(selection, { phase: 'ended', source: 'accessibility' })
+    return true
+  }
+
+  private activateAccessibilityElement(key: string | undefined): boolean {
+    if (!key || !this.resolvedAccessibilityConfiguration.capabilities.activation) return false
+    const item = this.accessibilitySnapshot.item(key)
+    if (!item) return false
+    if (!this.dispatchAccessibilityAction(item.reference, { kind: 'activate' })) return true
+    return item.kind !== 'node' || this.activateFocusedNode('accessibility')
+  }
+
+  private moveAccessibilityElement(
+    key: string | undefined,
+    direction: FdGraphNavigationDirection,
+    large: boolean,
+  ): boolean {
+    if (!key || !this.resolvedAccessibilityConfiguration.capabilities.movement) return false
+    const item = this.accessibilitySnapshot.item(key)
+    const nodeID = item?.reference.nodeID
+    if (item?.kind !== 'node' || nodeID === undefined) return false
+    if (!this.dispatchAccessibilityAction(item.reference, { kind: 'move', direction, large })) {
+      return true
+    }
+    if (!this.selectedNodeIDs.has(nodeID)) {
+      this.setSelection(new Set([nodeID]), { phase: 'ended', source: 'accessibility' })
+    }
+    this.focusedNodeID = nodeID
+    return this.nudgeKeyboardSelection(direction, large)
+  }
+
+  private dispatchAccessibilityAction(
+    element: FdGraphAccessibilityActionDetail['element'],
+    action: FdGraphAccessibilityActionDetail['action'],
+  ): boolean {
+    return this.dispatchEvent(
+      new CustomEvent<FdGraphAccessibilityActionDetail>('fd-graph-accessibility-action', {
+        detail: { element, action },
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    )
   }
 
   private handleKeyboardFocusIn = (): void => {
@@ -859,11 +1092,13 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     nodeID: FdGraphElementID,
     source: FdGraphFocusChangeDetail['source'],
     updatesSelection: boolean,
+    keepsVisible = this.resolvedKeyboardConfiguration.keepsFocusedNodeVisible,
   ): void {
     const node = this.index.nodes.get(nodeID)
     if (!node || node.capabilities?.keyboardNavigable === false) return
     const changed = this.focusedNodeID !== nodeID
     this.focusedNodeID = nodeID
+    this.syncAccessibilityBridge()
     if (
       updatesSelection &&
       this.resolvedKeyboardConfiguration.selectionBehavior === 'replace' &&
@@ -871,10 +1106,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     ) {
       this.setSelection(new Set([nodeID]), { phase: 'ended', source: 'keyboard' })
     }
-    if (
-      this.resolvedKeyboardConfiguration.keepsFocusedNodeVisible &&
-      !canvasRectContains(this.canvas.viewport.visibleWorldRect, node.frame)
-    ) {
+    if (keepsVisible && !canvasRectContains(this.canvas.viewport.visibleWorldRect, node.frame)) {
       this.canvas.focusRect(node.frame, this.canvas.viewport.transform.zoom)
     }
     if (!changed) return
@@ -1112,6 +1344,9 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
 
   private renderBackendFrame(): void {
     if (!this.backend || !this.canvas) return
+    const accessibilityFocus = this.accessibilityFocusedElementKey
+      ? this.accessibilitySnapshot.item(this.accessibilityFocusedElementKey)
+      : undefined
     const nodes: FdGraphRenderNode[] = this.visibleNodes.map((node) => ({
       node,
       frame: this.interactionPresentation.frames.get(node.id) ?? node.frame,
@@ -1124,6 +1359,8 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       source: this.endpointPoint(edge, 'source'),
       target: this.endpointPoint(edge, 'target'),
       selected: false,
+      focused:
+        accessibilityFocus?.kind === 'edge' && accessibilityFocus.reference.edgeID === edge.id,
       hovered: false,
     }))
     const frame: FdGraphRenderFrame = {

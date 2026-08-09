@@ -30,6 +30,7 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     this.edgeLayer.setAttribute('aria-hidden', 'true')
     this.nodeLayer.classList.add('graph-node-layer')
     this.nodeLayer.setAttribute('part', 'node-layer')
+    this.nodeLayer.setAttribute('aria-hidden', 'true')
   }
 
   mount(surface: FdGraphRenderingSurface): void {
@@ -171,6 +172,7 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
       )
       path.toggleAttribute('data-dashed', rendered.edge.style?.dashed === true)
       path.toggleAttribute('data-selected', rendered.selected)
+      path.toggleAttribute('data-focused', rendered.focused)
       path.toggleAttribute('data-hovered', rendered.hovered)
       if (rendered.edge.label) this.updateEdgeLabel(key, rendered)
       else this.removeEdgeLabel(key)

@@ -17,6 +17,7 @@ export interface FdGraphRenderEdge {
   readonly source: FdCanvasPoint
   readonly target: FdCanvasPoint
   readonly selected: boolean
+  readonly focused: boolean
   readonly hovered: boolean
 }
 
