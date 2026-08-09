@@ -15,7 +15,8 @@ import {
   graphSelectionBounds,
   resizeGraphBounds,
   scaleGraphFrames,
-  snapGraphTranslation,
+  snapGraphResize,
+  snapGraphTranslationRequest,
 } from '../../interactions/arrangement.js'
 import type {
   FdGraphCanvasTool,
@@ -302,11 +303,12 @@ export class FdGraphCanvasInteractionController {
       else translation.width = 0
     }
     let guides: readonly FdGraphGuide[] = []
-    if (!event.metaKey && !event.ctrlKey) {
-      const snapped = snapGraphTranslation(
-        session.baseBounds,
-        translation,
-        this.snapCandidates(
+    const configuration = this.delegate.resolvedConfiguration
+    if (!event.metaKey && !event.ctrlKey && configuration.snapping.enabled) {
+      const request = {
+        movingBounds: session.baseBounds,
+        proposedTranslation: translation,
+        candidates: this.snapCandidates(
           {
             ...session.baseBounds,
             x: session.baseBounds.x + translation.width,
@@ -314,10 +316,14 @@ export class FdGraphCanvasInteractionController {
           },
           new Set(session.baseFrames.keys()),
         ),
-        this.delegate.resolvedConfiguration.snapping,
-        this.delegate.viewport.transform.zoom,
-        session.snapState,
-      )
+        configuration: configuration.snapping,
+        zoom: this.delegate.viewport.transform.zoom,
+        previous: session.snapState,
+      }
+      const standard = (): ReturnType<typeof snapGraphTranslationRequest> =>
+        snapGraphTranslationRequest(request)
+      const custom = configuration.snappingStrategy?.translation?.(request)
+      const snapped = custom && this.validTranslationResult(custom) ? custom : standard()
       session.snapState = snapped.state
       translation = snapped.translation
       guides = snapped.guides
@@ -353,57 +359,52 @@ export class FdGraphCanvasInteractionController {
       width: worldPoint.x - session.startWorldPoint.x,
       height: worldPoint.y - session.startWorldPoint.y,
     }
-    let bounds = resizeGraphBounds(
+    const configuration = this.delegate.resolvedConfiguration
+    const proposedBounds = resizeGraphBounds(
       session.baseBounds,
       session.handle,
       translation,
       {
-        width: this.delegate.resolvedConfiguration.minimumNodeWidth,
-        height: this.delegate.resolvedConfiguration.minimumNodeHeight,
+        width: configuration.minimumNodeWidth,
+        height: configuration.minimumNodeHeight,
       },
       event.shiftKey,
       event.altKey,
     )
     let guides: readonly FdGraphGuide[] = []
-    if (!event.metaKey && !event.ctrlKey) {
-      const activePoint = this.resizeActivePoint(bounds, session.handle)
-      const snapped = snapGraphTranslation(
-        { x: activePoint.x, y: activePoint.y, width: 0, height: 0 },
-        { width: 0, height: 0 },
-        this.snapCandidates(bounds, new Set(session.baseFrames.keys())),
-        this.delegate.resolvedConfiguration.snapping,
-        this.delegate.viewport.transform.zoom,
-        session.snapState,
-      )
+    if (!event.metaKey && !event.ctrlKey && configuration.snapping.enabled) {
+      const request = {
+        baseFrames: session.baseFrames,
+        baseBounds: session.baseBounds,
+        proposedBounds,
+        proposedTranslation: translation,
+        handle: session.handle,
+        candidates: this.snapCandidates(proposedBounds, new Set(session.baseFrames.keys())),
+        configuration: configuration.snapping,
+        minimumSize: {
+          width: configuration.minimumNodeWidth,
+          height: configuration.minimumNodeHeight,
+        },
+        zoom: this.delegate.viewport.transform.zoom,
+        previous: session.snapState,
+        preservesAspectRatio: event.shiftKey,
+        resizesFromCenter: event.altKey,
+      }
+      const standard = (): ReturnType<typeof snapGraphResize> => snapGraphResize(request)
+      const custom = configuration.snappingStrategy?.resize?.(request)
+      const snapped =
+        custom && this.validResizeResult(custom, session.baseFrames) ? custom : standard()
       session.snapState = snapped.state
-      bounds = resizeGraphBounds(
-        session.baseBounds,
-        session.handle,
-        {
-          width:
-            translation.width +
-            (session.handle.includes('Right') ||
-            session.handle.includes('Left') ||
-            session.handle === 'right' ||
-            session.handle === 'left'
-              ? snapped.translation.width
-              : 0),
-          height:
-            translation.height +
-            (session.handle.startsWith('top') || session.handle.startsWith('bottom')
-              ? snapped.translation.height
-              : 0),
-        },
-        {
-          width: this.delegate.resolvedConfiguration.minimumNodeWidth,
-          height: this.delegate.resolvedConfiguration.minimumNodeHeight,
-        },
-        event.shiftKey,
-        event.altKey,
-      )
+      session.latestFrames = snapped.frames
       guides = snapped.guides
-    } else session.snapState = {}
-    session.latestFrames = scaleGraphFrames(session.baseFrames, session.baseBounds, bounds)
+    } else {
+      session.snapState = {}
+      session.latestFrames = scaleGraphFrames(
+        session.baseFrames,
+        session.baseBounds,
+        proposedBounds,
+      )
+    }
     this.delegate.setPresentation({ frames: session.latestFrames, guides })
     this.delegate.emitFrameChanges(
       session.transactionID,
@@ -471,21 +472,6 @@ export class FdGraphCanvasInteractionController {
       .map(({ id, frame }) => ({ id, frame }))
   }
 
-  private resizeActivePoint(bounds: FdCanvasRect, handle: FdGraphResizeHandle): FdCanvasPoint {
-    const x =
-      handle.includes('Left') || handle === 'left'
-        ? bounds.x
-        : handle.includes('Right') || handle === 'right'
-          ? bounds.x + bounds.width
-          : bounds.x + bounds.width / 2
-    const y = handle.startsWith('top')
-      ? bounds.y
-      : handle.startsWith('bottom')
-        ? bounds.y + bounds.height
-        : bounds.y + bounds.height / 2
-    return { x, y }
-  }
-
   private frameChanges(
     before: ReadonlyMap<FdGraphElementID, FdCanvasRect>,
     after: ReadonlyMap<FdGraphElementID, FdCanvasRect>,
@@ -503,6 +489,61 @@ export class FdGraphCanvasInteractionController {
       }
       return [{ nodeID, before: original, after: frame }]
     })
+  }
+
+  private validTranslationResult(result: {
+    readonly translation: FdCanvasSize
+    readonly guides: readonly FdGraphGuide[]
+    readonly state: FdGraphSnapState
+  }): boolean {
+    return (
+      Number.isFinite(result.translation.width) &&
+      Number.isFinite(result.translation.height) &&
+      this.validSnapState(result.state) &&
+      result.guides.every((guide) =>
+        [guide.position, guide.lowerBound, guide.upperBound].every(Number.isFinite),
+      )
+    )
+  }
+
+  private validResizeResult(
+    result: {
+      readonly bounds: FdCanvasRect
+      readonly frames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
+      readonly guides: readonly FdGraphGuide[]
+      readonly state: FdGraphSnapState
+    },
+    baseFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>,
+  ): boolean {
+    if (!this.validRect(result.bounds) || result.frames.size !== baseFrames.size) return false
+    for (const id of baseFrames.keys()) {
+      const frame = result.frames.get(id)
+      if (!frame || !this.validRect(frame)) return false
+    }
+    return (
+      this.validSnapState(result.state) &&
+      result.guides.every((guide) =>
+        [guide.position, guide.lowerBound, guide.upperBound].every(Number.isFinite),
+      )
+    )
+  }
+
+  private validSnapState(state: FdGraphSnapState): boolean {
+    return (
+      (state.x === undefined || Number.isFinite(state.x.target)) &&
+      (state.y === undefined || Number.isFinite(state.y.target))
+    )
+  }
+
+  private validRect(rect: FdCanvasRect): boolean {
+    return (
+      Number.isFinite(rect.x) &&
+      Number.isFinite(rect.y) &&
+      Number.isFinite(rect.width) &&
+      Number.isFinite(rect.height) &&
+      rect.width >= 0 &&
+      rect.height >= 0
+    )
   }
 
   private nodeID(event: PointerEvent): FdGraphElementID | undefined {

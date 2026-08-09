@@ -5,7 +5,9 @@ import {
   graphSelectionBounds,
   resizeGraphBounds,
   scaleGraphFrames,
+  snapGraphResize,
   snapGraphTranslation,
+  snapGraphTranslationRequest,
 } from './arrangement.js'
 import { resolveGraphCanvasInteractionConfiguration } from './configuration.js'
 import {
@@ -117,6 +119,24 @@ describe('graph snapping', () => {
     ).toEqual({ width: 25, height: 25 })
   })
 
+  it('exposes the standard translation solver through a reusable request', () => {
+    const request = {
+      movingBounds: { x: 0, y: 0, width: 40, height: 40 },
+      proposedTranslation: { width: 23, height: 24 },
+      candidates: [],
+      configuration: resolveGraphCanvasInteractionConfiguration({
+        snapping: {
+          alignment: false,
+          grid: { enabled: true, width: 20, height: 20, originX: 5, originY: 5 },
+        },
+      }).snapping,
+      zoom: 1,
+      previous: {},
+    }
+
+    expect(snapGraphTranslationRequest(request).translation).toEqual({ width: 25, height: 25 })
+  })
+
   it('resolves dense alignment candidates without materializing every guide', () => {
     const candidates = Array.from({ length: 10_000 }, (_, index) => ({
       id: index,
@@ -169,5 +189,31 @@ describe('graph group resizing', () => {
         true,
       ),
     ).toEqual({ x: 50, y: 100, width: 300, height: 100 })
+  })
+
+  it('exposes the standard resize solver through a reusable request', () => {
+    const baseBounds = graphSelectionBounds(frames) as FdCanvasRect
+    const result = snapGraphResize({
+      baseFrames: frames,
+      baseBounds,
+      proposedBounds: { x: 0, y: 0, width: 298, height: 148 },
+      proposedTranslation: { width: -2, height: -2 },
+      handle: 'bottomRight',
+      candidates: [],
+      configuration: resolveGraphCanvasInteractionConfiguration({
+        snapping: {
+          alignment: false,
+          grid: { enabled: true, width: 50, height: 50 },
+        },
+      }).snapping,
+      minimumSize: { width: 40, height: 32 },
+      zoom: 1,
+      previous: {},
+      preservesAspectRatio: false,
+      resizesFromCenter: false,
+    })
+
+    expect(result.bounds).toEqual({ x: 0, y: 0, width: 300, height: 150 })
+    expect(result.frames.get('two')).toEqual({ x: 200, y: 100, width: 100, height: 50 })
   })
 })

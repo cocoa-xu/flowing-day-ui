@@ -23,3 +23,8 @@ Its `automatic` rendering preference uses the WebGL2 hybrid backend when availab
 to DOM/SVG otherwise. WebGL batches graph geometry while visible rich node content remains DOM,
 so custom content and accessibility do not depend on the graphics backend. Set `renderingBackend`
 to `dom`, `webgl2`, or a custom backend when a product needs an explicit policy.
+
+Products with domain-specific alignment can set `interactionConfiguration.snappingStrategy`.
+Translation and resize solvers are replaceable independently, and custom solvers can delegate to
+`snapGraphTranslationRequest()` or `snapGraphResize()` before refining the standard result. These
+callbacks run synchronously in the pointer hot path and should remain deterministic and bounded.

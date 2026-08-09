@@ -1,4 +1,4 @@
-import type { FdCanvasRect, FdCanvasSize } from '../geometry.js'
+import type { FdCanvasPoint, FdCanvasRect, FdCanvasSize } from '../geometry.js'
 import { unionCanvasRects } from '../geometry.js'
 import type { FdGraphElementID } from '../graph/model.js'
 import type {
@@ -49,6 +49,40 @@ export interface FdGraphTranslationSnapResult {
   readonly translation: FdCanvasSize
   readonly guides: readonly FdGraphGuide[]
   readonly state: FdGraphSnapState
+}
+
+export interface FdGraphTranslationSnapRequest {
+  readonly movingBounds: FdCanvasRect
+  readonly proposedTranslation: FdCanvasSize
+  readonly candidates: readonly FdGraphSnapCandidate[]
+  readonly configuration: FdResolvedGraphSnappingConfiguration
+  readonly zoom: number
+  readonly previous: FdGraphSnapState
+}
+
+export interface FdGraphResizeSnapRequest {
+  readonly baseFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
+  readonly baseBounds: FdCanvasRect
+  readonly proposedBounds: FdCanvasRect
+  readonly proposedTranslation: FdCanvasSize
+  readonly handle: FdGraphResizeHandle
+  readonly candidates: readonly FdGraphSnapCandidate[]
+  readonly configuration: FdResolvedGraphSnappingConfiguration
+  readonly minimumSize: FdCanvasSize
+  readonly zoom: number
+  readonly previous: FdGraphSnapState
+  readonly preservesAspectRatio: boolean
+  readonly resizesFromCenter: boolean
+}
+
+export interface FdGraphResizeSnapResult extends FdGraphResizeResult {
+  readonly guides: readonly FdGraphGuide[]
+  readonly state: FdGraphSnapState
+}
+
+export interface FdGraphSnappingStrategy {
+  readonly translation?: (request: FdGraphTranslationSnapRequest) => FdGraphTranslationSnapResult
+  readonly resize?: (request: FdGraphResizeSnapRequest) => FdGraphResizeSnapResult
 }
 
 export interface FdGraphResizeResult {
@@ -209,6 +243,19 @@ export function snapGraphTranslation(
   }
 }
 
+export function snapGraphTranslationRequest(
+  request: FdGraphTranslationSnapRequest,
+): FdGraphTranslationSnapResult {
+  return snapGraphTranslation(
+    request.movingBounds,
+    request.proposedTranslation,
+    request.candidates,
+    request.configuration,
+    request.zoom,
+    request.previous,
+  )
+}
+
 export function graphSelectionBounds(
   frames: ReadonlyMap<FdGraphElementID, FdCanvasRect>,
 ): FdCanvasRect | undefined {
@@ -282,4 +329,64 @@ export function scaleGraphFrames(
       },
     ]),
   )
+}
+
+export function snapGraphResize(request: FdGraphResizeSnapRequest): FdGraphResizeSnapResult {
+  if (!request.configuration.enabled) {
+    return {
+      bounds: request.proposedBounds,
+      frames: scaleGraphFrames(request.baseFrames, request.baseBounds, request.proposedBounds),
+      guides: [],
+      state: {},
+    }
+  }
+  const activePoint = resizeActivePoint(request.proposedBounds, request.handle)
+  const snapped = snapGraphTranslation(
+    { x: activePoint.x, y: activePoint.y, width: 0, height: 0 },
+    { width: 0, height: 0 },
+    request.candidates,
+    request.configuration,
+    request.zoom,
+    request.previous,
+  )
+  const movesHorizontally =
+    request.handle.includes('Right') ||
+    request.handle.includes('Left') ||
+    request.handle === 'right' ||
+    request.handle === 'left'
+  const movesVertically = request.handle.startsWith('top') || request.handle.startsWith('bottom')
+  const bounds = resizeGraphBounds(
+    request.baseBounds,
+    request.handle,
+    {
+      width:
+        request.proposedTranslation.width + (movesHorizontally ? snapped.translation.width : 0),
+      height:
+        request.proposedTranslation.height + (movesVertically ? snapped.translation.height : 0),
+    },
+    request.minimumSize,
+    request.preservesAspectRatio,
+    request.resizesFromCenter,
+  )
+  return {
+    bounds,
+    frames: scaleGraphFrames(request.baseFrames, request.baseBounds, bounds),
+    guides: snapped.guides,
+    state: snapped.state,
+  }
+}
+
+const resizeActivePoint = (bounds: FdCanvasRect, handle: FdGraphResizeHandle): FdCanvasPoint => {
+  const x =
+    handle.includes('Left') || handle === 'left'
+      ? bounds.x
+      : handle.includes('Right') || handle === 'right'
+        ? bounds.x + bounds.width
+        : bounds.x + bounds.width / 2
+  const y = handle.startsWith('top')
+    ? bounds.y
+    : handle.startsWith('bottom')
+      ? bounds.y + bounds.height
+      : bounds.y + bounds.height / 2
+  return { x, y }
 }

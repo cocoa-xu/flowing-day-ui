@@ -1,4 +1,5 @@
 import type { FdAnyGraphNode } from '../graph/model.js'
+import type { FdGraphSnappingStrategy } from './arrangement.js'
 
 export type FdGraphSelectionBehavior = 'none' | 'single' | 'multiple'
 export type FdGraphMarqueeBehavior = 'disabled' | 'intersects' | 'contains'
@@ -36,6 +37,7 @@ export interface FdGraphCanvasInteractionConfiguration {
   readonly minimumNodeHeight?: number
   readonly frameUpdates?: FdGraphFrameUpdateBehavior
   readonly snapping?: FdGraphSnappingConfiguration
+  readonly snappingStrategy?: FdGraphSnappingStrategy
   readonly canDragNodes?: (nodes: readonly FdAnyGraphNode[]) => boolean
   readonly canResizeNodes?: (nodes: readonly FdAnyGraphNode[]) => boolean
 }
@@ -70,6 +72,7 @@ export interface FdResolvedGraphCanvasInteractionConfiguration {
   readonly minimumNodeHeight: number
   readonly frameUpdates: FdGraphFrameUpdateBehavior
   readonly snapping: FdResolvedGraphSnappingConfiguration
+  readonly snappingStrategy?: FdGraphSnappingStrategy
   readonly canDragNodes: (nodes: readonly FdAnyGraphNode[]) => boolean
   readonly canResizeNodes: (nodes: readonly FdAnyGraphNode[]) => boolean
 }
@@ -97,6 +100,7 @@ export function resolveGraphCanvasInteractionConfiguration(
     minimumNodeWidth: positive(configuration.minimumNodeWidth ?? 40, 'minimum node width'),
     minimumNodeHeight: positive(configuration.minimumNodeHeight ?? 32, 'minimum node height'),
     frameUpdates: configuration.frameUpdates ?? 'intent',
+    ...(configuration.snappingStrategy ? { snappingStrategy: configuration.snappingStrategy } : {}),
     snapping: {
       enabled: configuration.snapping?.enabled ?? true,
       alignment: configuration.snapping?.alignment ?? true,

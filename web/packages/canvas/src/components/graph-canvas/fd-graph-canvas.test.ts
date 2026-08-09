@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { FdGraphAccessibilityActionDetail } from '../../accessibility/events.js'
 import type { FdCanvasPoint } from '../../geometry.js'
 import type {
@@ -14,6 +14,7 @@ import type {
   FdGraphCanvasHistoryConflictDetail,
   FdGraphCanvasHistoryStateDetail,
 } from '../../history/events.js'
+import { snapGraphTranslationRequest } from '../../interactions/arrangement.js'
 import { graphConnectionOriginForEdge } from '../../interactions/connection.js'
 import type {
   FdGraphRenderFrame,
@@ -401,6 +402,108 @@ describe('fd-graph-canvas pointer editing', () => {
     dispatchPointer(secondCanvas, 'pointermove', secondEnd, { metaKey: true })
     dispatchPointer(secondCanvas, 'pointerup', secondEnd, { metaKey: true })
     expect(second.snapshot.nodes[0]?.frame.x).toBeCloseTo(236)
+  })
+
+  it('lets consumers extend translation snapping without replacing the standard solver', async () => {
+    const element = await mount()
+    const canvas = preparePointerInput(element)
+    element.interactionConfiguration = {
+      frameUpdates: 'local',
+      snapping: { alignment: false },
+      snappingStrategy: {
+        translation: (request) => {
+          const standard = snapGraphTranslationRequest(request)
+          return {
+            ...standard,
+            translation: {
+              width: standard.translation.width + 10,
+              height: standard.translation.height,
+            },
+          }
+        },
+      },
+    }
+    await element.updateComplete
+    const source = element.shadowRoot?.querySelector(
+      '[data-fd-graph-node="s:source"]',
+    ) as HTMLElement
+    const start = clientPoint(element, { x: 100, y: 120 })
+    const end = clientPoint(element, { x: 140, y: 150 })
+
+    dispatchPointer(source, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', end)
+    dispatchPointer(canvas, 'pointerup', end)
+
+    expect(element.snapshot.nodes[0]?.frame.x).toBe(90)
+    expect(element.snapshot.nodes[0]?.frame.y).toBe(110)
+  })
+
+  it('uses custom resize frames even when the strategy does not emit guides', async () => {
+    const element = await mount()
+    const canvas = preparePointerInput(element)
+    element.selectedNodeIDs = new Set(['source'])
+    element.interactionConfiguration = {
+      frameUpdates: 'local',
+      snappingStrategy: {
+        resize: () => {
+          const bounds = { x: 40, y: 80, width: 240, height: 128 }
+          return {
+            bounds,
+            frames: new Map([['source', bounds]]),
+            guides: [],
+            state: {},
+          }
+        },
+      },
+    }
+    await element.updateComplete
+    const handle = element.shadowRoot?.querySelector<HTMLElement>(
+      '[data-fd-resize-handle="bottomRight"]',
+    )
+    if (!handle) throw new Error('missing resize handle')
+    const start = clientPoint(element, { x: 220, y: 168 })
+    const end = clientPoint(element, { x: 260, y: 198 })
+
+    dispatchPointer(handle, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', end)
+    dispatchPointer(canvas, 'pointerup', end)
+
+    expect(element.snapshot.nodes[0]?.frame).toEqual({ x: 40, y: 80, width: 240, height: 128 })
+  })
+
+  it('does not invoke custom snapping while Command is held or snapping is disabled', async () => {
+    const strategy = vi.fn(snapGraphTranslationRequest)
+    const first = await mount()
+    const firstCanvas = preparePointerInput(first)
+    first.interactionConfiguration = { snappingStrategy: { translation: strategy } }
+    await first.updateComplete
+    const firstSource = first.shadowRoot?.querySelector(
+      '[data-fd-graph-node="s:source"]',
+    ) as HTMLElement
+    const start = clientPoint(first, { x: 100, y: 120 })
+    const end = clientPoint(first, { x: 140, y: 150 })
+
+    dispatchPointer(firstSource, 'pointerdown', start, { metaKey: true })
+    dispatchPointer(firstCanvas, 'pointermove', end, { metaKey: true })
+    dispatchPointer(firstCanvas, 'pointerup', end, { metaKey: true })
+
+    const second = await mount()
+    const secondCanvas = preparePointerInput(second)
+    second.interactionConfiguration = {
+      snapping: { enabled: false },
+      snappingStrategy: { translation: strategy },
+    }
+    await second.updateComplete
+    const secondSource = second.shadowRoot?.querySelector(
+      '[data-fd-graph-node="s:source"]',
+    ) as HTMLElement
+    const secondStart = clientPoint(second, { x: 100, y: 120 })
+    const secondEnd = clientPoint(second, { x: 140, y: 150 })
+    dispatchPointer(secondSource, 'pointerdown', secondStart)
+    dispatchPointer(secondCanvas, 'pointermove', secondEnd)
+    dispatchPointer(secondCanvas, 'pointerup', secondEnd)
+
+    expect(strategy).not.toHaveBeenCalled()
   })
 
   it('resizes selected nodes from all exposed edge and corner handles', async () => {
