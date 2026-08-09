@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import type { FdCard } from '../card/fd-card.js'
+import '../row/fd-row.js'
 import type { FdSeparator } from '../separator/fd-separator.js'
 import '../separator/fd-separator.js'
 import type { FdSection } from './fd-section.js'
@@ -55,6 +56,72 @@ describe('fd-section', () => {
     const element = await mount<FdSection>('<fd-section label="Startup"></fd-section>')
     expect(getComputedStyle(element).alignSelf).toBe('stretch')
   })
+
+  it('aligns homogeneous section separators with their row text', async () => {
+    const iconRows = await mount<FdSection>(`
+      <fd-section>
+        <fd-row symbol="gearshape" label="First"></fd-row>
+        <fd-separator></fd-separator>
+        <fd-row symbol="bolt" label="Second"></fd-row>
+      </fd-section>
+    `)
+    const textRows = await mount<FdSection>(`
+      <fd-section>
+        <fd-row label="First"></fd-row>
+        <fd-separator></fd-separator>
+        <fd-row label="Second"></fd-row>
+      </fd-section>
+    `)
+
+    expect(getComputedStyle(iconRows.querySelector('fd-separator') as Element).paddingLeft).toBe(
+      '52px',
+    )
+    expect(getComputedStyle(textRows.querySelector('fd-separator') as Element).paddingLeft).toBe(
+      '18px',
+    )
+  })
+
+  it('uses the section policy when row icon presence is mixed', async () => {
+    const content = await mount<FdSection>(`
+      <fd-section>
+        <fd-row symbol="gearshape" label="First"></fd-row>
+        <fd-separator></fd-separator>
+        <fd-row label="Second"></fd-row>
+      </fd-section>
+    `)
+    const iconText = await mount<FdSection>(`
+      <fd-section mixed-row-separator-leading-edge="icon-text">
+        <fd-row symbol="gearshape" label="First"></fd-row>
+        <fd-separator></fd-separator>
+        <fd-row label="Second"></fd-row>
+      </fd-section>
+    `)
+
+    expect(getComputedStyle(content.querySelector('fd-separator') as Element).paddingLeft).toBe(
+      '18px',
+    )
+    expect(getComputedStyle(iconText.querySelector('fd-separator') as Element).paddingLeft).toBe(
+      '52px',
+    )
+  })
+
+  it('updates alignment when visible row icon presence changes', async () => {
+    const element = await mount<FdSection>(`
+      <fd-section>
+        <fd-row symbol="gearshape" label="First"></fd-row>
+        <fd-separator></fd-separator>
+        <fd-row label="Second" hidden></fd-row>
+      </fd-section>
+    `)
+    const separator = element.querySelector('fd-separator') as Element
+    const textRow = element.querySelector('fd-row[hidden]') as HTMLElement
+
+    expect(getComputedStyle(separator).paddingLeft).toBe('52px')
+
+    textRow.hidden = false
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    expect(getComputedStyle(separator).paddingLeft).toBe('18px')
+  })
 })
 
 describe('fd-card', () => {
@@ -80,8 +147,10 @@ describe('fd-separator', () => {
     expect(getComputedStyle(element).paddingLeft).toBe('18px')
   })
 
-  it('adds the 34px symbol gutter when indented', async () => {
-    const element = await mount<FdSeparator>('<fd-separator indented></fd-separator>')
+  it('can align explicitly with the icon text edge', async () => {
+    const element = await mount<FdSeparator>(
+      '<fd-separator leading-edge="icon-text"></fd-separator>',
+    )
     expect(getComputedStyle(element).paddingLeft).toBe('52px')
   })
 

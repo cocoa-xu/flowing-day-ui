@@ -32,8 +32,17 @@ const aliasBlock = (indent: string, pick: (value: TokenValue) => string, dualOnl
 const reducedMotionBlock = (indent: string) =>
   reducedMotionTokens.map(([name, value]) => `${indent}--_fd-${name}: ${value};`).join('\n')
 
-const accentTokens = () =>
-  allTokens().filter(([name]) => name === 'accent' || name.startsWith('accent-'))
+const ACCENT_DERIVATION_TOKENS = new Set([
+  'accent',
+  'accent-lift',
+  'accent-contrast',
+  'accent-fill',
+  'accent-foreground',
+  'accent-wash',
+  'accent-veil',
+])
+
+const accentTokens = () => allTokens().filter(([name]) => ACCENT_DERIVATION_TOKENS.has(name))
 
 /**
  * These are formulas over `--fd-accent`, and a `var()` is substituted at the element its

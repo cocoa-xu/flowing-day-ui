@@ -10,7 +10,7 @@ Angular, Astro, Rails, Django or a CodePen — with no build step required of yo
 
 <fd-section label="Startup" footer="Applies the next time the app launches.">
   <fd-switch-row symbol="power" label="Launch at login" checked></fd-switch-row>
-  <fd-separator indented></fd-separator>
+  <fd-separator leading-edge="icon-text"></fd-separator>
   <fd-switch-row symbol="eye" label="Show in menu bar"></fd-switch-row>
 </fd-section>
 ```
@@ -51,6 +51,9 @@ fd-preferences-window {
 }
 ```
 
+Content is centered at `720px` by default. Use `content-layout="fluid"` to fill the pane,
+or set `--fd-preferences-content-max-width` to choose another centered measure.
+
 ## Theming
 
 Every value in `PreferencesTheme.swift` is a CSS custom property. Because custom properties
@@ -64,6 +67,16 @@ same semantics as overriding a SwiftUI environment value:
 
 `--fd-accent` is the only accent knob you need. Fill, foreground, wash and veil all derive
 from it in both light and dark, using the same lightness steps as `PreferencesAccent`.
+
+The named Swift palette is available as CSS tokens and JavaScript values:
+
+```css
+fd-preferences-window { --fd-accent: var(--fd-accent-bloom); }
+```
+
+```js
+import { namedAccentFamilies, namedAccents } from '@flowing-day/ui/tokens'
+```
 
 Import the stylesheet when you want the tokens available to your own CSS too:
 

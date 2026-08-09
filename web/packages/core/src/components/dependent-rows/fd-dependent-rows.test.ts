@@ -40,24 +40,24 @@ describe('fd-dependent-rows', () => {
     expect(getComputedStyle(clip).overflow).toBe('hidden')
   })
 
-  it('shows an indented separator by default', async () => {
+  it('inherits section separator alignment by default', async () => {
     const element = await mount<FdDependentRows>(
       `<fd-dependent-rows visible>${BODY}</fd-dependent-rows>`,
     )
     const separator = element.shadowRoot?.querySelector('fd-separator') as HTMLElement
 
     expect(separator).not.toBeNull()
-    expect(separator.hasAttribute('indented')).toBe(true)
-    expect(getComputedStyle(separator).paddingLeft).toBe('52px')
+    expect(separator.hasAttribute('leading-edge')).toBe(false)
+    expect(getComputedStyle(separator).paddingLeft).toBe('18px')
   })
 
-  it('can drop the separator or flush it to the row edge', async () => {
-    const flush = await mount<FdDependentRows>(
-      `<fd-dependent-rows visible separator-flush>${BODY}</fd-dependent-rows>`,
+  it('can drop the separator or override its leading edge', async () => {
+    const iconText = await mount<FdDependentRows>(
+      `<fd-dependent-rows visible separator-leading-edge="icon-text">${BODY}</fd-dependent-rows>`,
     )
     expect(
-      getComputedStyle(flush.shadowRoot?.querySelector('fd-separator') as Element).paddingLeft,
-    ).toBe('18px')
+      getComputedStyle(iconText.shadowRoot?.querySelector('fd-separator') as Element).paddingLeft,
+    ).toBe('52px')
 
     const none = await mount<FdDependentRows>(
       `<fd-dependent-rows visible no-separator>${BODY}</fd-dependent-rows>`,
@@ -122,5 +122,16 @@ describe('fd-switch-group', () => {
 
     expect(rows.noSeparator).toBe(true)
     expect(rows.shadowRoot?.querySelector('fd-separator')).toBeNull()
+  })
+
+  it('passes an explicit separator leading edge through', async () => {
+    const element = await mount<FdSwitchGroup>(
+      `<fd-switch-group label="Show USB devices" checked separator-leading-edge="icon-text">${BODY}</fd-switch-group>`,
+    )
+    const rows = element.shadowRoot?.querySelector('fd-dependent-rows') as FdDependentRows
+    const separator = rows.shadowRoot?.querySelector('fd-separator') as HTMLElement
+
+    expect(rows.separatorLeadingEdge).toBe('icon-text')
+    expect(getComputedStyle(separator).paddingLeft).toBe('52px')
   })
 })

@@ -2,9 +2,11 @@ import { type CSSResultGroup, css, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 
+export type FdSeparatorLeadingEdge = 'content' | 'icon-text'
+
 /**
- * Mirrors `PreferencesRowSeparator`: a 1px hairline inset by `rowInset`, plus a further
- * 34px when indented so it aligns past the leading symbol gutter.
+ * Mirrors `PreferencesRowSeparator`: a 1px hairline aligned with either the section's
+ * content edge or the text following its leading symbol gutter.
  */
 @customElement('fd-separator')
 export class FdSeparator extends FdElement {
@@ -12,11 +14,16 @@ export class FdSeparator extends FdElement {
     baseStyles,
     css`
       :host {
-        padding-inline-start: var(--_fd-metric-row-inset);
+        --_leading-inset: var(--_fd-section-separator-leading-inset, 0px);
+        padding-inline-start: calc(var(--_fd-metric-row-inset) + var(--_leading-inset));
       }
 
-      :host([indented]) {
-        padding-inline-start: calc(var(--_fd-metric-row-inset) + 34px);
+      :host([leading-edge='content']) {
+        --_leading-inset: 0px;
+      }
+
+      :host([leading-edge='icon-text']) {
+        --_leading-inset: 34px;
       }
 
       .rule {
@@ -26,8 +33,9 @@ export class FdSeparator extends FdElement {
     `,
   ]
 
-  /** Aligns the rule with row text rather than the row edge. */
-  @property({ type: Boolean, reflect: true }) indented = false
+  /** Overrides the containing section's separator alignment. */
+  @property({ attribute: 'leading-edge', reflect: true })
+  leadingEdge: FdSeparatorLeadingEdge | null = null
 
   override render() {
     return html`<div class="rule" role="separator"></div>`

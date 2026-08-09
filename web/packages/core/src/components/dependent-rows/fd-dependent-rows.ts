@@ -1,6 +1,7 @@
 import { type CSSResultGroup, css, html, nothing } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
+import type { FdSeparatorLeadingEdge } from '../separator/fd-separator.js'
 import '../separator/fd-separator.js'
 
 /**
@@ -56,8 +57,9 @@ export class FdDependentRows extends FdElement {
   /** Mirrors `showsSeparator`, which defaults to true. */
   @property({ type: Boolean, attribute: 'no-separator', reflect: true }) noSeparator = false
 
-  /** Mirrors `isSeparatorIndented`, which defaults to true. */
-  @property({ type: Boolean, attribute: 'separator-flush', reflect: true }) separatorFlush = false
+  /** Overrides the section separator alignment when set. */
+  @property({ attribute: 'separator-leading-edge', reflect: true })
+  separatorLeadingEdge: FdSeparatorLeadingEdge | null = null
 
   override render() {
     return html`
@@ -66,7 +68,9 @@ export class FdDependentRows extends FdElement {
           ${
             this.noSeparator
               ? nothing
-              : html`<fd-separator ?indented=${!this.separatorFlush}></fd-separator>`
+              : html`<fd-separator
+                leading-edge=${this.separatorLeadingEdge ?? nothing}
+              ></fd-separator>`
           }
           <slot></slot>
         </div>

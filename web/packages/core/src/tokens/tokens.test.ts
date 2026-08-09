@@ -6,6 +6,8 @@ import {
   fontWeights,
   isDualValue,
   lightValue,
+  namedAccentFamilies,
+  namedAccents,
   reducedMotionTokens,
   srgb,
   tokenGroups,
@@ -59,19 +61,37 @@ describe('fontWeights', () => {
   })
 })
 
+interface RawTokenMetadata {
+  readonly note?: string
+  readonly platform?: string
+  readonly swift?: string
+}
+
 interface RawGroup {
   readonly title: string
   readonly source: string | null
   readonly note?: string
   readonly expand?: string
-  readonly tokens?: Readonly<Record<string, { swift?: string; platform?: string; note?: string }>>
+  readonly tokens?: Readonly<Record<string, RawTokenMetadata>>
 }
 
 const rawGroups = raw.groups as readonly RawGroup[]
 
-const rawTokens = rawGroups.flatMap((group) =>
+const rawGroupTokens = rawGroups.flatMap((group) =>
   Object.entries(group.tokens ?? {}).map(([name, token]) => ({ name, token, group })),
 )
+
+const namedAccentGroup = rawGroups.find((group) => group.expand === 'namedAccents')
+if (!namedAccentGroup) throw new Error('Named accent token group is missing')
+const rawNamedAccentTokens = Object.values(raw.namedAccents.families).flatMap((family) =>
+  Object.entries(family as Readonly<Record<string, RawTokenMetadata>>).map(([name, token]) => ({
+    name: `accent-${name}`,
+    token,
+    group: namedAccentGroup,
+  })),
+)
+
+const rawTokens = [...rawGroupTokens, ...rawNamedAccentTokens]
 
 /**
  * tokens.json is the only place a value is written, and everything in it is meant to
@@ -112,7 +132,8 @@ describe('tokens.json as the source', () => {
     expect(flat.get('motion-page')).toBe('220ms') // ms
     expect(flat.get('surface-sidebar')).toBe('var(--fd-palette-card)') // ref
     expect(flat.get('motion-easing')).toBe('cubic-bezier(0, 0, 0.58, 1)') // css
-    expect(flat.get('accent')).toBe('#6D9EA5') // opaque colour
+    expect(flat.get('accent-celadon')).toBe('#6D9EA5') // opaque colour
+    expect(flat.get('accent')).toBe('var(--fd-accent-celadon)') // ref
     expect(flat.get('accent-lift')).toEqual({ light: '0', dark: '0.131' }) // paired scalar
     expect(flat.get('palette-hairline')).toEqual({
       light: 'rgb(0 0 0 / 0.07)',
@@ -150,8 +171,27 @@ describe('tokenGroups', () => {
   const light = (name: string) => lightValue(flat.get(name) ?? '')
   const dark = (name: string) => darkValue(flat.get(name) ?? '')
 
-  it('takes the celadon fill of PreferencesAccent.celadon as the single accent knob', () => {
-    expect(flat.get('accent')).toBe('#6D9EA5')
+  it('takes the celadon preset as the default accent knob', () => {
+    expect(flat.get('accent')).toBe('var(--fd-accent-celadon)')
+    expect(flat.get('accent-celadon')).toBe('#6D9EA5')
+  })
+
+  it('publishes the same seven-by-seven named palette as Swift', () => {
+    expect(Object.keys(namedAccentFamilies)).toEqual([
+      'red',
+      'orange',
+      'yellow',
+      'green',
+      'cyan',
+      'blue',
+      'purple',
+    ])
+    expect(Object.values(namedAccentFamilies).every((family) => family.length === 7)).toBe(true)
+    expect(Object.keys(namedAccents)).toHaveLength(49)
+    expect(new Set(Object.values(namedAccents)).size).toBe(49)
+    expect(namedAccents.poppy).toBe('#E96452')
+    expect(namedAccents.celadon).toBe('#6D9EA5')
+    expect(namedAccents.bloom).toBe('#9F82D5')
   })
 
   /**

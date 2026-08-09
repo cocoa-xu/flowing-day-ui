@@ -15,6 +15,8 @@ interface ResolvedGroup {
   pages: FdPage[]
 }
 
+export type FdPreferencesContentLayout = 'centered' | 'fluid'
+
 const xmark = svg`
   <svg viewBox="0 0 12 12" aria-hidden="true">
     <path
@@ -53,6 +55,7 @@ const xmark = svg`
  * @cssprop [--fd-preferences-min-height=640px] - Minimum host height.
  * @cssprop [--fd-preferences-max-width=1160px] - Maximum host width.
  * @cssprop [--fd-preferences-max-height=860px] - Maximum host height.
+ * @cssprop [--fd-preferences-content-max-width=720px] - Centered content column width.
  */
 @customElement('fd-preferences-window')
 export class FdPreferencesWindow extends FdElement {
@@ -281,6 +284,10 @@ export class FdPreferencesWindow extends FdElement {
         background: var(--_fd-surface-canvas);
       }
 
+      .content::-webkit-scrollbar-track {
+        margin-block: calc(var(--_fd-window-radius) / 2);
+      }
+
       /*
        * SwiftUI caps the column before padding is applied, so the border-box default
        * would make the content 68pt narrower than the original.
@@ -290,8 +297,13 @@ export class FdPreferencesWindow extends FdElement {
         flex-direction: column;
         gap: 28px;
         box-sizing: content-box;
-        max-width: var(--_fd-metric-content-width);
+        max-width: var(--fd-preferences-content-max-width, var(--_fd-metric-content-width));
+        margin-inline: auto;
         padding: 38px 34px 40px;
+      }
+
+      :host([content-layout='fluid']) .content-inner {
+        max-width: none;
       }
 
       .page-header {
@@ -341,6 +353,10 @@ export class FdPreferencesWindow extends FdElement {
   @property({ attribute: 'preferences-title', reflect: true }) preferencesTitle = 'Preferences'
 
   @property({ attribute: 'sidebar-footer', reflect: true }) sidebarFooter: string | null = null
+
+  /** Mirrors `PreferencesContentWidthPolicy`; centered is the default. */
+  @property({ attribute: 'content-layout', reflect: true })
+  contentLayout: FdPreferencesContentLayout = 'centered'
 
   /** The selected `fd-page`'s `page-id`. */
   @property({ reflect: true }) page: string | null = null

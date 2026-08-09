@@ -9,8 +9,9 @@ import type {
   FdSliderRow,
   FdSwitchRow,
   FdValueRow,
+  NamedAccentName,
 } from '@flowing-day/ui'
-import '@flowing-day/ui'
+import { namedAccentFamilies, namedAccents } from '@flowing-day/ui'
 import { makeMovableByBackground } from './drag.js'
 import { type IconStyle, installTheme, registerIcons } from './shared.js'
 
@@ -54,12 +55,40 @@ function onSlider(id: string, apply: (value: number) => void): void {
  * One colour each. Fill, foreground, wash and veil derive from it, in both
  * appearances — an accent is a set, not four values to keep in step by hand.
  */
-const ACCENTS: Record<string, string> = {
-  celadon: '#6D9EA5',
-  copper: '#B4795E',
-  iris: '#8286C4',
-  moss: '#7E9B6B',
+const accentTitle = (name: NamedAccentName): string =>
+  `${name[0]?.toUpperCase() ?? ''}${name.slice(1)}`
+
+const isNamedAccent = (value: string): value is NamedAccentName =>
+  Object.hasOwn(namedAccents, value)
+
+function populateNamedAccents(): void {
+  const library = document.querySelector<FdSearchPickerRow>('#accent-library')
+  const grid = document.querySelector<HTMLElement>('#accent-chips')
+
+  for (const names of Object.values(namedAccentFamilies)) {
+    for (const name of names) {
+      const value = namedAccents[name]
+      const title = accentTitle(name)
+
+      if (library) {
+        const option = document.createElement('fd-option')
+        option.value = value
+        option.label = title
+        library.append(option)
+      }
+
+      if (grid) {
+        const chip = document.createElement('fd-chip')
+        chip.value = value
+        chip.textContent = title
+        chip.style.setProperty('--fd-accent', value)
+        grid.append(chip)
+      }
+    }
+  }
 }
+
+populateNamedAccents()
 
 const CORNERS: Record<string, { window: string; card: string; control: string }> = {
   soft: { window: '18px', card: '14px', control: '9px' },
@@ -103,8 +132,7 @@ function applyAccent(hex: string): void {
 }
 
 onSegment('accent', (value) => {
-  const accent = ACCENTS[value]
-  if (accent) applyAccent(accent)
+  if (isNamedAccent(value)) applyAccent(namedAccents[value])
 })
 
 onSegment('corners', (value) => {
@@ -122,7 +150,14 @@ onSegment('density', (value) => {
   set('--fd-metric-section-spacing', density.section)
 })
 
-onSegment('content-width', (value) => set('--fd-metric-content-width', `${value}px`))
+onSegment('content-layout', (value) => {
+  if (!preferencesWindow) return
+  preferencesWindow.contentLayout = value === 'fluid' ? 'fluid' : 'centered'
+  const maximumWidth = document.querySelector<FdDependentRows>('#content-maximum-width')
+  if (maximumWidth) maximumWidth.visible = preferencesWindow.contentLayout === 'centered'
+})
+
+onSegment('content-width', (value) => set('--fd-preferences-content-max-width', `${value}px`))
 
 const sidebarWidth = document.querySelector<FdSliderRow>('#sidebar-width')
 if (sidebarWidth) sidebarWidth.format = (value) => `${Math.round(value)}px`
