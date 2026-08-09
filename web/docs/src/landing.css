@@ -115,21 +115,62 @@ body {
   outline-offset: 1px;
 }
 
-.stage {
+.hero {
   display: grid;
-  place-items: center;
+  align-items: center;
+  box-sizing: border-box;
+  grid-template-columns: minmax(340px, 440px) 900px;
+  gap: clamp(48px, 4.5vw, 80px);
+  justify-content: center;
   min-height: 100dvh;
-  padding: 104px 24px 64px;
+  padding: 100px 32px 64px;
 }
 
-.stage fd-preferences-window {
+.hero-copy {
+  width: 100%;
+  text-align: start;
+}
+
+.hero-kicker {
+  margin: 0 0 13px;
+  color: oklch(from var(--landing-accent) 0.5 calc(c * 0.82) h);
+  font-family: var(--fd-font-rounded);
+  font-size: 12px;
+  font-weight: 680;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  margin: 0;
+  text-wrap: balance;
+  color: #20201e;
+  font-family: var(--fd-font-rounded);
+  font-size: clamp(48px, 3.5vw, 60px);
+  font-weight: 680;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+}
+
+.hero-summary {
+  max-width: 650px;
+  margin: 22px 0 0;
+  text-wrap: balance;
+  color: #696b65;
+  font-size: clamp(15px, 1.4vw, 18px);
+  font-weight: 430;
+  letter-spacing: -0.012em;
+  line-height: 1.5;
+}
+
+.hero fd-preferences-window {
   box-shadow:
     0 30px 90px color-mix(in srgb, var(--landing-accent) 17%, transparent),
     0 8px 28px rgb(60 60 58 / 0.08);
   cursor: grab;
 }
 
-.stage fd-preferences-window[data-dragging] {
+.hero fd-preferences-window[data-dragging] {
   cursor: grabbing;
   user-select: none;
 }
@@ -150,6 +191,28 @@ fd-preferences-window[data-separators="off"] fd-separator {
   grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
+@media (max-width: 1480px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 44px;
+    justify-items: center;
+    padding: 116px 24px 72px;
+  }
+
+  .hero-copy {
+    width: min(760px, 100%);
+    text-align: center;
+  }
+
+  .hero h1 {
+    font-size: clamp(42px, 5.2vw, 68px);
+  }
+
+  .hero-summary {
+    margin-inline: auto;
+  }
+}
+
 @media (max-width: 720px) {
   .site-header {
     inset-inline: 16px;
@@ -159,9 +222,29 @@ fd-preferences-window[data-separators="off"] fd-separator {
     display: none;
   }
 
-  .stage {
-    justify-content: start;
-    padding-inline: 16px;
+  .hero {
+    align-items: flex-start;
+    gap: 34px;
+    justify-items: start;
+    padding: 108px 16px 48px;
+  }
+
+  .hero-copy {
+    width: min(560px, calc(100vw - 32px));
+    text-align: start;
+  }
+
+  .hero h1,
+  .hero-summary {
+    text-wrap: pretty;
+  }
+
+  .hero h1 {
+    font-size: clamp(38px, 12vw, 52px);
+  }
+
+  .hero-summary {
+    margin-inline: 0;
   }
 }
 
