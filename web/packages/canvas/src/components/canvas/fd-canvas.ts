@@ -133,6 +133,8 @@ export class FdCanvas extends LitElement {
   @property({ attribute: false }) request: FdCanvasRequest | undefined
   @property({ reflect: true, attribute: 'interaction-mode' })
   interactionMode: FdCanvasInteractionMode = 'pan'
+  @property({ type: Boolean, attribute: 'allows-page-scroll' }) allowsPageScroll = false
+  @property({ type: Number, attribute: 'viewport-tab-index' }) viewportTabIndex = 0
 
   @query('.viewport') private viewportElement!: HTMLDivElement
   @query('.world') private worldElement!: HTMLDivElement
@@ -166,7 +168,7 @@ export class FdCanvas extends LitElement {
       <div
         class="viewport"
         part="viewport"
-        tabindex="0"
+        tabindex=${this.viewportTabIndex}
         @pointerdown=${this.handlePointerDown}
         @pointermove=${this.handlePointerMove}
         @pointerup=${this.handlePointerEnd}
@@ -478,6 +480,7 @@ export class FdCanvas extends LitElement {
     if (event.metaKey || this.isClaimedByOverlayOrControl(event)) return
     const location = this.localPoint(event)
     if (!this.pointInContentBounds(location)) return
+    if (!event.ctrlKey && this.allowsPageScroll) return
     event.preventDefault()
     this.cancelAnimation()
     this.restoreTransform = undefined

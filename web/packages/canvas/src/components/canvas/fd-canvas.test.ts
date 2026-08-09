@@ -114,6 +114,33 @@ describe('fd-canvas input and events', () => {
     expect(element.viewport.transform.offset.y).toBeCloseTo(initialOffset.y - 20)
   })
 
+  it('can leave ordinary wheel events to a page scroller', async () => {
+    const element = await mount()
+    element.allowsPageScroll = true
+    const viewport = element.shadowRoot?.querySelector('.viewport') as HTMLElement
+    const initialTransform = element.viewport.transform
+    const event = new WheelEvent('wheel', {
+      clientX: 300,
+      clientY: 200,
+      deltaY: 40,
+      bubbles: true,
+      cancelable: true,
+    })
+
+    viewport.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(element.viewport.transform).toEqual(initialTransform)
+  })
+
+  it('accepts a consumer-defined viewport tab order', async () => {
+    const element = await mount()
+    element.viewportTabIndex = -1
+    await element.updateComplete
+    const viewport = element.shadowRoot?.querySelector('.viewport') as HTMLElement
+    expect(viewport.tabIndex).toBe(-1)
+  })
+
   it('reports bounded render coverage independently of world extent', async () => {
     const element = await mount()
     const onCoverage = vi.fn()
