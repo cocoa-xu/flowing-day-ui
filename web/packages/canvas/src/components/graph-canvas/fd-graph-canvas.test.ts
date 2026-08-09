@@ -697,6 +697,42 @@ describe('fd-graph-canvas keyboard editing', () => {
   })
 })
 
+describe('fd-graph-canvas navigation', () => {
+  it('jumps to a node with explicit focus, selection, zoom, and animation behavior', async () => {
+    const element = await mount()
+    const selectionChanges: FdGraphSelectionChangeDetail[] = []
+    const focusChanges: FdGraphFocusChangeDetail[] = []
+    element.addEventListener('fd-graph-selection-change', (event) => {
+      selectionChanges.push(event.detail)
+    })
+    element.addEventListener('fd-graph-focus-change', (event) => {
+      focusChanges.push(event.detail)
+    })
+
+    expect(
+      element.jumpToElement('target', { selection: 'replace', zoom: 1.4, animated: false }),
+    ).toBe(true)
+
+    expect(element.selectedNodeIDs).toEqual(new Set(['target']))
+    expect(element.focusedNodeID).toBe('target')
+    expect(element.viewport.transform.zoom).toBeCloseTo(1.4)
+    expect(selectionChanges.at(-1)?.source).toBe('programmatic')
+    expect(focusChanges.at(-1)).toEqual({ focusedNodeID: 'target', source: 'programmatic' })
+  })
+
+  it('supports preserved and additive selection and ignores missing nodes', async () => {
+    const element = await mount()
+    element.selectedNodeIDs = new Set(['source'])
+    await element.updateComplete
+
+    expect(element.jumpToElement('target', { selection: 'preserve', animated: false })).toBe(true)
+    expect(element.selectedNodeIDs).toEqual(new Set(['source']))
+    expect(element.jumpToElement('target', { selection: 'add', animated: false })).toBe(true)
+    expect(element.selectedNodeIDs).toEqual(new Set(['source', 'target']))
+    expect(element.jumpToElement('missing')).toBe(false)
+  })
+})
+
 describe('fd-graph-canvas accessibility', () => {
   it('uses one composite tab stop with a bounded active-descendant window', async () => {
     const element = await mount(graphSnapshot(), 'dom')

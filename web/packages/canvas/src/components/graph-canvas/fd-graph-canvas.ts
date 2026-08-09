@@ -85,6 +85,7 @@ import {
   nextGraphKeyboardNodeID,
   resolveGraphCanvasKeyboardConfiguration,
 } from '../../interactions/keyboard.js'
+import type { FdGraphJumpToElementOptions } from '../../interactions/navigation.js'
 import type { FdGraphMiniMapConfiguration } from '../../minimap/configuration.js'
 import type {
   FdGraphRenderFrame,
@@ -876,6 +877,27 @@ export class FdGraphCanvas
     const node = this.index.nodes.get(nodeID)
     if (!node) return
     this.canvas.focusRect(node.frame, zoom, options)
+  }
+
+  jumpToElement(nodeID: FdGraphElementID, options: FdGraphJumpToElementOptions = {}): boolean {
+    const node = this.index.nodes.get(nodeID)
+    if (!node) return false
+    const selection = options.selection ?? 'replace'
+    if (
+      selection !== 'preserve' &&
+      node.capabilities?.selectable !== false &&
+      this.resolvedInteractionConfiguration.selection !== 'none'
+    ) {
+      const selectedNodeIDs =
+        selection === 'add' && this.resolvedInteractionConfiguration.selection === 'multiple'
+          ? new Set(this.selectedNodeIDs)
+          : new Set<FdGraphElementID>()
+      selectedNodeIDs.add(nodeID)
+      this.setSelection(selectedNodeIDs, { phase: 'ended', source: 'programmatic' })
+    }
+    this.setFocusedNode(nodeID, 'programmatic', false, false)
+    this.canvas.focusRect(node.frame, options.zoom, { animated: options.animated ?? true })
+    return true
   }
 
   fit(padding = 64, maximumZoom = 1, options: FdCanvasTransformOptions = {}): void {

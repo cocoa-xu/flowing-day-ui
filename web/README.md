@@ -99,3 +99,7 @@ connection completion are semantic events; applications can apply them locally, 
 undo policy, or through a collaborative reducer. Connection editing is opt-in through
 `connectionEditingConfiguration` and supports default or consumer-rendered previews,
 validation feedback, new links, and endpoint reconnection.
+
+Large graphs can use `FdGraphSearchIndex` without rendering or scanning DOM nodes. The
+bounded index supports ranked metadata search over 100,000 elements, while
+`jumpToElement()` applies explicit focus, selection, zoom, and animation behavior.
