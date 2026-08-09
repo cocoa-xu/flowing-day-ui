@@ -16,6 +16,7 @@
       <nav class="site-nav" aria-label="Primary navigation">
         <a href="#demo" data-page="appearance">Preferences</a>
         <a href="#demo" data-page="components">Components</a>
+        <a href="#canvas">Canvas</a>
         <a
           class="github-link"
           href="https://github.com/cocoa-xu/flowing-day-ui"
@@ -543,6 +544,74 @@
           </fd-page>
         </fd-page-group>
       </fd-preferences-window>
+
+      <section class="canvas-showcase" id="canvas" aria-labelledby="canvas-title">
+        <header class="canvas-showcase-header">
+          <p class="section-kicker">Canvas</p>
+          <h2 id="canvas-title">An infinite surface that still feels close.</h2>
+          <p>Pan, pinch, focus, and fit without giving up precision.</p>
+        </header>
+
+        <div class="canvas-frame">
+          <fd-canvas
+            id="canvas-demo"
+            interaction-mode="pan"
+            aria-label="Interactive canvas demo"
+          >
+            <div class="canvas-grid" slot="background"></div>
+            <div class="canvas-world" slot="world">
+              <svg class="canvas-edges" viewBox="0 0 1200 460" aria-hidden="true">
+                <path d="M280 218 C330 218 335 158 390 158" />
+                <path d="M280 218 C330 218 335 338 390 338" />
+                <path d="M610 158 C655 158 660 248 710 248" />
+                <path d="M610 338 C655 338 660 248 710 248" />
+                <path d="M930 248 C975 248 980 158 1020 158" />
+                <path d="M930 248 C975 248 980 338 1020 338" />
+              </svg>
+
+              <article class="canvas-node" style="--node-x: 60px; --node-y: 170px">
+                <span class="canvas-node-mark">01</span>
+                <span><strong>Design language</strong><small>Shared intent</small></span>
+              </article>
+              <article class="canvas-node" style="--node-x: 390px; --node-y: 110px">
+                <span class="canvas-node-mark">02</span>
+                <span><strong>Preferences</strong><small>Precise controls</small></span>
+              </article>
+              <article class="canvas-node" style="--node-x: 390px; --node-y: 290px">
+                <span class="canvas-node-mark">03</span>
+                <span><strong>Components</strong><small>Composable surfaces</small></span>
+              </article>
+              <article
+                class="canvas-node canvas-node-featured"
+                style="--node-x: 710px; --node-y: 200px"
+              >
+                <span class="canvas-node-mark">04</span>
+                <span><strong>Flowing Canvas</strong><small>One viewport contract</small></span>
+              </article>
+              <article class="canvas-node" style="--node-x: 1020px; --node-y: 110px">
+                <span class="canvas-node-mark">05</span>
+                <span><strong>SwiftUI</strong><small>Platform native</small></span>
+              </article>
+              <article class="canvas-node" style="--node-x: 1020px; --node-y: 290px">
+                <span class="canvas-node-mark">06</span>
+                <span><strong>Web</strong><small>Framework agnostic</small></span>
+              </article>
+            </div>
+
+            <div
+              class="canvas-toolbar"
+              slot="overlay"
+              role="toolbar"
+              aria-label="Canvas zoom controls"
+            >
+              <button id="canvas-zoom-out" type="button" aria-label="Zoom out">−</button>
+              <output id="canvas-zoom-value" aria-live="polite">100%</output>
+              <button id="canvas-zoom-in" type="button" aria-label="Zoom in">+</button>
+              <button id="canvas-fit" type="button">Fit</button>
+            </div>
+          </fd-canvas>
+        </div>
+      </section>
     </main>
 
     <script type="module" src="./src/landing.ts"></script>

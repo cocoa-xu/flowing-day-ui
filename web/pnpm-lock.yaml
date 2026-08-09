@@ -17,6 +17,9 @@ importers:
 
   docs:
     dependencies:
+      '@flowing-day/canvas':
+        specifier: workspace:*
+        version: link:../packages/canvas
       '@flowing-day/ui':
         specifier: workspace:*
         version: link:../packages/core

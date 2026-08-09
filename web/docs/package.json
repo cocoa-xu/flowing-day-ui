@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@flowing-day/canvas": "workspace:*",
     "@flowing-day/ui": "workspace:*"
   },
   "devDependencies": {

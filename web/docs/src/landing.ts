@@ -1,3 +1,4 @@
+import { type FdCanvas, FdCanvasGridLevels } from '@flowing-day/canvas'
 import type {
   FdColorPickerRow,
   FdDependentRows,
@@ -17,6 +18,50 @@ import { installTheme, registerIcons } from './shared.js'
 
 installTheme()
 registerIcons()
+
+const canvasDemo = document.querySelector<FdCanvas>('#canvas-demo')
+const canvasGrid = document.querySelector<HTMLElement>('.canvas-grid')
+const canvasZoomValue = document.querySelector<HTMLOutputElement>('#canvas-zoom-value')
+const canvasContentRect = { x: 20, y: 50, width: 1240, height: 400 }
+
+function updateCanvasPresentation(canvas: FdCanvas): void {
+  const { transform } = canvas.viewport
+  const levels = new FdCanvasGridLevels(24, transform.zoom, 18, 2)
+  canvasGrid?.style.setProperty('--grid-x', `${transform.offset.x}px`)
+  canvasGrid?.style.setProperty('--grid-y', `${transform.offset.y}px`)
+  canvasGrid?.style.setProperty('--grid-coarse-spacing', `${levels.coarse.spacing}px`)
+  canvasGrid?.style.setProperty('--grid-coarse-opacity', `${levels.coarse.opacity}`)
+  canvasGrid?.style.setProperty('--grid-fine-spacing', `${levels.fine.spacing}px`)
+  canvasGrid?.style.setProperty('--grid-fine-opacity', `${levels.fine.opacity}`)
+  if (canvasZoomValue) canvasZoomValue.value = `${Math.round(transform.zoom * 100)}%`
+}
+
+if (canvasDemo) {
+  canvasDemo.contentRect = canvasContentRect
+  canvasDemo.configuration = {
+    initialZoom: 0.8,
+    focusedZoom: 1.3,
+    minimumZoom: 0.25,
+    maximumZoom: 4,
+  }
+  canvasDemo.addEventListener('fd-viewport-change', () => updateCanvasPresentation(canvasDemo))
+  void canvasDemo.updateComplete.then(() => {
+    canvasDemo.fitRect(canvasContentRect, 72, 0.92, { animated: false })
+    updateCanvasPresentation(canvasDemo)
+  })
+}
+
+document.querySelector<HTMLButtonElement>('#canvas-zoom-out')?.addEventListener('click', () => {
+  if (canvasDemo) canvasDemo.setZoom(canvasDemo.viewport.transform.zoom / 1.2, { animated: true })
+})
+
+document.querySelector<HTMLButtonElement>('#canvas-zoom-in')?.addEventListener('click', () => {
+  if (canvasDemo) canvasDemo.setZoom(canvasDemo.viewport.transform.zoom * 1.2, { animated: true })
+})
+
+document.querySelector<HTMLButtonElement>('#canvas-fit')?.addEventListener('click', () => {
+  canvasDemo?.fitRect(canvasContentRect, 72, 0.92, { animated: true })
+})
 
 const preferencesWindow = document.querySelector<FdPreferencesWindow>('#window')
 const preferencesAppIcon = document.querySelector<HTMLImageElement>('#preferences-app-icon')
