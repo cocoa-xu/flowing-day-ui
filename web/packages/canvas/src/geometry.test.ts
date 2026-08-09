@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { FdCanvasGridLevels, FdCanvasRenderSurface, FdCanvasTransform } from './geometry.js'
+import {
+  canvasRectsIntersect,
+  FdCanvasGridLevels,
+  FdCanvasRenderSurface,
+  FdCanvasTransform,
+  unionCanvasRects,
+} from './geometry.js'
 
 describe('FdCanvasTransform', () => {
   it('round trips world geometry', () => {
@@ -45,4 +51,30 @@ it('keeps adaptive grid levels within visual spacing bounds', () => {
   const levels = new FdCanvasGridLevels(12, 3, 12, 2)
   expect(levels.fine).toEqual({ spacing: 18, opacity: 0.5 })
   expect(levels.coarse).toEqual({ spacing: 36, opacity: 0.5 })
+})
+
+describe('canvas rectangle utilities', () => {
+  it('detects intersecting and disjoint rectangles', () => {
+    expect(
+      canvasRectsIntersect(
+        { x: 0, y: 0, width: 40, height: 40 },
+        { x: 30, y: 30, width: 40, height: 40 },
+      ),
+    ).toBe(true)
+    expect(
+      canvasRectsIntersect(
+        { x: 0, y: 0, width: 40, height: 40 },
+        { x: 41, y: 0, width: 40, height: 40 },
+      ),
+    ).toBe(false)
+  })
+
+  it('unions rectangles without losing negative origins', () => {
+    expect(
+      unionCanvasRects(
+        { x: -20, y: 10, width: 30, height: 20 },
+        { x: 5, y: -10, width: 20, height: 60 },
+      ),
+    ).toEqual({ x: -20, y: -10, width: 45, height: 60 })
+  })
 })

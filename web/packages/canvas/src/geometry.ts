@@ -214,3 +214,21 @@ export const canvasRectContains = (outer: FdCanvasRect, inner: FdCanvasRect): bo
   inner.y >= outer.y &&
   inner.x + inner.width <= outer.x + outer.width &&
   inner.y + inner.height <= outer.y + outer.height
+
+export const canvasRectsIntersect = (first: FdCanvasRect, second: FdCanvasRect): boolean =>
+  first.x <= second.x + second.width &&
+  first.x + first.width >= second.x &&
+  first.y <= second.y + second.height &&
+  first.y + first.height >= second.y
+
+export const unionCanvasRects = (
+  first: FdCanvasRect | undefined,
+  second: FdCanvasRect,
+): FdCanvasRect => {
+  if (!first) return second
+  const x = Math.min(first.x, second.x)
+  const y = Math.min(first.y, second.y)
+  const maximumX = Math.max(first.x + first.width, second.x + second.width)
+  const maximumY = Math.max(first.y + first.height, second.y + second.height)
+  return { x, y, width: maximumX - x, height: maximumY - y }
+}

@@ -5,3 +5,4 @@ export { FdCanvas, type FdCanvasTransformOptions } from './components/canvas/fd-
 export * from './configuration.js'
 export type * from './events.js'
 export * from './geometry.js'
+export * from './graph/index.js'
