@@ -1,19 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <title>Afloat</title>
+  <title>FlowingDayUI</title>
   <defs>
-    <linearGradient id="a" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#93C8CF" />
-      <stop offset="1" stop-color="#4E7B82" />
+    <linearGradient id="surface" x1="10" y1="7" x2="54" y2="57" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FBFCF7" />
+      <stop offset="1" stop-color="#E8F2EE" />
+    </linearGradient>
+    <linearGradient id="flow" x1="15" y1="18" x2="50" y2="48" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E9BC68" />
+      <stop offset="0.42" stop-color="#76B9AD" />
+      <stop offset="1" stop-color="#477F82" />
     </linearGradient>
   </defs>
-  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#a)" />
+  <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#surface)" />
   <path
-    d="M12 40c5-6 9-6 14 0s9 6 14 0 9-6 12-2"
+    d="M47 23C41.2 16.2 30.1 14.9 22.1 20.1C13.7 25.5 13.4 37.8 21.3 44.1C29 50.3 41.1 48.8 47.1 40.8C52.3 33.8 48 27.7 40.1 28.6C32.4 29.5 26.3 36 21.3 44.1"
     fill="none"
-    stroke="#FCFCFB"
-    stroke-width="4"
+    stroke="url(#flow)"
+    stroke-width="6.5"
     stroke-linecap="round"
-    opacity="0.92"
+    stroke-linejoin="round"
   />
-  <circle cx="32" cy="24" r="6" fill="#FCFCFB" opacity="0.92" />
 </svg>
