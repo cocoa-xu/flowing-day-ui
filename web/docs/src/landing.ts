@@ -13,6 +13,7 @@ import type {
   NamedAccentName,
 } from '@flowing-day/ui'
 import { namedAccentFamilies, namedAccents } from '@flowing-day/ui'
+import { canvasObserverThresholds, shouldActivateCanvas } from './canvas-takeover.js'
 import { makeMovableByBackground } from './drag.js'
 import { resolveScheme } from './scheme.js'
 import { installTheme, registerIcons } from './shared.js'
@@ -60,6 +61,7 @@ if (landingBackdrop) {
 }
 
 const canvasDemo = document.querySelector<FdCanvas>('#canvas-demo')
+const canvasShowcase = document.querySelector<HTMLElement>('.canvas-showcase')
 const canvasGrid = document.querySelector<HTMLElement>('.canvas-grid')
 const canvasZoomValue = document.querySelector<HTMLOutputElement>('#canvas-zoom-value')
 const canvasContentRect = { x: 40, y: 40, width: 1040, height: 440 }
@@ -89,6 +91,29 @@ if (canvasDemo) {
     canvasDemo.fitRect(canvasContentRect, 72, 0.92, { animated: false })
     updateCanvasPresentation(canvasDemo)
   })
+}
+
+if (canvasShowcase) {
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        canvasShowcase.toggleAttribute(
+          'data-canvas-active',
+          entry
+            ? shouldActivateCanvas(
+                entry.isIntersecting,
+                entry.intersectionRect.height,
+                entry.rootBounds?.height ?? window.innerHeight,
+              )
+            : false,
+        )
+      },
+      { threshold: canvasObserverThresholds },
+    )
+    observer.observe(canvasShowcase)
+  } else {
+    canvasShowcase.toggleAttribute('data-canvas-active', true)
+  }
 }
 
 document.querySelector<HTMLButtonElement>('#canvas-zoom-out')?.addEventListener('click', () => {

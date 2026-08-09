@@ -425,12 +425,19 @@ fd-preferences-window[data-separators="off"] fd-separator {
 
 .canvas-showcase {
   position: relative;
+  z-index: 1;
   width: 100%;
   height: max(100dvh, 720px);
   overflow: visible;
-  background: var(--landing-canvas);
-  pointer-events: auto;
+  background: transparent;
+  pointer-events: none;
   scroll-margin-top: 88px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.canvas-showcase[data-canvas-active] {
+  pointer-events: auto;
 }
 
 .canvas-showcase::before {
@@ -489,6 +496,10 @@ fd-preferences-window[data-separators="off"] fd-separator {
   overflow: hidden;
   border-radius: 0;
   background: var(--landing-canvas);
+  pointer-events: none;
+}
+
+.canvas-showcase[data-canvas-active] .canvas-frame {
   pointer-events: auto;
 }
 
@@ -535,6 +546,8 @@ fd-preferences-window[data-separators="off"] fd-separator {
   left: 0;
   width: 1080px;
   height: 520px;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .canvas-edges {
@@ -690,29 +703,77 @@ fd-preferences-window[data-separators="off"] fd-separator {
   outline-offset: -1px;
 }
 
-@supports (animation-timeline: view()) {
+@supports (animation-timeline: --canvas-takeover) and (timeline-scope: --canvas-takeover) {
+  body {
+    timeline-scope: --canvas-takeover;
+  }
+
+  .canvas-showcase {
+    view-timeline: --canvas-takeover block;
+  }
+
+  .landing-canvas-world {
+    animation: landing-world-release 1ms linear both;
+    animation-range: entry 0% entry 85%;
+    animation-timeline: --canvas-takeover;
+  }
+
   .canvas-frame {
-    animation: canvas-frame-reveal linear both;
+    animation: canvas-surface-takeover 1ms linear both;
     animation-range: entry 0% entry 100%;
-    animation-timeline: view();
+    animation-timeline: --canvas-takeover;
+  }
+
+  .canvas-world {
+    animation: canvas-world-arrival 1ms linear both;
+    animation-range: entry 28% entry 100%;
+    animation-timeline: --canvas-takeover;
   }
 
   .canvas-showcase-header {
-    animation: canvas-copy-reveal linear both;
-    animation-range: entry 40% entry 100%;
-    animation-timeline: view();
+    animation: canvas-copy-reveal 1ms linear both;
+    animation-range: entry 52% entry 100%;
+    animation-timeline: --canvas-takeover;
   }
 }
 
-@keyframes canvas-frame-reveal {
+@keyframes landing-world-release {
+  0%,
+  18% {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  78% {
+    opacity: 0.12;
+    filter: blur(1.5px);
+  }
+
+  100% {
+    opacity: 0;
+    filter: blur(3px);
+  }
+}
+
+@keyframes canvas-surface-takeover {
   from {
-    border-radius: 30px;
-    clip-path: inset(4.5vw 3.5vw round 30px);
+    opacity: 0;
   }
 
   to {
-    border-radius: 0;
-    clip-path: inset(0 round 0);
+    opacity: 1;
+  }
+}
+
+@keyframes canvas-world-arrival {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
   }
 }
 
@@ -865,7 +926,9 @@ fd-preferences-window[data-separators="off"] fd-separator {
   }
 
   .canvas-frame,
-  .canvas-showcase-header {
+  .canvas-showcase-header,
+  .canvas-world,
+  .landing-canvas-world {
     animation: none;
   }
 }
