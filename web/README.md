@@ -12,6 +12,8 @@ This file covers working on it.
 ```
 web/
 ├── packages/core/   @flowing-day/ui — the components and tokens
+├── packages/canvas/ @flowing-day/canvas — infinite canvas and graph interactions
+├── benchmarks/      opt-in headed canvas performance benchmarks
 └── docs/            the landing page, run with `pnpm dev`
 ```
 
@@ -34,6 +36,7 @@ hot-reloads the page instead of waiting on a rebuild.
 | `pnpm lint` / `pnpm format` | Biome check / write |
 | `pnpm tokens:swift` | Regenerate the Swift theme from `tokens.json` |
 | `pnpm tokens:check` | Verify that the committed Swift theme is current |
+| `pnpm benchmark:canvas` | Run the headed graph benchmark on the main display |
 
 `pnpm --filter @flowing-day/ui check:exports` validates the published entry points with
 publint and are-the-types-wrong.
@@ -90,3 +93,9 @@ behind it is what `fd-slider` reproduces.
 
 Swift and web now share the same token source. A generated-file check fails CI if either
 the JSON or the Swift artifact changes without the other.
+
+`@flowing-day/canvas` keeps graph mutations consumer-owned. Node frame changes and
+connection completion are semantic events; applications can apply them locally, through an
+undo policy, or through a collaborative reducer. Connection editing is opt-in through
+`connectionEditingConfiguration` and supports default or consumer-rendered previews,
+validation feedback, new links, and endpoint reconnection.

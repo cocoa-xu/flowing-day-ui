@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it } from 'vitest'
 import type { FdGraphAccessibilityActionDetail } from '../../accessibility/events.js'
 import type { FdCanvasPoint } from '../../geometry.js'
 import type {
+  FdGraphConnectionCancelDetail,
+  FdGraphConnectionCompleteDetail,
+  FdGraphConnectionPreviewChangeDetail,
   FdGraphFocusChangeDetail,
   FdGraphNodeFramesChangeDetail,
   FdGraphSelectionChangeDetail,
@@ -11,6 +14,7 @@ import type {
   FdGraphCanvasHistoryConflictDetail,
   FdGraphCanvasHistoryStateDetail,
 } from '../../history/events.js'
+import { graphConnectionOriginForEdge } from '../../interactions/connection.js'
 import type {
   FdGraphRenderFrame,
   FdGraphRenderingBackend,
@@ -452,6 +456,154 @@ describe('fd-graph-canvas pointer editing', () => {
       }),
     )
     expect(element.viewport.transform.zoom).toBeGreaterThan(initial.zoom)
+  })
+})
+
+describe('fd-graph-canvas connection editing', () => {
+  it('previews and completes a new connection without mutating the snapshot', async () => {
+    const snapshot = graphSnapshot()
+    const element = await mount(snapshot)
+    const canvas = preparePointerInput(element)
+    element.connectionEditingConfiguration = { enabled: true }
+    await element.updateComplete
+    const previews: FdGraphConnectionPreviewChangeDetail[] = []
+    const completions: FdGraphConnectionCompleteDetail[] = []
+    element.addEventListener('fd-graph-connection-preview-change', (event) => {
+      previews.push(event.detail)
+    })
+    element.addEventListener('fd-graph-connection-complete', (event) => {
+      completions.push(event.detail)
+    })
+    const sourcePort = element.shadowRoot?.querySelector<HTMLElement>(
+      '[data-fd-graph-node="s:source"][data-fd-graph-port="s:output"]',
+    )
+    if (!sourcePort) throw new Error('missing source port')
+    const start = clientPoint(element, { x: 220, y: 124 })
+    const end = clientPoint(element, { x: 420, y: 264 })
+
+    dispatchPointer(sourcePort, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', end)
+
+    const preview = element.shadowRoot?.querySelector('.connection-preview')
+    expect(previews.at(-1)?.connection?.candidate?.endpoint).toEqual({
+      nodeID: 'target',
+      portID: 'input',
+    })
+    expect(preview?.hasAttribute('hidden')).toBe(false)
+    expect(preview?.getAttribute('data-validation')).toBe('valid')
+
+    dispatchPointer(canvas, 'pointerup', end)
+
+    expect(completions).toHaveLength(1)
+    expect(completions[0]?.operation).toEqual({
+      kind: 'create',
+      source: { nodeID: 'source', portID: 'output' },
+      target: { nodeID: 'target', portID: 'input' },
+    })
+    expect(element.snapshot).toBe(snapshot)
+    expect(preview?.hasAttribute('hidden')).toBe(true)
+  })
+
+  it('exposes validation feedback and reports an invalid target', async () => {
+    const element = await mount()
+    const canvas = preparePointerInput(element)
+    element.connectionEditingConfiguration = {
+      enabled: true,
+      validate: () => ({
+        kind: 'invalid',
+        feedback: { message: 'This input already has a connection.' },
+      }),
+    }
+    await element.updateComplete
+    const cancellations: FdGraphConnectionCancelDetail[] = []
+    element.addEventListener('fd-graph-connection-cancel', (event) => {
+      cancellations.push(event.detail)
+    })
+    const sourcePort = element.shadowRoot?.querySelector<HTMLElement>(
+      '[data-fd-graph-port="s:output"]',
+    )
+    if (!sourcePort) throw new Error('missing source port')
+    const start = clientPoint(element, { x: 220, y: 124 })
+    const end = clientPoint(element, { x: 420, y: 264 })
+
+    dispatchPointer(sourcePort, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', end)
+
+    expect(
+      element.shadowRoot?.querySelector('.connection-preview')?.getAttribute('data-validation'),
+    ).toBe('invalid')
+    expect(element.shadowRoot?.querySelector('.connection-feedback')?.textContent).toBe(
+      'This input already has a connection.',
+    )
+
+    dispatchPointer(canvas, 'pointerup', end)
+    expect(cancellations[0]?.reason).toEqual({
+      kind: 'invalidTarget',
+      feedback: { message: 'This input already has a connection.' },
+    })
+  })
+
+  it('supports custom previews and cancels stale sessions on snapshot replacement', async () => {
+    const element = await mount()
+    element.connectionEditingConfiguration = { enabled: true, rendersDefaultPreview: false }
+    await element.updateComplete
+    const previews: FdGraphConnectionPreviewChangeDetail[] = []
+    const cancellations: FdGraphConnectionCancelDetail[] = []
+    element.addEventListener('fd-graph-connection-preview-change', (event) => {
+      previews.push(event.detail)
+    })
+    element.addEventListener('fd-graph-connection-cancel', (event) => {
+      cancellations.push(event.detail)
+    })
+
+    expect(
+      element.beginConnection({
+        kind: 'new',
+        source: { nodeID: 'source', portID: 'output' },
+      }),
+    ).toBe(true)
+    expect(element.updateConnection({ x: 420, y: 264 })).toBe(true)
+    expect(previews.at(-1)?.connection?.candidate?.endpoint.nodeID).toBe('target')
+    expect(element.shadowRoot?.querySelector('.connection-preview')?.hasAttribute('hidden')).toBe(
+      true,
+    )
+
+    element.snapshot = { ...graphSnapshot(), id: 'graph-2' }
+    await element.updateComplete
+    expect(cancellations[0]?.snapshotID).toBe('graph-1')
+    expect(cancellations[0]?.reason).toEqual({ kind: 'staleSnapshot' })
+  })
+
+  it('supports programmatic endpoint reconnection and Escape cancellation', async () => {
+    const element = await mount()
+    element.connectionEditingConfiguration = { enabled: true }
+    await element.updateComplete
+    const edge = element.snapshot.edges[0]
+    if (!edge) throw new Error('missing edge fixture')
+    const origin = graphConnectionOriginForEdge(edge, 'target')
+    if (!origin) throw new Error('missing reconnect origin')
+    const completions: FdGraphConnectionCompleteDetail[] = []
+    const cancellations: FdGraphConnectionCancelDetail[] = []
+    element.addEventListener('fd-graph-connection-complete', (event) => {
+      completions.push(event.detail)
+    })
+    element.addEventListener('fd-graph-connection-cancel', (event) => {
+      cancellations.push(event.detail)
+    })
+
+    expect(element.beginConnection(origin)).toBe(true)
+    expect(element.updateConnection({ x: 220, y: 124 })).toBe(true)
+    expect(element.completeConnection()).toBe(true)
+    expect(completions[0]?.operation).toEqual({
+      kind: 'reconnect',
+      edgeID: 'connection',
+      endpoint: 'target',
+      target: { nodeID: 'source', portID: 'output' },
+    })
+
+    expect(element.beginConnection(origin)).toBe(true)
+    dispatchKey(element.shadowRoot?.querySelector('fd-canvas') ?? element, 'Escape')
+    expect(cancellations.at(-1)?.reason).toEqual({ kind: 'cancelled' })
   })
 })
 

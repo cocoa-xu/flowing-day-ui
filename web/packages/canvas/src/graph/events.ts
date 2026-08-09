@@ -1,4 +1,10 @@
 import type { FdCanvasRect } from '../geometry.js'
+import type {
+  FdGraphConnectionCancellationReason,
+  FdGraphConnectionOperation,
+  FdGraphConnectionOrigin,
+  FdGraphTransientConnection,
+} from '../interactions/connection.js'
 import type { FdGraphElementID } from './model.js'
 
 export type FdGraphInteractionPhase = 'continuous' | 'ended'
@@ -36,11 +42,30 @@ export interface FdGraphNodeActivateDetail {
   readonly source: 'keyboard' | 'accessibility'
 }
 
+export interface FdGraphConnectionPreviewChangeDetail {
+  readonly connection?: FdGraphTransientConnection
+}
+
+export interface FdGraphConnectionCompleteDetail {
+  readonly snapshotID: string | number
+  readonly origin: FdGraphConnectionOrigin
+  readonly operation: FdGraphConnectionOperation
+}
+
+export interface FdGraphConnectionCancelDetail {
+  readonly snapshotID: string | number
+  readonly origin: FdGraphConnectionOrigin
+  readonly reason: FdGraphConnectionCancellationReason
+}
+
 declare global {
   interface HTMLElementEventMap {
     'fd-graph-selection-change': CustomEvent<FdGraphSelectionChangeDetail>
     'fd-graph-node-frames-change': CustomEvent<FdGraphNodeFramesChangeDetail>
     'fd-graph-focus-change': CustomEvent<FdGraphFocusChangeDetail>
     'fd-graph-node-activate': CustomEvent<FdGraphNodeActivateDetail>
+    'fd-graph-connection-preview-change': CustomEvent<FdGraphConnectionPreviewChangeDetail>
+    'fd-graph-connection-complete': CustomEvent<FdGraphConnectionCompleteDetail>
+    'fd-graph-connection-cancel': CustomEvent<FdGraphConnectionCancelDetail>
   }
 }

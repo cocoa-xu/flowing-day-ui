@@ -107,10 +107,7 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
         rendered.node.accessibilityLabel ?? rendered.node.label ?? String(rendered.node.id),
       )
       if (element.dataset.fdSnapshotRevision !== String(frame.snapshotRevision)) {
-        element.replaceChildren(
-          this.nodeContent(rendered),
-          ...this.portElements(rendered.node.ports),
-        )
+        element.replaceChildren(this.nodeContent(rendered), ...this.portElements(rendered.node))
         element.dataset.fdSnapshotRevision = String(frame.snapshotRevision)
       }
     }
@@ -143,12 +140,13 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     return content
   }
 
-  private portElements(ports: readonly FdGraphPort[] | undefined): HTMLElement[] {
-    return (ports ?? []).map((port) => {
+  private portElements(node: FdGraphRenderFrame['nodes'][number]['node']): HTMLElement[] {
+    return (node.ports ?? []).map((port: FdGraphPort) => {
       const element = document.createElement('span')
       element.className = 'graph-port'
       element.setAttribute('part', 'port')
       element.dataset.fdGraphPort = graphElementKey(port.id)
+      element.dataset.fdGraphNode = graphElementKey(node.id)
       element.dataset.side = port.side
       element.style.setProperty('--fd-graph-port-offset', `${(port.offset ?? 0.5) * 100}%`)
       element.setAttribute('aria-hidden', 'true')

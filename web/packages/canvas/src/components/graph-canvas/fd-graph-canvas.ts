@@ -28,6 +28,9 @@ import {
   zeroCanvasInsets,
 } from '../../geometry.js'
 import type {
+  FdGraphConnectionCancelDetail,
+  FdGraphConnectionCompleteDetail,
+  FdGraphConnectionPreviewChangeDetail,
   FdGraphFocusChangeDetail,
   FdGraphNodeActivateDetail,
   FdGraphNodeFrameChange,
@@ -42,7 +45,7 @@ import type {
   FdAnyGraphSnapshot,
   FdGraphElementID,
 } from '../../graph/model.js'
-import { graphElementIDFromKey, graphPortPoint } from '../../graph/model.js'
+import { graphElementIDFromKey, graphElementKey, graphPortPoint } from '../../graph/model.js'
 import { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
 import { FdGraphHistoryDriver } from '../../history/driver.js'
 import type {
@@ -64,6 +67,14 @@ import type {
   FdResolvedGraphCanvasInteractionConfiguration,
 } from '../../interactions/configuration.js'
 import { resolveGraphCanvasInteractionConfiguration } from '../../interactions/configuration.js'
+import {
+  type FdGraphConnectionEditingConfiguration,
+  type FdGraphConnectionOrigin,
+  type FdGraphConnectionResolution,
+  type FdGraphTransientConnection,
+  type FdResolvedGraphConnectionEditingConfiguration,
+  resolveGraphConnectionEditingConfiguration,
+} from '../../interactions/connection.js'
 import {
   type FdGraphCanvasKeyboardConfiguration,
   type FdGraphKeyboardCommand,
@@ -93,6 +104,10 @@ import type { FdGraphMiniMap } from '../graph-minimap/fd-graph-minimap.js'
 import '../graph-minimap/fd-graph-minimap.js'
 import { FdGraphCanvasAccessibilityBridge } from './accessibility-bridge.js'
 import {
+  FdGraphCanvasConnectionController,
+  type FdGraphCanvasConnectionDelegate,
+} from './connection-controller.js'
+import {
   FdGraphCanvasInteractionController,
   type FdGraphCanvasInteractionDelegate,
   type FdGraphInteractionPresentation,
@@ -101,7 +116,10 @@ import {
 const emptySnapshot: FdAnyGraphSnapshot = { id: 'empty', nodes: [], edges: [] }
 
 @customElement('fd-graph-canvas')
-export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractionDelegate {
+export class FdGraphCanvas
+  extends LitElement
+  implements FdGraphCanvasInteractionDelegate, FdGraphCanvasConnectionDelegate
+{
   static override styles: CSSResultGroup = css`
     :host {
       display: block;
@@ -264,6 +282,32 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       pointer-events: auto;
     }
 
+    .graph-port::before {
+      position: absolute;
+      inset: calc(-1 * var(--fd-graph-port-hit-padding, 0px));
+      border-radius: 50%;
+      content: '';
+    }
+
+    .graph-port[data-connection-state='source'] {
+      box-shadow:
+        0 0 0 1px var(--fd-canvas-node-border-color, #d7dcd8),
+        0 0 0 4px color-mix(in srgb, var(--fd-canvas-accent-color, #6d9ea5) 22%, transparent);
+    }
+
+    .graph-port[data-connection-state='valid'] {
+      box-shadow:
+        0 0 0 1px var(--fd-canvas-node-border-color, #d7dcd8),
+        0 0 0 5px color-mix(in srgb, var(--fd-canvas-accent-color, #6d9ea5) 30%, transparent);
+    }
+
+    .graph-port[data-connection-state='invalid'] {
+      background: var(--fd-graph-connection-invalid-color, #d95c5c);
+      box-shadow:
+        0 0 0 1px var(--fd-canvas-node-border-color, #d7dcd8),
+        0 0 0 5px color-mix(in srgb, var(--fd-graph-connection-invalid-color, #d95c5c) 28%, transparent);
+    }
+
     .graph-port[data-side='top'] {
       top: 0;
       left: var(--fd-graph-port-offset);
@@ -297,9 +341,53 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
 
     .selection-bounds,
     .selection-marquee,
-    .alignment-guide {
+    .alignment-guide,
+    .connection-feedback {
       position: absolute;
       box-sizing: border-box;
+    }
+
+    .connection-preview-layer {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: visible;
+      fill: none;
+      pointer-events: none;
+    }
+
+    .connection-preview {
+      fill: none;
+      stroke: var(--fd-graph-connection-color, var(--fd-canvas-accent-color, #6d9ea5));
+      stroke-linecap: round;
+      stroke-width: var(--fd-graph-connection-width, 2.5);
+      vector-effect: non-scaling-stroke;
+    }
+
+    .connection-preview[data-validation='invalid'] {
+      stroke: var(--fd-graph-connection-invalid-color, #d95c5c);
+      stroke-dasharray: 6 5;
+    }
+
+    .connection-feedback {
+      max-width: 220px;
+      padding: 5px 8px;
+      border: var(--fd-graph-world-pixel) solid
+        color-mix(in srgb, var(--fd-graph-connection-invalid-color, #d95c5c) 32%, transparent);
+      border-radius: 8px;
+      background: var(--fd-canvas-node-surface-color, #fff);
+      box-shadow: var(--fd-canvas-node-shadow, 0 8px 20px rgb(35 43 38 / 0.09));
+      color: var(--fd-graph-connection-invalid-color, #b83f48);
+      font-size: 11px;
+      font-weight: 550;
+      line-height: 1.25;
+      pointer-events: none;
+      white-space: normal;
+    }
+
+    .connection-preview[hidden],
+    .connection-feedback[hidden] {
+      display: none;
     }
 
     .selection-bounds {
@@ -453,6 +541,8 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   @property({ attribute: false })
   accessibilityConfiguration: FdGraphCanvasAccessibilityConfiguration = {}
   @property({ attribute: false }) historyConfiguration: FdGraphCanvasHistoryConfiguration = {}
+  @property({ attribute: false })
+  connectionEditingConfiguration: FdGraphConnectionEditingConfiguration = {}
   @property({ attribute: false }) miniMapConfiguration: FdGraphMiniMapConfiguration | undefined
   @property({ attribute: false })
   get selectedNodeIDs(): ReadonlySet<FdGraphElementID> {
@@ -488,6 +578,8 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   @query('.selection-bounds') private selectionBoundsElement!: HTMLElement
   @query('.selection-marquee') private marqueeElement!: HTMLElement
   @query('.guide-layer') private guideLayer!: HTMLElement
+  @query('.connection-preview') private connectionPreviewElement!: SVGPathElement
+  @query('.connection-feedback') private connectionFeedbackElement!: HTMLElement
   @query('.accessibility-surface') private accessibilitySurface!: HTMLElement
   @query('.accessibility-items') private accessibilityItems!: HTMLElement
   @query('fd-graph-minimap') private miniMap: FdGraphMiniMap | undefined
@@ -502,6 +594,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   private presentationRevision = 0
   private renderFrameRequest: number | undefined
   private interactionController: FdGraphCanvasInteractionController | undefined
+  private connectionController: FdGraphCanvasConnectionController | undefined
   private interactionPresentation: FdGraphInteractionPresentation = {
     frames: new Map(),
     guides: [],
@@ -513,6 +606,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     resolveGraphCanvasAccessibilityConfiguration()
   private resolvedHistoryConfiguration: FdResolvedGraphCanvasHistoryConfiguration =
     resolveGraphCanvasHistoryConfiguration()
+  private connectionConfiguration = resolveGraphConnectionEditingConfiguration()
   private historyDriver = this.createHistoryDriver()
   private accessibilitySnapshot = new FdGraphAccessibilitySnapshot([])
   private accessibilityBridge: FdGraphCanvasAccessibilityBridge | undefined
@@ -535,6 +629,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   private indexedSnapshot: FdAnyGraphSnapshot | undefined
   private keyboardTransactionSequence = 0
   private historyTransactionSequence = 0
+  private readonly connectionPortElements = new Set<HTMLElement>()
 
   get viewport(): FdCanvasViewport {
     return this.canvas.viewport
@@ -542,6 +637,14 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
 
   get graphIndex(): FdGraphSnapshotIndex {
     return this.index
+  }
+
+  get snapshotID(): string | number {
+    return this.snapshot.id
+  }
+
+  get resolvedConnectionConfiguration(): FdResolvedGraphConnectionEditingConfiguration {
+    return this.connectionConfiguration
   }
 
   get resolvedConfiguration(): FdResolvedGraphCanvasInteractionConfiguration {
@@ -600,6 +703,10 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
         <div class="render-viewport" slot="background"></div>
         <div class="render-world" slot="world"></div>
         <div class="interaction-world" slot="world">
+          <svg class="connection-preview-layer" aria-hidden="true">
+            <path class="connection-preview" hidden></path>
+          </svg>
+          <span class="connection-feedback" hidden></span>
           <div class="guide-layer"></div>
           <div class="selection-marquee" hidden></div>
           <div class="selection-bounds" hidden>
@@ -646,6 +753,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
 
   override firstUpdated(): void {
     this.interactionController = new FdGraphCanvasInteractionController(this)
+    this.connectionController = new FdGraphCanvasConnectionController(this)
     this.accessibilityBridge = new FdGraphCanvasAccessibilityBridge(
       this.accessibilitySurface,
       this.accessibilityItems,
@@ -675,6 +783,11 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       )
       this.historyDriver = this.createHistoryDriver()
     }
+    if (changed.has('connectionEditingConfiguration')) {
+      this.connectionConfiguration = resolveGraphConnectionEditingConfiguration(
+        this.connectionEditingConfiguration,
+      )
+    }
   }
 
   protected override updated(changed: PropertyValues<this>): void {
@@ -695,6 +808,10 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       this.syncInteractionOverlay()
       this.syncAccessibilityBridge()
     }
+    if (changed.has('connectionEditingConfiguration')) {
+      this.connectionController?.cancel()
+      this.syncPortHitPadding()
+    }
     if (changed.has('accessibilityConfiguration') && !changed.has('snapshot')) {
       this.rebuildAccessibilitySnapshot()
     }
@@ -712,7 +829,10 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       this.syncAccessibilityBridge()
       this.scheduleRenderFrame()
     }
-    if (changed.has('tool')) this.interactionController?.cancel()
+    if (changed.has('tool')) {
+      this.interactionController?.cancel()
+      this.connectionController?.cancel()
+    }
     if (changed.has('miniMapConfiguration')) this.syncMiniMap()
   }
 
@@ -727,6 +847,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
 
   override disconnectedCallback(): void {
     this.interactionController?.cancel()
+    this.connectionController?.reset()
     if (this.renderFrameRequest !== undefined) cancelAnimationFrame(this.renderFrameRequest)
     this.renderFrameRequest = undefined
     this.backend?.unmount()
@@ -763,6 +884,22 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
 
   restore(options: FdCanvasTransformOptions = {}): void {
     this.canvas.restore(options)
+  }
+
+  beginConnection(origin: FdGraphConnectionOrigin): boolean {
+    return this.connectionController?.begin(origin) ?? false
+  }
+
+  updateConnection(worldPoint: FdCanvasPoint): boolean {
+    return this.connectionController?.update(worldPoint) ?? false
+  }
+
+  completeConnection(): boolean {
+    return this.connectionController?.finish() ?? false
+  }
+
+  cancelConnection(): boolean {
+    return this.connectionController?.cancel() ?? false
   }
 
   viewportPoint(event: PointerEvent): FdCanvasPoint {
@@ -847,6 +984,14 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   }
 
   private handleGraphPointerDown = (event: PointerEvent): void => {
+    if (this.connectionController?.pointerDown(event)) {
+      if (this.resolvedAccessibilityConfiguration.enabled) {
+        this.accessibilitySurface.focus({ preventScroll: true })
+      }
+      event.preventDefault()
+      this.canvas.setPointerCapture(event.pointerId)
+      return
+    }
     const hitNodeID = this.nodeIDAtViewportPoint(this.viewportPoint(event))
     if (!this.interactionController?.pointerDown(event)) return
     const nodeElement = event
@@ -866,12 +1011,25 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   }
 
   private handleGraphPointerMove = (event: PointerEvent): void => {
+    if (this.connectionController?.activePointerID === event.pointerId) {
+      event.preventDefault()
+      this.connectionController.pointerMove(event)
+      return
+    }
     if (this.interactionController?.activePointerID !== event.pointerId) return
     event.preventDefault()
     this.interactionController.pointerMove(event)
   }
 
   private handleGraphPointerEnd = (event: PointerEvent): void => {
+    if (this.connectionController?.activePointerID === event.pointerId) {
+      event.preventDefault()
+      this.connectionController.pointerEnd(event)
+      if (this.canvas.hasPointerCapture(event.pointerId)) {
+        this.canvas.releasePointerCapture(event.pointerId)
+      }
+      return
+    }
     if (this.interactionController?.activePointerID !== event.pointerId) return
     event.preventDefault()
     this.interactionController.pointerEnd(event)
@@ -880,6 +1038,13 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   }
 
   private handleGraphPointerCancel = (event: PointerEvent): void => {
+    if (this.connectionController?.activePointerID === event.pointerId) {
+      this.connectionController.cancel()
+      if (this.canvas.hasPointerCapture(event.pointerId)) {
+        this.canvas.releasePointerCapture(event.pointerId)
+      }
+      return
+    }
     if (this.interactionController?.activePointerID !== event.pointerId) return
     this.interactionController.cancel()
     if (this.canvas.hasPointerCapture(event.pointerId))
@@ -904,6 +1069,12 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
 
   private rebuildSnapshot(): void {
     this.interactionController?.cancel()
+    if (
+      this.connectionController?.activeConnection &&
+      this.connectionController.activeConnection.snapshotID !== this.snapshot.id
+    ) {
+      this.connectionController.cancel({ kind: 'staleSnapshot' })
+    }
     this.index = new FdGraphSnapshotIndex(this.snapshot)
     this.indexedSnapshot = this.snapshot
     this.snapshotRevision += 1
@@ -1232,6 +1403,11 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   }
 
   private handleKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape' && this.connectionController?.cancel()) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
     if (!this.resolvedKeyboardConfiguration.enabled || this.isEditableKeyboardTarget(event)) return
     const command = this.resolvedKeyboardConfiguration.resolveCommand(event, {
       hasSelection: this.selectedNodeIDs.size > 0,
@@ -1428,6 +1604,118 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     this.syncSelectionBounds()
     this.syncMarquee()
     this.syncGuides(this.interactionPresentation.guides)
+  }
+
+  setConnectionPresentation(connection: FdGraphTransientConnection | undefined): void {
+    const detail: FdGraphConnectionPreviewChangeDetail = connection ? { connection } : {}
+    this.dispatchEvent(
+      new CustomEvent<FdGraphConnectionPreviewChangeDetail>('fd-graph-connection-preview-change', {
+        detail,
+        bubbles: true,
+        composed: true,
+      }),
+    )
+    this.clearConnectionPortStates()
+    if (!connection || !this.connectionConfiguration.rendersDefaultPreview) {
+      this.connectionPreviewElement.setAttribute('hidden', '')
+      this.connectionFeedbackElement.hidden = true
+      return
+    }
+
+    const { stationaryPoint: start, movingPoint: end } = connection
+    const direction = end.x >= start.x ? 1 : -1
+    const bend = Math.max(40, Math.abs(end.x - start.x) * 0.5) * direction
+    this.connectionPreviewElement.setAttribute(
+      'd',
+      `M ${start.x} ${start.y} C ${start.x + bend} ${start.y}, ${end.x - bend} ${end.y}, ${end.x} ${end.y}`,
+    )
+    this.connectionPreviewElement.removeAttribute('hidden')
+    const validation = connection.validation?.kind ?? 'pending'
+    this.connectionPreviewElement.dataset.validation = validation
+    this.syncConnectionPortStates(connection)
+
+    const feedback =
+      connection.validation?.kind === 'invalid'
+        ? connection.validation.feedback?.message
+        : undefined
+    this.connectionFeedbackElement.hidden = !feedback
+    if (feedback) {
+      this.connectionFeedbackElement.textContent = feedback
+      this.connectionFeedbackElement.style.transform = `translate3d(${end.x + 12}px, ${end.y + 12}px, 0)`
+    }
+  }
+
+  emitConnectionResolution(
+    connection: FdGraphTransientConnection,
+    resolution: FdGraphConnectionResolution,
+  ): void {
+    if (resolution.kind === 'completed') {
+      const detail: FdGraphConnectionCompleteDetail = {
+        snapshotID: connection.snapshotID,
+        origin: connection.origin,
+        operation: resolution.operation,
+      }
+      this.dispatchEvent(
+        new CustomEvent<FdGraphConnectionCompleteDetail>('fd-graph-connection-complete', {
+          detail,
+          bubbles: true,
+          composed: true,
+        }),
+      )
+      return
+    }
+    const detail: FdGraphConnectionCancelDetail = {
+      snapshotID: connection.snapshotID,
+      origin: connection.origin,
+      reason: resolution.reason,
+    }
+    this.dispatchEvent(
+      new CustomEvent<FdGraphConnectionCancelDetail>('fd-graph-connection-cancel', {
+        detail,
+        bubbles: true,
+        composed: true,
+      }),
+    )
+  }
+
+  private syncPortHitPadding(): void {
+    this.style.setProperty(
+      '--fd-graph-port-hit-padding',
+      `${this.connectionConfiguration.enabled ? this.connectionConfiguration.sourceHitPadding : 0}px`,
+    )
+  }
+
+  private syncConnectionPortStates(connection: FdGraphTransientConnection): void {
+    const source =
+      connection.origin.kind === 'new' ? connection.origin.source : connection.origin.original
+    this.setConnectionPortState(source.nodeID, source.portID, 'source')
+    if (!connection.candidate) return
+    this.setConnectionPortState(
+      connection.candidate.endpoint.nodeID,
+      connection.candidate.endpoint.portID,
+      connection.validation?.kind === 'invalid' ? 'invalid' : 'valid',
+    )
+  }
+
+  private setConnectionPortState(
+    nodeID: FdGraphElementID,
+    portID: FdGraphElementID,
+    state: 'source' | 'valid' | 'invalid',
+  ): void {
+    const nodeKey = graphElementKey(nodeID)
+    const portKey = graphElementKey(portID)
+    for (const element of this.renderWorld.querySelectorAll<HTMLElement>('.graph-port')) {
+      if (element.dataset.fdGraphNode !== nodeKey || element.dataset.fdGraphPort !== portKey)
+        continue
+      element.dataset.connectionState = state
+      this.connectionPortElements.add(element)
+      return
+    }
+  }
+
+  private clearConnectionPortStates(): void {
+    for (const element of this.connectionPortElements) delete element.dataset.connectionState
+    this.connectionPortElements.clear()
   }
 
   private syncInteractionScale(): void {
