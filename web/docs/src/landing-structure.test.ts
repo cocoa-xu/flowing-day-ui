@@ -2,21 +2,24 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const landing = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
+const landingStyles = readFileSync(new URL('./landing.css', import.meta.url), 'utf8')
 
 describe('landing page structure', () => {
   it('introduces components before composed experiences', () => {
     const components = landing.indexOf('id="components"')
+    const moreComponents = landing.indexOf('id="more-components"')
     const preferences = landing.indexOf('id="preferences"')
     const canvas = landing.indexOf('id="canvas"')
 
     expect(components).toBeGreaterThan(-1)
-    expect(preferences).toBeGreaterThan(components)
+    expect(moreComponents).toBeGreaterThan(components)
+    expect(preferences).toBeGreaterThan(moreComponents)
     expect(canvas).toBeGreaterThan(preferences)
   })
 
   it('uses live controls in the first component composition', () => {
     const start = landing.indexOf('id="components"')
-    const end = landing.indexOf('id="preferences"')
+    const end = landing.indexOf('id="more-components"')
     const composition = landing.slice(start, end)
 
     expect(composition).toContain('<fd-connected-segmented-row')
@@ -24,6 +27,34 @@ describe('landing page structure', () => {
     expect(composition).toContain('<fd-slider-row')
     expect(composition).toContain('<fd-switch-row')
     expect(composition).toContain('<fd-button-row')
+    expect(composition).not.toContain('id="hero-accent"')
+  })
+
+  it('continues discovery with a second set of live controls', () => {
+    const start = landing.indexOf('id="more-components"')
+    const end = landing.indexOf('id="preferences"')
+    const composition = landing.slice(start, end)
+
+    expect(composition).toContain('<fd-search-picker-row')
+    expect(composition).toContain('<fd-multi-select-row')
+    expect(composition).toContain('<fd-expandable-row')
+    expect(composition).toContain('<fd-selectable-tag')
+    expect(composition).toContain('href="#preferences"')
+  })
+
+  it('keeps the decorative backdrop out of pointer interaction', () => {
+    const backdrop = landing.slice(
+      landing.indexOf('<fd-canvas\n      id="landing-backdrop"'),
+      landing.indexOf('>', landing.indexOf('id="landing-backdrop"')),
+    )
+    const backdropStyles = landingStyles.slice(
+      landingStyles.indexOf('.landing-backdrop {'),
+      landingStyles.indexOf('}', landingStyles.indexOf('.landing-backdrop {')),
+    )
+
+    expect(backdrop).not.toContain('interaction-mode')
+    expect(backdrop).not.toContain('allows-page-scroll')
+    expect(backdropStyles).toContain('pointer-events: none')
   })
 
   it('links navigation to each experience', () => {

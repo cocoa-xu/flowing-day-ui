@@ -286,7 +286,6 @@ function scheduleLandingAccent(hex: string): void {
 }
 
 const accentPopup = document.querySelector<FdPopupRow>('#accent')
-const heroAccentPopup = document.querySelector<FdPopupRow>('#hero-accent')
 const allAccentRows = document.querySelector<FdDependentRows>('#all-accent-rows')
 accentPopup?.addEventListener('fd-change', (event) => {
   if (event.detail.value === 'all') {
@@ -295,21 +294,12 @@ accentPopup?.addEventListener('fd-change', (event) => {
   }
   if (allAccentRows) allAccentRows.visible = false
   if (event.detail.value && isNamedAccent(event.detail.value)) {
-    if (heroAccentPopup) heroAccentPopup.value = event.detail.value
     applyAccent(namedAccents[event.detail.value])
   }
 })
 if (accentPopup?.value && isNamedAccent(accentPopup.value)) {
   applyAccent(namedAccents[accentPopup.value])
 }
-
-heroAccentPopup?.addEventListener('fd-change', (event) => {
-  if (event.detail.value && isNamedAccent(event.detail.value)) {
-    if (accentPopup) accentPopup.value = event.detail.value
-    if (allAccentRows) allAccentRows.visible = false
-    applyAccent(namedAccents[event.detail.value])
-  }
-})
 
 onSegment('corners', (value) => {
   const corners = CORNERS[value]
@@ -380,12 +370,18 @@ for (const id of ['appearance-accent-chips', 'accent-chips']) {
   })
 }
 
-document.querySelector<HTMLElement>('#tag-group')?.addEventListener('fd-activate', (event) => {
-  const pressed = event.target as FdSelectableTag
-  for (const tag of document.querySelectorAll<FdSelectableTag>('#tag-group fd-selectable-tag')) {
-    tag.selected = tag === pressed
-  }
-})
+function singleSelectTagGroup(id: string): void {
+  const group = document.querySelector<HTMLElement>(`#${id}`)
+  group?.addEventListener('fd-activate', (event) => {
+    const pressed = event.target as FdSelectableTag
+    for (const tag of group.querySelectorAll<FdSelectableTag>('fd-selectable-tag')) {
+      tag.selected = tag === pressed
+    }
+  })
+}
+
+singleSelectTagGroup('tag-group')
+singleSelectTagGroup('discovery-tag-group')
 
 function discloses(rowId: string, rowsId: string): void {
   const row = document.querySelector<FdExpandableRow>(`#${rowId}`)
@@ -399,6 +395,7 @@ function discloses(rowId: string, rowsId: string): void {
 
 discloses('advanced', 'advanced-rows')
 discloses('reference-expand', 'reference-expand-rows')
+discloses('discovery-expand', 'discovery-expand-rows')
 
 let pressCount = 0
 document.querySelector<HTMLElement>('#press')?.addEventListener('fd-activate', () => {

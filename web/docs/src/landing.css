@@ -115,11 +115,7 @@ html[data-landing-scheme="dark"] body {
   inset: 0;
   width: 100%;
   height: 100dvh;
-  cursor: grab;
-}
-
-.landing-backdrop:active {
-  cursor: grabbing;
+  pointer-events: none;
 }
 
 .landing-canvas-surface,
@@ -351,6 +347,7 @@ html[data-landing-scheme="dark"] .landing-canvas-surface::after {
 }
 
 .component-hero,
+.component-exploration,
 .preferences-showcase {
   display: grid;
   align-items: center;
@@ -370,8 +367,24 @@ html[data-landing-scheme="dark"] .landing-canvas-surface::after {
   pointer-events: none;
 }
 
+.component-exploration {
+  grid-template-columns: minmax(620px, 760px) minmax(320px, 410px);
+  grid-template-rows: minmax(calc(100dvh - 164px), auto);
+  gap: clamp(54px, 5vw, 96px);
+  justify-content: center;
+  padding: 84px 32px 76px;
+  pointer-events: none;
+}
+
 .component-hero-copy {
   grid-column: 1;
+  grid-row: 1;
+  width: 100%;
+  text-align: start;
+}
+
+.component-exploration-copy {
+  grid-column: 2;
   grid-row: 1;
   width: 100%;
   text-align: start;
@@ -388,6 +401,7 @@ html[data-landing-scheme="dark"] .landing-canvas-surface::after {
 }
 
 .component-hero h1,
+.component-exploration h2,
 .preferences-showcase h2 {
   margin: 0;
   text-wrap: balance;
@@ -404,6 +418,10 @@ html[data-landing-scheme="dark"] .landing-canvas-surface::after {
 
 .preferences-showcase h2 {
   font-size: clamp(40px, 3.2vw, 54px);
+}
+
+.component-exploration h2 {
+  font-size: clamp(42px, 3.3vw, 56px);
 }
 
 .hero-summary {
@@ -445,6 +463,10 @@ html[data-landing-scheme="dark"] .component-composition::before {
   display: grid;
   gap: 10px;
   pointer-events: auto;
+}
+
+.component-card:focus-within {
+  z-index: 4;
 }
 
 .component-card > header {
@@ -500,6 +522,71 @@ html[data-landing-scheme="dark"] .component-composition::before {
   width: 220px;
   gap: 7px;
   pointer-events: auto;
+}
+
+.component-composition-secondary {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.component-composition-secondary::before {
+  inset: 2% 8% 3% 2%;
+}
+
+.component-card-search {
+  top: 18px;
+  right: 0;
+  width: 520px;
+}
+
+.component-card-collection {
+  top: 222px;
+  left: 0;
+  width: 590px;
+}
+
+.component-card-disclosure {
+  right: 24px;
+  bottom: 12px;
+  width: 510px;
+}
+
+.component-choice-tags {
+  position: absolute;
+  top: 148px;
+  left: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  width: 250px;
+  gap: 7px;
+  pointer-events: auto;
+}
+
+.experience-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  margin-top: 25px;
+  padding-inline: 15px;
+  border: 1px solid color-mix(in srgb, var(--landing-accent) 18%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--landing-accent) 7%, transparent);
+  color: var(--landing-accent-foreground);
+  font-family: var(--fd-font-rounded);
+  font-size: 12px;
+  font-weight: 620;
+  text-decoration: none;
+  pointer-events: auto;
+}
+
+.experience-link:hover,
+.experience-link:focus-visible {
+  background: color-mix(in srgb, var(--landing-accent) 12%, transparent);
+}
+
+.experience-link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--landing-accent) 46%, transparent);
+  outline-offset: 2px;
 }
 
 .preferences-showcase {
@@ -920,8 +1007,10 @@ fd-preferences-window[data-separators="off"] fd-separator {
   .canvas-toolbar,
   .canvas-toolbar button,
   .component-hero h1,
+  .component-exploration h2,
   .hero-summary,
   .preferences-showcase h2,
+  .experience-link,
   .canvas-showcase h2,
   .canvas-showcase-header > p:last-child {
     transition:
@@ -952,6 +1041,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
 
 @media (max-width: 1400px) {
   .component-hero,
+  .component-exploration,
   .preferences-showcase {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto;
@@ -961,6 +1051,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
   }
 
   .component-hero-copy,
+  .component-exploration-copy,
   .preferences-showcase-copy {
     grid-column: 1;
     grid-row: 1;
@@ -993,6 +1084,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
   }
 
   .component-hero,
+  .component-exploration,
   .preferences-showcase {
     align-items: flex-start;
     gap: 34px;
@@ -1001,12 +1093,14 @@ fd-preferences-window[data-separators="off"] fd-separator {
   }
 
   .component-hero-copy,
+  .component-exploration-copy,
   .preferences-showcase-copy {
     width: min(560px, calc(100vw - 32px));
     text-align: start;
   }
 
   .component-hero h1,
+  .component-exploration h2,
   .preferences-showcase h2,
   .hero-summary {
     text-wrap: pretty;
@@ -1033,8 +1127,13 @@ fd-preferences-window[data-separators="off"] fd-separator {
     transform: none;
   }
 
+  .component-composition-secondary::before {
+    inset: -18px -8px;
+  }
+
   .component-card,
-  .component-tags {
+  .component-tags,
+  .component-choice-tags {
     position: relative;
     inset: auto;
     width: 100%;
@@ -1054,6 +1153,23 @@ fd-preferences-window[data-separators="off"] fd-separator {
   }
 
   .component-tags {
+    order: 4;
+    padding-inline: 8px;
+  }
+
+  .component-card-search {
+    order: 1;
+  }
+
+  .component-card-collection {
+    order: 2;
+  }
+
+  .component-card-disclosure {
+    order: 3;
+  }
+
+  .component-choice-tags {
     order: 4;
     padding-inline: 8px;
   }

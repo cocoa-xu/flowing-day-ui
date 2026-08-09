@@ -10,8 +10,6 @@
     <fd-canvas
       id="landing-backdrop"
       class="landing-backdrop"
-      interaction-mode="pan"
-      allows-page-scroll
       viewport-tab-index="-1"
       aria-hidden="true"
     >
@@ -119,19 +117,19 @@
             </header>
             <fd-card>
               <fd-connected-segmented-row
-                label="Layout"
-                value="balanced"
+                label="Reading"
+                value="focused"
                 control-width="238"
               >
-                <fd-option value="compact">Compact</fd-option>
-                <fd-option value="balanced">Balanced</fd-option>
-                <fd-option value="roomy">Roomy</fd-option>
+                <fd-option value="quiet">Quiet</fd-option>
+                <fd-option value="focused">Focused</fd-option>
+                <fd-option value="open">Open</fd-option>
               </fd-connected-segmented-row>
               <fd-separator></fd-separator>
-              <fd-popup-row id="hero-accent" label="Accent" value="petal" min-width="168">
-                <fd-option value="petal" accent="#D67084">Sakura Petal</fd-option>
-                <fd-option value="meadow" accent="#69A75F">Leaf Meadow</fd-option>
-                <fd-option value="sprout" accent="#60AB32">Honey Sprout</fd-option>
+              <fd-popup-row label="Language" value="english" min-width="168">
+                <fd-option value="english">English</fd-option>
+                <fd-option value="japanese">Japanese</fd-option>
+                <fd-option value="french">French</fd-option>
               </fd-popup-row>
             </fd-card>
           </article>
@@ -180,11 +178,93 @@
         </section>
       </section>
 
+      <section
+        class="component-exploration"
+        id="more-components"
+        aria-labelledby="exploration-title"
+      >
+        <div class="component-exploration-copy">
+          <p class="hero-kicker">A little further</p>
+          <h2 id="exploration-title">More, only when you want it.</h2>
+          <p class="hero-summary">Find what matters, keep a few things close, and let the rest wait quietly.</p>
+          <a class="experience-link" href="#preferences">See them together</a>
+        </div>
+
+        <section
+          class="component-composition component-composition-secondary"
+          aria-label="More interactive components"
+        >
+          <article class="component-card component-card-search">
+            <header>
+              <span>Find</span>
+              <small class="component-card-caption">Long lists remain approachable</small>
+            </header>
+            <fd-card>
+              <fd-search-picker-row
+                label="Destination"
+                value="kyoto"
+                max-visible-options="4"
+              >
+                <fd-option value="kamakura" label="Kamakura"></fd-option>
+                <fd-option value="kanazawa" label="Kanazawa"></fd-option>
+                <fd-option value="kobe" label="Kobe"></fd-option>
+                <fd-option value="kurashiki" label="Kurashiki"></fd-option>
+                <fd-option value="kyoto" label="Kyoto"></fd-option>
+              </fd-search-picker-row>
+            </fd-card>
+          </article>
+
+          <article class="component-card component-card-collection">
+            <header>
+              <span>Gather</span>
+              <small class="component-card-caption">Several choices, one calm row</small>
+            </header>
+            <fd-card>
+              <fd-multi-select-row label="Include" control-width="286">
+                <fd-option value="notes" selected>Notes</fd-option>
+                <fd-option value="images" selected>Images</fd-option>
+                <fd-option value="links">Links</fd-option>
+              </fd-multi-select-row>
+            </fd-card>
+          </article>
+
+          <article class="component-card component-card-disclosure">
+            <header>
+              <span>Reveal</span>
+              <small class="component-card-caption">Details wait until they are wanted</small>
+            </header>
+            <fd-card>
+              <fd-expandable-row
+                id="discovery-expand"
+                label="A Little More"
+                caption="Open only when the moment calls for it."
+                expanded
+              ></fd-expandable-row>
+              <fd-dependent-rows id="discovery-expand-rows">
+                <fd-switch-row label="Keep Nearby" checked></fd-switch-row>
+                <fd-separator></fd-separator>
+                <fd-value-row label="Status" value="Ready"></fd-value-row>
+              </fd-dependent-rows>
+            </fd-card>
+          </article>
+
+          <section
+            id="discovery-tag-group"
+            class="component-choice-tags"
+            aria-label="Selectable qualities"
+          >
+            <fd-selectable-tag value="quiet" selected>Quiet</fd-selectable-tag>
+            <fd-selectable-tag value="focused">Focused</fd-selectable-tag>
+            <fd-selectable-tag value="shared">Shared</fd-selectable-tag>
+          </section>
+        </section>
+      </section>
+
       <section class="preferences-showcase" id="preferences" aria-labelledby="preferences-title">
         <div class="preferences-showcase-copy">
           <p class="hero-kicker">Composed</p>
-          <h2 id="preferences-title">Small pieces, at home together.</h2>
-          <p class="hero-summary">A complete Preferences experience built from the same controls.</p>
+          <h2 id="preferences-title">A whole experience, built from the same pieces.</h2>
+          <p class="hero-summary">Open every page, change every setting, and see the system move as one.</p>
         </div>
 
       <fd-preferences-window
