@@ -5,6 +5,8 @@ html {
 
 body {
   --landing-accent: #d67084;
+  --landing-honey: #ac9326;
+  --landing-sprout: #60ab32;
 
   margin: 0;
   min-height: 100dvh;
@@ -35,20 +37,16 @@ body {
 .landing-canvas-surface {
   background:
     radial-gradient(
-      circle at 14% 8%,
-      oklch(from var(--landing-accent) 0.92 calc(c * 0.52) h / 0.68),
-      transparent 31rem
+      ellipse 44rem 35rem at 12% 3%,
+      oklch(from var(--landing-honey) 0.93 calc(c * 0.42) h / 0.64),
+      transparent 70%
     ),
     radial-gradient(
-      circle at 86% 12%,
-      oklch(from var(--landing-accent) 0.94 calc(c * 0.34) calc(h + 28) / 0.72),
-      transparent 34rem
+      ellipse 46rem 38rem at 88% 8%,
+      oklch(from var(--landing-sprout) 0.94 calc(c * 0.36) h / 0.58),
+      transparent 72%
     ),
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--landing-accent) 4%, #fff) 0%,
-      color-mix(in oklab, var(--landing-accent) 3%, #f6f5f2) 100%
-    );
+    linear-gradient(180deg, #fffef9 0%, #f7f7f0 100%);
 }
 
 .landing-canvas-grid::before,
@@ -57,7 +55,12 @@ body {
   inset: 0;
   background-image: radial-gradient(
     circle,
-    color-mix(in srgb, var(--landing-accent) 34%, #9ca09a) 1px,
+    color-mix(
+        in oklab,
+        color-mix(in oklab, var(--landing-honey) 46%, var(--landing-sprout)) 38%,
+        #9da199
+      )
+      1px,
     transparent 1.25px
   );
   background-position: var(--backdrop-grid-x) var(--backdrop-grid-y);
@@ -91,10 +94,14 @@ body {
   height: 1500px;
   overflow: visible;
   fill: none;
-  opacity: 0.18;
-  stroke: color-mix(in srgb, var(--landing-accent) 38%, #9ea39d);
+  opacity: 0.3;
+  stroke: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--landing-honey) 48%, var(--landing-sprout)) 42%,
+    #a6aaa1
+  );
   stroke-linecap: round;
-  stroke-width: 2;
+  stroke-width: 1.5;
 }
 
 .landing-canvas-routes path {
@@ -102,24 +109,44 @@ body {
 }
 
 .landing-map-node {
+  --map-accent: var(--landing-honey);
+
   position: absolute;
   top: var(--map-y);
   left: var(--map-x);
-  display: grid;
-  min-width: 180px;
-  height: 90px;
-  padding: 0 24px;
-  border: 1px solid color-mix(in srgb, var(--landing-accent) 18%, #cfd3ce);
-  border-radius: 22px;
-  background: color-mix(in srgb, var(--landing-accent) 6%, rgb(255 255 253 / 0.76));
-  box-shadow: 0 18px 44px rgb(68 76 70 / 0.06);
-  color: color-mix(in srgb, var(--landing-accent) 42%, #747871);
+  display: inline-flex;
+  align-items: center;
+  min-width: 146px;
+  height: 46px;
+  box-sizing: border-box;
+  gap: 10px;
+  padding: 0 17px 0 13px;
+  border: 1px solid color-mix(in oklab, var(--map-accent) 16%, #d4d7d0);
+  border-radius: 15px;
+  background: rgb(255 255 252 / 0.72);
+  box-shadow:
+    0 12px 32px rgb(67 74 64 / 0.055),
+    inset 0 1px rgb(255 255 255 / 0.84);
+  color: color-mix(in oklab, var(--map-accent) 30%, #5f635d);
   font-family: var(--fd-font-rounded);
-  font-size: 15px;
-  font-weight: 620;
+  font-size: 13px;
+  font-weight: 610;
   letter-spacing: -0.01em;
-  opacity: 0.28;
-  place-items: center;
+  opacity: 0.48;
+}
+
+.landing-map-node[data-tone="sprout"] {
+  --map-accent: var(--landing-sprout);
+}
+
+.landing-map-marker {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border: 3px solid color-mix(in oklab, var(--map-accent) 18%, #fff);
+  border-radius: 50%;
+  background: var(--map-accent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--map-accent) 32%, transparent);
 }
 
 .site-header {

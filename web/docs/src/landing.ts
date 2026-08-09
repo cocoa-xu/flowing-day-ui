@@ -22,6 +22,7 @@ registerIcons()
 const landingBackdrop = document.querySelector<FdCanvas>('#landing-backdrop')
 const landingBackdropGrid = document.querySelector<HTMLElement>('.landing-canvas-grid')
 const landingBackdropRect = { x: 0, y: 0, width: 2400, height: 1500 }
+const landingBackdropFocusRect = { x: 180, y: 120, width: 2040, height: 1260 }
 
 function updateLandingBackdrop(canvas: FdCanvas): void {
   const { transform } = canvas.viewport
@@ -52,7 +53,7 @@ if (landingBackdrop) {
     updateLandingBackdrop(landingBackdrop),
   )
   void landingBackdrop.updateComplete.then(() => {
-    landingBackdrop.fitRect(landingBackdropRect, 0, 0.8, { animated: false })
+    landingBackdrop.fitRect(landingBackdropFocusRect, 0, 0.9, { animated: false })
     updateLandingBackdrop(landingBackdrop)
   })
 }
