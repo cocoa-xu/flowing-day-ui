@@ -1,6 +1,7 @@
 import type { FdCanvasRect } from '../geometry.js'
 import type { FdAnyGraphSnapshot, FdGraphElementID, FdGraphPort } from '../graph/model.js'
 import { graphElementKey, graphPortPoint } from '../graph/model.js'
+import type { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
 import type {
   FdGraphAccessibilityDescription,
   FdResolvedGraphCanvasAccessibilityConfiguration,
@@ -45,7 +46,7 @@ const edgeFrame = (
 })
 
 export class FdGraphAccessibilitySnapshot {
-  readonly items: readonly FdGraphAccessibilityItem[]
+  private readonly itemValues: FdGraphAccessibilityItem[]
   private readonly indexByKey = new Map<string, number>()
 
   constructor(items: readonly FdGraphAccessibilityItem[]) {
@@ -55,7 +56,11 @@ export class FdGraphAccessibilitySnapshot {
       }
       this.indexByKey.set(item.key, index)
     }
-    this.items = items
+    this.itemValues = [...items]
+  }
+
+  get items(): readonly FdGraphAccessibilityItem[] {
+    return this.itemValues
   }
 
   get firstElementKey(): string | undefined {
@@ -72,7 +77,7 @@ export class FdGraphAccessibilitySnapshot {
 
   item(key: string): FdGraphAccessibilityItem | undefined {
     const index = this.indexByKey.get(key)
-    return index === undefined ? undefined : this.items[index]
+    return index === undefined ? undefined : this.itemValues[index]
   }
 
   indexOf(key: string): number | undefined {
@@ -111,6 +116,33 @@ export class FdGraphAccessibilitySnapshot {
       this.items.length - maximumCount,
     )
     return this.items.slice(start, start + maximumCount)
+  }
+
+  updateGeometry(index: FdGraphSnapshotIndex, nodeIDs: ReadonlySet<FdGraphElementID>): void {
+    const edgeIDs = new Set<FdGraphElementID>()
+    for (const nodeID of nodeIDs) {
+      const node = index.nodes.get(nodeID)
+      if (!node) continue
+      this.updateFrame(nodeKey(nodeID), node.frame)
+      for (const port of node.ports ?? [])
+        this.updateFrame(portKey(nodeID, port.id), portFrame(node, port))
+      for (const edge of index.incidentEdges(nodeID)) edgeIDs.add(edge.id)
+    }
+    for (const edgeID of edgeIDs) {
+      const edge = index.edges.get(edgeID)
+      if (!edge) continue
+      this.updateFrame(
+        edgeKey(edgeID),
+        edgeFrame(index.endpointPoint(edge, 'source'), index.endpointPoint(edge, 'target')),
+      )
+    }
+  }
+
+  private updateFrame(key: string, frame: FdCanvasRect): void {
+    const index = this.indexByKey.get(key)
+    const item = index === undefined ? undefined : this.itemValues[index]
+    if (index === undefined || !item) return
+    this.itemValues[index] = { ...item, frame }
   }
 }
 

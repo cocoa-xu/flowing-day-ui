@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FdAnyGraphSnapshot } from '../graph/model.js'
+import { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
 import { resolveGraphCanvasAccessibilityConfiguration } from './configuration.js'
 import {
   createGraphAccessibilitySnapshot,
@@ -94,5 +95,37 @@ describe('graph accessibility snapshot', () => {
 
     expect(exposed).toHaveLength(64)
     expect(exposed[32]?.key).toBe('node:50000')
+  })
+
+  it('updates affected node, port, and edge geometry incrementally', () => {
+    const index = new FdGraphSnapshotIndex(graph)
+    const snapshot = createGraphAccessibilitySnapshot(
+      graph,
+      resolveGraphCanvasAccessibilityConfiguration(),
+    )
+    index.applyNodeFrames('accessibility-2', [
+      { nodeID: 'source', frame: { x: 40, y: 30, width: 100, height: 60 } },
+    ])
+
+    snapshot.updateGeometry(index, new Set(['source']))
+
+    expect(snapshot.item(graphNodeAccessibilityKey('source'))?.frame).toEqual({
+      x: 40,
+      y: 30,
+      width: 100,
+      height: 60,
+    })
+    expect(snapshot.items.find(({ kind }) => kind === 'port')?.frame).toEqual({
+      x: 129,
+      y: 49,
+      width: 22,
+      height: 22,
+    })
+    expect(snapshot.items.find(({ kind }) => kind === 'edge')?.frame).toEqual({
+      x: 140,
+      y: 30,
+      width: 110,
+      height: 30,
+    })
   })
 })

@@ -65,6 +65,41 @@ describe('FdGraphSnapshotIndex', () => {
     })
   })
 
+  it('updates local node and incident-edge geometry without rebuilding topology', () => {
+    const index = new FdGraphSnapshotIndex(snapshot(), { cellSize: 100 })
+    const next = index.applyNodeFrames('snapshot-2', [
+      { nodeID: 'source', frame: { x: 300, y: 120, width: 100, height: 60 } },
+    ])
+
+    expect(next.id).toBe('snapshot-2')
+    expect(index.nodes.get('source')?.frame).toEqual({ x: 300, y: 120, width: 100, height: 60 })
+    expect(index.nodesIn({ x: -10, y: 0, width: 130, height: 100 })).toEqual([])
+    expect(index.nodesIn({ x: 290, y: 110, width: 130, height: 100 }).map(({ id }) => id)).toEqual([
+      'source',
+    ])
+    expect(index.edgesIn({ x: 450, y: 160, width: 20, height: 20 }).map(({ id }) => id)).toEqual([
+      'edge',
+    ])
+    expect(index.incidentEdges('source').map(({ id }) => id)).toEqual(['edge'])
+  })
+
+  it('recalculates exact content bounds when the sole outermost element moves inward', () => {
+    const index = new FdGraphSnapshotIndex({
+      id: 'bounds-1',
+      nodes: [
+        { id: 'outer', frame: { x: -100, y: -100, width: 20, height: 20 } },
+        { id: 'inner', frame: { x: 0, y: 0, width: 20, height: 20 } },
+      ],
+      edges: [],
+    })
+
+    index.applyNodeFrames('bounds-2', [
+      { nodeID: 'outer', frame: { x: 10, y: 10, width: 5, height: 5 } },
+    ])
+
+    expect(index.contentBounds).toEqual({ x: 0, y: 0, width: 20, height: 20 })
+  })
+
   it('rejects invalid references and duplicate identities', () => {
     const invalid: FdAnyGraphSnapshot = {
       id: 'invalid',

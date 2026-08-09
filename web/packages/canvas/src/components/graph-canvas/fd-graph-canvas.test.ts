@@ -295,6 +295,8 @@ describe('fd-graph-canvas pointer editing', () => {
       snapping: { enabled: false },
     }
     await element.updateComplete
+    const initialIndex = element.graphIndex
+    const initialTransform = element.viewport.transform
     const events: FdGraphNodeFramesChangeDetail[] = []
     element.addEventListener('fd-graph-node-frames-change', (event) => events.push(event.detail))
     const source = element.shadowRoot?.querySelector(
@@ -314,6 +316,10 @@ describe('fd-graph-canvas pointer editing', () => {
     expect(element.snapshot.nodes[0]?.frame.y).toBe(100)
     expect(element.snapshot.nodes[1]?.frame.x).toBe(450)
     expect(element.snapshot.nodes[1]?.frame.y).toBe(240)
+    await element.updateComplete
+    await nextFrame()
+    expect(element.graphIndex).toBe(initialIndex)
+    expect(element.viewport.transform).toEqual(initialTransform)
   })
 
   it('emits intent updates without mutating a consumer-owned snapshot', async () => {

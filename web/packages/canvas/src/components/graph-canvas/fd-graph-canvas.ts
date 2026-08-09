@@ -590,6 +590,7 @@ export class FdGraphCanvas
   private readonly renderGeometryCache = new FdGraphRenderGeometryCache()
   private visibleNodes: readonly FdAnyGraphNode[] = []
   private visibleEdges: readonly FdAnyGraphEdge[] = []
+  private canvasContentRect: FdCanvasRect = { x: 0, y: 0, width: 1, height: 1 }
   private renderWorldRect: FdCanvasRect = { x: 0, y: 0, width: 1, height: 1 }
   private snapshotRevision = 0
   private presentationRevision = 0
@@ -612,7 +613,8 @@ export class FdGraphCanvas
   private accessibilitySnapshot = new FdGraphAccessibilitySnapshot([])
   private accessibilityBridge: FdGraphCanvasAccessibilityBridge | undefined
   private accessibilityFocusedElementKey: string | undefined
-  private keyboardCandidates: readonly FdGraphKeyboardNavigationCandidate[] = []
+  private keyboardCandidates: FdGraphKeyboardNavigationCandidate[] = []
+  private readonly keyboardCandidateIndices = new Map<FdGraphElementID, number>()
   private selectionValue: ReadonlySet<FdGraphElementID> = new Set()
   private focusedNodeValue: FdGraphElementID | undefined
   private resizeHandlesVisible = false
@@ -690,7 +692,7 @@ export class FdGraphCanvas
         exportparts="viewport:canvas-viewport"
         interaction-mode=${this.tool === 'pan' ? 'pan' : 'content'}
         .configuration=${this.configuration}
-        .contentRect=${this.index.contentBounds}
+        .contentRect=${this.canvasContentRect}
         .contentInsets=${this.contentInsets}
         .contentChangeBehavior=${this.contentChangeBehavior}
         .request=${this.request}
@@ -1100,11 +1102,7 @@ export class FdGraphCanvas
     this.index = new FdGraphSnapshotIndex(this.snapshot)
     this.indexedSnapshot = this.snapshot
     this.snapshotRevision += 1
-    this.keyboardCandidates = this.snapshot.nodes.flatMap((node, presentationOrder) =>
-      node.capabilities?.keyboardNavigable === false
-        ? []
-        : [{ id: node.id, frame: node.frame, presentationOrder }],
-    )
+    this.rebuildKeyboardCandidates()
     this.reconcileSelection()
     this.reconcileKeyboardFocus()
     this.rebuildAccessibilitySnapshot()
@@ -1113,23 +1111,46 @@ export class FdGraphCanvas
     this.syncMiniMap()
     this.syncAccessibilityBridge()
     if (!this.canvas) return
-    this.canvas.contentRect = this.index.contentBounds
+    this.canvasContentRect = this.index.contentBounds
+    this.canvas.contentRect = this.canvasContentRect
     this.refreshVisibleElements(this.canvas.renderWorldRect)
   }
 
   private applyLocalFrameChanges(changes: readonly FdGraphNodeFrameChange[]): void {
-    const frames = new Map(changes.map(({ nodeID, after }) => [nodeID, after]))
     this.localSnapshotBaseID ??= this.snapshot.id
     this.localSnapshotSequence += 1
-    this.snapshot = {
-      ...this.snapshot,
-      id: `${this.localSnapshotBaseID}:local-${this.localSnapshotSequence}`,
-      nodes: this.snapshot.nodes.map((node) => {
-        const frame = frames.get(node.id)
-        return frame ? { ...node, frame } : node
-      }),
+    this.snapshot = this.index.applyNodeFrames(
+      `${this.localSnapshotBaseID}:local-${this.localSnapshotSequence}`,
+      changes.map(({ nodeID, after }) => ({ nodeID, frame: after })),
+    )
+    this.indexedSnapshot = this.snapshot
+    this.snapshotRevision += 1
+    const changedNodeIDs = new Set<FdGraphElementID>()
+    for (const { nodeID, after } of changes) {
+      changedNodeIDs.add(nodeID)
+      const candidateIndex = this.keyboardCandidateIndices.get(nodeID)
+      const candidate =
+        candidateIndex === undefined ? undefined : this.keyboardCandidates[candidateIndex]
+      if (candidateIndex !== undefined && candidate) {
+        this.keyboardCandidates[candidateIndex] = { ...candidate, frame: after }
+      }
     }
-    this.rebuildSnapshot()
+    this.accessibilitySnapshot.updateGeometry(this.index, changedNodeIDs)
+    this.refreshResizeHandleVisibility()
+    this.syncInteractionOverlay()
+    this.syncMiniMap()
+    this.syncAccessibilityBridge()
+    this.refreshVisibleElements(this.canvas.renderWorldRect)
+  }
+
+  private rebuildKeyboardCandidates(): void {
+    this.keyboardCandidates = []
+    this.keyboardCandidateIndices.clear()
+    for (const [presentationOrder, node] of this.snapshot.nodes.entries()) {
+      if (node.capabilities?.keyboardNavigable === false) continue
+      this.keyboardCandidateIndices.set(node.id, this.keyboardCandidates.length)
+      this.keyboardCandidates.push({ id: node.id, frame: node.frame, presentationOrder })
+    }
   }
 
   private createHistoryDriver(): FdGraphHistoryDriver<

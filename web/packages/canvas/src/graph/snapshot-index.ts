@@ -1,9 +1,4 @@
-import {
-  canvasRectsIntersect,
-  type FdCanvasPoint,
-  type FdCanvasRect,
-  unionCanvasRects,
-} from '../geometry.js'
+import { canvasRectsIntersect, type FdCanvasPoint, type FdCanvasRect } from '../geometry.js'
 import {
   type FdAnyGraphEdge,
   type FdAnyGraphNode,
@@ -68,6 +63,27 @@ class FdGraphBoundsGrid<ID extends FdGraphElementID> {
     }
   }
 
+  remove(id: ID): FdCanvasRect | undefined {
+    const bounds = this.bounds.get(id)
+    if (!bounds) return undefined
+    this.bounds.delete(id)
+    if (this.overflow.delete(id)) return bounds
+    const range = this.cellRange(bounds)
+    for (let y = range.minimumY; y <= range.maximumY; y += 1) {
+      for (let x = range.minimumX; x <= range.maximumX; x += 1) {
+        const key = `${x}:${y}`
+        const values = this.cells.get(key)
+        values?.delete(id)
+        if (values?.size === 0) this.cells.delete(key)
+      }
+    }
+    return bounds
+  }
+
+  allBounds(): IterableIterator<FdCanvasRect> {
+    return this.bounds.values()
+  }
+
   query(rect: FdCanvasRect): Set<ID> {
     const candidates = new Set(this.overflow)
     const range = this.cellRange(rect)
@@ -94,14 +110,24 @@ class FdGraphBoundsGrid<ID extends FdGraphElementID> {
 }
 
 export class FdGraphSnapshotIndex {
-  readonly snapshot: FdAnyGraphSnapshot
+  snapshot: FdAnyGraphSnapshot
   readonly nodes = new Map<FdGraphElementID, FdAnyGraphNode>()
   readonly edges = new Map<FdGraphElementID, FdAnyGraphEdge>()
-  readonly contentBounds: FdCanvasRect
+  contentBounds: FdCanvasRect = { x: 0, y: 0, width: 1, height: 1 }
   private readonly nodeGrid: FdGraphBoundsGrid<FdGraphElementID>
   private readonly edgeGrid: FdGraphBoundsGrid<FdGraphElementID>
   private readonly nodeOrder = new Map<FdGraphElementID, number>()
   private readonly edgeOrder = new Map<FdGraphElementID, number>()
+  private readonly incidentEdgeIDs = new Map<FdGraphElementID, FdGraphElementID[]>()
+  private minimumX = Number.POSITIVE_INFINITY
+  private minimumY = Number.POSITIVE_INFINITY
+  private maximumX = Number.NEGATIVE_INFINITY
+  private maximumY = Number.NEGATIVE_INFINITY
+  private minimumXCount = 0
+  private minimumYCount = 0
+  private maximumXCount = 0
+  private maximumYCount = 0
+  private contentBoundsNeedRecalculation = false
 
   constructor(snapshot: FdAnyGraphSnapshot, configuration: FdGraphSpatialIndexConfiguration = {}) {
     this.snapshot = snapshot
@@ -118,7 +144,6 @@ export class FdGraphSnapshotIndex {
     this.edgeGrid = new FdGraphBoundsGrid(cellSize, maximumCellsPerElement)
 
     const issues: FdGraphSnapshotIssue[] = []
-    let contentBounds: FdCanvasRect | undefined
     for (const [index, node] of snapshot.nodes.entries()) {
       if (this.nodes.has(node.id)) {
         issues.push({ kind: 'duplicateNodeID', nodeID: node.id })
@@ -143,7 +168,7 @@ export class FdGraphSnapshotIndex {
       this.nodeOrder.set(node.id, index)
       if (isValidFrame(node.frame)) {
         this.nodeGrid.insert(node.id, node.frame)
-        contentBounds = unionCanvasRects(contentBounds, node.frame)
+        this.includeContentBounds(node.frame)
       }
     }
 
@@ -159,11 +184,74 @@ export class FdGraphSnapshotIndex {
       if (!source || !target) continue
       const bounds = edgeBounds(source, target)
       this.edgeGrid.insert(edge.id, bounds)
-      contentBounds = unionCanvasRects(contentBounds, bounds)
+      this.includeContentBounds(bounds)
+      this.appendIncidentEdge(edge.source.nodeID, edge.id)
+      if (edge.target.nodeID !== edge.source.nodeID) {
+        this.appendIncidentEdge(edge.target.nodeID, edge.id)
+      }
     }
 
     if (issues.length > 0) throw new FdGraphSnapshotValidationError(issues)
-    this.contentBounds = contentBounds ?? { x: 0, y: 0, width: 1, height: 1 }
+    this.syncContentBounds()
+  }
+
+  applyNodeFrames(
+    snapshotID: string | number,
+    updates: readonly { readonly nodeID: FdGraphElementID; readonly frame: FdCanvasRect }[],
+  ): FdAnyGraphSnapshot {
+    const frames = new Map<FdGraphElementID, FdCanvasRect>()
+    const updatedNodes = new Map<FdGraphElementID, FdAnyGraphNode>()
+    const affectedEdgeIDs = new Set<FdGraphElementID>()
+    for (const { nodeID, frame } of updates) {
+      if (frames.has(nodeID))
+        throw new RangeError(`duplicate node frame ${graphElementKey(nodeID)}`)
+      if (!isValidFrame(frame))
+        throw new RangeError(`invalid node frame ${graphElementKey(nodeID)}`)
+      const node = this.nodes.get(nodeID)
+      if (!node) throw new RangeError(`missing node ${graphElementKey(nodeID)}`)
+      frames.set(nodeID, frame)
+      updatedNodes.set(nodeID, { ...node, frame })
+      for (const edgeID of this.incidentEdgeIDs.get(nodeID) ?? []) affectedEdgeIDs.add(edgeID)
+    }
+    if (frames.size === 0) return this.snapshot
+
+    for (const edgeID of affectedEdgeIDs) {
+      const bounds = this.edgeGrid.remove(edgeID)
+      if (bounds) this.removeContentBounds(bounds)
+    }
+    for (const [nodeID, node] of updatedNodes) {
+      const bounds = this.nodeGrid.remove(nodeID)
+      if (bounds) this.removeContentBounds(bounds)
+      this.nodes.set(nodeID, node)
+      this.nodeGrid.insert(nodeID, node.frame)
+      this.includeContentBounds(node.frame)
+    }
+    for (const edgeID of affectedEdgeIDs) {
+      const edge = this.edges.get(edgeID)
+      if (!edge) continue
+      const bounds = edgeBounds(
+        this.endpointPoint(edge, 'source'),
+        this.endpointPoint(edge, 'target'),
+      )
+      this.edgeGrid.insert(edgeID, bounds)
+      this.includeContentBounds(bounds)
+    }
+    if (this.contentBoundsNeedRecalculation) this.recalculateContentBounds()
+    this.syncContentBounds()
+
+    this.snapshot = {
+      ...this.snapshot,
+      id: snapshotID,
+      nodes: this.snapshot.nodes.map((node) => updatedNodes.get(node.id) ?? node),
+    }
+    return this.snapshot
+  }
+
+  incidentEdges(nodeID: FdGraphElementID): readonly FdAnyGraphEdge[] {
+    return (this.incidentEdgeIDs.get(nodeID) ?? []).flatMap((edgeID) => {
+      const edge = this.edges.get(edgeID)
+      return edge ? [edge] : []
+    })
   }
 
   nodesIn(rect: FdCanvasRect): readonly FdAnyGraphNode[] {
@@ -179,6 +267,73 @@ export class FdGraphSnapshotIndex {
     const node = this.nodes.get(value.nodeID)
     if (!node) throw new RangeError(`missing endpoint node ${graphElementKey(value.nodeID)}`)
     return graphPortPoint(node, value.portID)
+  }
+
+  private appendIncidentEdge(nodeID: FdGraphElementID, edgeID: FdGraphElementID): void {
+    const values = this.incidentEdgeIDs.get(nodeID)
+    if (values) values.push(edgeID)
+    else this.incidentEdgeIDs.set(nodeID, [edgeID])
+  }
+
+  private includeContentBounds(bounds: FdCanvasRect): void {
+    const maximumX = bounds.x + bounds.width
+    const maximumY = bounds.y + bounds.height
+    if (bounds.x < this.minimumX) {
+      this.minimumX = bounds.x
+      this.minimumXCount = 1
+    } else if (bounds.x === this.minimumX) this.minimumXCount += 1
+    if (bounds.y < this.minimumY) {
+      this.minimumY = bounds.y
+      this.minimumYCount = 1
+    } else if (bounds.y === this.minimumY) this.minimumYCount += 1
+    if (maximumX > this.maximumX) {
+      this.maximumX = maximumX
+      this.maximumXCount = 1
+    } else if (maximumX === this.maximumX) this.maximumXCount += 1
+    if (maximumY > this.maximumY) {
+      this.maximumY = maximumY
+      this.maximumYCount = 1
+    } else if (maximumY === this.maximumY) this.maximumYCount += 1
+  }
+
+  private removeContentBounds(bounds: FdCanvasRect): void {
+    if (bounds.x === this.minimumX && --this.minimumXCount === 0) {
+      this.contentBoundsNeedRecalculation = true
+    }
+    if (bounds.y === this.minimumY && --this.minimumYCount === 0) {
+      this.contentBoundsNeedRecalculation = true
+    }
+    if (bounds.x + bounds.width === this.maximumX && --this.maximumXCount === 0) {
+      this.contentBoundsNeedRecalculation = true
+    }
+    if (bounds.y + bounds.height === this.maximumY && --this.maximumYCount === 0) {
+      this.contentBoundsNeedRecalculation = true
+    }
+  }
+
+  private recalculateContentBounds(): void {
+    this.minimumX = Number.POSITIVE_INFINITY
+    this.minimumY = Number.POSITIVE_INFINITY
+    this.maximumX = Number.NEGATIVE_INFINITY
+    this.maximumY = Number.NEGATIVE_INFINITY
+    this.minimumXCount = 0
+    this.minimumYCount = 0
+    this.maximumXCount = 0
+    this.maximumYCount = 0
+    for (const bounds of this.nodeGrid.allBounds()) this.includeContentBounds(bounds)
+    for (const bounds of this.edgeGrid.allBounds()) this.includeContentBounds(bounds)
+    this.contentBoundsNeedRecalculation = false
+  }
+
+  private syncContentBounds(): void {
+    this.contentBounds = Number.isFinite(this.minimumX)
+      ? {
+          x: this.minimumX,
+          y: this.minimumY,
+          width: this.maximumX - this.minimumX,
+          height: this.maximumY - this.minimumY,
+        }
+      : { x: 0, y: 0, width: 1, height: 1 }
   }
 
   private endpoint(
