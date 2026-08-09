@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "pnpm --filter @flowing-day/ui build",
+    "build": "pnpm --filter './packages/*' build",
     "dev": "pnpm --filter @flowing-day/docs dev",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
