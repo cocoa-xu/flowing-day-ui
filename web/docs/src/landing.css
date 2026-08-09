@@ -431,14 +431,14 @@ fd-preferences-window[data-separators="off"] fd-separator {
   position: absolute;
   top: 0;
   left: 0;
-  width: 1100px;
+  width: 1080px;
   height: 520px;
 }
 
 .canvas-edges {
   position: absolute;
   inset: 0;
-  width: 1100px;
+  width: 1080px;
   height: 520px;
   overflow: visible;
   fill: none;
@@ -487,8 +487,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
 }
 
 .canvas-node-contract {
-  width: 280px;
-  height: 144px;
+  width: 260px;
   border-color: #bfc4bd;
   background: #f8f9f6;
 }
@@ -508,36 +507,16 @@ fd-preferences-window[data-separators="off"] fd-separator {
 }
 
 .canvas-node-source .canvas-node-mark {
-  width: 48px;
   color: #464a45;
-  font-size: 9px;
-  letter-spacing: 0.04em;
+  font-size: 11px;
+  letter-spacing: -0.02em;
 }
 
-.canvas-node-contract .canvas-node-mark {
-  background: #e8ebe6;
-  color: #4f554e;
-}
-
-.canvas-node-contract-content {
-  align-self: stretch;
-}
-
-.canvas-node-features {
-  display: flex;
-  gap: 6px;
-  margin-top: 7px;
-}
-
-.canvas-node-features > span {
-  padding: 5px 8px;
-  border: 1px solid #d8dcd6;
-  border-radius: 8px;
-  background: #fff;
-  color: #646963;
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1;
+.canvas-node-logo {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 13px;
 }
 
 .canvas-node > span:last-child {
