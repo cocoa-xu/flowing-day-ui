@@ -5,6 +5,7 @@ import './components/canvas/fd-canvas.js'
 import './components/graph-canvas/fd-graph-canvas.js'
 import './components/graph-minimap/fd-graph-minimap.js'
 
+export * from './accessibility/index.js'
 export { FdCanvas, type FdCanvasTransformOptions } from './components/canvas/fd-canvas.js'
 export { FdGraphCanvas } from './components/graph-canvas/fd-graph-canvas.js'
 export { FdGraphMiniMap } from './components/graph-minimap/fd-graph-minimap.js'
