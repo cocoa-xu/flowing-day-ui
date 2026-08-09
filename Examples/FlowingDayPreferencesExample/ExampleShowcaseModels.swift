@@ -75,6 +75,15 @@ enum ExampleAccent: CaseIterable, Hashable {
   case custom
 
   static let palette = allCases.filter { $0 != .custom }
+  static let featured: [Self] = [
+    .petal,
+    .apricot,
+    .honey,
+    .leaf,
+    .seafoam,
+    .brook,
+    .wisteria,
+  ]
 
   var title: String {
     switch self {
@@ -207,6 +216,11 @@ enum ExampleAccent: CaseIterable, Hashable {
     case .custom: nil
     }
   }
+}
+
+enum ExampleAccentMenuSelection: Hashable {
+  case accent(ExampleAccent)
+  case allColors
 }
 
 enum ExampleCorners: Hashable {

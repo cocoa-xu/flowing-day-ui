@@ -7,6 +7,7 @@ struct AppearanceShowcase: View {
   @Binding var customAccent: Color
   @Binding var corners: ExampleCorners
   @Binding var showsSeparators: Bool
+  @State private var showsAllAccents = false
 
   var body: some View {
     PreferencesPaneStack {
@@ -30,17 +31,30 @@ struct AppearanceShowcase: View {
         PreferencesPopupRow(
           symbol: "swatchpalette",
           title: "Accent",
-          selection: $accent,
-          options: ExampleAccent.allCases.map {
-            PreferencesPopupOption($0, label: $0.title)
-          }
+          selection: accentMenuSelection,
+          options: accentMenuOptions
         )
+        PreferencesDependentRows(
+          isVisible: showsAllAccents,
+          showsSeparator: showsSeparators,
+          separatorLeadingEdge: .iconText
+        ) {
+          VStack(spacing: 0) {
+            ForEach(ExampleAccentFamily.allCases) { family in
+              ExampleAccentFamilyGrid(
+                family: family,
+                selection: $accent,
+                customColor: customAccent
+              )
+            }
+          }
+        }
         separator
         PreferencesColorPickerRow(
           symbol: "eyedropper",
           title: "Custom Accent",
           caption: "Choosing a color selects the Custom accent preset.",
-          selection: $customAccent
+          selection: customAccentSelection
         )
       }
 
@@ -74,6 +88,48 @@ struct AppearanceShowcase: View {
     if showsSeparators {
       PreferencesRowSeparator(leadingEdge: .iconText)
     }
+  }
+
+  private var accentMenuSelection: Binding<ExampleAccentMenuSelection> {
+    Binding(
+      get: { showsAllAccents ? .allColors : .accent(accent) },
+      set: { selection in
+        switch selection {
+        case .accent(let accent):
+          self.accent = accent
+          showsAllAccents = false
+        case .allColors:
+          showsAllAccents = true
+        }
+      }
+    )
+  }
+
+  private var customAccentSelection: Binding<Color> {
+    Binding(
+      get: { customAccent },
+      set: {
+        customAccent = $0
+        showsAllAccents = false
+      }
+    )
+  }
+
+  private var accentMenuOptions: [PreferencesPopupOption<ExampleAccentMenuSelection>] {
+    ExampleAccent.featured.map {
+      PreferencesPopupOption(
+        .accent($0),
+        label: $0.title,
+        accent: $0.value(customColor: customAccent)
+      )
+    } + [
+      PreferencesPopupOption(.allColors, label: "All Colors…"),
+      PreferencesPopupOption(
+        .accent(.custom),
+        label: "Custom",
+        accent: .init(fill: customAccent, foreground: customAccent)
+      ),
+    ]
   }
 }
 
@@ -257,13 +313,13 @@ struct IconsShowcase: View {
       }
 
       PreferencesSection(
-        "Accent Scope",
-        footer: "This page declares its own PreferencesAccent without changing the other pages."
+        "Accent Inheritance",
+        footer: "This page follows the accent selected in Appearance."
       ) {
         PreferencesRow(
           symbol: "swatchpalette",
-          title: "PreferencesPage(accent:)",
-          caption: "The sidebar item, page header, and controls share the scoped accent."
+          title: "Inherited Accent",
+          caption: "The sidebar item, page header, and controls share the window accent."
         )
       }
     }

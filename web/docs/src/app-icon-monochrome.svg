@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>FlowingDayUI</title>
+  <g transform="rotate(-4 28 29)" opacity="0.52">
+    <rect x="10" y="12" width="35" height="34" rx="12" fill="#000" />
+  </g>
+  <g transform="rotate(4 37 35)" opacity="0.82">
+    <rect x="20" y="18" width="34" height="34" rx="12" fill="#000" />
+  </g>
+</svg>

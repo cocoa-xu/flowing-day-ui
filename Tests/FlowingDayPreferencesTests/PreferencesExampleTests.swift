@@ -104,6 +104,19 @@ final class PreferencesExampleTests: XCTestCase {
     )
   }
 
+  func testAppearanceOffersOneFeaturedAccentPerFamily() {
+    XCTAssertEqual(
+      ExampleAccent.featured,
+      [.petal, .apricot, .honey, .leaf, .seafoam, .brook, .wisteria]
+    )
+    XCTAssertEqual(ExampleAccent.featured.count, ExampleAccentFamily.allCases.count)
+    XCTAssertTrue(
+      zip(ExampleAccent.featured, ExampleAccentFamily.allCases).allSatisfy { accent, family in
+        family.accents.contains(accent)
+      }
+    )
+  }
+
   func testExampleGroupsRelatedAccentsIntoColorFamilies() {
     XCTAssertEqual(
       ExampleAccentFamily.allCases.map(\.title),

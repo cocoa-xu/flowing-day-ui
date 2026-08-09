@@ -4,12 +4,26 @@ html {
 }
 
 body {
+  --landing-accent: #d67084;
+
   margin: 0;
   min-height: 100dvh;
   background:
-    radial-gradient(circle at 14% 8%, rgb(255 246 200 / 0.72), transparent 31rem),
-    radial-gradient(circle at 86% 12%, rgb(196 236 235 / 0.76), transparent 34rem),
-    linear-gradient(180deg, #fffef9 0%, #f3f6f1 100%);
+    radial-gradient(
+      circle at 14% 8%,
+      oklch(from var(--landing-accent) 0.92 calc(c * 0.52) h / 0.68),
+      transparent 31rem
+    ),
+    radial-gradient(
+      circle at 86% 12%,
+      oklch(from var(--landing-accent) 0.94 calc(c * 0.34) calc(h + 28) / 0.72),
+      transparent 34rem
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--landing-accent) 4%, #fff) 0%,
+      color-mix(in oklab, var(--landing-accent) 3%, #f6f5f2) 100%
+    );
   color: #1d1d1b;
   font-family: var(--fd-font-standard);
 }
@@ -28,22 +42,21 @@ body {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: inherit;
   text-decoration: none;
   pointer-events: auto;
 }
 
 .brand-mark {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  box-shadow: 0 5px 14px rgb(57 91 91 / 0.15);
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 5px 9px color-mix(in srgb, var(--landing-accent) 18%, transparent));
 }
 
 .wordmark {
   font-family: var(--fd-font-rounded);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 650;
   letter-spacing: -0.15px;
 }
@@ -80,12 +93,12 @@ body {
 
 .site-nav a:hover,
 .site-nav a:focus-visible {
-  background: rgb(109 158 165 / 0.11);
-  color: #335e64;
+  background: color-mix(in srgb, var(--landing-accent) 11%, transparent);
+  color: oklch(from var(--landing-accent) 0.46 calc(c * 0.78) h);
 }
 
 .site-nav a:focus-visible {
-  outline: 2px solid rgb(109 158 165 / 0.48);
+  outline: 2px solid color-mix(in srgb, var(--landing-accent) 48%, transparent);
   outline-offset: 1px;
 }
 
@@ -98,8 +111,8 @@ body {
 
 .stage fd-preferences-window {
   box-shadow:
-    0 30px 90px rgb(60 78 67 / 0.17),
-    0 8px 28px rgb(60 78 67 / 0.09);
+    0 30px 90px color-mix(in srgb, var(--landing-accent) 17%, transparent),
+    0 8px 28px rgb(60 60 58 / 0.08);
   cursor: grab;
 }
 
@@ -118,6 +131,10 @@ fd-preferences-window[data-separators="off"] fd-separator {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   padding: 13px;
+}
+
+.accent-palette-grid::part(grid) {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 @media (max-width: 720px) {

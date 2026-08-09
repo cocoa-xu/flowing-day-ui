@@ -19,6 +19,9 @@ installTheme()
 registerIcons()
 
 const preferencesWindow = document.querySelector<FdPreferencesWindow>('#window')
+const preferencesAppIcon = document.querySelector<HTMLImageElement>('#preferences-app-icon')
+const lightAppIcon = new URL('./app-icon.svg', import.meta.url).href
+const darkAppIcon = new URL('./app-icon-dark.svg', import.meta.url).href
 
 if (preferencesWindow) makeMovableByBackground(preferencesWindow)
 
@@ -60,37 +63,46 @@ const accentTitle = (name: NamedAccentName): string =>
 const isNamedAccent = (value: string): value is NamedAccentName =>
   Object.hasOwn(namedAccents, value)
 
+const landingAccentNames = [
+  'petal',
+  'apricot',
+  'honey',
+  'leaf',
+  'seafoam',
+  'brook',
+  'wisteria',
+] as const satisfies readonly NamedAccentName[]
+
 function populateNamedAccents(): void {
   const popup = document.querySelector<FdPopupRow>('#accent')
-  const grid = document.querySelector<HTMLElement>('#accent-chips')
-
-  for (const names of Object.values(namedAccentFamilies)) {
-    for (const name of names) {
-      const value = namedAccents[name]
-      const title = accentTitle(name)
-
-      if (popup) {
-        const option = document.createElement('fd-option')
-        option.value = name
-        option.label = title
-        popup.append(option)
-      }
-
-      if (grid) {
-        const chip = document.createElement('fd-chip')
-        chip.value = name
-        chip.textContent = title
-        chip.style.setProperty('--fd-accent', value)
-        grid.append(chip)
-      }
-    }
-  }
 
   if (popup) {
-    const custom = document.createElement('fd-option')
-    custom.value = 'custom'
-    custom.label = 'Custom'
-    popup.append(custom)
+    popup.options = [
+      ...landingAccentNames.map((name) => ({
+        value: name,
+        label: accentTitle(name),
+        accent: namedAccents[name],
+      })),
+      { value: 'all', label: 'All Colors…' },
+      { value: 'custom', label: 'Custom', accent: '#6d9ea5' },
+    ]
+  }
+
+  for (const id of ['appearance-accent-chips', 'accent-chips']) {
+    const grid = document.querySelector<HTMLElement>(`#${id}`)
+    if (grid) {
+      for (const names of Object.values(namedAccentFamilies)) {
+        for (const name of names) {
+          const value = namedAccents[name]
+          const title = accentTitle(name)
+          const chip = document.createElement('fd-chip')
+          chip.value = name
+          chip.textContent = title
+          chip.style.setProperty('--fd-accent', value)
+          grid.append(chip)
+        }
+      }
+    }
   }
 }
 
@@ -124,16 +136,39 @@ onSegment('scheme', (value) => {
       : value
   preferencesWindow.dataset.fdScheme = scheme
   preferencesWindow.style.colorScheme = scheme
+  if (preferencesAppIcon) preferencesAppIcon.src = scheme === 'dark' ? darkAppIcon : lightAppIcon
 })
 
 function applyAccent(hex: string): void {
   set('--fd-accent', hex)
+  scheduleLandingAccent(hex)
   const well = document.querySelector<FdColorPickerRow>('#custom-accent')
   if (well) well.value = hex.toLowerCase()
 }
 
+let pendingLandingAccent: string | null = null
+let landingAccentFrame: number | null = null
+
+function scheduleLandingAccent(hex: string): void {
+  pendingLandingAccent = hex
+  if (landingAccentFrame !== null) return
+  landingAccentFrame = requestAnimationFrame(() => {
+    if (pendingLandingAccent) {
+      document.body.style.setProperty('--landing-accent', pendingLandingAccent)
+    }
+    pendingLandingAccent = null
+    landingAccentFrame = null
+  })
+}
+
 const accentPopup = document.querySelector<FdPopupRow>('#accent')
+const allAccentRows = document.querySelector<FdDependentRows>('#all-accent-rows')
 accentPopup?.addEventListener('fd-change', (event) => {
+  if (event.detail.value === 'all') {
+    if (allAccentRows) allAccentRows.visible = true
+    return
+  }
+  if (allAccentRows) allAccentRows.visible = false
   if (event.detail.value && isNamedAccent(event.detail.value)) {
     applyAccent(namedAccents[event.detail.value])
   }
@@ -190,16 +225,26 @@ document.querySelector<FdSwitchRow>('#separators')?.addEventListener('fd-change'
 document
   .querySelector<FdColorPickerRow>('#custom-accent')
   ?.addEventListener('fd-change', (event) => {
-    if (!event.detail.value) return
-    applyAccent(event.detail.value)
-    if (accentPopup) accentPopup.value = 'custom'
+    const value = event.detail.value
+    if (!value) return
+    applyAccent(value)
+    if (allAccentRows) allAccentRows.visible = false
+    if (accentPopup) {
+      accentPopup.options = accentPopup.options.map((option) =>
+        option.value === 'custom' ? { ...option, accent: value } : option,
+      )
+      accentPopup.value = 'custom'
+    }
   })
 
-document.querySelector<HTMLElement>('#accent-chips')?.addEventListener('fd-activate', (event) => {
-  if (!event.detail.value || !isNamedAccent(event.detail.value)) return
-  applyAccent(namedAccents[event.detail.value])
-  if (accentPopup) accentPopup.value = event.detail.value
-})
+for (const id of ['appearance-accent-chips', 'accent-chips']) {
+  document.querySelector<HTMLElement>(`#${id}`)?.addEventListener('fd-activate', (event) => {
+    if (!event.detail.value || !isNamedAccent(event.detail.value)) return
+    applyAccent(namedAccents[event.detail.value])
+    if (accentPopup) accentPopup.value = 'all'
+    if (allAccentRows) allAccentRows.visible = true
+  })
+}
 
 document.querySelector<HTMLElement>('#tag-group')?.addEventListener('fd-activate', (event) => {
   const pressed = event.target as FdSelectableTag

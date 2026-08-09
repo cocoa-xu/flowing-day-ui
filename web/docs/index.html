@@ -28,7 +28,7 @@
         sidebar-footer="Every control here changes this window."
         page="appearance"
       >
-        <img slot="app-icon" src="./src/app-icon.svg" alt="" />
+        <img id="preferences-app-icon" slot="app-icon" src="./src/app-icon.svg" alt="" />
 
         <fd-page-group>
           <fd-page
@@ -58,9 +58,15 @@
                   id="accent"
                   symbol="swatchpalette"
                   label="Accent"
-                  value="celadon"
+                  value="petal"
                   min-width="180"
                 ></fd-popup-row>
+                <fd-dependent-rows
+                  id="all-accent-rows"
+                  separator-leading-edge="icon-text"
+                >
+                  <fd-grid id="appearance-accent-chips" class="accent-palette-grid"></fd-grid>
+                </fd-dependent-rows>
                 <fd-separator leading-edge="icon-text"></fd-separator>
                 <fd-color-picker-row
                   id="custom-accent"
@@ -247,9 +253,8 @@
           <fd-page
             page-id="icons"
             label="Icons"
-            subtitle="SF Symbols and page-level accents"
+            subtitle="SF Symbols and icon presentation"
             symbol="sparkles"
-            accent="#968AC7"
           >
             <fd-pane-stack>
               <fd-section
@@ -270,13 +275,13 @@
               </fd-section>
 
               <fd-section
-                label="Accent Scope"
-                footer="This page declares its own accent without changing the other pages."
+                label="Accent Inheritance"
+                footer="This page follows the accent selected in Appearance."
               >
                 <fd-row
                   symbol="swatchpalette"
-                  label="Page Accent"
-                  caption="The sidebar item, page header, and controls share the scoped accent."
+                  label="Inherited Accent"
+                  caption="The sidebar item, page header, and controls share the window accent."
                 ></fd-row>
               </fd-section>
             </fd-pane-stack>
@@ -483,7 +488,7 @@
                 label="Grid"
                 footer="Named accents are grouped into seven families with seven candidates each."
               >
-                <fd-grid id="accent-chips"></fd-grid>
+                <fd-grid id="accent-chips" class="accent-palette-grid"></fd-grid>
               </fd-section>
             </fd-pane-stack>
           </fd-page>

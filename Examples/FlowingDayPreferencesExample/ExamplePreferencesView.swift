@@ -14,8 +14,8 @@ enum ExamplePage: String, CaseIterable {
 struct ExamplePreferencesView: View {
   @State private var selection = ExamplePage.appearance
   @State private var appearance = ExampleAppearance.system
-  @State private var accent = ExampleAccent.celadon
-  @State private var customAccent = ExampleAccent.celadon.color
+  @State private var accent = ExampleAccent.petal
+  @State private var customAccent = ExampleAccent.petal.color
   @State private var corners = ExampleCorners.soft
   @State private var density = ExampleDensity.standard
   @State private var contentLayout = ExampleContentLayout.centered
@@ -151,9 +151,8 @@ struct ExamplePreferencesView: View {
     PreferencesPage(
       id: .icons,
       title: "Icons",
-      subtitle: "SF Symbols and page-level accents",
-      icon: .system("sparkles"),
-      accent: ExampleAccent.wisteria.value(customColor: customAccent)
+      subtitle: "SF Symbols and icon presentation",
+      icon: .system("sparkles")
     ) {
       IconsShowcase()
     }
