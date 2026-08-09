@@ -3,7 +3,7 @@ import type { FdGraphSnappingStrategy } from './arrangement.js'
 
 export type FdGraphSelectionBehavior = 'none' | 'single' | 'multiple'
 export type FdGraphMarqueeBehavior = 'disabled' | 'intersects' | 'contains'
-export type FdGraphGridRoundingPolicy = 'nearest' | 'down' | 'up'
+export type FdGraphGridRoundingPolicy = 'nearest' | 'down' | 'up' | 'towardZero' | 'awayFromZero'
 export type FdGraphFrameUpdateBehavior = 'intent' | 'local'
 export type FdGraphCanvasTool = 'select' | 'pan'
 
@@ -21,9 +21,15 @@ export interface FdGraphGridConfiguration {
 export interface FdGraphSnappingConfiguration {
   readonly enabled?: boolean
   readonly alignment?: boolean
+  readonly equalSpacing?: boolean
+  readonly equalSize?: boolean
   readonly grid?: FdGraphGridConfiguration
   readonly acquisitionDistance?: number
   readonly releaseDistance?: number
+  readonly searchRadius?: number
+  readonly maximumCandidates?: number
+  readonly showsGuides?: boolean
+  readonly guideOffset?: number
 }
 
 export interface FdGraphCanvasInteractionConfiguration {
@@ -56,9 +62,15 @@ export interface FdResolvedGraphGridConfiguration {
 export interface FdResolvedGraphSnappingConfiguration {
   readonly enabled: boolean
   readonly alignment: boolean
+  readonly equalSpacing: boolean
+  readonly equalSize: boolean
   readonly grid: FdResolvedGraphGridConfiguration
   readonly acquisitionDistance: number
   readonly releaseDistance: number
+  readonly searchRadius: number
+  readonly maximumCandidates: number
+  readonly showsGuides: boolean
+  readonly guideOffset: number
 }
 
 export interface FdResolvedGraphCanvasInteractionConfiguration {
@@ -79,6 +91,16 @@ export interface FdResolvedGraphCanvasInteractionConfiguration {
 
 const positive = (value: number, name: string): number => {
   if (!Number.isFinite(value) || value <= 0) throw new RangeError(`${name} must be positive`)
+  return value
+}
+
+const nonnegative = (value: number, name: string): number => {
+  if (!Number.isFinite(value) || value < 0) throw new RangeError(`${name} must not be negative`)
+  return value
+}
+
+const positiveInteger = (value: number, name: string): number => {
+  if (!Number.isInteger(value) || value <= 0) throw new RangeError(`${name} must be positive`)
   return value
 }
 
@@ -104,6 +126,8 @@ export function resolveGraphCanvasInteractionConfiguration(
     snapping: {
       enabled: configuration.snapping?.enabled ?? true,
       alignment: configuration.snapping?.alignment ?? true,
+      equalSpacing: configuration.snapping?.equalSpacing ?? true,
+      equalSize: configuration.snapping?.equalSize ?? true,
       grid: {
         enabled: configuration.snapping?.grid?.enabled ?? false,
         width: positive(configuration.snapping?.grid?.width ?? 24, 'grid width'),
@@ -116,6 +140,13 @@ export function resolveGraphCanvasInteractionConfiguration(
       },
       acquisitionDistance: positive(acquisitionDistance, 'snap acquisition distance'),
       releaseDistance: positive(releaseDistance, 'snap release distance'),
+      searchRadius: nonnegative(configuration.snapping?.searchRadius ?? 600, 'snap search radius'),
+      maximumCandidates: positiveInteger(
+        configuration.snapping?.maximumCandidates ?? 512,
+        'maximum snap candidates',
+      ),
+      showsGuides: configuration.snapping?.showsGuides ?? true,
+      guideOffset: nonnegative(configuration.snapping?.guideOffset ?? 8, 'guide offset'),
     },
     canDragNodes: configuration.canDragNodes ?? (() => true),
     canResizeNodes: configuration.canResizeNodes ?? (() => true),

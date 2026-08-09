@@ -16,6 +16,7 @@ export interface FdGraphNodeCapabilities {
   readonly draggable?: boolean
   readonly resizable?: boolean
   readonly keyboardNavigable?: boolean
+  readonly arrangementParticipant?: boolean
 }
 
 export interface FdGraphNodeStyle {

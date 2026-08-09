@@ -28,3 +28,9 @@ Products with domain-specific alignment can set `interactionConfiguration.snappi
 Translation and resize solvers are replaceable independently, and custom solvers can delegate to
 `snapGraphTranslationRequest()` or `snapGraphResize()` before refining the standard result. These
 callbacks run synchronously in the pointer hot path and should remain deterministic and bounded.
+
+The standard solver supports alignment, configurable grid rounding, equal-spacing chains,
+equal-size resizing, hysteresis, and measurement guides. Candidate lookup is constrained by
+`searchRadius` and `maximumCandidates` so dense graphs do not turn pointer input into a full graph
+scan. `arrangeSelectedNodes()` applies align and distribute actions through the same semantic
+frame-change and undo boundary as direct manipulation.

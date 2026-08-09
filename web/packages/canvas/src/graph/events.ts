@@ -9,7 +9,7 @@ import type { FdGraphElementID } from './model.js'
 
 export type FdGraphInteractionPhase = 'continuous' | 'ended'
 export type FdGraphSelectionSource = 'pointer' | 'keyboard' | 'accessibility' | 'programmatic'
-export type FdGraphNodeFrameChangeKind = 'drag' | 'resize' | 'keyboard' | 'history'
+export type FdGraphNodeFrameChangeKind = 'drag' | 'resize' | 'keyboard' | 'arrangement' | 'history'
 export type FdGraphFocusSource = 'pointer' | 'keyboard' | 'accessibility' | 'programmatic'
 
 export interface FdGraphSelectionChangeDetail {

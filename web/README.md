@@ -107,3 +107,7 @@ bounded index supports ranked metadata search over 100,000 elements, while
 Custom snapping strategies can replace translation and resize independently or refine the
 standard solver. They stay outside the graph model, so business anchors and timeline scales do not
 leak into the reusable canvas core.
+
+The built-in arrangement layer includes hysteresis, grid and alignment snapping, equal-spacing
+chains, equal-size resizing, measurement guides, and explicit align/distribute actions. Snap
+candidate searches remain spatially bounded for large graphs.

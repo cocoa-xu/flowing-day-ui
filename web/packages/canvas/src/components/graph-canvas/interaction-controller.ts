@@ -4,7 +4,7 @@ import type {
   FdGraphNodeFrameChangeKind,
   FdGraphSelectionChangeDetail,
 } from '../../graph/events.js'
-import type { FdAnyGraphNode, FdGraphElementID } from '../../graph/model.js'
+import type { FdGraphElementID } from '../../graph/model.js'
 import { graphElementIDFromKey } from '../../graph/model.js'
 import type { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
 import {
@@ -436,39 +436,23 @@ export class FdGraphCanvasInteractionController {
   ): FdGraphSnapCandidate[] {
     if (
       !this.delegate.resolvedConfiguration.snapping.enabled ||
-      !this.delegate.resolvedConfiguration.snapping.alignment
+      (!this.delegate.resolvedConfiguration.snapping.alignment &&
+        !this.delegate.resolvedConfiguration.snapping.equalSpacing &&
+        !this.delegate.resolvedConfiguration.snapping.equalSize)
     ) {
       return []
     }
-    const tolerance =
-      this.delegate.resolvedConfiguration.snapping.releaseDistance /
-      this.delegate.viewport.transform.zoom
-    const content = this.delegate.graphIndex.contentBounds
-    const xAnchors = [bounds.x, bounds.x + bounds.width / 2, bounds.x + bounds.width]
-    const yAnchors = [bounds.y, bounds.y + bounds.height / 2, bounds.y + bounds.height]
-    const nodes = new Map<FdGraphElementID, FdAnyGraphNode>()
-    for (const x of xAnchors) {
-      for (const node of this.delegate.graphIndex.nodesIn({
-        x: x - tolerance,
-        y: content.y,
-        width: tolerance * 2,
-        height: content.height,
-      })) {
-        nodes.set(node.id, node)
-      }
-    }
-    for (const y of yAnchors) {
-      for (const node of this.delegate.graphIndex.nodesIn({
-        x: content.x,
-        y: y - tolerance,
-        width: content.width,
-        height: tolerance * 2,
-      })) {
-        nodes.set(node.id, node)
-      }
-    }
-    return [...nodes.values()]
+    const configuration = this.delegate.resolvedConfiguration.snapping
+    const radius = configuration.searchRadius / this.delegate.viewport.transform.zoom
+    return this.delegate.graphIndex
+      .nodesIn({
+        x: bounds.x - radius,
+        y: bounds.y - radius,
+        width: bounds.width + radius * 2,
+        height: bounds.height + radius * 2,
+      })
       .filter(({ id }) => !excluded.has(id))
+      .slice(0, configuration.maximumCandidates)
       .map(({ id, frame }) => ({ id, frame }))
   }
 

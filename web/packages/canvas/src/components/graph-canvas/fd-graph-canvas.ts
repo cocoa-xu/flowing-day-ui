@@ -60,7 +60,12 @@ import {
   resolveGraphCanvasHistoryConfiguration,
 } from '../../history/graph-canvas.js'
 import type { FdGraphHistoryApplyResult, FdGraphHistoryDirection } from '../../history/model.js'
-import { type FdGraphGuide, graphSelectionBounds } from '../../interactions/arrangement.js'
+import {
+  type FdGraphArrangementAction,
+  type FdGraphGuide,
+  graphArrangementTranslations,
+  graphSelectionBounds,
+} from '../../interactions/arrangement.js'
 import type {
   FdGraphCanvasInteractionConfiguration,
   FdGraphCanvasTool,
@@ -631,6 +636,7 @@ export class FdGraphCanvas
     | undefined
   private indexedSnapshot: FdAnyGraphSnapshot | undefined
   private keyboardTransactionSequence = 0
+  private arrangementTransactionSequence = 0
   private historyTransactionSequence = 0
   private readonly connectionPortElements = new Set<HTMLElement>()
 
@@ -899,6 +905,38 @@ export class FdGraphCanvas
     }
     this.setFocusedNode(nodeID, 'programmatic', false, false)
     this.canvas.focusRect(node.frame, options.zoom, { animated: options.animated ?? true })
+    return true
+  }
+
+  arrangeSelectedNodes(action: FdGraphArrangementAction): boolean {
+    const nodes = [...this.selectedNodeIDs].flatMap((id) => {
+      const node = this.index.nodes.get(id)
+      return node && node.capabilities?.arrangementParticipant !== false ? [node] : []
+    })
+    const translations = graphArrangementTranslations(nodes, action)
+    const changes = nodes.flatMap<FdGraphNodeFrameChange>((node) => {
+      const translation = translations.get(node.id)
+      if (!translation) return []
+      return [
+        {
+          nodeID: node.id,
+          before: node.frame,
+          after: {
+            ...node.frame,
+            x: node.frame.x + translation.width,
+            y: node.frame.y + translation.height,
+          },
+        },
+      ]
+    })
+    if (changes.length === 0) return false
+    this.arrangementTransactionSequence += 1
+    this.emitFrameChanges(
+      `arrangement-${this.arrangementTransactionSequence}`,
+      'arrangement',
+      'ended',
+      changes,
+    )
     return true
   }
 

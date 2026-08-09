@@ -41,6 +41,8 @@ const defaultActionName = ({ kind }: FdGraphCanvasHistoryActionContext): string 
       return 'Resize Nodes'
     case 'keyboard':
       return 'Move Nodes'
+    case 'arrangement':
+      return 'Arrange Nodes'
   }
 }
 

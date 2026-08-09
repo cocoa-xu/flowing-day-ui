@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { FdCanvasRect } from '../geometry.js'
 import type { FdAnyGraphNode } from '../graph/model.js'
 import {
+  graphArrangementTranslations,
   graphSelectionBounds,
   resizeGraphBounds,
   scaleGraphFrames,
@@ -137,7 +138,7 @@ describe('graph snapping', () => {
     expect(snapGraphTranslationRequest(request).translation).toEqual({ width: 25, height: 25 })
   })
 
-  it('resolves dense alignment candidates without materializing every guide', () => {
+  it('bounds dense alignment candidates without materializing every guide', () => {
     const candidates = Array.from({ length: 10_000 }, (_, index) => ({
       id: index,
       frame: { x: 120, y: index * 80, width: 80, height: 60 },
@@ -151,7 +152,30 @@ describe('graph snapping', () => {
     )
 
     expect(result.translation.width).toBe(40)
-    expect(result.guides[0]?.upperBound).toBe(799_980)
+    expect(result.guides[0]?.upperBound).toBe(60)
+  })
+
+  it('recognizes and presents a longer equal-spacing chain', () => {
+    const spacing = resolveGraphCanvasInteractionConfiguration({
+      snapping: { alignment: false, equalSpacing: true, guideOffset: 8 },
+    }).snapping
+    const result = snapGraphTranslation(
+      { x: 120, y: 0, width: 20, height: 20 },
+      { width: -2, height: 0 },
+      [
+        { id: 'one', frame: { x: 0, y: 0, width: 20, height: 20 } },
+        { id: 'two', frame: { x: 40, y: 0, width: 20, height: 20 } },
+        { id: 'three', frame: { x: 80, y: 0, width: 20, height: 20 } },
+      ],
+      spacing,
+      1,
+    )
+
+    expect(result.translation.width).toBe(0)
+    expect(result.guides).toHaveLength(3)
+    expect(
+      result.guides.every(({ kind, measurement }) => kind === 'equalSpacing' && measurement === 20),
+    ).toBe(true)
   })
 })
 
@@ -215,5 +239,55 @@ describe('graph group resizing', () => {
 
     expect(result.bounds).toEqual({ x: 0, y: 0, width: 300, height: 150 })
     expect(result.frames.get('two')).toEqual({ x: 200, y: 100, width: 100, height: 50 })
+  })
+
+  it('snaps resize dimensions and emits measurement guides', () => {
+    const baseFrames = new Map([['one', { x: 0, y: 0, width: 100, height: 60 }]])
+    const result = snapGraphResize({
+      baseFrames,
+      baseBounds: { x: 0, y: 0, width: 100, height: 60 },
+      proposedBounds: { x: 0, y: 0, width: 147, height: 60 },
+      proposedTranslation: { width: 47, height: 0 },
+      handle: 'right',
+      candidates: [{ id: 'target', frame: { x: 300, y: 0, width: 150, height: 80 } }],
+      configuration: resolveGraphCanvasInteractionConfiguration({
+        snapping: { alignment: false, equalSpacing: false, equalSize: true },
+      }).snapping,
+      minimumSize: { width: 40, height: 32 },
+      zoom: 1,
+      previous: {},
+      preservesAspectRatio: false,
+      resizesFromCenter: false,
+    })
+
+    expect(result.bounds.width).toBe(150)
+    expect(result.guides.map(({ kind }) => kind)).toEqual(['equalSize', 'resize'])
+    expect(result.guides.at(-1)?.measurement).toBe(150)
+  })
+})
+
+describe('graph arrangement actions', () => {
+  const geometries = [
+    { id: 'one', frame: { x: 0, y: 0, width: 20, height: 20 } },
+    { id: 'two', frame: { x: 50, y: 40, width: 10, height: 10 } },
+    { id: 'three', frame: { x: 100, y: 80, width: 20, height: 20 } },
+  ]
+
+  it('aligns a selection to its shared bounds', () => {
+    expect(graphArrangementTranslations(geometries, { kind: 'align', alignment: 'right' })).toEqual(
+      new Map([
+        ['one', { width: 100, height: 0 }],
+        ['two', { width: 60, height: 0 }],
+      ]),
+    )
+  })
+
+  it('distributes a selection while preserving its outer nodes', () => {
+    expect(
+      graphArrangementTranslations(geometries, {
+        kind: 'distribute',
+        distribution: 'horizontal',
+      }),
+    ).toEqual(new Map([['two', { width: 5, height: 0 }]]))
   })
 })

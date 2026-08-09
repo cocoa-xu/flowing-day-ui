@@ -842,6 +842,41 @@ describe('fd-graph-canvas navigation', () => {
   })
 })
 
+describe('fd-graph-canvas arrangement', () => {
+  it('arranges selected nodes through the standard event and history boundary', async () => {
+    const element = await mount()
+    element.selectedNodeIDs = new Set(['source', 'target'])
+    element.interactionConfiguration = { frameUpdates: 'local' }
+    await element.updateComplete
+    const events: FdGraphNodeFramesChangeDetail[] = []
+    element.addEventListener('fd-graph-node-frames-change', (event) => events.push(event.detail))
+
+    expect(element.arrangeSelectedNodes({ kind: 'align', alignment: 'top' })).toBe(true)
+
+    expect(element.snapshot.nodes[1]?.frame.y).toBe(80)
+    expect(events.at(-1)?.kind).toBe('arrangement')
+    expect(element.undoActionName).toBe('Arrange Nodes')
+    expect(await element.undo()).toBe(true)
+    expect(element.snapshot.nodes[1]?.frame.y).toBe(220)
+  })
+
+  it('excludes nodes that opt out of arrangement actions', async () => {
+    const snapshot = graphSnapshot()
+    const element = await mount({
+      ...snapshot,
+      nodes: snapshot.nodes.map((node) =>
+        node.id === 'target'
+          ? { ...node, capabilities: { ...node.capabilities, arrangementParticipant: false } }
+          : node,
+      ),
+    })
+    element.selectedNodeIDs = new Set(['source', 'target'])
+    await element.updateComplete
+
+    expect(element.arrangeSelectedNodes({ kind: 'align', alignment: 'top' })).toBe(false)
+  })
+})
+
 describe('fd-graph-canvas accessibility', () => {
   it('uses one composite tab stop with a bounded active-descendant window', async () => {
     const element = await mount(graphSnapshot(), 'dom')
