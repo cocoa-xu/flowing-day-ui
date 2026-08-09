@@ -171,7 +171,7 @@ const axisCandidate = (
       return {
         correction,
         state: previous,
-        guides: guidesForState(axis, previous, snappedBounds, candidates),
+        guides: guidesForState(axis, previous, snappedBounds),
       }
     }
   }
@@ -237,7 +237,7 @@ const axisCandidate = (
       : { ...movingBounds, y: movingBounds.y + best.correction }
   return {
     ...best,
-    guides: guidesForState(axis, best.state, snappedBounds, candidates),
+    guides: guidesForState(axis, best.state, snappedBounds),
   }
 }
 
@@ -365,7 +365,6 @@ const guidesForState = (
   axis: 'x' | 'y',
   state: FdGraphSnapAxisState,
   movingFrame: FdCanvasRect,
-  candidates: readonly FdGraphSnapCandidate[],
 ): readonly FdGraphGuide[] => {
   if (state.kind === 'equalSpacing') {
     return spacingGuides(
@@ -380,7 +379,7 @@ const guidesForState = (
       axis,
       state.target,
       movingFrame,
-      state.candidateFrame ? [{ id: '', frame: state.candidateFrame }] : candidates,
+      state.candidateFrame ? [{ id: '', frame: state.candidateFrame }] : [],
       state.kind,
     ),
   ]
@@ -595,8 +594,8 @@ export function snapGraphResize(request: FdGraphResizeSnapRequest): FdGraphResiz
   )
   const guides = request.configuration.showsGuides
     ? [
-        ...(x ? guidesForState('x', x.state, bounds, effectiveRequest.candidates) : []),
-        ...(y ? guidesForState('y', y.state, bounds, effectiveRequest.candidates) : []),
+        ...(x ? guidesForState('x', x.state, bounds) : []),
+        ...(y ? guidesForState('y', y.state, bounds) : []),
         ...(movesHorizontally
           ? [dimensionGuide('x', bounds, request.configuration.guideOffset / request.zoom)]
           : []),
@@ -669,7 +668,7 @@ const resizeAxisCandidate = (
     equalSize = {
       correction,
       state,
-      guides: guidesForState(axis, state, request.proposedBounds, request.candidates),
+      guides: guidesForState(axis, state, request.proposedBounds),
     }
   }
   if (!standard || (equalSize && Math.abs(equalSize.correction) < Math.abs(standard.correction))) {

@@ -159,4 +159,26 @@ describe('FdGraphSnapshotIndex', () => {
     expect(index.nodesIn({ x: 0, y: 0, width: 50, height: 50 })).toHaveLength(1)
     expect(identifierReads).toBe(0)
   })
+
+  it('bounds dense spatial queries before materializing every match', () => {
+    const index = new FdGraphSnapshotIndex({
+      id: 'dense-query',
+      nodes: Array.from({ length: 10_000 }, (_, id) => ({
+        id,
+        frame: { x: 0, y: 0, width: 40, height: 40 },
+      })),
+      edges: [],
+    })
+    const excluded = new Set([0, 1, 2])
+    const result = index.nodesIn(
+      { x: 0, y: 0, width: 40, height: 40 },
+      { maximumCount: 5, excluding: excluded },
+    )
+
+    expect(result).toHaveLength(5)
+    expect(result.every(({ id }) => !excluded.has(id as number))).toBe(true)
+    expect(() => index.nodesIn({ x: 0, y: 0, width: 40, height: 40 }, { maximumCount: 0 })).toThrow(
+      RangeError,
+    )
+  })
 })

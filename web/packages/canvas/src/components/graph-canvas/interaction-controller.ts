@@ -445,14 +445,15 @@ export class FdGraphCanvasInteractionController {
     const configuration = this.delegate.resolvedConfiguration.snapping
     const radius = configuration.searchRadius / this.delegate.viewport.transform.zoom
     return this.delegate.graphIndex
-      .nodesIn({
-        x: bounds.x - radius,
-        y: bounds.y - radius,
-        width: bounds.width + radius * 2,
-        height: bounds.height + radius * 2,
-      })
-      .filter(({ id }) => !excluded.has(id))
-      .slice(0, configuration.maximumCandidates)
+      .nodesIn(
+        {
+          x: bounds.x - radius,
+          y: bounds.y - radius,
+          width: bounds.width + radius * 2,
+          height: bounds.height + radius * 2,
+        },
+        { maximumCount: configuration.maximumCandidates, excluding: excluded },
+      )
       .map(({ id, frame }) => ({ id, frame }))
   }
 

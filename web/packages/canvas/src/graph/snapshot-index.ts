@@ -15,6 +15,11 @@ export interface FdGraphSpatialIndexConfiguration {
   readonly maximumCellsPerElement?: number
 }
 
+export interface FdGraphSpatialQueryOptions<ID extends FdGraphElementID = FdGraphElementID> {
+  readonly maximumCount?: number
+  readonly excluding?: ReadonlySet<ID>
+}
+
 const defaultSpatialIndexConfiguration = {
   cellSize: 512,
   maximumCellsPerElement: 64,
@@ -84,17 +89,27 @@ class FdGraphBoundsGrid<ID extends FdGraphElementID> {
     return this.bounds.values()
   }
 
-  query(rect: FdCanvasRect): Set<ID> {
-    const candidates = new Set(this.overflow)
+  query(rect: FdCanvasRect, options: FdGraphSpatialQueryOptions<ID> = {}): Set<ID> {
+    const maximumCount = options.maximumCount ?? Number.MAX_SAFE_INTEGER
+    if (!Number.isInteger(maximumCount) || maximumCount <= 0) {
+      throw new RangeError('maximum query count must be a positive integer')
+    }
+    const candidates = new Set<ID>()
+    const consider = (id: ID): boolean => {
+      if (options.excluding?.has(id) || candidates.has(id)) return false
+      const bounds = this.bounds.get(id)
+      if (!bounds || !canvasRectsIntersect(bounds, rect)) return false
+      candidates.add(id)
+      return candidates.size >= maximumCount
+    }
+    for (const id of this.overflow) if (consider(id)) return candidates
     const range = this.cellRange(rect)
     for (let y = range.minimumY; y <= range.maximumY; y += 1) {
       for (let x = range.minimumX; x <= range.maximumX; x += 1) {
-        for (const id of this.cells.get(`${x}:${y}`) ?? []) candidates.add(id)
+        for (const id of this.cells.get(`${x}:${y}`) ?? []) {
+          if (consider(id)) return candidates
+        }
       }
-    }
-    for (const id of candidates) {
-      const bounds = this.bounds.get(id)
-      if (!bounds || !canvasRectsIntersect(bounds, rect)) candidates.delete(id)
     }
     return candidates
   }
@@ -254,8 +269,8 @@ export class FdGraphSnapshotIndex {
     })
   }
 
-  nodesIn(rect: FdCanvasRect): readonly FdAnyGraphNode[] {
-    return this.orderedValues(this.nodeGrid.query(rect), this.nodes, this.nodeOrder)
+  nodesIn(rect: FdCanvasRect, options: FdGraphSpatialQueryOptions = {}): readonly FdAnyGraphNode[] {
+    return this.orderedValues(this.nodeGrid.query(rect, options), this.nodes, this.nodeOrder)
   }
 
   edgesIn(rect: FdCanvasRect): readonly FdAnyGraphEdge[] {
