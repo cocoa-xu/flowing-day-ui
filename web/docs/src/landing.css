@@ -243,11 +243,11 @@ body {
   z-index: 1;
   box-sizing: border-box;
   grid-template-columns: minmax(300px, 360px) 900px;
-  grid-template-rows: minmax(calc(100dvh - 164px), auto) auto;
+  grid-template-rows: minmax(calc(100dvh - 164px), auto);
   gap: clamp(48px, 4.5vw, 80px);
   justify-content: center;
   min-height: 100dvh;
-  padding: 100px 32px 0;
+  padding: 100px 32px 64px;
   pointer-events: none;
 }
 
@@ -323,11 +323,8 @@ fd-preferences-window[data-separators="off"] fd-separator {
 
 .canvas-showcase {
   position: relative;
-  grid-column: 1 / -1;
-  grid-row: 2;
-  width: 100vw;
+  width: 100%;
   height: max(100dvh, 720px);
-  margin-inline: calc(50% - 50vw);
   overflow: visible;
   background: #fff;
   pointer-events: auto;
@@ -434,15 +431,15 @@ fd-preferences-window[data-separators="off"] fd-separator {
   position: absolute;
   top: 0;
   left: 0;
-  width: 1260px;
-  height: 460px;
+  width: 1040px;
+  height: 520px;
 }
 
 .canvas-edges {
   position: absolute;
   inset: 0;
-  width: 1200px;
-  height: 460px;
+  width: 1040px;
+  height: 520px;
   overflow: visible;
   fill: none;
   pointer-events: none;
@@ -451,8 +448,14 @@ fd-preferences-window[data-separators="off"] fd-separator {
   stroke-width: 2;
 }
 
-.canvas-edges path {
+.canvas-edges > path {
+  marker-end: url(#canvas-arrow);
   vector-effect: non-scaling-stroke;
+}
+
+.canvas-edges marker path {
+  fill: #b3b7b1;
+  stroke: none;
 }
 
 .canvas-node {
@@ -461,8 +464,9 @@ fd-preferences-window[data-separators="off"] fd-separator {
   left: var(--node-x);
   display: flex;
   align-items: center;
-  width: 220px;
-  height: 96px;
+  width: 240px;
+  height: 92px;
+  box-sizing: border-box;
   gap: 14px;
   padding: 18px;
   border: 1px solid #d9dcd7;
@@ -473,9 +477,13 @@ fd-preferences-window[data-separators="off"] fd-separator {
     inset 0 1px #fff;
 }
 
-.canvas-node-featured {
-  border-color: #bfc4bd;
-  background: #f7f8f5;
+.canvas-node-source {
+  border-color: #aeb3ac;
+  background: #f5f6f3;
+}
+
+.canvas-node-platform {
+  width: 260px;
 }
 
 .canvas-node-mark {
@@ -490,6 +498,18 @@ fd-preferences-window[data-separators="off"] fd-separator {
   font-size: 11px;
   font-weight: 700;
   place-items: center;
+}
+
+.canvas-node-source .canvas-node-mark {
+  width: 48px;
+  color: #464a45;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
+.canvas-node-capability .canvas-node-mark {
+  background: #e8ebe6;
+  color: #4f554e;
 }
 
 .canvas-node > span:last-child {
@@ -609,7 +629,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
 @media (max-width: 1400px) {
   .hero {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto;
     gap: 44px;
     justify-items: center;
     padding: 116px 24px 72px;
@@ -634,11 +654,6 @@ fd-preferences-window[data-separators="off"] fd-separator {
     grid-column: 1;
     grid-row: 2;
   }
-
-  .canvas-showcase {
-    grid-column: 1;
-    grid-row: 3;
-  }
 }
 
 @media (max-width: 720px) {
@@ -654,7 +669,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
     align-items: flex-start;
     gap: 34px;
     justify-items: start;
-    padding: 108px 16px 0;
+    padding: 108px 16px 48px;
   }
 
   .hero-copy {

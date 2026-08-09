@@ -61,7 +61,7 @@ if (landingBackdrop) {
 const canvasDemo = document.querySelector<FdCanvas>('#canvas-demo')
 const canvasGrid = document.querySelector<HTMLElement>('.canvas-grid')
 const canvasZoomValue = document.querySelector<HTMLOutputElement>('#canvas-zoom-value')
-const canvasContentRect = { x: 20, y: 50, width: 1240, height: 400 }
+const canvasContentRect = { x: 20, y: 20, width: 1020, height: 500 }
 
 function updateCanvasPresentation(canvas: FdCanvas): void {
   const { transform } = canvas.viewport
