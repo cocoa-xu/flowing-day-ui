@@ -30,6 +30,9 @@ export class FdOption extends FdElement {
   /** Icon registry key, used by `fd-symbol-segmented-row`. */
   @property({ reflect: true }) symbol: string | null = null
 
+  /** Optional base accent used to distinguish this option in popup menus. */
+  @property({ reflect: true }) accent: string | null = null
+
   /** Mirrors `PreferencesMultiSelectOption.isOn`; only meaningful in a multi-select. */
   @property({ type: Boolean, reflect: true }) selected = false
 

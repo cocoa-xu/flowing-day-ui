@@ -746,11 +746,13 @@ final class PreferencesSliderControl: NSControl {
 public struct PreferencesPopupOption<Value: Hashable>: Identifiable {
   public let value: Value
   public let label: String
+  public let accent: PreferencesAccent?
   public var id: Value { value }
 
-  public init(_ value: Value, label: String) {
+  public init(_ value: Value, label: String, accent: PreferencesAccent? = nil) {
     self.value = value
     self.label = label
+    self.accent = accent
   }
 }
 

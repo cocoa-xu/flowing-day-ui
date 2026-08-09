@@ -4,6 +4,16 @@ import XCTest
 @testable import FlowingDayPreferences
 
 final class PreferencesControlsTests: XCTestCase {
+  func testPopupOptionCanCarryItsOwnAccent() {
+    let option = PreferencesPopupOption(
+      "petal",
+      label: "Petal",
+      accent: PreferencesAccent.petal
+    )
+
+    XCTAssertEqual(option.accent, .petal)
+  }
+
   func testSectionSeparatorsFollowHomogeneousRowIconPresence() {
     XCTAssertEqual(
       PreferencesSectionSeparatorResolver.resolve(

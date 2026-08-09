@@ -30,6 +30,7 @@ struct PreferencesPopupControl<Value: Hashable>: NSViewRepresentable {
   private func update(_ button: PreferencesPopupButton, coordinator: Coordinator) {
     button.configure(
       labels: options.map(\.label),
+      optionAccents: options.map(\.accent),
       selectedIndex: options.firstIndex { $0.value == selection },
       minimumWidth: minimumWidth,
       accent: accent,
@@ -63,6 +64,7 @@ final class PreferencesPopupButton: NSButton {
 
   var onSelect: ((Int) -> Void)?
   private var labels: [String] = []
+  private var optionAccents: [PreferencesAccent?] = []
   private var selectedIndex: Int?
   private var minimumWidth: CGFloat = 0
   private var accent = PreferencesAccent.celadon
@@ -120,6 +122,7 @@ final class PreferencesPopupButton: NSButton {
 
   func configure(
     labels: [String],
+    optionAccents: [PreferencesAccent?] = [],
     selectedIndex: Int?,
     minimumWidth: CGFloat,
     accent: PreferencesAccent,
@@ -129,8 +132,10 @@ final class PreferencesPopupButton: NSButton {
     optionTextStyle: PreferencesTextStyle,
     menuBackgroundColor: Color
   ) {
-    let structureChanged = self.labels != labels || self.accent != accent
+    let structureChanged =
+      self.labels != labels || self.optionAccents != optionAccents || self.accent != accent
     self.labels = labels
+    self.optionAccents = optionAccents
     self.selectedIndex = selectedIndex
     self.minimumWidth = minimumWidth
     self.accent = accent
@@ -255,7 +260,14 @@ final class PreferencesPopupButton: NSButton {
       ?? NSScreen.main
     let visibleFrame = screen?.visibleFrame ?? anchorFrame.insetBy(dx: -400, dy: -400)
     let menuWidth = min(
-      max(bounds.width, PreferencesPopupMenuView.preferredWidth(for: labels, font: optionFont)),
+      max(
+        bounds.width,
+        PreferencesPopupMenuView.preferredWidth(
+          for: labels,
+          font: optionFont,
+          showsSwatches: optionAccents.contains { $0 != nil }
+        )
+      ),
       visibleFrame.width - 16
     )
     let menuSize = PreferencesPopupMenuView.menuSize(
@@ -278,6 +290,7 @@ final class PreferencesPopupButton: NSButton {
     panel.contentView = PreferencesPopupMenuView(
       frame: NSRect(origin: .zero, size: menuSize),
       labels: labels,
+      optionAccents: optionAccents,
       selectedIndex: selectedIndex,
       accent: accent,
       strings: strings,
@@ -485,6 +498,7 @@ private final class PreferencesPopupMenuView: NSView {
   init(
     frame: NSRect,
     labels: [String],
+    optionAccents: [PreferencesAccent?],
     selectedIndex: Int?,
     accent: PreferencesAccent,
     strings: PreferencesStrings,
@@ -501,10 +515,12 @@ private final class PreferencesPopupMenuView: NSView {
 
     for (index, label) in labels.enumerated() {
       let y = bounds.height - Self.verticalInset - CGFloat(index + 1) * Self.rowHeight
+      let itemAccent = optionAccents.indices.contains(index) ? optionAccents[index] : nil
       let button = PreferencesPopupOptionButton(
         frame: NSRect(x: 8, y: y + 2, width: bounds.width - 16, height: 32),
         title: label,
-        accent: accent,
+        accent: itemAccent ?? accent,
+        showsSwatch: itemAccent != nil,
         strings: strings,
         font: font,
         controlRadius: controlRadius
@@ -529,12 +545,16 @@ private final class PreferencesPopupMenuView: NSView {
     )
   }
 
-  static func preferredWidth(for labels: [String], font: NSFont) -> CGFloat {
+  static func preferredWidth(
+    for labels: [String],
+    font: NSFont,
+    showsSwatches: Bool = false
+  ) -> CGFloat {
     let textWidth =
       labels.map {
         ($0 as NSString).size(withAttributes: [.font: font]).width
       }.max() ?? 0
-    return ceil(textWidth) + 68
+    return ceil(textWidth) + (showsSwatches ? 85 : 68)
   }
 
   override func draw(_ dirtyRect: NSRect) {
@@ -566,6 +586,7 @@ private final class PreferencesPopupOptionButton: NSButton {
   private let strings: PreferencesStrings
   private let optionFont: NSFont
   private let controlRadius: CGFloat
+  private let showsSwatch: Bool
   private let perform: () -> Void
   private var hoverArea: NSTrackingArea?
   private var isHovered = false
@@ -585,6 +606,7 @@ private final class PreferencesPopupOptionButton: NSButton {
     frame: NSRect,
     title: String,
     accent: PreferencesAccent,
+    showsSwatch: Bool,
     strings: PreferencesStrings,
     font: NSFont,
     controlRadius: CGFloat,
@@ -595,6 +617,7 @@ private final class PreferencesPopupOptionButton: NSButton {
     self.strings = strings
     optionFont = font
     self.controlRadius = controlRadius
+    self.showsSwatch = showsSwatch
     self.perform = perform
     super.init(frame: frame)
     isBordered = false
@@ -668,11 +691,25 @@ private final class PreferencesPopupOptionButton: NSButton {
         hints: nil
       )
     }
+    if showsSwatch {
+      let swatchRect = NSRect(x: 37, y: bounds.midY - 6, width: 12, height: 12)
+      let swatch = NSBezierPath(ovalIn: swatchRect)
+      NSColor(accent.fill).setFill()
+      swatch.fill()
+      NSColor(accent.foreground).withAlphaComponent(0.2).setStroke()
+      swatch.lineWidth = 1
+      swatch.stroke()
+    }
     optionTitle.draw(
-      in: NSRect(x: 40, y: bounds.midY - 8, width: bounds.width - 50, height: 17),
+      in: NSRect(
+        x: showsSwatch ? 57 : 40,
+        y: bounds.midY - 8,
+        width: bounds.width - (showsSwatch ? 67 : 50),
+        height: 17
+      ),
       withAttributes: [
         .font: optionFont,
-        .foregroundColor: isSelected
+        .foregroundColor: isSelected || isHighlighted
           ? NSColor(accent.foreground)
           : NSColor(PreferencesPalette.ink),
       ]

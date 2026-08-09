@@ -1,6 +1,7 @@
 import { type CSSResultGroup, css, html, nothing, type PropertyValues } from 'lit'
 import { customElement, property, query, state } from 'lit/decorators.js'
 import { repeat } from 'lit/directives/repeat.js'
+import { styleMap } from 'lit/directives/style-map.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { checkmark, chevronDown, chevronUp } from '../../internal/glyphs.js'
 import { textRole } from '../../internal/typography.js'
@@ -10,6 +11,7 @@ import '../option/fd-option.js'
 export interface FdPopupOption {
   value: string
   label: string
+  accent?: string
 }
 
 /** `PreferencesPopupMenuView.rowHeight`. */
@@ -138,6 +140,11 @@ export class FdPopup extends FdElement {
       }
 
       .option {
+        --_option-fill: var(--_fd-accent-fill);
+        --_option-foreground: var(--_fd-accent-foreground);
+        --_option-wash: var(--_fd-accent-wash);
+        --_option-veil: var(--_fd-accent-veil);
+
         display: flex;
         align-items: center;
         flex: none;
@@ -152,12 +159,23 @@ export class FdPopup extends FdElement {
         cursor: pointer;
       }
 
+      .option[data-accent] {
+        --_option-fill: oklch(
+          from var(--_option-accent) calc(l + var(--_fd-accent-lift)) c h
+        );
+        --_option-foreground: oklch(
+          from var(--_option-fill) calc(l + var(--_fd-accent-contrast)) c h
+        );
+        --_option-wash: color-mix(in srgb, var(--_option-fill) 13%, transparent);
+        --_option-veil: color-mix(in srgb, var(--_option-fill) 8%, transparent);
+      }
+
       .option[data-highlighted] {
-        background: var(--_fd-accent-veil);
+        background: var(--_option-veil);
       }
 
       .option[aria-selected='true'] {
-        background: var(--_fd-accent-wash);
+        background: var(--_option-wash);
       }
 
       /* 22pt badge inset 8pt, with a 10pt checkmark centred inside it. */
@@ -170,13 +188,28 @@ export class FdPopup extends FdElement {
         height: 22px;
         margin-inline-start: 8px;
         border-radius: 50%;
-        background: var(--_fd-accent-veil);
-        color: var(--_fd-accent-foreground);
+        background: var(--_option-veil);
+        color: var(--_option-foreground);
       }
 
       .badge svg {
         width: 10px;
         height: 10px;
+      }
+
+      .swatch {
+        flex: none;
+        width: 12px;
+        height: 12px;
+        margin-inline-start: 37px;
+        border-radius: 50%;
+        background: var(--_option-fill);
+        box-shadow: inset 0 0 0 1px
+          color-mix(in srgb, var(--_option-foreground) 20%, transparent);
+      }
+
+      .badge + .swatch {
+        margin-inline-start: 7px;
       }
 
       /* Swift draws every option title at x 40, badge or not. */
@@ -195,8 +228,13 @@ export class FdPopup extends FdElement {
         margin-inline-start: 10px;
       }
 
+      .swatch + .option-label {
+        margin-inline-start: 8px;
+      }
+
+      .option[data-highlighted] .option-label,
       .option[aria-selected='true'] .option-label {
-        color: var(--_fd-accent-foreground);
+        color: var(--_option-foreground);
       }
 
       .measure {
@@ -334,7 +372,11 @@ export class FdPopup extends FdElement {
     this.slotted = (event.target as HTMLSlotElement)
       .assignedElements({ flatten: true })
       .filter((element): element is FdOption => element.localName === 'fd-option')
-      .map((element) => ({ value: element.value, label: element.optionLabel }))
+      .map((element) => ({
+        value: element.value,
+        label: element.optionLabel,
+        ...(element.accent ? { accent: element.accent } : {}),
+      }))
     this.dismiss()
   }
 
@@ -510,12 +552,15 @@ export class FdPopup extends FdElement {
               role="option"
               aria-selected=${index === selected}
               ?data-highlighted=${index === this.highlighted}
+              ?data-accent=${Boolean(option.accent)}
+              style=${styleMap({ '--_option-accent': option.accent ?? null })}
               @click=${() => this.#select(index)}
               @pointerenter=${() => {
                 this.highlighted = index
               }}
             >
               ${index === selected ? html`<span class="badge">${checkmark}</span>` : nothing}
+              ${option.accent ? html`<span class="swatch" aria-hidden="true"></span>` : nothing}
               <span class="option-label">${option.label}</span>
             </button>
           `,

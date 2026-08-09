@@ -64,6 +64,29 @@ describe('fd-popup options', () => {
     expect(element.resolvedOptions).toEqual([{ value: 'a', label: 'Alpha' }])
   })
 
+  it('uses an option accent without changing undecorated options', async () => {
+    const element = await mount(`
+      <fd-popup value="petal">
+        <fd-option value="petal" accent="#D67084">Petal</fd-option>
+        <fd-option value="all">All Colors…</fd-option>
+      </fd-popup>
+    `)
+
+    expect(element.resolvedOptions).toEqual([
+      { value: 'petal', label: 'Petal', accent: '#D67084' },
+      { value: 'all', label: 'All Colors…' },
+    ])
+
+    button(element).click()
+    await element.updateComplete
+    const rows = optionRows(element)
+    expect(rows[0]?.hasAttribute('data-accent')).toBe(true)
+    expect(rows[0]?.style.getPropertyValue('--_option-accent')).toBe('#D67084')
+    expect(rows[0]?.querySelector('.swatch')).not.toBeNull()
+    expect(rows[1]?.hasAttribute('data-accent')).toBe(false)
+    expect(rows[1]?.querySelector('.swatch')).toBeNull()
+  })
+
   it('shows the label of the selected option', async () => {
     const element = await mount(`<fd-popup value="ask">${OPTIONS}</fd-popup>`)
     expect(element.shadowRoot?.querySelector('.value')?.textContent).toBe('Ask every time')
