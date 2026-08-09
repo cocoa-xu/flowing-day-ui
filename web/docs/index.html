@@ -78,14 +78,14 @@
     </fd-canvas>
 
     <header class="site-header">
-      <a class="brand" href="#demo" aria-label="FlowingDayUI home">
+      <a class="brand" href="#components" aria-label="FlowingDayUI home">
         <img id="brand-app-icon" class="brand-mark" src="./src/app-icon.svg" alt="" />
         <span class="wordmark">FlowingDayUI</span>
       </a>
 
       <nav class="site-nav" aria-label="Primary navigation">
-        <a href="#demo" data-page="appearance">Preferences</a>
-        <a href="#demo" data-page="components">Components</a>
+        <a href="#components">Components</a>
+        <a href="#preferences" data-page="appearance">Preferences</a>
         <a href="#canvas">Canvas</a>
         <a
           class="github-link"
@@ -104,11 +104,87 @@
     </header>
 
     <main id="demo">
-      <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-copy">
+      <section class="component-hero" id="components" aria-labelledby="hero-title">
+        <div class="component-hero-copy">
           <p class="hero-kicker">SwiftUI + Web</p>
-          <h1 id="hero-title">Desktop precision. Web reach.</h1>
-          <p class="hero-summary">One calm design language, shaped for each platform.</p>
+          <h1 id="hero-title">Components that already feel at home.</h1>
+          <p class="hero-summary">Familiar at first glance. Careful in every interaction.</p>
+        </div>
+
+        <section class="component-composition" aria-label="Interactive component collection">
+          <article class="component-card component-card-selection">
+            <header>
+              <span>Choose</span>
+              <small class="component-card-caption">Clear options, kept together</small>
+            </header>
+            <fd-card>
+              <fd-connected-segmented-row
+                label="Layout"
+                value="balanced"
+                control-width="238"
+              >
+                <fd-option value="compact">Compact</fd-option>
+                <fd-option value="balanced">Balanced</fd-option>
+                <fd-option value="roomy">Roomy</fd-option>
+              </fd-connected-segmented-row>
+              <fd-separator></fd-separator>
+              <fd-popup-row id="hero-accent" label="Accent" value="petal" min-width="168">
+                <fd-option value="petal" accent="#D67084">Sakura Petal</fd-option>
+                <fd-option value="meadow" accent="#69A75F">Leaf Meadow</fd-option>
+                <fd-option value="sprout" accent="#60AB32">Honey Sprout</fd-option>
+              </fd-popup-row>
+            </fd-card>
+          </article>
+
+          <article class="component-card component-card-adjustment">
+            <header>
+              <span>Adjust</span>
+              <small class="component-card-caption">Precise without feeling busy</small>
+            </header>
+            <fd-card>
+              <fd-slider-row
+                label="Presence"
+                caption="A little more room to breathe."
+                min="0"
+                max="100"
+                step="1"
+                value="68"
+              ></fd-slider-row>
+              <fd-separator></fd-separator>
+              <fd-switch-row label="Gentle Motion" checked></fd-switch-row>
+            </fd-card>
+          </article>
+
+          <article class="component-card component-card-action">
+            <header>
+              <span>Act</span>
+              <small class="component-card-caption">Inviting, never demanding</small>
+            </header>
+            <fd-card>
+              <fd-button-row
+                id="hero-save"
+                label="Save This Moment"
+                caption="Actions stay close to their meaning."
+                button-label="Save"
+              ></fd-button-row>
+              <fd-separator></fd-separator>
+              <fd-value-row id="hero-save-value" label="Last Saved" value="Ready"></fd-value-row>
+            </fd-card>
+          </article>
+
+          <section class="component-tags" aria-label="Component qualities">
+            <fd-tag>Responsive</fd-tag>
+            <fd-tag>Accessible</fd-tag>
+            <fd-tag>Native-minded</fd-tag>
+          </section>
+        </section>
+      </section>
+
+      <section class="preferences-showcase" id="preferences" aria-labelledby="preferences-title">
+        <div class="preferences-showcase-copy">
+          <p class="hero-kicker">Composed</p>
+          <h2 id="preferences-title">Small pieces, at home together.</h2>
+          <p class="hero-summary">A complete Preferences experience built from the same controls.</p>
         </div>
 
       <fd-preferences-window

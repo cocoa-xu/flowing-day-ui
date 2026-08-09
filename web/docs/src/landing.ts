@@ -264,6 +264,7 @@ systemScheme.addEventListener('change', () => {
 
 function applyAccent(hex: string): void {
   set('--fd-accent', hex)
+  document.documentElement.style.setProperty('--fd-accent', hex)
   scheduleLandingAccent(hex)
   const well = document.querySelector<FdColorPickerRow>('#custom-accent')
   if (well) well.value = hex.toLowerCase()
@@ -285,6 +286,7 @@ function scheduleLandingAccent(hex: string): void {
 }
 
 const accentPopup = document.querySelector<FdPopupRow>('#accent')
+const heroAccentPopup = document.querySelector<FdPopupRow>('#hero-accent')
 const allAccentRows = document.querySelector<FdDependentRows>('#all-accent-rows')
 accentPopup?.addEventListener('fd-change', (event) => {
   if (event.detail.value === 'all') {
@@ -293,12 +295,21 @@ accentPopup?.addEventListener('fd-change', (event) => {
   }
   if (allAccentRows) allAccentRows.visible = false
   if (event.detail.value && isNamedAccent(event.detail.value)) {
+    if (heroAccentPopup) heroAccentPopup.value = event.detail.value
     applyAccent(namedAccents[event.detail.value])
   }
 })
 if (accentPopup?.value && isNamedAccent(accentPopup.value)) {
   applyAccent(namedAccents[accentPopup.value])
 }
+
+heroAccentPopup?.addEventListener('fd-change', (event) => {
+  if (event.detail.value && isNamedAccent(event.detail.value)) {
+    if (accentPopup) accentPopup.value = event.detail.value
+    if (allAccentRows) allAccentRows.visible = false
+    applyAccent(namedAccents[event.detail.value])
+  }
+})
 
 onSegment('corners', (value) => {
   const corners = CORNERS[value]
@@ -394,6 +405,11 @@ document.querySelector<HTMLElement>('#press')?.addEventListener('fd-activate', (
   pressCount += 1
   const readout = document.querySelector<FdValueRow>('#press-readout')
   if (readout) readout.value = `Pressed ${pressCount} ${pressCount === 1 ? 'time' : 'times'}`
+})
+
+document.querySelector<HTMLElement>('#hero-save')?.addEventListener('fd-activate', () => {
+  const readout = document.querySelector<FdValueRow>('#hero-save-value')
+  if (readout) readout.value = 'Just now'
 })
 
 for (const link of document.querySelectorAll<HTMLAnchorElement>('[data-page]')) {
