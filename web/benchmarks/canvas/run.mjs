@@ -18,10 +18,12 @@ const scenarios = (argumentsByName.get('scenarios') ?? 'pan,zoom,drag,click')
   .filter((value) => supportedScenarios.has(value))
 const duration = Math.max(Number(argumentsByName.get('duration') ?? 2_000), 500)
 const backend = argumentsByName.get('backend') ?? 'automatic'
+const frameUpdates = argumentsByName.get('frame-updates') ?? 'intent'
 const output = argumentsByName.get('output')
 if (counts.length === 0) throw new Error('at least one positive node count is required')
 if (scenarios.length === 0) throw new Error('at least one supported scenario is required')
 if (!['automatic', 'webgl2', 'dom'].includes(backend)) throw new Error('unsupported backend')
+if (!['intent', 'local'].includes(frameUpdates)) throw new Error('unsupported frame update mode')
 const port = await availablePort()
 const server = await createViteServer({
   root: import.meta.dirname,
@@ -40,7 +42,7 @@ const results = []
 
 try {
   for (const count of counts) {
-    const url = `http://127.0.0.1:${port}/?nodes=${count}&backend=${backend}`
+    const url = `http://127.0.0.1:${port}/?nodes=${count}&backend=${backend}&frameUpdates=${frameUpdates}`
     await page.goto(url, { waitUntil: 'networkidle' })
     await page.evaluate(() => window.fdCanvasBenchmark.ready)
     const metadata = await page.evaluate(async () => ({
@@ -49,6 +51,7 @@ try {
       buildDuration: window.fdCanvasBenchmark.buildDuration,
       initializationDuration: await window.fdCanvasBenchmark.initializationDuration,
       backend: window.fdCanvasBenchmark.backend,
+      frameUpdates: window.fdCanvasBenchmark.frameUpdates,
       devicePixelRatio: window.devicePixelRatio,
       screen: { width: window.screen.width, height: window.screen.height },
       hardwareConcurrency: navigator.hardwareConcurrency,
@@ -59,6 +62,7 @@ try {
           window.fdCanvasBenchmark.measure(name, measurementDuration),
         [scenario, duration],
       )
+      await devtools.send('HeapProfiler.collectGarbage')
       const performanceMetrics = await devtools.send('Performance.getMetrics')
       const heapUsed = performanceMetrics.metrics.find(
         ({ name }) => name === 'JSHeapUsedSize',
@@ -76,6 +80,7 @@ try {
         `${String(count).padStart(6)} ${scenario.padEnd(5)} ${result.backend.padEnd(7)} ` +
           `${(result.refreshInterval || 0).toFixed(2)}ms refresh ` +
           `${(result.p95 || 0).toFixed(2)}ms p95 ` +
+          `${(result.inputP95 || 0).toFixed(2)}ms input ` +
           `${((result.frameDelivery || 0) * 100).toFixed(1)}% delivery ` +
           `${result.droppedFrameCount} dropped ` +
           `${(result.heapUsedMB ?? 0).toFixed(1)}MB heap\n`,

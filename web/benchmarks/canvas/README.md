@@ -16,11 +16,16 @@ Limit the run or retain structured results when investigating a regression:
 pnpm benchmark:canvas -- \
   --counts=10000,50000,100000 \
   --scenarios=pan,zoom,drag,click \
+  --frame-updates=intent \
   --duration=2000 \
   --output=/tmp/flowing-day-canvas-benchmark.json
 ```
 
 The runner maximizes Chromium on the main display, calibrates the observed refresh interval before
-every scenario, and reports frame-time percentiles, frame delivery, dropped frames, DOM size, and
-JavaScript heap use. `automatic` is the default rendering backend; use `--backend=dom` or
+every scenario, and reports frame-time percentiles, synchronous input-handler cost, frame delivery,
+dropped frames, DOM size, and JavaScript heap use after forced garbage collection. `automatic` is
+the default rendering backend; use `--backend=dom` or
 `--backend=webgl2` only for controlled comparisons.
+
+The default frame update mode is `intent`. Use `--frame-updates=local` to include the package-owned
+local snapshot commit in drag measurements.

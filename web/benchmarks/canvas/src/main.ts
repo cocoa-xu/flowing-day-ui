@@ -19,6 +19,8 @@ interface FdFrameMetrics {
   readonly p99: number
   readonly longFrameCount: number
   readonly droppedFrameCount: number
+  readonly inputP95: number
+  readonly inputMaximum: number
 }
 
 interface FdCanvasBenchmarkAPI {
@@ -28,6 +30,7 @@ interface FdCanvasBenchmarkAPI {
   readonly buildDuration: number
   readonly initializationDuration: Promise<number>
   readonly backend: string
+  readonly frameUpdates: 'intent' | 'local'
   measure(scenario: FdBenchmarkScenario, duration: number): Promise<FdFrameMetrics>
 }
 
@@ -47,6 +50,7 @@ const parameters = new URLSearchParams(location.search)
 const nodeCount = Math.max(Number(parameters.get('nodes') ?? 1_000), 1)
 const requestedBackend = (parameters.get('backend') ??
   'automatic') as FdGraphRenderingBackendPreference
+const frameUpdates = parameters.get('frameUpdates') === 'local' ? 'local' : 'intent'
 const columnCount = Math.max(Math.ceil(Math.sqrt(nodeCount * 1.7)), 1)
 const horizontalSpacing = 132
 const verticalSpacing = 84
@@ -89,6 +93,7 @@ graph.interactionConfiguration = {
   multipleNodeDragging: true,
   nodeResizing: true,
   groupResizing: true,
+  frameUpdates,
 }
 graph.miniMapConfiguration = {
   visibility: 'always',
@@ -114,6 +119,7 @@ function percentile(values: readonly number[], ratio: number): number {
 async function sampleFrames(
   duration: number,
   update?: (elapsed: number, frame: number) => void,
+  updateDurations?: number[],
 ): Promise<readonly number[]> {
   const timestamps: number[] = []
   const startedAt = await animationFrame()
@@ -121,7 +127,11 @@ async function sampleFrames(
     const step = (now: number): void => {
       const elapsed = now - startedAt
       timestamps.push(now)
-      update?.(elapsed, timestamps.length)
+      if (update) {
+        const updateStartedAt = performance.now()
+        update(elapsed, timestamps.length)
+        updateDurations?.push(performance.now() - updateStartedAt)
+      }
       if (elapsed >= duration) resolve(timestamps)
       else requestAnimationFrame(step)
     }
@@ -138,11 +148,16 @@ async function measureRefreshInterval(): Promise<number> {
   return percentile(intervals, 0.5)
 }
 
-function metrics(timestamps: readonly number[], refreshInterval: number): FdFrameMetrics {
+function metrics(
+  timestamps: readonly number[],
+  refreshInterval: number,
+  updateDurations: readonly number[],
+): FdFrameMetrics {
   const intervals = timestamps
     .slice(1)
     .map((timestamp, index) => timestamp - (timestamps[index] ?? timestamp))
   const sorted = [...intervals].sort((first, second) => first - second)
+  const sortedUpdateDurations = [...updateDurations].sort((first, second) => first - second)
   const duration = Math.max((timestamps.at(-1) ?? 0) - (timestamps[0] ?? 0), 0)
   const expectedFrameCount = duration / refreshInterval
   return {
@@ -159,6 +174,8 @@ function metrics(timestamps: readonly number[], refreshInterval: number): FdFram
       (total, interval) => total + Math.max(Math.round(interval / refreshInterval) - 1, 0),
       0,
     ),
+    inputP95: percentile(sortedUpdateDurations, 0.95),
+    inputMaximum: sortedUpdateDurations.at(-1) ?? 0,
   }
 }
 
@@ -198,7 +215,9 @@ function pointerDispatcher(
   const clientX = bounds.left + start.x
   const clientY = bounds.top + start.y
   let active = false
+  let finished = false
   return (elapsed, frame) => {
+    if (finished) return
     if (!active) {
       target.dispatchEvent(
         new PointerEvent('pointerdown', {
@@ -232,7 +251,10 @@ function pointerDispatcher(
         cancelable: true,
       }),
     )
-    if (shouldRelease) active = false
+    if (shouldRelease) {
+      active = false
+      finished = scenario === 'drag'
+    }
   }
 }
 
@@ -245,7 +267,12 @@ async function measure(scenario: FdBenchmarkScenario, duration: number): Promise
       : scenario === 'zoom'
         ? (elapsed: number) => dispatchWheel(0, Math.sin(elapsed / 520) * 0.7, true)
         : pointerDispatcher(scenario, duration)
-  return metrics(await sampleFrames(duration, update), refreshInterval)
+  const updateDurations: number[] = []
+  return metrics(
+    await sampleFrames(duration, update, updateDurations),
+    refreshInterval,
+    updateDurations,
+  )
 }
 
 const initializationStartedAt = performance.now()
@@ -263,5 +290,6 @@ window.fdCanvasBenchmark = {
   get backend() {
     return graph.resolvedRenderingBackend?.kind ?? 'pending'
   },
+  frameUpdates,
   measure,
 }
