@@ -14,9 +14,11 @@ import type {
 import type {
   FdGraphRenderFrame,
   FdGraphRenderingBackend,
+  FdGraphRenderingBackendPreference,
   FdGraphRenderingSurface,
 } from '../../rendering/backend.js'
 import { FdGraphDOMRenderingBackend } from '../../rendering/dom-backend.js'
+import { FdGraphWebGL2RenderingBackend } from '../../rendering/webgl2-backend.js'
 import type { FdGraphCanvas } from './fd-graph-canvas.js'
 import './fd-graph-canvas.js'
 
@@ -51,7 +53,7 @@ const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() 
 
 async function mount(
   snapshot: FdAnyGraphSnapshot = graphSnapshot(),
-  backend?: FdGraphRenderingBackend,
+  backend?: FdGraphRenderingBackend | FdGraphRenderingBackendPreference,
 ): Promise<FdGraphCanvas> {
   const element = document.createElement('fd-graph-canvas')
   element.style.width = '800px'
@@ -140,10 +142,11 @@ describe('fd-graph-canvas rendering boundary', () => {
     const element = await mount()
     const root = element.shadowRoot
 
-    expect(element.resolvedRenderingBackend?.kind).toBe('dom')
+    expect(element.resolvedRenderingBackend?.kind).toBe('webgl2')
+    expect(root?.querySelectorAll('.graph-gpu-layer')).toHaveLength(1)
     expect(root?.querySelectorAll('.graph-node')).toHaveLength(2)
     expect(root?.querySelectorAll('.graph-port')).toHaveLength(2)
-    expect(root?.querySelectorAll('.graph-edge')).toHaveLength(1)
+    expect(root?.querySelectorAll('.graph-edge')).toHaveLength(0)
     expect(root?.querySelector('.graph-edge-label')?.textContent).toBe('Data')
   })
 
@@ -198,6 +201,31 @@ describe('fd-graph-canvas rendering boundary', () => {
     const element = await mount(graphSnapshot(), backend)
 
     expect(element.shadowRoot?.querySelector('.graph-node')?.textContent).toContain('Custom Source')
+  })
+
+  it('keeps model hit testing available when dense nodes use GPU level of detail', async () => {
+    const element = await mount(
+      graphSnapshot(),
+      new FdGraphWebGL2RenderingBackend({ maximumDOMNodeCount: 0 }),
+    )
+    const canvas = preparePointerInput(element)
+    const point = clientPoint(element, { x: 100, y: 120 })
+
+    expect(element.shadowRoot?.querySelectorAll('.graph-node')).toHaveLength(0)
+    dispatchPointer(canvas, 'pointerdown', point)
+    dispatchPointer(canvas, 'pointerup', point)
+
+    expect(element.selectedNodeIDs.has('source')).toBe(true)
+  })
+
+  it('falls back to complete DOM rendering after WebGL context loss', async () => {
+    const element = await mount()
+    const canvas = element.shadowRoot?.querySelector<HTMLCanvasElement>('.graph-gpu-layer')
+
+    canvas?.dispatchEvent(new Event('webglcontextlost', { cancelable: true }))
+
+    expect(element.shadowRoot?.querySelectorAll('.graph-edge')).toHaveLength(1)
+    expect(element.shadowRoot?.querySelectorAll('.graph-node')).toHaveLength(2)
   })
 
   it('only sends a bounded visible slice of a hundred-thousand-node graph to the backend', async () => {
@@ -519,7 +547,7 @@ describe('fd-graph-canvas keyboard editing', () => {
 
 describe('fd-graph-canvas accessibility', () => {
   it('uses one composite tab stop with a bounded active-descendant window', async () => {
-    const element = await mount()
+    const element = await mount(graphSnapshot(), 'dom')
     const canvas = element.shadowRoot?.querySelector('fd-canvas')
     const viewport = canvas?.shadowRoot?.querySelector('.viewport')
     const surface = element.shadowRoot?.querySelector<HTMLElement>('.accessibility-surface')

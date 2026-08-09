@@ -82,7 +82,12 @@ import type {
   FdGraphRenderingBackendPreference,
   FdGraphRenderNode,
 } from '../../rendering/backend.js'
+import {
+  graphRenderingCapabilities,
+  resolveGraphRenderingBackendKind,
+} from '../../rendering/backend.js'
 import { FdGraphDOMRenderingBackend } from '../../rendering/dom-backend.js'
+import { FdGraphWebGL2RenderingBackend } from '../../rendering/webgl2-backend.js'
 import type { FdCanvas, FdCanvasTransformOptions } from '../canvas/fd-canvas.js'
 import '../canvas/fd-canvas.js'
 import type { FdGraphMiniMap } from '../graph-minimap/fd-graph-minimap.js'
@@ -128,6 +133,14 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       position: absolute;
       top: 0;
       left: 0;
+    }
+
+    .graph-gpu-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
     }
 
     .render-viewport {
@@ -756,6 +769,22 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
   }
 
+  nodeIDAtViewportPoint(point: FdCanvasPoint): FdGraphElementID | undefined {
+    const worldPoint = this.canvas.viewport.transform.removePoint(point)
+    for (const [nodeID, frame] of [...this.interactionPresentation.frames].reverse()) {
+      if (canvasRectContains(frame, { ...worldPoint, width: 0, height: 0 })) return nodeID
+    }
+    const tolerance = 1 / this.canvas.viewport.transform.zoom
+    return this.index
+      .nodesIn({
+        x: worldPoint.x - tolerance,
+        y: worldPoint.y - tolerance,
+        width: tolerance * 2,
+        height: tolerance * 2,
+      })
+      .at(-1)?.id
+  }
+
   setSelection(
     selection: ReadonlySet<FdGraphElementID>,
     detail: Omit<FdGraphSelectionChangeDetail, 'selectedNodeIDs'>,
@@ -817,6 +846,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   }
 
   private handleGraphPointerDown = (event: PointerEvent): void => {
+    const hitNodeID = this.nodeIDAtViewportPoint(this.viewportPoint(event))
     if (!this.interactionController?.pointerDown(event)) return
     const nodeElement = event
       .composedPath()
@@ -825,7 +855,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
           target instanceof HTMLElement && target.matches('[data-fd-graph-node]'),
       )
     const key = nodeElement?.dataset.fdGraphNode
-    const nodeID = key ? graphElementIDFromKey(key) : undefined
+    const nodeID = key ? graphElementIDFromKey(key) : hitNodeID
     if (nodeID !== undefined) this.setFocusedNode(nodeID, 'pointer', false)
     if (this.resolvedAccessibilityConfiguration.enabled) {
       this.accessibilitySurface.focus({ preventScroll: true })
@@ -858,10 +888,14 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   private activateBackend(): void {
     if (!this.renderViewport || !this.renderWorld) return
     this.backend?.unmount()
-    this.backend =
-      typeof this.renderingBackend === 'string'
-        ? new FdGraphDOMRenderingBackend()
-        : this.renderingBackend
+    if (typeof this.renderingBackend === 'string') {
+      const kind = resolveGraphRenderingBackendKind(
+        this.renderingBackend,
+        graphRenderingCapabilities(),
+      )
+      this.backend =
+        kind === 'webgl2' ? new FdGraphWebGL2RenderingBackend() : new FdGraphDOMRenderingBackend()
+    } else this.backend = this.renderingBackend
     this.activeBackendSource = this.renderingBackend
     this.backend.mount({ viewport: this.renderViewport, world: this.renderWorld })
     this.scheduleRenderFrame()

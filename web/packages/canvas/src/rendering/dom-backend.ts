@@ -9,6 +9,9 @@ import type {
 
 export interface FdGraphDOMRenderingBackendConfiguration {
   readonly createNodeContent?: (node: FdGraphRenderFrame['nodes'][number]) => Node | string | null
+  readonly rendersEdgePaths?: boolean
+  readonly rendersEdgeLabels?: boolean
+  readonly rendersNodes?: boolean
 }
 
 const svgNamespace = 'http://www.w3.org/2000/svg'
@@ -68,6 +71,11 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
   }
 
   private updateNodes(frame: FdGraphRenderFrame): void {
+    if (this.configuration.rendersNodes === false) {
+      this.nodeLayer.replaceChildren()
+      this.nodeElements.clear()
+      return
+    }
     const visibleKeys = new Set<string>()
     for (const rendered of frame.nodes) {
       const key = graphElementKey(rendered.node.id)
@@ -154,27 +162,30 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     for (const rendered of edges) {
       const key = graphElementKey(rendered.edge.id)
       visibleKeys.add(key)
-      let path = this.edgeElements.get(key)
-      if (!path) {
-        path = document.createElementNS(svgNamespace, 'path')
-        path.classList.add('graph-edge')
-        path.setAttribute('part', 'edge')
-        path.dataset.fdGraphEdge = key
-        this.edgeElements.set(key, path)
-        this.edgeLayer.append(path)
+      if (this.configuration.rendersEdgePaths !== false) {
+        let path = this.edgeElements.get(key)
+        if (!path) {
+          path = document.createElementNS(svgNamespace, 'path')
+          path.classList.add('graph-edge')
+          path.setAttribute('part', 'edge')
+          path.dataset.fdGraphEdge = key
+          this.edgeElements.set(key, path)
+          this.edgeLayer.append(path)
+        }
+        path.setAttribute('d', this.edgePath(rendered))
+        this.setOptionalStyle(path.style, '--fd-graph-edge-color', rendered.edge.style?.color)
+        this.setOptionalStyle(
+          path.style,
+          '--fd-graph-edge-width',
+          rendered.edge.style?.width === undefined ? undefined : `${rendered.edge.style.width}px`,
+        )
+        path.toggleAttribute('data-dashed', rendered.edge.style?.dashed === true)
+        path.toggleAttribute('data-selected', rendered.selected)
+        path.toggleAttribute('data-focused', rendered.focused)
+        path.toggleAttribute('data-hovered', rendered.hovered)
       }
-      path.setAttribute('d', this.edgePath(rendered))
-      this.setOptionalStyle(path.style, '--fd-graph-edge-color', rendered.edge.style?.color)
-      this.setOptionalStyle(
-        path.style,
-        '--fd-graph-edge-width',
-        rendered.edge.style?.width === undefined ? undefined : `${rendered.edge.style.width}px`,
-      )
-      path.toggleAttribute('data-dashed', rendered.edge.style?.dashed === true)
-      path.toggleAttribute('data-selected', rendered.selected)
-      path.toggleAttribute('data-focused', rendered.focused)
-      path.toggleAttribute('data-hovered', rendered.hovered)
-      if (rendered.edge.label) this.updateEdgeLabel(key, rendered)
+      if (this.configuration.rendersEdgeLabels !== false && rendered.edge.label)
+        this.updateEdgeLabel(key, rendered)
       else this.removeEdgeLabel(key)
     }
     for (const [key, path] of this.edgeElements) {

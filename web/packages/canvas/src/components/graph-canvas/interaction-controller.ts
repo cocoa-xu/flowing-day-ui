@@ -41,6 +41,7 @@ export interface FdGraphCanvasInteractionDelegate {
   readonly resolvedConfiguration: FdResolvedGraphCanvasInteractionConfiguration
   readonly selectedNodeIDs: ReadonlySet<FdGraphElementID>
   viewportPoint(event: PointerEvent): FdCanvasPoint
+  nodeIDAtViewportPoint(point: FdCanvasPoint): FdGraphElementID | undefined
   setSelection(
     selection: ReadonlySet<FdGraphElementID>,
     detail: Omit<FdGraphSelectionChangeDetail, 'selectedNodeIDs'>,
@@ -510,7 +511,7 @@ export class FdGraphCanvasInteractionController {
       const key = candidate.dataset.fdGraphNode
       if (key) return graphElementIDFromKey(key)
     }
-    return undefined
+    return this.delegate.nodeIDAtViewportPoint(this.delegate.viewportPoint(event))
   }
 
   private resizeHandle(event: PointerEvent): FdGraphResizeHandle | undefined {
