@@ -45,6 +45,22 @@ const edgeFrame = (
   height: Math.max(Math.abs(target.y - source.y), 22),
 })
 
+const validatedDescription = (
+  description: FdGraphAccessibilityDescription,
+): FdGraphAccessibilityDescription => {
+  if (!description.label.trim()) throw new RangeError('accessibility label must not be empty')
+  const actionIDs = new Set<string>()
+  for (const action of description.actions ?? []) {
+    if (!action.id.trim()) throw new RangeError('accessibility action ID must not be empty')
+    if (!action.label.trim()) throw new RangeError('accessibility action label must not be empty')
+    if (actionIDs.has(action.id)) {
+      throw new RangeError(`duplicate accessibility action ID ${action.id}`)
+    }
+    actionIDs.add(action.id)
+  }
+  return description
+}
+
 export class FdGraphAccessibilitySnapshot {
   private readonly itemValues: FdGraphAccessibilityItem[]
   private readonly indexByKey = new Map<string, number>()
@@ -171,7 +187,7 @@ export function createGraphAccessibilitySnapshot(
         kind: 'node',
         reference: { kind: 'node', nodeID: node.id },
         frame: node.frame,
-        description: representation.description,
+        description: validatedDescription(representation.description),
         relatedElementKeys: relatedNodes.get(node.id) ?? [],
       })
     }
@@ -183,7 +199,7 @@ export function createGraphAccessibilitySnapshot(
         kind: 'port',
         reference: { kind: 'port', nodeID: node.id, portID: port.id },
         frame: portFrame(node, port),
-        description: portRepresentation.description,
+        description: validatedDescription(portRepresentation.description),
         relatedElementKeys: [nodeKey(node.id)],
       })
     }
@@ -202,7 +218,7 @@ export function createGraphAccessibilitySnapshot(
         graphPortPoint(sourceNode, edge.source.portID),
         graphPortPoint(targetNode, edge.target.portID),
       ),
-      description: representation.description,
+      description: validatedDescription(representation.description),
       relatedElementKeys: [nodeKey(edge.source.nodeID), nodeKey(edge.target.nodeID)],
     })
   }

@@ -5,6 +5,7 @@ export type FdGraphAccessibilityAction =
   | { readonly kind: 'focus' }
   | { readonly kind: 'select' }
   | { readonly kind: 'activate' }
+  | { readonly kind: 'perform'; readonly actionID: string }
   | {
       readonly kind: 'move'
       readonly direction: FdGraphNavigationDirection

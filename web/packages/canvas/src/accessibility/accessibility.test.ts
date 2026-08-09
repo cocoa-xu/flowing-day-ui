@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { FdAnyGraphSnapshot } from '../graph/model.js'
 import { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
-import { resolveGraphCanvasAccessibilityConfiguration } from './configuration.js'
+import {
+  defaultGraphAccessibilityCommandResolver,
+  resolveGraphCanvasAccessibilityConfiguration,
+} from './configuration.js'
 import {
   createGraphAccessibilitySnapshot,
   FdGraphAccessibilitySnapshot,
@@ -63,6 +66,31 @@ describe('graph accessibility configuration', () => {
 
     expect(standard.items.map(({ kind }) => kind)).toEqual(['node', 'port', 'node', 'edge'])
     expect(nodesOnly.items.map(({ kind }) => kind)).toEqual(['node', 'node'])
+  })
+
+  it('provides a default connected-element command and validates custom actions', () => {
+    expect(
+      defaultGraphAccessibilityCommandResolver(
+        new KeyboardEvent('keydown', { key: 'ArrowRight', altKey: true }),
+      ),
+    ).toEqual({ kind: 'focusNextRelated' })
+    expect(() =>
+      createGraphAccessibilitySnapshot(
+        graph,
+        resolveGraphCanvasAccessibilityConfiguration({
+          nodeRepresentation: () => ({
+            kind: 'element',
+            description: {
+              label: 'Node',
+              actions: [
+                { id: 'inspect', label: 'Inspect' },
+                { id: 'inspect', label: 'Inspect again' },
+              ],
+            },
+          }),
+        }),
+      ),
+    ).toThrow('duplicate accessibility action ID inspect')
   })
 })
 

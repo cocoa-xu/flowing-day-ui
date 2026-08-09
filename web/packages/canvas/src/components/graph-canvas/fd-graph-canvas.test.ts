@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { defaultGraphAccessibilityCommandResolver } from '../../accessibility/configuration.js'
 import type { FdGraphAccessibilityActionDetail } from '../../accessibility/events.js'
 import type { FdCanvasPoint } from '../../geometry.js'
 import type {
@@ -1120,6 +1121,49 @@ describe('fd-graph-canvas accessibility', () => {
       'move',
       'activate',
     ])
+  })
+
+  it('navigates connected elements and dispatches consumer-defined accessibility actions', async () => {
+    const element = document.createElement('fd-graph-canvas')
+    element.style.width = '800px'
+    element.style.height = '600px'
+    element.snapshot = graphSnapshot()
+    element.renderingBackend = 'dom'
+    element.accessibilityConfiguration = {
+      resolveCommand: (event) =>
+        event.key === 'i'
+          ? { kind: 'perform', actionID: 'inspect' }
+          : defaultGraphAccessibilityCommandResolver(event),
+      nodeRepresentation: (node) => ({
+        kind: 'element',
+        description: {
+          label: String(node.label),
+          identifier: `node-${String(node.id)}`,
+          actions: [{ id: 'inspect', label: 'Inspect node' }],
+        },
+      }),
+    }
+    const actions: FdGraphAccessibilityActionDetail[] = []
+    element.addEventListener('fd-graph-accessibility-action', (event) => actions.push(event.detail))
+    document.body.append(element)
+    await element.updateComplete
+    await nextFrame()
+    const surface = element.shadowRoot?.querySelector<HTMLElement>('.accessibility-surface')
+
+    surface?.focus()
+    dispatchKey(surface ?? element, 'ArrowRight', { altKey: true })
+    expect(surface?.getAttribute('aria-activedescendant')).toContain('node%3As%3Atarget')
+
+    dispatchKey(surface ?? element, 'i')
+
+    expect(actions.at(-1)).toEqual({
+      element: { kind: 'node', nodeID: 'target' },
+      action: { kind: 'perform', actionID: 'inspect' },
+    })
+    const targetRow = element.shadowRoot?.querySelector<HTMLElement>(
+      '[data-fd-graph-accessibility-identifier="node-target"]',
+    )
+    expect(targetRow?.getAttribute('aria-description')).toBe('Inspect node')
   })
 
   it('lets consumers replace accessibility commands and opt out completely', async () => {

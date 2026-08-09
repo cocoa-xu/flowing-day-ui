@@ -796,6 +796,10 @@ export class FdGraphCanvas
     this.historyDriver.clear()
   }
 
+  performFocusedAccessibilityAction(actionID: string): boolean {
+    return this.performAccessibilityElementAction(this.accessibilityFocusedElementKey, actionID)
+  }
+
   override render() {
     return html`
       <fd-canvas
@@ -1494,13 +1498,22 @@ export class FdGraphCanvas
         return this.focusAccessibilityElement(this.accessibilitySnapshot.firstElementKey)
       case 'focusLast':
         return this.focusAccessibilityElement(this.accessibilitySnapshot.lastElementKey)
+      case 'focusNextRelated':
+        return this.focusNextRelatedAccessibilityElement(currentKey)
       case 'select':
         return this.selectAccessibilityElement(currentKey)
       case 'activate':
         return this.activateAccessibilityElement(currentKey)
+      case 'perform':
+        return this.performAccessibilityElementAction(currentKey, command.actionID)
       case 'move':
         return this.moveAccessibilityElement(currentKey, command.direction, command.large)
     }
+  }
+
+  private focusNextRelatedAccessibilityElement(key: string | undefined): boolean {
+    if (!key || !this.resolvedAccessibilityConfiguration.capabilities.connections) return false
+    return this.focusAccessibilityElement(this.accessibilitySnapshot.relatedElementKeys(key)[0])
   }
 
   private focusAccessibilityElement(key: string | undefined): boolean {
@@ -1550,6 +1563,14 @@ export class FdGraphCanvas
     if (!item) return false
     if (!this.dispatchAccessibilityAction(item.reference, { kind: 'activate' })) return true
     return item.kind !== 'node' || this.activateFocusedNode('accessibility')
+  }
+
+  private performAccessibilityElementAction(key: string | undefined, actionID: string): boolean {
+    if (!key || !this.resolvedAccessibilityConfiguration.capabilities.elementActions) return false
+    const item = this.accessibilitySnapshot.item(key)
+    if (!item?.description.actions?.some(({ id }) => id === actionID)) return false
+    this.dispatchAccessibilityAction(item.reference, { kind: 'perform', actionID })
+    return true
   }
 
   private moveAccessibilityElement(

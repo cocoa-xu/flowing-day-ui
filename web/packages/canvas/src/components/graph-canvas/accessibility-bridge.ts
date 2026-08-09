@@ -74,6 +74,11 @@ export class FdGraphCanvasAccessibilityBridge {
     element.setAttribute('aria-rowindex', String((snapshot.indexOf(item.key) ?? 0) + 1))
     this.setOptionalAttribute(element, 'aria-description', this.description(item))
     this.setOptionalAttribute(element, 'aria-roledescription', item.description.roleDescription)
+    this.setOptionalAttribute(
+      element,
+      'data-fd-graph-accessibility-identifier',
+      item.description.identifier,
+    )
     if (item.kind === 'node' && item.reference.nodeID !== undefined) {
       element.setAttribute('aria-selected', String(selectedNodeIDs.has(item.reference.nodeID)))
     } else {
@@ -82,9 +87,11 @@ export class FdGraphCanvasAccessibilityBridge {
   }
 
   private description(item: FdGraphAccessibilityItem): string | undefined {
-    const values = [item.description.value, item.description.hint].filter(
-      (value): value is string => Boolean(value),
-    )
+    const values = [
+      item.description.value,
+      item.description.hint,
+      ...(item.description.actions ?? []).map(({ label }) => label),
+    ].filter((value): value is string => Boolean(value))
     return values.length > 0 ? values.join('. ') : undefined
   }
 

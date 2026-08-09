@@ -6,6 +6,13 @@ export interface FdGraphAccessibilityCapabilities {
   readonly selection?: boolean
   readonly movement?: boolean
   readonly activation?: boolean
+  readonly connections?: boolean
+  readonly elementActions?: boolean
+}
+
+export interface FdGraphAccessibilityElementAction {
+  readonly id: string
+  readonly label: string
 }
 
 export interface FdGraphAccessibilityDescription {
@@ -13,6 +20,8 @@ export interface FdGraphAccessibilityDescription {
   readonly value?: string
   readonly hint?: string
   readonly roleDescription?: string
+  readonly identifier?: string
+  readonly actions?: readonly FdGraphAccessibilityElementAction[]
 }
 
 export type FdGraphAccessibilityRepresentation =
@@ -29,8 +38,10 @@ export type FdGraphAccessibilityCommand =
   | { readonly kind: 'focusNext' }
   | { readonly kind: 'focusFirst' }
   | { readonly kind: 'focusLast' }
+  | { readonly kind: 'focusNextRelated' }
   | { readonly kind: 'select' }
   | { readonly kind: 'activate' }
+  | { readonly kind: 'perform'; readonly actionID: string }
   | {
       readonly kind: 'move'
       readonly direction: FdGraphNavigationDirection
@@ -60,6 +71,8 @@ export interface FdResolvedGraphAccessibilityCapabilities {
   readonly selection: boolean
   readonly movement: boolean
   readonly activation: boolean
+  readonly connections: boolean
+  readonly elementActions: boolean
 }
 
 export interface FdResolvedGraphCanvasAccessibilityConfiguration {
@@ -104,9 +117,13 @@ const directions: Readonly<Record<string, FdGraphNavigationDirection>> = {
 export const defaultGraphAccessibilityCommandResolver: FdGraphAccessibilityCommandResolver = (
   event,
 ) => {
-  if (event.isComposing || event.altKey) return undefined
+  if (event.isComposing) return undefined
   const direction = directions[event.key]
   const primaryModifier = event.metaKey || event.ctrlKey
+  if (event.altKey && !primaryModifier && event.key === 'ArrowRight') {
+    return { kind: 'focusNextRelated' }
+  }
+  if (event.altKey) return undefined
   if (direction && primaryModifier) return { kind: 'move', direction, large: event.shiftKey }
   if (direction && !event.shiftKey) {
     return { kind: direction === 'up' || direction === 'left' ? 'focusPrevious' : 'focusNext' }
@@ -137,6 +154,8 @@ export function resolveGraphCanvasAccessibilityConfiguration(
       selection: configuration.capabilities?.selection ?? true,
       movement: configuration.capabilities?.movement ?? true,
       activation: configuration.capabilities?.activation ?? true,
+      connections: configuration.capabilities?.connections ?? true,
+      elementActions: configuration.capabilities?.elementActions ?? true,
     },
     resolveCommand: configuration.resolveCommand ?? defaultGraphAccessibilityCommandResolver,
     nodeRepresentation: configuration.nodeRepresentation ?? defaultNodeRepresentation,

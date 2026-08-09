@@ -45,3 +45,9 @@ and `guide-label`, plus CSS variables for line and label colors. Use
 `FdGraphDefaultGuideRenderer` to customize measurement formatting, or assign a
 `FdGraphGuideRenderer` for completely custom incremental rendering. Guide elements are pooled and
 updated in place during pointer movement.
+
+Accessibility uses one composite tab stop with a bounded `aria-activedescendant` window, stable
+node, port, and edge identities, connected-element navigation, and consumer-defined actions.
+Because ARIA has no AppKit-style custom action API, products bind those actions through the
+replaceable command resolver or `performFocusedAccessibilityAction()` and handle them through the
+canvas accessibility event.
