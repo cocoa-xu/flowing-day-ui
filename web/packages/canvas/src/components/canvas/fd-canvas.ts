@@ -388,7 +388,8 @@ export class FdCanvas extends LitElement {
   }
 
   private handlePointerDown = (event: PointerEvent): void => {
-    if (event.button !== 0 || this.isClaimedByOverlayOrControl(event)) return
+    if (event.defaultPrevented || event.button !== 0 || this.isClaimedByOverlayOrControl(event))
+      return
     this.cancelAnimation()
     this.viewportElement.focus({ preventScroll: true })
     const location = this.localPoint(event)

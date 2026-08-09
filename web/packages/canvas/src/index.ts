@@ -1,4 +1,5 @@
 import './events.js'
+import './graph/events.js'
 import './components/canvas/fd-canvas.js'
 import './components/graph-canvas/fd-graph-canvas.js'
 

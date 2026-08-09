@@ -3,6 +3,8 @@ import type { FdAnyGraphNode } from '../graph/model.js'
 export type FdGraphSelectionBehavior = 'none' | 'single' | 'multiple'
 export type FdGraphMarqueeBehavior = 'disabled' | 'intersects' | 'contains'
 export type FdGraphGridRoundingPolicy = 'nearest' | 'down' | 'up'
+export type FdGraphFrameUpdateBehavior = 'intent' | 'local'
+export type FdGraphCanvasTool = 'select' | 'pan'
 
 export interface FdGraphGridConfiguration {
   readonly enabled?: boolean
@@ -32,6 +34,7 @@ export interface FdGraphCanvasInteractionConfiguration {
   readonly groupResizing?: boolean
   readonly minimumNodeWidth?: number
   readonly minimumNodeHeight?: number
+  readonly frameUpdates?: FdGraphFrameUpdateBehavior
   readonly snapping?: FdGraphSnappingConfiguration
   readonly canDragNodes?: (nodes: readonly FdAnyGraphNode[]) => boolean
   readonly canResizeNodes?: (nodes: readonly FdAnyGraphNode[]) => boolean
@@ -65,6 +68,7 @@ export interface FdResolvedGraphCanvasInteractionConfiguration {
   readonly groupResizing: boolean
   readonly minimumNodeWidth: number
   readonly minimumNodeHeight: number
+  readonly frameUpdates: FdGraphFrameUpdateBehavior
   readonly snapping: FdResolvedGraphSnappingConfiguration
   readonly canDragNodes: (nodes: readonly FdAnyGraphNode[]) => boolean
   readonly canResizeNodes: (nodes: readonly FdAnyGraphNode[]) => boolean
@@ -92,6 +96,7 @@ export function resolveGraphCanvasInteractionConfiguration(
     groupResizing: configuration.groupResizing ?? true,
     minimumNodeWidth: positive(configuration.minimumNodeWidth ?? 40, 'minimum node width'),
     minimumNodeHeight: positive(configuration.minimumNodeHeight ?? 32, 'minimum node height'),
+    frameUpdates: configuration.frameUpdates ?? 'intent',
     snapping: {
       enabled: configuration.snapping?.enabled ?? true,
       alignment: configuration.snapping?.alignment ?? true,

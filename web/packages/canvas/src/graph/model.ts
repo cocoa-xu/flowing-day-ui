@@ -125,6 +125,15 @@ export class FdGraphSnapshotValidationError extends Error {
 export const graphElementKey = (id: FdGraphElementID): string =>
   `${typeof id === 'number' ? 'n' : 's'}:${id}`
 
+export function graphElementIDFromKey(key: string): FdGraphElementID | undefined {
+  const prefix = key.slice(0, 2)
+  const value = key.slice(2)
+  if (prefix === 's:') return value
+  if (prefix !== 'n:' || value.length === 0) return undefined
+  const number = Number(value)
+  return Number.isFinite(number) ? number : undefined
+}
+
 export function graphPortPoint(node: FdAnyGraphNode, portID?: FdGraphElementID): FdCanvasPoint {
   const port = portID === undefined ? undefined : node.ports?.find(({ id }) => id === portID)
   const offset = port?.offset ?? 0.5

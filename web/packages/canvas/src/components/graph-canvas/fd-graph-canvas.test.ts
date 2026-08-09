@@ -1,4 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import type { FdCanvasPoint } from '../../geometry.js'
+import type {
+  FdGraphNodeFramesChangeDetail,
+  FdGraphSelectionChangeDetail,
+} from '../../graph/events.js'
 import type { FdAnyGraphSnapshot } from '../../graph/model.js'
 import type {
   FdGraphRenderFrame,
@@ -52,6 +57,41 @@ async function mount(
   await nextFrame()
   await nextFrame()
   return element
+}
+
+function preparePointerInput(element: FdGraphCanvas): HTMLElement {
+  const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
+  canvas.setPointerCapture = () => undefined
+  return canvas
+}
+
+function clientPoint(element: FdGraphCanvas, worldPoint: FdCanvasPoint): FdCanvasPoint {
+  const point = element.viewport.transform.applyPoint(worldPoint)
+  const bounds = element.getBoundingClientRect()
+  return { x: bounds.left + point.x, y: bounds.top + point.y }
+}
+
+function dispatchPointer(
+  target: EventTarget,
+  type: 'pointerdown' | 'pointermove' | 'pointerup',
+  point: FdCanvasPoint,
+  modifiers: Pick<PointerEventInit, 'shiftKey' | 'metaKey' | 'ctrlKey' | 'altKey'> = {},
+): void {
+  target.dispatchEvent(
+    new PointerEvent(type, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      isPrimary: true,
+      button: 0,
+      buttons: type === 'pointerup' ? 0 : 1,
+      clientX: point.x,
+      clientY: point.y,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+      ...modifiers,
+    }),
+  )
 }
 
 afterEach(() => {
@@ -162,5 +202,205 @@ describe('fd-graph-canvas rendering boundary', () => {
     const visibleCount = backend.frames.at(-1)?.nodes.length ?? 0
     expect(visibleCount).toBeGreaterThan(0)
     expect(visibleCount).toBeLessThan(20_000)
+  })
+})
+
+describe('fd-graph-canvas pointer editing', () => {
+  it('shows live marquee selection before the pointer is released', async () => {
+    const element = await mount()
+    const canvas = preparePointerInput(element)
+    const changes: FdGraphSelectionChangeDetail[] = []
+    element.addEventListener('fd-graph-selection-change', (event) => changes.push(event.detail))
+    const start = clientPoint(element, { x: 20, y: 60 })
+    const end = clientPoint(element, { x: 250, y: 190 })
+
+    dispatchPointer(canvas, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', end)
+    await nextFrame()
+
+    expect(changes.at(-1)?.phase).toBe('continuous')
+    expect(changes.at(-1)?.selectedNodeIDs).toEqual(new Set(['source']))
+    expect(element.shadowRoot?.querySelector<HTMLElement>('.selection-marquee')?.hidden).toBe(false)
+    expect(
+      element.shadowRoot
+        ?.querySelector('[data-fd-graph-node="s:source"]')
+        ?.hasAttribute('data-selected'),
+    ).toBe(true)
+
+    dispatchPointer(canvas, 'pointerup', end)
+    expect(changes.at(-1)?.phase).toBe('ended')
+    expect(element.shadowRoot?.querySelector<HTMLElement>('.selection-marquee')?.hidden).toBe(true)
+  })
+
+  it('drags a multi-node selection and commits one local snapshot on pointer release', async () => {
+    const element = await mount()
+    const canvas = preparePointerInput(element)
+    element.selectedNodeIDs = new Set(['source', 'target'])
+    element.interactionConfiguration = {
+      frameUpdates: 'local',
+      snapping: { enabled: false },
+    }
+    await element.updateComplete
+    const events: FdGraphNodeFramesChangeDetail[] = []
+    element.addEventListener('fd-graph-node-frames-change', (event) => events.push(event.detail))
+    const source = element.shadowRoot?.querySelector(
+      '[data-fd-graph-node="s:source"]',
+    ) as HTMLElement
+    const start = clientPoint(element, { x: 100, y: 120 })
+    const end = clientPoint(element, { x: 130, y: 140 })
+
+    dispatchPointer(source, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', end)
+    dispatchPointer(canvas, 'pointerup', end)
+
+    expect(events.some(({ phase }) => phase === 'continuous')).toBe(true)
+    expect(events.at(-1)?.phase).toBe('ended')
+    expect(events.at(-1)?.changes).toHaveLength(2)
+    expect(element.snapshot.nodes[0]?.frame.x).toBe(70)
+    expect(element.snapshot.nodes[0]?.frame.y).toBe(100)
+    expect(element.snapshot.nodes[1]?.frame.x).toBe(450)
+    expect(element.snapshot.nodes[1]?.frame.y).toBe(240)
+  })
+
+  it('emits intent updates without mutating a consumer-owned snapshot', async () => {
+    const snapshot = graphSnapshot()
+    const element = await mount(snapshot)
+    const canvas = preparePointerInput(element)
+    element.interactionConfiguration = { snapping: { enabled: false } }
+    await element.updateComplete
+    const events: FdGraphNodeFramesChangeDetail[] = []
+    element.addEventListener('fd-graph-node-frames-change', (event) => events.push(event.detail))
+    const source = element.shadowRoot?.querySelector(
+      '[data-fd-graph-node="s:source"]',
+    ) as HTMLElement
+    const start = clientPoint(element, { x: 100, y: 120 })
+    const end = clientPoint(element, { x: 140, y: 150 })
+
+    dispatchPointer(source, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', end)
+    dispatchPointer(canvas, 'pointerup', end)
+
+    expect(events.at(-1)?.changes[0]?.after.x).toBe(80)
+    expect(events.at(-1)?.changes[0]?.after.y).toBe(110)
+    expect(element.snapshot).toBe(snapshot)
+    expect(element.snapshot.nodes[0]?.frame).toEqual({ x: 40, y: 80, width: 180, height: 88 })
+  })
+
+  it('honors node capabilities and consumer drag policy', async () => {
+    const snapshot = graphSnapshot()
+    const element = await mount({
+      ...snapshot,
+      nodes: snapshot.nodes.map((node) =>
+        node.id === 'source' ? { ...node, capabilities: { draggable: false } } : node,
+      ),
+    })
+    const canvas = preparePointerInput(element)
+    const events: FdGraphNodeFramesChangeDetail[] = []
+    element.addEventListener('fd-graph-node-frames-change', (event) => events.push(event.detail))
+    const source = element.shadowRoot?.querySelector(
+      '[data-fd-graph-node="s:source"]',
+    ) as HTMLElement
+    const start = clientPoint(element, { x: 100, y: 120 })
+    const end = clientPoint(element, { x: 160, y: 150 })
+
+    dispatchPointer(source, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', end)
+    dispatchPointer(canvas, 'pointerup', end)
+
+    expect(events).toHaveLength(0)
+    expect(element.snapshot.nodes[0]?.frame.x).toBe(40)
+  })
+
+  it('snaps during ordinary dragging and bypasses snapping while Command is held', async () => {
+    const first = await mount()
+    const firstCanvas = preparePointerInput(first)
+    first.interactionConfiguration = { frameUpdates: 'local' }
+    await first.updateComplete
+    const firstSource = first.shadowRoot?.querySelector(
+      '[data-fd-graph-node="s:source"]',
+    ) as HTMLElement
+    const firstStart = clientPoint(first, { x: 100, y: 120 })
+    const firstEnd = clientPoint(first, { x: 296, y: 120 })
+
+    dispatchPointer(firstSource, 'pointerdown', firstStart)
+    dispatchPointer(firstCanvas, 'pointermove', firstEnd)
+    dispatchPointer(firstCanvas, 'pointerup', firstEnd)
+    expect(first.snapshot.nodes[0]?.frame.x).toBeCloseTo(240)
+
+    const second = await mount()
+    const secondCanvas = preparePointerInput(second)
+    second.interactionConfiguration = { frameUpdates: 'local' }
+    await second.updateComplete
+    const secondSource = second.shadowRoot?.querySelector(
+      '[data-fd-graph-node="s:source"]',
+    ) as HTMLElement
+    const secondStart = clientPoint(second, { x: 100, y: 120 })
+    const secondEnd = clientPoint(second, { x: 296, y: 120 })
+
+    dispatchPointer(secondSource, 'pointerdown', secondStart, { metaKey: true })
+    dispatchPointer(secondCanvas, 'pointermove', secondEnd, { metaKey: true })
+    dispatchPointer(secondCanvas, 'pointerup', secondEnd, { metaKey: true })
+    expect(second.snapshot.nodes[0]?.frame.x).toBeCloseTo(236)
+  })
+
+  it('resizes selected nodes from all exposed edge and corner handles', async () => {
+    const element = await mount()
+    const canvas = preparePointerInput(element)
+    element.selectedNodeIDs = new Set(['source'])
+    element.interactionConfiguration = {
+      frameUpdates: 'local',
+      snapping: { enabled: false },
+    }
+    await element.updateComplete
+    const handles = element.shadowRoot?.querySelectorAll<HTMLElement>('.resize-handle')
+    expect(handles).toHaveLength(8)
+    expect(handles && [...handles].every(({ hidden }) => !hidden)).toBe(true)
+    const handle = element.shadowRoot?.querySelector<HTMLElement>(
+      '[data-fd-resize-handle="bottomRight"]',
+    )
+    expect(handle).toBeTruthy()
+    const start = clientPoint(element, { x: 220, y: 168 })
+    const end = clientPoint(element, { x: 260, y: 198 })
+
+    if (!handle) throw new Error('missing resize handle')
+    dispatchPointer(handle, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', end)
+    dispatchPointer(canvas, 'pointerup', end)
+
+    expect(element.snapshot.nodes[0]?.frame.width).toBeCloseTo(220)
+    expect(element.snapshot.nodes[0]?.frame.height).toBeCloseTo(118)
+  })
+
+  it('keeps wheel pan and pinch input active while the selection tool is enabled', async () => {
+    const element = await mount()
+    const viewport = element.shadowRoot
+      ?.querySelector('fd-canvas')
+      ?.shadowRoot?.querySelector('.viewport') as HTMLElement
+    const initial = element.viewport.transform
+
+    viewport.dispatchEvent(
+      new WheelEvent('wheel', {
+        clientX: 400,
+        clientY: 300,
+        deltaX: 16,
+        deltaY: 12,
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+    expect(element.viewport.transform.offset.x).toBeCloseTo(initial.offset.x - 16)
+    expect(element.viewport.transform.offset.y).toBeCloseTo(initial.offset.y - 12)
+
+    viewport.dispatchEvent(
+      new WheelEvent('wheel', {
+        clientX: 400,
+        clientY: 300,
+        deltaY: -12,
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+    expect(element.viewport.transform.zoom).toBeGreaterThan(initial.zoom)
   })
 })

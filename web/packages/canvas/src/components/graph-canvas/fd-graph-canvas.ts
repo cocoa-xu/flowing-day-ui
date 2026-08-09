@@ -6,10 +6,34 @@ import type {
   FdCanvasRequest,
 } from '../../configuration.js'
 import type { FdCanvasViewportChangeDetail } from '../../events.js'
-import type { FdCanvasInsets, FdCanvasRect, FdCanvasViewport } from '../../geometry.js'
+import type {
+  FdCanvasInsets,
+  FdCanvasPoint,
+  FdCanvasRect,
+  FdCanvasViewport,
+} from '../../geometry.js'
 import { zeroCanvasInsets } from '../../geometry.js'
-import type { FdAnyGraphEdge, FdAnyGraphNode, FdAnyGraphSnapshot } from '../../graph/model.js'
+import type {
+  FdGraphNodeFrameChange,
+  FdGraphNodeFrameChangeKind,
+  FdGraphNodeFramesChangeDetail,
+  FdGraphSelectionChangeDetail,
+} from '../../graph/events.js'
+import type {
+  FdAnyGraphEdge,
+  FdAnyGraphNode,
+  FdAnyGraphSnapshot,
+  FdGraphElementID,
+} from '../../graph/model.js'
+import { graphPortPoint } from '../../graph/model.js'
 import { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
+import { type FdGraphGuide, graphSelectionBounds } from '../../interactions/arrangement.js'
+import type {
+  FdGraphCanvasInteractionConfiguration,
+  FdGraphCanvasTool,
+  FdResolvedGraphCanvasInteractionConfiguration,
+} from '../../interactions/configuration.js'
+import { resolveGraphCanvasInteractionConfiguration } from '../../interactions/configuration.js'
 import type {
   FdGraphRenderEdge,
   FdGraphRenderFrame,
@@ -20,11 +44,16 @@ import type {
 import { FdGraphDOMRenderingBackend } from '../../rendering/dom-backend.js'
 import type { FdCanvas, FdCanvasTransformOptions } from '../canvas/fd-canvas.js'
 import '../canvas/fd-canvas.js'
+import {
+  FdGraphCanvasInteractionController,
+  type FdGraphCanvasInteractionDelegate,
+  type FdGraphInteractionPresentation,
+} from './interaction-controller.js'
 
 const emptySnapshot: FdAnyGraphSnapshot = { id: 'empty', nodes: [], edges: [] }
 
 @customElement('fd-graph-canvas')
-export class FdGraphCanvas extends LitElement {
+export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractionDelegate {
   static override styles: CSSResultGroup = css`
     :host {
       display: block;
@@ -49,6 +78,7 @@ export class FdGraphCanvas extends LitElement {
 
     .render-viewport,
     .render-world,
+    .interaction-world,
     .graph-node-layer,
     .graph-edge-layer {
       position: absolute;
@@ -63,6 +93,7 @@ export class FdGraphCanvas extends LitElement {
     }
 
     .render-world,
+    .interaction-world,
     .graph-node-layer,
     .graph-edge-layer {
       width: 1px;
@@ -192,6 +223,119 @@ export class FdGraphCanvas extends LitElement {
       transform: translate(50%, -50%);
     }
 
+    .interaction-world {
+      --fd-graph-world-pixel: 1px;
+      --fd-graph-handle-world-size: 9px;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .selection-bounds,
+    .selection-marquee,
+    .alignment-guide {
+      position: absolute;
+      box-sizing: border-box;
+    }
+
+    .selection-bounds {
+      border: var(--fd-graph-world-pixel) solid
+        var(--fd-graph-selection-color, var(--fd-canvas-accent-color, #6d9ea5));
+    }
+
+    .selection-bounds[hidden],
+    .selection-marquee[hidden] {
+      display: none;
+    }
+
+    .resize-handle {
+      position: absolute;
+      width: var(--fd-graph-handle-world-size);
+      height: var(--fd-graph-handle-world-size);
+      border: var(--fd-graph-world-pixel) solid
+        var(--fd-graph-selection-color, var(--fd-canvas-accent-color, #6d9ea5));
+      border-radius: 50%;
+      background: var(--fd-canvas-surface-color, #fff);
+      pointer-events: auto;
+    }
+
+    .resize-handle[data-fd-resize-handle='top'] {
+      top: 0;
+      left: 50%;
+      cursor: ns-resize;
+      transform: translate(-50%, -50%);
+    }
+
+    .resize-handle[data-fd-resize-handle='topRight'] {
+      top: 0;
+      right: 0;
+      cursor: nesw-resize;
+      transform: translate(50%, -50%);
+    }
+
+    .resize-handle[data-fd-resize-handle='right'] {
+      top: 50%;
+      right: 0;
+      cursor: ew-resize;
+      transform: translate(50%, -50%);
+    }
+
+    .resize-handle[data-fd-resize-handle='bottomRight'] {
+      right: 0;
+      bottom: 0;
+      cursor: nwse-resize;
+      transform: translate(50%, 50%);
+    }
+
+    .resize-handle[data-fd-resize-handle='bottom'] {
+      bottom: 0;
+      left: 50%;
+      cursor: ns-resize;
+      transform: translate(-50%, 50%);
+    }
+
+    .resize-handle[data-fd-resize-handle='bottomLeft'] {
+      bottom: 0;
+      left: 0;
+      cursor: nesw-resize;
+      transform: translate(-50%, 50%);
+    }
+
+    .resize-handle[data-fd-resize-handle='left'] {
+      top: 50%;
+      left: 0;
+      cursor: ew-resize;
+      transform: translate(-50%, -50%);
+    }
+
+    .resize-handle[data-fd-resize-handle='topLeft'] {
+      top: 0;
+      left: 0;
+      cursor: nwse-resize;
+      transform: translate(-50%, -50%);
+    }
+
+    .selection-marquee {
+      border: var(--fd-graph-world-pixel) solid
+        var(--fd-graph-selection-color, var(--fd-canvas-accent-color, #6d9ea5));
+      background: color-mix(
+        in srgb,
+        var(--fd-graph-selection-color, var(--fd-canvas-accent-color, #6d9ea5)) 12%,
+        transparent
+      );
+    }
+
+    .alignment-guide {
+      background: var(--fd-graph-guide-color, var(--fd-canvas-accent-color, #6d9ea5));
+    }
+
+    .alignment-guide[data-axis='vertical'] {
+      width: var(--fd-graph-world-pixel);
+    }
+
+    .alignment-guide[data-axis='horizontal'] {
+      height: var(--fd-graph-world-pixel);
+    }
+
     .consumer-background,
     .consumer-overlay {
       position: absolute;
@@ -216,10 +360,27 @@ export class FdGraphCanvas extends LitElement {
   @property({ attribute: false }) renderingBackend:
     | FdGraphRenderingBackendPreference
     | FdGraphRenderingBackend = 'automatic'
+  @property({ reflect: true }) tool: FdGraphCanvasTool = 'select'
+  @property({ attribute: false }) interactionConfiguration: FdGraphCanvasInteractionConfiguration =
+    {}
+  @property({ attribute: false })
+  get selectedNodeIDs(): ReadonlySet<FdGraphElementID> {
+    return this.selectionValue
+  }
+
+  set selectedNodeIDs(value: ReadonlySet<FdGraphElementID>) {
+    const previous = this.selectionValue
+    this.selectionValue = new Set(value)
+    this.requestUpdate('selectedNodeIDs', previous)
+  }
 
   @query('fd-canvas') private canvas!: FdCanvas
   @query('.render-viewport') private renderViewport!: HTMLElement
   @query('.render-world') private renderWorld!: HTMLElement
+  @query('.interaction-world') private interactionWorld!: HTMLElement
+  @query('.selection-bounds') private selectionBoundsElement!: HTMLElement
+  @query('.selection-marquee') private marqueeElement!: HTMLElement
+  @query('.guide-layer') private guideLayer!: HTMLElement
 
   private index = new FdGraphSnapshotIndex(emptySnapshot)
   private backend: FdGraphRenderingBackend | undefined
@@ -229,6 +390,16 @@ export class FdGraphCanvas extends LitElement {
   private snapshotRevision = 0
   private presentationRevision = 0
   private renderFrameRequest: number | undefined
+  private interactionController: FdGraphCanvasInteractionController | undefined
+  private interactionPresentation: FdGraphInteractionPresentation = {
+    frames: new Map(),
+    guides: [],
+  }
+  private resolvedInteractionConfiguration = resolveGraphCanvasInteractionConfiguration({})
+  private selectionValue: ReadonlySet<FdGraphElementID> = new Set()
+  private resizeHandlesVisible = false
+  private localSnapshotSequence = 0
+  private localSnapshotBaseID: string | number | undefined
   private activeBackendSource:
     | FdGraphRenderingBackendPreference
     | FdGraphRenderingBackend
@@ -239,6 +410,14 @@ export class FdGraphCanvas extends LitElement {
     return this.canvas.viewport
   }
 
+  get graphIndex(): FdGraphSnapshotIndex {
+    return this.index
+  }
+
+  get resolvedConfiguration(): FdResolvedGraphCanvasInteractionConfiguration {
+    return this.resolvedInteractionConfiguration
+  }
+
   get resolvedRenderingBackend(): FdGraphRenderingBackend | undefined {
     return this.backend
   }
@@ -247,7 +426,7 @@ export class FdGraphCanvas extends LitElement {
     return html`
       <fd-canvas
         exportparts="viewport:canvas-viewport"
-        interaction-mode="pan"
+        interaction-mode=${this.tool === 'pan' ? 'pan' : 'content'}
         .configuration=${this.configuration}
         .contentRect=${this.index.contentBounds}
         .contentInsets=${this.contentInsets}
@@ -259,12 +438,35 @@ export class FdGraphCanvas extends LitElement {
         <div class="consumer-background" slot="background"><slot name="background"></slot></div>
         <div class="render-viewport" slot="background"></div>
         <div class="render-world" slot="world"></div>
+        <div class="interaction-world" slot="world">
+          <div class="guide-layer"></div>
+          <div class="selection-marquee" hidden></div>
+          <div class="selection-bounds" hidden>
+            ${[
+              'top',
+              'topRight',
+              'right',
+              'bottomRight',
+              'bottom',
+              'bottomLeft',
+              'left',
+              'topLeft',
+            ].map(
+              (handle) => html`<span class="resize-handle" data-fd-resize-handle=${handle}></span>`,
+            )}
+          </div>
+        </div>
         <div class="consumer-overlay" slot="overlay"><slot name="overlay"></slot></div>
       </fd-canvas>
     `
   }
 
   override firstUpdated(): void {
+    this.interactionController = new FdGraphCanvasInteractionController(this)
+    this.canvas.addEventListener('pointerdown', this.handleGraphPointerDown, { capture: true })
+    this.canvas.addEventListener('pointermove', this.handleGraphPointerMove, { capture: true })
+    this.canvas.addEventListener('pointerup', this.handleGraphPointerEnd, { capture: true })
+    this.canvas.addEventListener('pointercancel', this.handleGraphPointerCancel, { capture: true })
     this.activateBackend()
     this.rebuildSnapshot()
   }
@@ -273,7 +475,27 @@ export class FdGraphCanvas extends LitElement {
     if (changed.has('renderingBackend') && this.activeBackendSource !== this.renderingBackend) {
       this.activateBackend()
     }
-    if (changed.has('snapshot') && this.indexedSnapshot !== this.snapshot) this.rebuildSnapshot()
+    if (changed.has('snapshot') && this.indexedSnapshot !== this.snapshot) {
+      this.localSnapshotBaseID = undefined
+      this.localSnapshotSequence = 0
+      this.rebuildSnapshot()
+    }
+    if (changed.has('interactionConfiguration')) {
+      this.resolvedInteractionConfiguration = resolveGraphCanvasInteractionConfiguration(
+        this.interactionConfiguration,
+      )
+      this.interactionController?.cancel()
+      this.refreshResizeHandleVisibility()
+      this.syncInteractionOverlay()
+    }
+    if (changed.has('selectedNodeIDs')) {
+      this.reconcileSelection()
+      this.refreshResizeHandleVisibility()
+      this.presentationRevision += 1
+      this.syncInteractionOverlay()
+      this.scheduleRenderFrame()
+    }
+    if (changed.has('tool')) this.interactionController?.cancel()
   }
 
   override connectedCallback(): void {
@@ -286,6 +508,7 @@ export class FdGraphCanvas extends LitElement {
   }
 
   override disconnectedCallback(): void {
+    this.interactionController?.cancel()
     if (this.renderFrameRequest !== undefined) cancelAnimationFrame(this.renderFrameRequest)
     this.renderFrameRequest = undefined
     this.backend?.unmount()
@@ -315,6 +538,95 @@ export class FdGraphCanvas extends LitElement {
     this.canvas.restore(options)
   }
 
+  viewportPoint(event: PointerEvent): FdCanvasPoint {
+    const bounds = this.canvas.getBoundingClientRect()
+    return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
+  }
+
+  setSelection(
+    selection: ReadonlySet<FdGraphElementID>,
+    detail: Omit<FdGraphSelectionChangeDetail, 'selectedNodeIDs'>,
+  ): void {
+    const next = new Set(selection)
+    const changed = !this.setsEqual(this.selectedNodeIDs, next)
+    if (changed) {
+      this.selectionValue = next
+      this.refreshResizeHandleVisibility()
+      this.presentationRevision += 1
+      this.syncInteractionOverlay()
+      this.scheduleRenderFrame()
+    }
+    if (!changed && detail.phase === 'continuous') return
+    this.dispatchEvent(
+      new CustomEvent<FdGraphSelectionChangeDetail>('fd-graph-selection-change', {
+        detail: { ...detail, selectedNodeIDs: next },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+  }
+
+  setPresentation(presentation: FdGraphInteractionPresentation): void {
+    this.interactionPresentation = presentation
+    this.presentationRevision += 1
+    this.syncInteractionOverlay()
+    this.scheduleRenderFrame()
+  }
+
+  emitFrameChanges(
+    transactionID: string,
+    kind: FdGraphNodeFrameChangeKind,
+    phase: 'continuous' | 'ended',
+    changes: readonly FdGraphNodeFrameChange[],
+  ): void {
+    if (changes.length === 0) return
+    const snapshotID = this.snapshot.id
+    if (phase === 'ended' && this.resolvedInteractionConfiguration.frameUpdates === 'local') {
+      this.applyLocalFrameChanges(changes)
+    }
+    const detail: FdGraphNodeFramesChangeDetail = {
+      transactionID,
+      snapshotID,
+      kind,
+      phase,
+      changes,
+    }
+    this.dispatchEvent(
+      new CustomEvent<FdGraphNodeFramesChangeDetail>('fd-graph-node-frames-change', {
+        detail,
+        bubbles: true,
+        composed: true,
+      }),
+    )
+  }
+
+  private handleGraphPointerDown = (event: PointerEvent): void => {
+    if (!this.interactionController?.pointerDown(event)) return
+    event.preventDefault()
+    this.canvas.setPointerCapture(event.pointerId)
+  }
+
+  private handleGraphPointerMove = (event: PointerEvent): void => {
+    if (this.interactionController?.activePointerID !== event.pointerId) return
+    event.preventDefault()
+    this.interactionController.pointerMove(event)
+  }
+
+  private handleGraphPointerEnd = (event: PointerEvent): void => {
+    if (this.interactionController?.activePointerID !== event.pointerId) return
+    event.preventDefault()
+    this.interactionController.pointerEnd(event)
+    if (this.canvas.hasPointerCapture(event.pointerId))
+      this.canvas.releasePointerCapture(event.pointerId)
+  }
+
+  private handleGraphPointerCancel = (event: PointerEvent): void => {
+    if (this.interactionController?.activePointerID !== event.pointerId) return
+    this.interactionController.cancel()
+    if (this.canvas.hasPointerCapture(event.pointerId))
+      this.canvas.releasePointerCapture(event.pointerId)
+  }
+
   private activateBackend(): void {
     if (!this.renderViewport || !this.renderWorld) return
     this.backend?.unmount()
@@ -328,12 +640,134 @@ export class FdGraphCanvas extends LitElement {
   }
 
   private rebuildSnapshot(): void {
+    this.interactionController?.cancel()
     this.index = new FdGraphSnapshotIndex(this.snapshot)
     this.indexedSnapshot = this.snapshot
     this.snapshotRevision += 1
+    this.reconcileSelection()
+    this.refreshResizeHandleVisibility()
+    this.syncInteractionOverlay()
     if (!this.canvas) return
     this.canvas.contentRect = this.index.contentBounds
     this.refreshVisibleElements(this.canvas.renderWorldRect)
+  }
+
+  private applyLocalFrameChanges(changes: readonly FdGraphNodeFrameChange[]): void {
+    const frames = new Map(changes.map(({ nodeID, after }) => [nodeID, after]))
+    this.localSnapshotBaseID ??= this.snapshot.id
+    this.localSnapshotSequence += 1
+    this.snapshot = {
+      ...this.snapshot,
+      id: `${this.localSnapshotBaseID}:local-${this.localSnapshotSequence}`,
+      nodes: this.snapshot.nodes.map((node) => {
+        const frame = frames.get(node.id)
+        return frame ? { ...node, frame } : node
+      }),
+    }
+    this.rebuildSnapshot()
+  }
+
+  private reconcileSelection(): void {
+    const valid = [...this.selectedNodeIDs].filter(
+      (id) => this.index.nodes.get(id)?.capabilities?.selectable !== false,
+    )
+    const next = new Set(
+      this.resolvedInteractionConfiguration.selection === 'none'
+        ? []
+        : this.resolvedInteractionConfiguration.selection === 'single'
+          ? valid.slice(0, 1)
+          : valid,
+    )
+    if (!this.setsEqual(this.selectedNodeIDs, next)) this.selectedNodeIDs = next
+  }
+
+  private setsEqual(
+    first: ReadonlySet<FdGraphElementID>,
+    second: ReadonlySet<FdGraphElementID>,
+  ): boolean {
+    if (first.size !== second.size) return false
+    for (const id of first) if (!second.has(id)) return false
+    return true
+  }
+
+  private syncInteractionOverlay(): void {
+    if (!this.interactionWorld || !this.selectionBoundsElement || !this.marqueeElement) return
+    this.syncInteractionScale()
+    this.syncSelectionBounds()
+    this.syncMarquee()
+    this.syncGuides(this.interactionPresentation.guides)
+  }
+
+  private syncInteractionScale(): void {
+    if (!this.interactionWorld) return
+    const zoom = this.canvas?.viewport.transform.zoom ?? 1
+    this.interactionWorld.style.setProperty('--fd-graph-world-pixel', `${1 / zoom}px`)
+    this.interactionWorld.style.setProperty('--fd-graph-handle-world-size', `${9 / zoom}px`)
+  }
+
+  private syncSelectionBounds(): void {
+    const frames = new Map<FdGraphElementID, FdCanvasRect>()
+    for (const id of this.selectedNodeIDs) {
+      const frame = this.interactionPresentation.frames.get(id) ?? this.index.nodes.get(id)?.frame
+      if (frame) frames.set(id, frame)
+    }
+    const bounds = graphSelectionBounds(frames)
+    this.selectionBoundsElement.hidden = bounds === undefined
+    if (!bounds) return
+    this.selectionBoundsElement.style.transform = `translate3d(${bounds.x}px, ${bounds.y}px, 0)`
+    this.selectionBoundsElement.style.width = `${bounds.width}px`
+    this.selectionBoundsElement.style.height = `${bounds.height}px`
+    for (const handle of this.selectionBoundsElement.querySelectorAll<HTMLElement>(
+      '.resize-handle',
+    )) {
+      handle.hidden = !this.resizeHandlesVisible
+    }
+  }
+
+  private refreshResizeHandleVisibility(): void {
+    if (!this.resolvedInteractionConfiguration.nodeResizing || this.selectedNodeIDs.size === 0) {
+      this.resizeHandlesVisible = false
+      return
+    }
+    if (this.selectedNodeIDs.size > 1 && !this.resolvedInteractionConfiguration.groupResizing) {
+      this.resizeHandlesVisible = false
+      return
+    }
+    const nodes = [...this.selectedNodeIDs].flatMap((id) => {
+      const node = this.index.nodes.get(id)
+      return node ? [node] : []
+    })
+    this.resizeHandlesVisible =
+      nodes.length === this.selectedNodeIDs.size &&
+      nodes.every(({ capabilities }) => capabilities?.resizable !== false) &&
+      this.resolvedInteractionConfiguration.canResizeNodes(nodes)
+  }
+
+  private syncMarquee(): void {
+    const marquee = this.interactionPresentation.marquee
+    this.marqueeElement.hidden = marquee === undefined
+    if (!marquee) return
+    this.marqueeElement.style.transform = `translate3d(${marquee.x}px, ${marquee.y}px, 0)`
+    this.marqueeElement.style.width = `${marquee.width}px`
+    this.marqueeElement.style.height = `${marquee.height}px`
+  }
+
+  private syncGuides(guides: readonly FdGraphGuide[]): void {
+    const elements = guides.map((guide) => {
+      const element = document.createElement('span')
+      element.className = 'alignment-guide'
+      element.dataset.axis = guide.axis
+      element.dataset.kind = guide.kind
+      if (guide.axis === 'vertical') {
+        element.style.transform = `translate3d(${guide.position}px, ${guide.lowerBound}px, 0)`
+        element.style.height = `${guide.upperBound - guide.lowerBound}px`
+      } else {
+        element.style.transform = `translate3d(${guide.lowerBound}px, ${guide.position}px, 0)`
+        element.style.width = `${guide.upperBound - guide.lowerBound}px`
+      }
+      return element
+    })
+    this.guideLayer.replaceChildren(...elements)
   }
 
   private handleRenderWorldRectChange(event: CustomEvent<{ readonly rect: FdCanvasRect }>): void {
@@ -342,6 +776,7 @@ export class FdGraphCanvas extends LitElement {
 
   private handleViewportChange(event: CustomEvent<FdCanvasViewportChangeDetail>): void {
     if (event.target !== this.canvas) return
+    this.syncInteractionScale()
     this.scheduleRenderFrame()
   }
 
@@ -366,15 +801,15 @@ export class FdGraphCanvas extends LitElement {
     if (!this.backend || !this.canvas) return
     const nodes: FdGraphRenderNode[] = this.visibleNodes.map((node) => ({
       node,
-      frame: node.frame,
-      selected: false,
+      frame: this.interactionPresentation.frames.get(node.id) ?? node.frame,
+      selected: this.selectedNodeIDs.has(node.id),
       focused: false,
       hovered: false,
     }))
     const edges: FdGraphRenderEdge[] = this.visibleEdges.map((edge) => ({
       edge,
-      source: this.index.endpointPoint(edge, 'source'),
-      target: this.index.endpointPoint(edge, 'target'),
+      source: this.endpointPoint(edge, 'source'),
+      target: this.endpointPoint(edge, 'target'),
       selected: false,
       hovered: false,
     }))
@@ -386,10 +821,18 @@ export class FdGraphCanvas extends LitElement {
       renderWorldRect: this.renderWorldRect,
       nodes,
       edges,
-      selectedNodeIDs: new Set(),
+      selectedNodeIDs: this.selectedNodeIDs,
       pixelRatio: window.devicePixelRatio,
     }
     this.backend.render(frame)
+  }
+
+  private endpointPoint(edge: FdAnyGraphEdge, endpoint: 'source' | 'target'): FdCanvasPoint {
+    const value = edge[endpoint]
+    const node = this.index.nodes.get(value.nodeID)
+    if (!node) throw new RangeError(`missing endpoint node ${String(value.nodeID)}`)
+    const frame = this.interactionPresentation.frames.get(node.id)
+    return graphPortPoint(frame ? { ...node, frame } : node, value.portID)
   }
 }
 

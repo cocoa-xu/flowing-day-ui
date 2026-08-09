@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   type FdAnyGraphSnapshot,
   FdGraphSnapshotValidationError,
+  graphElementIDFromKey,
   graphElementKey,
   graphPortPoint,
 } from './model.js'
@@ -33,6 +34,8 @@ const snapshot = (): FdAnyGraphSnapshot => ({
 describe('FdGraphSnapshotIndex', () => {
   it('keeps number and string identities distinct', () => {
     expect(graphElementKey(1)).not.toBe(graphElementKey('1'))
+    expect(graphElementIDFromKey('n:12')).toBe(12)
+    expect(graphElementIDFromKey('s:12')).toBe('12')
   })
 
   it('resolves port geometry', () => {
