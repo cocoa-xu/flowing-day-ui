@@ -13,6 +13,8 @@ export const baseStyles: CSSResultGroup = [
       box-sizing: border-box;
       font-family: var(--_fd-font-standard);
       -webkit-font-smoothing: antialiased;
+      -webkit-user-select: var(--fd-user-select, none);
+      user-select: var(--fd-user-select, none);
     }
 
     :host([hidden]) {
@@ -32,6 +34,13 @@ export const baseStyles: CSSResultGroup = [
      */
     svg {
       display: block;
+    }
+
+    input,
+    textarea,
+    [contenteditable='true'] {
+      -webkit-user-select: text;
+      user-select: text;
     }
   `,
 ]

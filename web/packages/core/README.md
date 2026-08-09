@@ -54,6 +54,10 @@ fd-preferences-window {
 Content is centered at `720px` by default. Use `content-layout="fluid"` to fill the pane,
 or set `--fd-preferences-content-max-width` to choose another centered measure.
 
+Component chrome is nonselectable by default, matching desktop controls. Editable fields
+and copyable value rows remain selectable. Set `--fd-user-select: text` on any component
+or subtree when its labels should also allow text selection.
+
 ## Theming
 
 Every value in `PreferencesTheme.swift` is a CSS custom property. Because custom properties
