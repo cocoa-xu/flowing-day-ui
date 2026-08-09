@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import type { FdCanvasPoint } from '../../geometry.js'
 import type {
+  FdGraphFocusChangeDetail,
   FdGraphNodeFramesChangeDetail,
   FdGraphSelectionChangeDetail,
 } from '../../graph/events.js'
@@ -90,6 +91,18 @@ function dispatchPointer(
       composed: true,
       cancelable: true,
       ...modifiers,
+    }),
+  )
+}
+
+function dispatchKey(target: EventTarget, value: string, init: KeyboardEventInit = {}): void {
+  target.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: value,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+      ...init,
     }),
   )
 }
@@ -402,6 +415,96 @@ describe('fd-graph-canvas pointer editing', () => {
       }),
     )
     expect(element.viewport.transform.zoom).toBeGreaterThan(initial.zoom)
+  })
+})
+
+describe('fd-graph-canvas keyboard editing', () => {
+  it('keeps one canvas tab stop and navigates nodes spatially', async () => {
+    const element = await mount()
+    const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
+    const viewport = canvas.shadowRoot?.querySelector('.viewport') as HTMLElement
+    const focusChanges: FdGraphFocusChangeDetail[] = []
+    element.addEventListener('fd-graph-focus-change', (event) => focusChanges.push(event.detail))
+
+    viewport.focus()
+    expect(element.focusedNodeID).toBe('source')
+    dispatchKey(canvas, 'ArrowRight')
+    await nextFrame()
+
+    expect(element.focusedNodeID).toBe('target')
+    expect(element.selectedNodeIDs).toEqual(new Set(['target']))
+    expect(focusChanges.at(-1)).toEqual({ focusedNodeID: 'target', source: 'keyboard' })
+    expect(
+      element.shadowRoot
+        ?.querySelector('[data-fd-graph-node="s:target"]')
+        ?.hasAttribute('data-focused'),
+    ).toBe(true)
+  })
+
+  it('nudges a selected node by standard and configurable large steps', async () => {
+    const element = await mount()
+    const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
+    element.interactionConfiguration = { frameUpdates: 'local' }
+    element.keyboardConfiguration = { nudgeStep: 2, largeNudgeStep: 18 }
+    element.focusedNodeID = 'source'
+    element.selectedNodeIDs = new Set(['source'])
+    await element.updateComplete
+
+    dispatchKey(canvas, 'ArrowRight')
+    expect(element.snapshot.nodes[0]?.frame.x).toBe(42)
+    dispatchKey(canvas, 'ArrowDown', { shiftKey: true })
+    expect(element.snapshot.nodes[0]?.frame.y).toBe(98)
+  })
+
+  it('allows the consumer to replace every default key binding', async () => {
+    const element = await mount()
+    const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
+    element.keyboardConfiguration = {
+      selectionBehavior: 'preserve',
+      resolveCommand: (event) =>
+        event.key === 'j' ? { kind: 'navigate', direction: 'right' } : undefined,
+    }
+    element.focusedNodeID = 'source'
+    await element.updateComplete
+
+    dispatchKey(canvas, 'ArrowRight')
+    expect(element.focusedNodeID).toBe('source')
+    dispatchKey(canvas, 'j')
+    expect(element.focusedNodeID).toBe('target')
+  })
+
+  it('respects keyboard navigation and dragging capabilities independently', async () => {
+    const snapshot = graphSnapshot()
+    const element = await mount({
+      ...snapshot,
+      nodes: snapshot.nodes.map((node) =>
+        node.id === 'target'
+          ? { ...node, capabilities: { ...node.capabilities, keyboardNavigable: false } }
+          : node,
+      ),
+    })
+    const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
+    element.focusedNodeID = 'source'
+    await element.updateComplete
+
+    dispatchKey(canvas, 'ArrowRight')
+    expect(element.focusedNodeID).toBe('source')
+  })
+
+  it('reconciles focus when a snapshot removes the focused node', async () => {
+    const element = await mount()
+    const source = graphSnapshot().nodes[0]
+    if (!source) throw new Error('missing source fixture')
+    element.focusedNodeID = 'target'
+    await element.updateComplete
+    element.snapshot = {
+      id: 'without-target',
+      nodes: [source],
+      edges: [],
+    }
+    await element.updateComplete
+
+    expect(element.focusedNodeID).toBe(undefined)
   })
 })
 

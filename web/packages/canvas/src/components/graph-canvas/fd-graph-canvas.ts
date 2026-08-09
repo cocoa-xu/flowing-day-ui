@@ -7,6 +7,7 @@ import type {
 } from '../../configuration.js'
 import type { FdCanvasViewportChangeDetail } from '../../events.js'
 import {
+  canvasRectContains,
   type FdCanvasInsets,
   type FdCanvasPoint,
   type FdCanvasRect,
@@ -15,6 +16,8 @@ import {
   zeroCanvasInsets,
 } from '../../geometry.js'
 import type {
+  FdGraphFocusChangeDetail,
+  FdGraphNodeActivateDetail,
   FdGraphNodeFrameChange,
   FdGraphNodeFrameChangeKind,
   FdGraphNodeFramesChangeDetail,
@@ -27,7 +30,7 @@ import type {
   FdAnyGraphSnapshot,
   FdGraphElementID,
 } from '../../graph/model.js'
-import { graphPortPoint } from '../../graph/model.js'
+import { graphElementIDFromKey, graphPortPoint } from '../../graph/model.js'
 import { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
 import { type FdGraphGuide, graphSelectionBounds } from '../../interactions/arrangement.js'
 import type {
@@ -36,6 +39,16 @@ import type {
   FdResolvedGraphCanvasInteractionConfiguration,
 } from '../../interactions/configuration.js'
 import { resolveGraphCanvasInteractionConfiguration } from '../../interactions/configuration.js'
+import {
+  type FdGraphCanvasKeyboardConfiguration,
+  type FdGraphKeyboardCommand,
+  type FdGraphKeyboardNavigationCandidate,
+  type FdGraphNavigationDirection,
+  type FdResolvedGraphCanvasKeyboardConfiguration,
+  graphKeyboardTranslation,
+  nextGraphKeyboardNodeID,
+  resolveGraphCanvasKeyboardConfiguration,
+} from '../../interactions/keyboard.js'
 import type { FdGraphMiniMapConfiguration } from '../../minimap/configuration.js'
 import type {
   FdGraphRenderEdge,
@@ -164,6 +177,11 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
           transparent
         ),
         var(--fd-canvas-node-shadow, 0 12px 30px rgb(35 43 38 / 0.09));
+    }
+
+    .graph-node[data-focused] {
+      outline: 2px solid var(--fd-graph-focus-color, var(--fd-canvas-focus-color, Highlight));
+      outline-offset: 3px;
     }
 
     .graph-node-content {
@@ -368,6 +386,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   @property({ reflect: true }) tool: FdGraphCanvasTool = 'select'
   @property({ attribute: false }) interactionConfiguration: FdGraphCanvasInteractionConfiguration =
     {}
+  @property({ attribute: false }) keyboardConfiguration: FdGraphCanvasKeyboardConfiguration = {}
   @property({ attribute: false }) miniMapConfiguration: FdGraphMiniMapConfiguration | undefined
   @property({ attribute: false })
   get selectedNodeIDs(): ReadonlySet<FdGraphElementID> {
@@ -378,6 +397,18 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     const previous = this.selectionValue
     this.selectionValue = new Set(value)
     this.requestUpdate('selectedNodeIDs', previous)
+  }
+
+  @property({ attribute: false })
+  get focusedNodeID(): FdGraphElementID | undefined {
+    return this.focusedNodeValue
+  }
+
+  set focusedNodeID(value: FdGraphElementID | undefined) {
+    const previous = this.focusedNodeValue
+    if (previous === value) return
+    this.focusedNodeValue = value
+    this.requestUpdate('focusedNodeID', previous)
   }
 
   @query('fd-canvas') private canvas!: FdCanvas
@@ -403,7 +434,11 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     guides: [],
   }
   private resolvedInteractionConfiguration = resolveGraphCanvasInteractionConfiguration({})
+  private resolvedKeyboardConfiguration: FdResolvedGraphCanvasKeyboardConfiguration =
+    resolveGraphCanvasKeyboardConfiguration()
+  private keyboardCandidates: readonly FdGraphKeyboardNavigationCandidate[] = []
   private selectionValue: ReadonlySet<FdGraphElementID> = new Set()
+  private focusedNodeValue: FdGraphElementID | undefined
   private resizeHandlesVisible = false
   private localSnapshotSequence = 0
   private localSnapshotBaseID: string | number | undefined
@@ -417,6 +452,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     | FdGraphRenderingBackend
     | undefined
   private indexedSnapshot: FdAnyGraphSnapshot | undefined
+  private keyboardTransactionSequence = 0
 
   get viewport(): FdCanvasViewport {
     return this.canvas.viewport
@@ -446,6 +482,8 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
         .request=${this.request}
         @fd-render-world-rect-change=${this.handleRenderWorldRectChange}
         @fd-viewport-change=${this.handleViewportChange}
+        @focusin=${this.handleKeyboardFocusIn}
+        @keydown=${this.handleKeyDown}
       >
         <div class="consumer-background" slot="background"><slot name="background"></slot></div>
         <div class="render-viewport" slot="background"></div>
@@ -514,11 +552,21 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       this.refreshResizeHandleVisibility()
       this.syncInteractionOverlay()
     }
+    if (changed.has('keyboardConfiguration')) {
+      this.resolvedKeyboardConfiguration = resolveGraphCanvasKeyboardConfiguration(
+        this.keyboardConfiguration,
+      )
+    }
     if (changed.has('selectedNodeIDs')) {
       this.reconcileSelection()
       this.refreshResizeHandleVisibility()
       this.presentationRevision += 1
       this.syncInteractionOverlay()
+      this.scheduleRenderFrame()
+    }
+    if (changed.has('focusedNodeID')) {
+      this.reconcileKeyboardFocus()
+      this.presentationRevision += 1
       this.scheduleRenderFrame()
     }
     if (changed.has('tool')) this.interactionController?.cancel()
@@ -637,6 +685,15 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
 
   private handleGraphPointerDown = (event: PointerEvent): void => {
     if (!this.interactionController?.pointerDown(event)) return
+    const nodeElement = event
+      .composedPath()
+      .find(
+        (target): target is HTMLElement =>
+          target instanceof HTMLElement && target.matches('[data-fd-graph-node]'),
+      )
+    const key = nodeElement?.dataset.fdGraphNode
+    const nodeID = key ? graphElementIDFromKey(key) : undefined
+    if (nodeID !== undefined) this.setFocusedNode(nodeID, 'pointer', false)
     event.preventDefault()
     this.canvas.setPointerCapture(event.pointerId)
   }
@@ -679,7 +736,13 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     this.index = new FdGraphSnapshotIndex(this.snapshot)
     this.indexedSnapshot = this.snapshot
     this.snapshotRevision += 1
+    this.keyboardCandidates = this.snapshot.nodes.flatMap((node, presentationOrder) =>
+      node.capabilities?.keyboardNavigable === false
+        ? []
+        : [{ id: node.id, frame: node.frame, presentationOrder }],
+    )
     this.reconcileSelection()
+    this.reconcileKeyboardFocus()
     this.refreshResizeHandleVisibility()
     this.syncInteractionOverlay()
     this.syncMiniMap()
@@ -715,6 +778,198 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
           : valid,
     )
     if (!this.setsEqual(this.selectedNodeIDs, next)) this.selectedNodeIDs = next
+  }
+
+  private reconcileKeyboardFocus(): void {
+    if (this.focusedNodeID === undefined) return
+    const node = this.index.nodes.get(this.focusedNodeID)
+    if (node && node.capabilities?.keyboardNavigable !== false) return
+    this.focusedNodeValue = undefined
+  }
+
+  private handleKeyboardFocusIn = (): void => {
+    if (!this.resolvedKeyboardConfiguration.enabled || this.focusedNodeID !== undefined) return
+    const selected = this.keyboardCandidates.find(({ id }) => this.selectedNodeIDs.has(id))
+    const first = selected ?? this.keyboardCandidates[0]
+    if (first) this.setFocusedNode(first.id, 'keyboard', false)
+  }
+
+  private handleKeyDown = (event: KeyboardEvent): void => {
+    if (!this.resolvedKeyboardConfiguration.enabled || this.isEditableKeyboardTarget(event)) return
+    const command = this.resolvedKeyboardConfiguration.resolveCommand(event, {
+      hasSelection: this.selectedNodeIDs.size > 0,
+      focusedNodeIsSelected:
+        this.focusedNodeID !== undefined && this.selectedNodeIDs.has(this.focusedNodeID),
+      navigationEnabled: this.resolvedKeyboardConfiguration.navigation,
+      nudgingEnabled: this.resolvedKeyboardConfiguration.nudging,
+      selectionEnabled:
+        this.resolvedKeyboardConfiguration.selection &&
+        this.resolvedInteractionConfiguration.selection !== 'none',
+      historyEnabled: false,
+    })
+    if (!command || !this.performKeyboardCommand(command)) return
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  private performKeyboardCommand(command: FdGraphKeyboardCommand): boolean {
+    switch (command.kind) {
+      case 'navigate':
+        return this.navigateKeyboardFocus(command.direction)
+      case 'nudge':
+        return this.nudgeKeyboardSelection(command.direction, command.large)
+      case 'focusFirst':
+        return this.focusKeyboardCandidate(this.keyboardCandidates[0])
+      case 'focusLast':
+        return this.focusKeyboardCandidate(this.keyboardCandidates.at(-1))
+      case 'toggleSelection':
+        return this.toggleFocusedSelection()
+      case 'selectAll':
+        return this.selectAllKeyboardNodes()
+      case 'clearSelection':
+        this.setSelection(new Set(), { phase: 'ended', source: 'keyboard' })
+        return true
+      case 'activate':
+        return this.activateFocusedNode('keyboard')
+      case 'undo':
+      case 'redo':
+        return false
+    }
+  }
+
+  private navigateKeyboardFocus(direction: FdGraphNavigationDirection): boolean {
+    if (this.keyboardCandidates.length === 0) return false
+    const current =
+      this.keyboardCandidates.find(({ id }) => id === this.focusedNodeID) ??
+      this.keyboardCandidates.find(({ id }) => this.selectedNodeIDs.has(id))
+    if (!current) return this.focusKeyboardCandidate(this.keyboardCandidates[0])
+    const nodeID = nextGraphKeyboardNodeID(current, direction, this.keyboardCandidates)
+    return this.focusKeyboardCandidate(this.keyboardCandidates.find(({ id }) => id === nodeID))
+  }
+
+  private focusKeyboardCandidate(
+    candidate: FdGraphKeyboardNavigationCandidate | undefined,
+  ): boolean {
+    if (!candidate) return false
+    this.setFocusedNode(candidate.id, 'keyboard', true)
+    return true
+  }
+
+  private setFocusedNode(
+    nodeID: FdGraphElementID,
+    source: FdGraphFocusChangeDetail['source'],
+    updatesSelection: boolean,
+  ): void {
+    const node = this.index.nodes.get(nodeID)
+    if (!node || node.capabilities?.keyboardNavigable === false) return
+    const changed = this.focusedNodeID !== nodeID
+    this.focusedNodeID = nodeID
+    if (
+      updatesSelection &&
+      this.resolvedKeyboardConfiguration.selectionBehavior === 'replace' &&
+      node.capabilities?.selectable !== false
+    ) {
+      this.setSelection(new Set([nodeID]), { phase: 'ended', source: 'keyboard' })
+    }
+    if (
+      this.resolvedKeyboardConfiguration.keepsFocusedNodeVisible &&
+      !canvasRectContains(this.canvas.viewport.visibleWorldRect, node.frame)
+    ) {
+      this.canvas.focusRect(node.frame, this.canvas.viewport.transform.zoom)
+    }
+    if (!changed) return
+    this.dispatchEvent(
+      new CustomEvent<FdGraphFocusChangeDetail>('fd-graph-focus-change', {
+        detail: { focusedNodeID: nodeID, source },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+  }
+
+  private toggleFocusedSelection(): boolean {
+    const nodeID = this.focusedNodeID
+    if (nodeID === undefined || this.index.nodes.get(nodeID)?.capabilities?.selectable === false) {
+      return false
+    }
+    const selection = new Set(this.selectedNodeIDs)
+    if (this.resolvedInteractionConfiguration.selection === 'single') selection.clear()
+    if (selection.has(nodeID)) selection.delete(nodeID)
+    else selection.add(nodeID)
+    this.setSelection(selection, { phase: 'ended', source: 'keyboard' })
+    return true
+  }
+
+  private selectAllKeyboardNodes(): boolean {
+    if (this.resolvedInteractionConfiguration.selection !== 'multiple') return false
+    const selection = new Set(
+      this.keyboardCandidates.flatMap(({ id }) =>
+        this.index.nodes.get(id)?.capabilities?.selectable === false ? [] : [id],
+      ),
+    )
+    this.setSelection(selection, { phase: 'ended', source: 'keyboard' })
+    return true
+  }
+
+  private nudgeKeyboardSelection(direction: FdGraphNavigationDirection, large: boolean): boolean {
+    const nodes = [...this.selectedNodeIDs].flatMap((id) => {
+      const node = this.index.nodes.get(id)
+      return node ? [node] : []
+    })
+    if (
+      nodes.length === 0 ||
+      nodes.some(({ capabilities }) => capabilities?.draggable === false) ||
+      !this.resolvedInteractionConfiguration.nodeDragging ||
+      (nodes.length > 1 && !this.resolvedInteractionConfiguration.multipleNodeDragging) ||
+      !this.resolvedInteractionConfiguration.canDragNodes(nodes)
+    ) {
+      return false
+    }
+    const distance = large
+      ? this.resolvedKeyboardConfiguration.largeNudgeStep
+      : this.resolvedKeyboardConfiguration.nudgeStep
+    const translation = graphKeyboardTranslation(direction, distance)
+    const changes = nodes.map(({ id, frame }) => ({
+      nodeID: id,
+      before: frame,
+      after: {
+        ...frame,
+        x: frame.x + translation.width,
+        y: frame.y + translation.height,
+      },
+    }))
+    this.keyboardTransactionSequence += 1
+    this.emitFrameChanges(
+      `keyboard-${this.keyboardTransactionSequence}`,
+      'keyboard',
+      'ended',
+      changes,
+    )
+    return true
+  }
+
+  private activateFocusedNode(source: FdGraphNodeActivateDetail['source']): boolean {
+    if (this.focusedNodeID === undefined) return false
+    this.dispatchEvent(
+      new CustomEvent<FdGraphNodeActivateDetail>('fd-graph-node-activate', {
+        detail: { nodeID: this.focusedNodeID, source },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+    return true
+  }
+
+  private isEditableKeyboardTarget(event: KeyboardEvent): boolean {
+    return event
+      .composedPath()
+      .some(
+        (target) =>
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement ||
+          (target instanceof HTMLElement && target.isContentEditable),
+      )
   }
 
   private setsEqual(
@@ -861,7 +1116,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       node,
       frame: this.interactionPresentation.frames.get(node.id) ?? node.frame,
       selected: this.selectedNodeIDs.has(node.id),
-      focused: false,
+      focused: this.focusedNodeID === node.id,
       hovered: false,
     }))
     const edges: FdGraphRenderEdge[] = this.visibleEdges.map((edge) => ({
@@ -880,6 +1135,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       nodes,
       edges,
       selectedNodeIDs: this.selectedNodeIDs,
+      ...(this.focusedNodeID === undefined ? {} : { focusedNodeID: this.focusedNodeID }),
       pixelRatio: window.devicePixelRatio,
     }
     this.backend.render(frame)

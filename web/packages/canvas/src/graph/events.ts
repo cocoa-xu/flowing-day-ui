@@ -4,6 +4,7 @@ import type { FdGraphElementID } from './model.js'
 export type FdGraphInteractionPhase = 'continuous' | 'ended'
 export type FdGraphSelectionSource = 'pointer' | 'keyboard' | 'programmatic'
 export type FdGraphNodeFrameChangeKind = 'drag' | 'resize' | 'keyboard'
+export type FdGraphFocusSource = 'pointer' | 'keyboard' | 'accessibility' | 'programmatic'
 
 export interface FdGraphSelectionChangeDetail {
   readonly selectedNodeIDs: ReadonlySet<FdGraphElementID>
@@ -25,9 +26,21 @@ export interface FdGraphNodeFramesChangeDetail {
   readonly changes: readonly FdGraphNodeFrameChange[]
 }
 
+export interface FdGraphFocusChangeDetail {
+  readonly focusedNodeID?: FdGraphElementID
+  readonly source: FdGraphFocusSource
+}
+
+export interface FdGraphNodeActivateDetail {
+  readonly nodeID: FdGraphElementID
+  readonly source: 'keyboard' | 'accessibility'
+}
+
 declare global {
   interface HTMLElementEventMap {
     'fd-graph-selection-change': CustomEvent<FdGraphSelectionChangeDetail>
     'fd-graph-node-frames-change': CustomEvent<FdGraphNodeFramesChangeDetail>
+    'fd-graph-focus-change': CustomEvent<FdGraphFocusChangeDetail>
+    'fd-graph-node-activate': CustomEvent<FdGraphNodeActivateDetail>
   }
 }
