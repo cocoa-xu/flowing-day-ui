@@ -1,8 +1,11 @@
 import './events.js'
 import './components/canvas/fd-canvas.js'
+import './components/graph-canvas/fd-graph-canvas.js'
 
 export { FdCanvas, type FdCanvasTransformOptions } from './components/canvas/fd-canvas.js'
+export { FdGraphCanvas } from './components/graph-canvas/fd-graph-canvas.js'
 export * from './configuration.js'
 export type * from './events.js'
 export * from './geometry.js'
 export * from './graph/index.js'
+export * from './rendering/index.js'
