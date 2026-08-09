@@ -91,6 +91,19 @@ body {
     background-color 140ms ease-out;
 }
 
+.site-nav .github-link {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+}
+
+.github-link svg {
+  width: 15px;
+  height: 15px;
+}
+
 .site-nav a:hover,
 .site-nav a:focus-visible {
   background: color-mix(in srgb, var(--landing-accent) 11%, transparent);
