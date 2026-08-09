@@ -7,6 +7,40 @@
     <link rel="stylesheet" href="./src/landing.css" />
   </head>
   <body>
+    <fd-canvas
+      id="landing-backdrop"
+      class="landing-backdrop"
+      interaction-mode="pan"
+      allows-page-scroll
+      viewport-tab-index="-1"
+      aria-hidden="true"
+    >
+      <div class="landing-canvas-surface" slot="background"></div>
+      <div class="landing-canvas-grid" slot="background"></div>
+      <div class="landing-canvas-world" slot="world">
+        <svg class="landing-canvas-routes" viewBox="0 0 2400 1500" aria-hidden="true">
+          <path d="M390 300 C620 300 620 210 830 210" />
+          <path d="M1010 210 C1260 210 1280 350 1510 350" />
+          <path d="M390 300 C470 560 430 850 520 1020" />
+          <path d="M700 1020 C870 1020 900 1140 1060 1140" />
+          <path d="M1240 1140 C1500 1140 1550 980 1810 980" />
+          <path d="M1690 350 C1930 350 1970 690 1990 900" />
+        </svg>
+        <span class="landing-map-node" style="--map-x: 210px; --map-y: 255px"
+          >Preferences</span
+        >
+        <span class="landing-map-node" style="--map-x: 830px; --map-y: 165px"
+          >Components</span
+        >
+        <span class="landing-map-node" style="--map-x: 1510px; --map-y: 305px">Canvas</span>
+        <span class="landing-map-node" style="--map-x: 520px; --map-y: 975px">Motion</span>
+        <span class="landing-map-node" style="--map-x: 1060px; --map-y: 1095px"
+          >Accessibility</span
+        >
+        <span class="landing-map-node" style="--map-x: 1810px; --map-y: 935px">Tokens</span>
+      </div>
+    </fd-canvas>
+
     <header class="site-header">
       <a class="brand" href="#demo" aria-label="FlowingDayUI home">
         <img class="brand-mark" src="./src/app-icon.svg" alt="" />

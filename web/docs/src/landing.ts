@@ -19,6 +19,44 @@ import { installTheme, registerIcons } from './shared.js'
 installTheme()
 registerIcons()
 
+const landingBackdrop = document.querySelector<FdCanvas>('#landing-backdrop')
+const landingBackdropGrid = document.querySelector<HTMLElement>('.landing-canvas-grid')
+const landingBackdropRect = { x: 0, y: 0, width: 2400, height: 1500 }
+
+function updateLandingBackdrop(canvas: FdCanvas): void {
+  const { transform } = canvas.viewport
+  const levels = new FdCanvasGridLevels(32, transform.zoom, 22, 2)
+  landingBackdropGrid?.style.setProperty('--backdrop-grid-x', `${transform.offset.x}px`)
+  landingBackdropGrid?.style.setProperty('--backdrop-grid-y', `${transform.offset.y}px`)
+  landingBackdropGrid?.style.setProperty(
+    '--backdrop-grid-coarse-spacing',
+    `${levels.coarse.spacing}px`,
+  )
+  landingBackdropGrid?.style.setProperty(
+    '--backdrop-grid-coarse-opacity',
+    `${levels.coarse.opacity}`,
+  )
+  landingBackdropGrid?.style.setProperty('--backdrop-grid-fine-spacing', `${levels.fine.spacing}px`)
+  landingBackdropGrid?.style.setProperty('--backdrop-grid-fine-opacity', `${levels.fine.opacity}`)
+}
+
+if (landingBackdrop) {
+  landingBackdrop.contentRect = landingBackdropRect
+  landingBackdrop.configuration = {
+    initialZoom: 0.7,
+    focusedZoom: 1,
+    minimumZoom: 0.25,
+    maximumZoom: 2,
+  }
+  landingBackdrop.addEventListener('fd-viewport-change', () =>
+    updateLandingBackdrop(landingBackdrop),
+  )
+  void landingBackdrop.updateComplete.then(() => {
+    landingBackdrop.fitRect(landingBackdropRect, 0, 0.8, { animated: false })
+    updateLandingBackdrop(landingBackdrop)
+  })
+}
+
 const canvasDemo = document.querySelector<FdCanvas>('#canvas-demo')
 const canvasGrid = document.querySelector<HTMLElement>('.canvas-grid')
 const canvasZoomValue = document.querySelector<HTMLOutputElement>('#canvas-zoom-value')

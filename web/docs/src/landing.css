@@ -8,6 +8,31 @@ body {
 
   margin: 0;
   min-height: 100dvh;
+  background: #f7f6f2;
+  color: #1d1d1b;
+  font-family: var(--fd-font-standard);
+}
+
+.landing-backdrop {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  cursor: grab;
+}
+
+.landing-backdrop:active {
+  cursor: grabbing;
+}
+
+.landing-canvas-surface,
+.landing-canvas-grid {
+  position: absolute;
+  inset: 0;
+}
+
+.landing-canvas-surface {
   background:
     radial-gradient(
       circle at 14% 8%,
@@ -24,8 +49,77 @@ body {
       color-mix(in oklab, var(--landing-accent) 4%, #fff) 0%,
       color-mix(in oklab, var(--landing-accent) 3%, #f6f5f2) 100%
     );
-  color: #1d1d1b;
-  font-family: var(--fd-font-standard);
+}
+
+.landing-canvas-grid::before,
+.landing-canvas-grid::after {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--landing-accent) 34%, #9ca09a) 1px,
+    transparent 1.25px
+  );
+  background-position: var(--backdrop-grid-x) var(--backdrop-grid-y);
+  content: "";
+}
+
+.landing-canvas-grid::before {
+  opacity: calc(var(--backdrop-grid-coarse-opacity, 0.5) * 0.2);
+  background-size: var(--backdrop-grid-coarse-spacing, 64px)
+    var(--backdrop-grid-coarse-spacing, 64px);
+}
+
+.landing-canvas-grid::after {
+  opacity: calc(var(--backdrop-grid-fine-opacity, 0.5) * 0.16);
+  background-size: var(--backdrop-grid-fine-spacing, 32px) var(--backdrop-grid-fine-spacing, 32px);
+}
+
+.landing-canvas-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2400px;
+  height: 1500px;
+  pointer-events: none;
+}
+
+.landing-canvas-routes {
+  position: absolute;
+  inset: 0;
+  width: 2400px;
+  height: 1500px;
+  overflow: visible;
+  fill: none;
+  opacity: 0.18;
+  stroke: color-mix(in srgb, var(--landing-accent) 38%, #9ea39d);
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.landing-canvas-routes path {
+  vector-effect: non-scaling-stroke;
+}
+
+.landing-map-node {
+  position: absolute;
+  top: var(--map-y);
+  left: var(--map-x);
+  display: grid;
+  min-width: 180px;
+  height: 90px;
+  padding: 0 24px;
+  border: 1px solid color-mix(in srgb, var(--landing-accent) 18%, #cfd3ce);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--landing-accent) 6%, rgb(255 255 253 / 0.76));
+  box-shadow: 0 18px 44px rgb(68 76 70 / 0.06);
+  color: color-mix(in srgb, var(--landing-accent) 42%, #747871);
+  font-family: var(--fd-font-rounded);
+  font-size: 15px;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  opacity: 0.28;
+  place-items: center;
 }
 
 .site-header {
@@ -118,6 +212,8 @@ body {
 .hero {
   display: grid;
   align-items: center;
+  position: relative;
+  z-index: 1;
   box-sizing: border-box;
   grid-template-columns: minmax(300px, 360px) 900px;
   grid-template-rows: minmax(calc(100dvh - 164px), auto) auto;
@@ -125,6 +221,7 @@ body {
   justify-content: center;
   min-height: 100dvh;
   padding: 100px 32px 64px;
+  pointer-events: none;
 }
 
 .hero-copy {
@@ -173,6 +270,7 @@ body {
     0 30px 90px color-mix(in srgb, var(--landing-accent) 17%, transparent),
     0 8px 28px rgb(60 60 58 / 0.08);
   cursor: grab;
+  pointer-events: auto;
 }
 
 .hero fd-preferences-window[data-dragging] {
@@ -245,6 +343,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
   box-shadow:
     0 34px 90px color-mix(in srgb, var(--landing-accent) 13%, transparent),
     inset 0 1px rgb(255 255 255 / 0.82);
+  pointer-events: auto;
 }
 
 #canvas-demo {
