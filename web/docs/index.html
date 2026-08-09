@@ -633,7 +633,7 @@
           >
             <div class="canvas-grid" slot="background"></div>
             <div class="canvas-world" slot="world">
-              <svg class="canvas-edges" viewBox="0 0 1040 520" aria-hidden="true">
+              <svg class="canvas-edges" viewBox="0 0 1100 520" aria-hidden="true">
                 <defs>
                   <marker
                     id="canvas-arrow"
@@ -647,62 +647,45 @@
                     <path d="M0 0 L8 4 L0 8 Z" />
                   </marker>
                 </defs>
-                <path d="M280 260 C330 260 330 146 380 146" />
-                <path d="M280 260 C330 260 330 396 380 396" />
-                <path d="M620 146 C680 146 700 96 760 96" />
-                <path d="M620 146 C680 146 700 216 760 216" />
-                <path d="M620 396 C680 396 700 336 760 336" />
-                <path d="M620 396 C680 396 700 456 760 456" />
+                <path d="M320 260 C360 260 380 260 420 260" />
+                <path d="M700 260 C760 260 760 156 820 156" />
+                <path d="M700 260 C760 260 760 376 820 376" />
               </svg>
 
               <article
                 class="canvas-node canvas-node-source"
-                style="--node-x: 40px; --node-y: 214px"
+                style="--node-x: 80px; --node-y: 214px"
               >
                 <span class="canvas-node-mark">JSON</span>
                 <span><strong>Design tokens</strong><small>One source of truth</small></span>
               </article>
               <article
-                class="canvas-node canvas-node-capability"
-                style="--node-x: 380px; --node-y: 100px"
+                class="canvas-node canvas-node-contract"
+                style="--node-x: 420px; --node-y: 188px"
               >
-                <span class="canvas-node-mark">UI</span>
-                <span><strong>Preferences</strong><small>Desktop-grade controls</small></span>
-              </article>
-              <article
-                class="canvas-node canvas-node-capability"
-                style="--node-x: 380px; --node-y: 350px"
-              >
-                <span class="canvas-node-mark">∞</span>
-                <span><strong>Canvas</strong><small>Precise infinite viewport</small></span>
+                <span class="canvas-node-mark">FD</span>
+                <span class="canvas-node-contract-content">
+                  <strong>Component contracts</strong>
+                  <small>Shared behavior and semantics</small>
+                  <span class="canvas-node-features">
+                    <span>Preferences</span>
+                    <span>Canvas</span>
+                  </span>
+                </span>
               </article>
               <article
                 class="canvas-node canvas-node-platform"
-                style="--node-x: 760px; --node-y: 50px"
+                style="--node-x: 820px; --node-y: 110px"
               >
                 <span class="canvas-node-mark">S</span>
-                <span><strong>SwiftUI Preferences</strong><small>Native on Apple</small></span>
+                <span><strong>SwiftUI</strong><small>Native on Apple platforms</small></span>
               </article>
               <article
                 class="canvas-node canvas-node-platform"
-                style="--node-x: 760px; --node-y: 170px"
+                style="--node-x: 820px; --node-y: 330px"
               >
                 <span class="canvas-node-mark">W</span>
-                <span><strong>Web Preferences</strong><small>Desktop behavior</small></span>
-              </article>
-              <article
-                class="canvas-node canvas-node-platform"
-                style="--node-x: 760px; --node-y: 290px"
-              >
-                <span class="canvas-node-mark">S</span>
-                <span><strong>SwiftUI Canvas</strong><small>Native rendering</small></span>
-              </article>
-              <article
-                class="canvas-node canvas-node-platform"
-                style="--node-x: 760px; --node-y: 410px"
-              >
-                <span class="canvas-node-mark">W</span>
-                <span><strong>Web Canvas</strong><small>Precise interaction</small></span>
+                <span><strong>Web Components</strong><small>Desktop behavior in the browser</small></span>
               </article>
             </div>
 
