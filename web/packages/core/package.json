@@ -56,7 +56,7 @@
   "scripts": {
     "build": "pnpm run build:js && pnpm run build:types && pnpm run build:theme && pnpm run manifest",
     "build:js": "vite build",
-    "build:types": "tsc -p tsconfig.build.json",
+    "build:types": "tsc -p tsconfig.build.json && node scripts/copy-token-source.js",
     "build:theme": "node scripts/emit-theme-css.js",
     "manifest": "cem analyze --litelement",
     "dev": "vite build --watch",
