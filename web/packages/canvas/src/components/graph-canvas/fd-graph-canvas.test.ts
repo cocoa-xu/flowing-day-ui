@@ -8,6 +8,10 @@ import type {
 } from '../../graph/events.js'
 import type { FdAnyGraphSnapshot } from '../../graph/model.js'
 import type {
+  FdGraphCanvasHistoryConflictDetail,
+  FdGraphCanvasHistoryStateDetail,
+} from '../../history/events.js'
+import type {
   FdGraphRenderFrame,
   FdGraphRenderingBackend,
   FdGraphRenderingSurface,
@@ -619,6 +623,118 @@ describe('fd-graph-canvas accessibility', () => {
         ?.getAttribute('tabindex'),
     ).toBe('0')
     expect(element.shadowRoot?.querySelectorAll('.accessibility-item')).toHaveLength(0)
+  })
+})
+
+describe('fd-graph-canvas history', () => {
+  it('registers one local transaction and supports public undo and redo', async () => {
+    const element = await mount()
+    const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
+    const states: FdGraphCanvasHistoryStateDetail[] = []
+    element.interactionConfiguration = { frameUpdates: 'local' }
+    element.focusedNodeID = 'source'
+    element.selectedNodeIDs = new Set(['source'])
+    element.addEventListener('fd-graph-history-state-change', (event) => states.push(event.detail))
+    await element.updateComplete
+
+    dispatchKey(canvas, 'ArrowRight')
+    expect(element.snapshot.nodes[0]?.frame.x).toBe(41)
+    expect(element.canUndo).toBe(true)
+    expect(element.undoActionName).toBe('Move Nodes')
+
+    expect(await element.undo()).toBe(true)
+    expect(element.snapshot.nodes[0]?.frame.x).toBe(40)
+    expect(element.canRedo).toBe(true)
+    expect(await element.redo()).toBe(true)
+    expect(element.snapshot.nodes[0]?.frame.x).toBe(41)
+    expect(states.some(({ isApplying }) => isApplying)).toBe(true)
+  })
+
+  it('uses rebindable platform shortcuts without claiming unavailable history', async () => {
+    const element = await mount()
+    const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
+    element.interactionConfiguration = { frameUpdates: 'local' }
+    element.focusedNodeID = 'source'
+    element.selectedNodeIDs = new Set(['source'])
+    await element.updateComplete
+    const unavailable = new KeyboardEvent('keydown', {
+      key: 'z',
+      metaKey: true,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    })
+    canvas.dispatchEvent(unavailable)
+    expect(unavailable.defaultPrevented).toBe(false)
+
+    dispatchKey(canvas, 'ArrowRight')
+    const undo = new KeyboardEvent('keydown', {
+      key: 'z',
+      metaKey: true,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    })
+    canvas.dispatchEvent(undo)
+    await nextFrame()
+    expect(undo.defaultPrevented).toBe(true)
+    expect(element.snapshot.nodes[0]?.frame.x).toBe(40)
+
+    dispatchKey(canvas, 'z', { metaKey: true, shiftKey: true })
+    await nextFrame()
+    expect(element.snapshot.nodes[0]?.frame.x).toBe(41)
+  })
+
+  it('reports stale state instead of overwriting a newer snapshot', async () => {
+    const element = await mount()
+    const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
+    const conflicts: FdGraphCanvasHistoryConflictDetail[] = []
+    element.interactionConfiguration = { frameUpdates: 'local' }
+    element.focusedNodeID = 'source'
+    element.selectedNodeIDs = new Set(['source'])
+    element.addEventListener('fd-graph-history-conflict', (event) => conflicts.push(event.detail))
+    await element.updateComplete
+    dispatchKey(canvas, 'ArrowRight')
+    const current = element.snapshot
+    element.snapshot = {
+      ...current,
+      id: 'remote-update',
+      nodes: current.nodes.map((node) =>
+        node.id === 'source' ? { ...node, frame: { ...node.frame, x: 500 } } : node,
+      ),
+    }
+    await element.updateComplete
+
+    expect(await element.undo()).toBe(false)
+    expect(element.snapshot.nodes[0]?.frame.x).toBe(500)
+    expect(conflicts[0]?.failure).toEqual({ kind: 'staleNodeFrame', nodeID: 'source' })
+    expect(element.canRedo).toBe(false)
+  })
+
+  it('lets a collaboration policy own compensation and supports capability opt-out', async () => {
+    const applied: string[] = []
+    const element = await mount()
+    const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
+    element.historyConfiguration = {
+      mode: 'collaborative',
+      apply: (_changes, direction) => {
+        applied.push(direction)
+        return { kind: 'applied' }
+      },
+    }
+    element.focusedNodeID = 'source'
+    element.selectedNodeIDs = new Set(['source'])
+    await element.updateComplete
+    dispatchKey(canvas, 'ArrowRight')
+
+    expect(await element.undo()).toBe(true)
+    expect(await element.redo()).toBe(true)
+    expect(applied).toEqual(['undo', 'redo'])
+
+    element.historyConfiguration = { capabilities: { localUndoRedo: false } }
+    await element.updateComplete
+    dispatchKey(canvas, 'ArrowRight')
+    expect(element.canUndo).toBe(false)
   })
 })
 

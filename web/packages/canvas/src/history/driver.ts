@@ -79,6 +79,9 @@ export class FdGraphHistoryDriver<Change, Failure> {
 
   register(transaction: FdGraphHistoryTransaction<Change>): boolean {
     if (!this.allows(transaction.mode)) return false
+    if (!transaction.id.trim()) throw new RangeError('history transaction ID must not be empty')
+    if (!transaction.actionName.trim())
+      throw new RangeError('history action name must not be empty')
     this.registrationRevision += 1
     this.undoStack.push({
       transactionID: transaction.id,

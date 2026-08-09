@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FdGraphHistoryDriver } from './driver.js'
+import { resolveGraphCanvasHistoryConfiguration } from './graph-canvas.js'
 
 describe('graph history driver', () => {
   it('uses independent undo and redo stacks for local transactions', async () => {
@@ -178,5 +179,17 @@ describe('graph history driver', () => {
     await expect(driver.undo()).rejects.toThrow('transport failed')
     expect(driver.isApplying).toBe(false)
     expect(states.at(-1)).toBe(false)
+  })
+
+  it('requires collaborative consumers to provide an apply policy', () => {
+    expect(() => resolveGraphCanvasHistoryConfiguration({ mode: 'collaborative' })).toThrow(
+      RangeError,
+    )
+    expect(
+      resolveGraphCanvasHistoryConfiguration({
+        mode: 'collaborative',
+        apply: () => ({ kind: 'applied' }),
+      }).mode,
+    ).toBe('collaborative')
   })
 })

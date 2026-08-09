@@ -44,6 +44,19 @@ import type {
 } from '../../graph/model.js'
 import { graphElementIDFromKey, graphPortPoint } from '../../graph/model.js'
 import { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
+import { FdGraphHistoryDriver } from '../../history/driver.js'
+import type {
+  FdGraphCanvasHistoryConflictDetail,
+  FdGraphCanvasHistoryFailure,
+  FdGraphCanvasHistoryStateDetail,
+} from '../../history/events.js'
+import {
+  type FdGraphCanvasHistoryChange,
+  type FdGraphCanvasHistoryConfiguration,
+  type FdResolvedGraphCanvasHistoryConfiguration,
+  resolveGraphCanvasHistoryConfiguration,
+} from '../../history/graph-canvas.js'
+import type { FdGraphHistoryApplyResult, FdGraphHistoryDirection } from '../../history/model.js'
 import { type FdGraphGuide, graphSelectionBounds } from '../../interactions/arrangement.js'
 import type {
   FdGraphCanvasInteractionConfiguration,
@@ -427,6 +440,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   @property({ attribute: false }) keyboardConfiguration: FdGraphCanvasKeyboardConfiguration = {}
   @property({ attribute: false })
   accessibilityConfiguration: FdGraphCanvasAccessibilityConfiguration = {}
+  @property({ attribute: false }) historyConfiguration: FdGraphCanvasHistoryConfiguration = {}
   @property({ attribute: false }) miniMapConfiguration: FdGraphMiniMapConfiguration | undefined
   @property({ attribute: false })
   get selectedNodeIDs(): ReadonlySet<FdGraphElementID> {
@@ -484,6 +498,9 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     resolveGraphCanvasKeyboardConfiguration()
   private resolvedAccessibilityConfiguration: FdResolvedGraphCanvasAccessibilityConfiguration =
     resolveGraphCanvasAccessibilityConfiguration()
+  private resolvedHistoryConfiguration: FdResolvedGraphCanvasHistoryConfiguration =
+    resolveGraphCanvasHistoryConfiguration()
+  private historyDriver = this.createHistoryDriver()
   private accessibilitySnapshot = new FdGraphAccessibilitySnapshot([])
   private accessibilityBridge: FdGraphCanvasAccessibilityBridge | undefined
   private accessibilityFocusedElementKey: string | undefined
@@ -504,6 +521,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     | undefined
   private indexedSnapshot: FdAnyGraphSnapshot | undefined
   private keyboardTransactionSequence = 0
+  private historyTransactionSequence = 0
 
   get viewport(): FdCanvasViewport {
     return this.canvas.viewport
@@ -519,6 +537,34 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
 
   get resolvedRenderingBackend(): FdGraphRenderingBackend | undefined {
     return this.backend
+  }
+
+  get canUndo(): boolean {
+    return this.historyDriver.canUndo
+  }
+
+  get canRedo(): boolean {
+    return this.historyDriver.canRedo
+  }
+
+  get undoActionName(): string | undefined {
+    return this.historyDriver.undoActionName
+  }
+
+  get redoActionName(): string | undefined {
+    return this.historyDriver.redoActionName
+  }
+
+  undo(): Promise<boolean> {
+    return this.historyDriver.undo()
+  }
+
+  redo(): Promise<boolean> {
+    return this.historyDriver.redo()
+  }
+
+  clearHistory(): void {
+    this.historyDriver.clear()
   }
 
   override render() {
@@ -609,6 +655,12 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       this.resolvedAccessibilityConfiguration = resolveGraphCanvasAccessibilityConfiguration(
         this.accessibilityConfiguration,
       )
+    }
+    if (changed.has('historyConfiguration')) {
+      this.resolvedHistoryConfiguration = resolveGraphCanvasHistoryConfiguration(
+        this.historyConfiguration,
+      )
+      this.historyDriver = this.createHistoryDriver()
     }
   }
 
@@ -759,6 +811,9 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
         composed: true,
       }),
     )
+    if (phase === 'ended' && kind !== 'history') {
+      this.registerFrameHistory(transactionID, kind, changes)
+    }
   }
 
   private handleGraphPointerDown = (event: PointerEvent): void => {
@@ -847,6 +902,120 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       }),
     }
     this.rebuildSnapshot()
+  }
+
+  private createHistoryDriver(): FdGraphHistoryDriver<
+    FdGraphCanvasHistoryChange,
+    FdGraphCanvasHistoryFailure
+  > {
+    return new FdGraphHistoryDriver({
+      configuration: {
+        enabled: this.resolvedHistoryConfiguration.enabled,
+        maximumDepth: this.resolvedHistoryConfiguration.maximumDepth,
+        capabilities: this.resolvedHistoryConfiguration.capabilities,
+      },
+      apply: (change, direction) => this.applyHistoryChange(change, direction),
+      onConflict: (conflict) => {
+        this.dispatchEvent(
+          new CustomEvent<FdGraphCanvasHistoryConflictDetail>('fd-graph-history-conflict', {
+            detail: conflict,
+            bubbles: true,
+            composed: true,
+          }),
+        )
+      },
+      onStateChange: (state) => {
+        this.dispatchEvent(
+          new CustomEvent<FdGraphCanvasHistoryStateDetail>('fd-graph-history-state-change', {
+            detail: state,
+            bubbles: true,
+            composed: true,
+          }),
+        )
+      },
+    })
+  }
+
+  private registerFrameHistory(
+    transactionID: string,
+    kind: Exclude<FdGraphNodeFrameChangeKind, 'history'>,
+    changes: readonly FdGraphNodeFrameChange[],
+  ): void {
+    const redoChange = changes.map(({ nodeID, before, after }) => ({
+      nodeID,
+      before: { ...before },
+      after: { ...after },
+    }))
+    const undoChange = redoChange.map(({ nodeID, before, after }) => ({
+      nodeID,
+      before: after,
+      after: before,
+    }))
+    this.historyDriver.register({
+      id: transactionID,
+      actionName: this.resolvedHistoryConfiguration.actionName({ kind, changes: redoChange }),
+      mode: this.resolvedHistoryConfiguration.mode,
+      undoChange,
+      redoChange,
+    })
+  }
+
+  private async applyHistoryChange(
+    changes: FdGraphCanvasHistoryChange,
+    direction: FdGraphHistoryDirection,
+  ): Promise<FdGraphHistoryApplyResult<FdGraphCanvasHistoryChange, FdGraphCanvasHistoryFailure>> {
+    const consumerApply = this.resolvedHistoryConfiguration.apply
+    if (consumerApply) {
+      try {
+        const result = await consumerApply(changes, direction)
+        return result.kind === 'rejected'
+          ? {
+              kind: 'rejected',
+              failure: { kind: 'consumerRejected', failure: result.failure },
+            }
+          : result
+      } catch (error) {
+        return { kind: 'rejected', failure: { kind: 'consumerFailure', error } }
+      }
+    }
+    for (const change of changes) {
+      const frame = this.index.nodes.get(change.nodeID)?.frame
+      if (!frame || !this.framesEqual(frame, change.before)) {
+        return {
+          kind: 'rejected',
+          failure: { kind: 'staleNodeFrame', nodeID: change.nodeID },
+        }
+      }
+    }
+    const snapshotID = this.snapshot.id
+    if (this.resolvedInteractionConfiguration.frameUpdates === 'local') {
+      this.applyLocalFrameChanges(changes)
+    }
+    this.historyTransactionSequence += 1
+    const detail: FdGraphNodeFramesChangeDetail = {
+      transactionID: `history-${this.historyTransactionSequence}`,
+      snapshotID,
+      kind: 'history',
+      phase: 'ended',
+      changes,
+    }
+    this.dispatchEvent(
+      new CustomEvent<FdGraphNodeFramesChangeDetail>('fd-graph-node-frames-change', {
+        detail,
+        bubbles: true,
+        composed: true,
+      }),
+    )
+    return { kind: 'applied' }
+  }
+
+  private framesEqual(first: FdCanvasRect, second: FdCanvasRect): boolean {
+    return (
+      first.x === second.x &&
+      first.y === second.y &&
+      first.width === second.width &&
+      first.height === second.height
+    )
   }
 
   private reconcileSelection(): void {
@@ -1038,7 +1207,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       selectionEnabled:
         this.resolvedKeyboardConfiguration.selection &&
         this.resolvedInteractionConfiguration.selection !== 'none',
-      historyEnabled: false,
+      historyEnabled: this.resolvedHistoryConfiguration.enabled,
     })
     if (!command || !this.performKeyboardCommand(command)) return
     event.preventDefault()
@@ -1065,8 +1234,13 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       case 'activate':
         return this.activateFocusedNode('keyboard')
       case 'undo':
+        if (!this.historyDriver.canUndo) return false
+        void this.historyDriver.undo()
+        return true
       case 'redo':
-        return false
+        if (!this.historyDriver.canRedo) return false
+        void this.historyDriver.redo()
+        return true
     }
   }
 
