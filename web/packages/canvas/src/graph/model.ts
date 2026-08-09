@@ -2,6 +2,27 @@ import type { FdCanvasPoint, FdCanvasRect } from '../geometry.js'
 
 export type FdGraphElementID = string | number
 
+export interface FdGraphNodeReference {
+  readonly kind: 'node'
+  readonly nodeID: FdGraphElementID
+}
+
+export interface FdGraphPortReference {
+  readonly kind: 'port'
+  readonly nodeID: FdGraphElementID
+  readonly portID: FdGraphElementID
+}
+
+export interface FdGraphEdgeReference {
+  readonly kind: 'edge'
+  readonly edgeID: FdGraphElementID
+}
+
+export type FdGraphElementReference =
+  | FdGraphNodeReference
+  | FdGraphPortReference
+  | FdGraphEdgeReference
+
 export type FdGraphPortSide = 'top' | 'right' | 'bottom' | 'left'
 
 export interface FdGraphPort<PortID extends FdGraphElementID = FdGraphElementID> {
@@ -134,6 +155,36 @@ export function graphElementIDFromKey(key: string): FdGraphElementID | undefined
   if (prefix !== 'n:' || value.length === 0) return undefined
   const number = Number(value)
   return Number.isFinite(number) ? number : undefined
+}
+
+export const graphNodeReference = (nodeID: FdGraphElementID): FdGraphNodeReference => ({
+  kind: 'node',
+  nodeID,
+})
+
+export const graphPortReference = (
+  nodeID: FdGraphElementID,
+  portID: FdGraphElementID,
+): FdGraphPortReference => ({ kind: 'port', nodeID, portID })
+
+export const graphEdgeReference = (edgeID: FdGraphElementID): FdGraphEdgeReference => ({
+  kind: 'edge',
+  edgeID,
+})
+
+export function graphElementReferenceKey(reference: FdGraphElementReference): string {
+  switch (reference.kind) {
+    case 'node':
+      return JSON.stringify(['node', graphElementKey(reference.nodeID)])
+    case 'port':
+      return JSON.stringify([
+        'port',
+        graphElementKey(reference.nodeID),
+        graphElementKey(reference.portID),
+      ])
+    case 'edge':
+      return JSON.stringify(['edge', graphElementKey(reference.edgeID)])
+  }
 }
 
 export function graphPortPoint(node: FdAnyGraphNode, portID?: FdGraphElementID): FdCanvasPoint {

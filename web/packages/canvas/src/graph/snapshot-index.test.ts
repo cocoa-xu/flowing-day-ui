@@ -167,7 +167,11 @@ describe('FdGraphSnapshotIndex', () => {
         id,
         frame: { x: 0, y: 0, width: 40, height: 40 },
       })),
-      edges: [],
+      edges: Array.from({ length: 10_000 }, (_, id) => ({
+        id,
+        source: { nodeID: 0 },
+        target: { nodeID: 1 },
+      })),
     })
     const excluded = new Set([0, 1, 2])
     const result = index.nodesIn(
@@ -177,6 +181,9 @@ describe('FdGraphSnapshotIndex', () => {
 
     expect(result).toHaveLength(5)
     expect(result.every(({ id }) => !excluded.has(id as number))).toBe(true)
+    expect(index.edgesIn({ x: 0, y: 0, width: 40, height: 40 }, { maximumCount: 7 })).toHaveLength(
+      7,
+    )
     expect(() => index.nodesIn({ x: 0, y: 0, width: 40, height: 40 }, { maximumCount: 0 })).toThrow(
       RangeError,
     )

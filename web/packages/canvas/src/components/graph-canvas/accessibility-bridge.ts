@@ -3,12 +3,11 @@ import type {
   FdGraphAccessibilityItem,
   FdGraphAccessibilitySnapshot,
 } from '../../accessibility/snapshot.js'
-import type { FdGraphElementID } from '../../graph/model.js'
 
 export interface FdGraphCanvasAccessibilityBridgeUpdate {
   readonly snapshot: FdGraphAccessibilitySnapshot
   readonly configuration: FdResolvedGraphCanvasAccessibilityConfiguration
-  readonly selectedNodeIDs: ReadonlySet<FdGraphElementID>
+  readonly selectedElementKeys: ReadonlySet<string>
   readonly allowsMultipleSelection: boolean
   readonly focusedElementKey?: string
 }
@@ -38,7 +37,7 @@ export class FdGraphCanvasAccessibilityBridge {
     const fragment = document.createDocumentFragment()
     for (const item of items) {
       const element = this.elements.get(item.key) ?? this.createElement(item.key)
-      this.updateElement(element, item, snapshot, update.selectedNodeIDs)
+      this.updateElement(element, item, snapshot, update.selectedElementKeys)
       fragment.append(element)
     }
     for (const [key, element] of this.elements) {
@@ -67,7 +66,7 @@ export class FdGraphCanvasAccessibilityBridge {
     element: HTMLElement,
     item: FdGraphAccessibilityItem,
     snapshot: FdGraphAccessibilitySnapshot,
-    selectedNodeIDs: ReadonlySet<FdGraphElementID>,
+    selectedElementKeys: ReadonlySet<string>,
   ): void {
     element.dataset.fdGraphAccessibilityKey = item.key
     element.setAttribute('aria-label', item.description.label)
@@ -79,11 +78,7 @@ export class FdGraphCanvasAccessibilityBridge {
       'data-fd-graph-accessibility-identifier',
       item.description.identifier,
     )
-    if (item.kind === 'node' && item.reference.nodeID !== undefined) {
-      element.setAttribute('aria-selected', String(selectedNodeIDs.has(item.reference.nodeID)))
-    } else {
-      element.removeAttribute('aria-selected')
-    }
+    element.setAttribute('aria-selected', String(selectedElementKeys.has(item.key)))
   }
 
   private description(item: FdGraphAccessibilityItem): string | undefined {

@@ -50,7 +50,8 @@ export interface FdGraphCanvasInteractionDelegate {
   nodeIDAtViewportPoint(point: FdCanvasPoint): FdGraphElementID | undefined
   setSelection(
     selection: ReadonlySet<FdGraphElementID>,
-    detail: Omit<FdGraphSelectionChangeDetail, 'selectedNodeIDs'>,
+    mode: FdGraphSelectionMode,
+    detail: Omit<FdGraphSelectionChangeDetail, 'selectedElements' | 'selectedNodeIDs'>,
   ): void
   setPresentation(presentation: FdGraphInteractionPresentation): void
   emitFrameChanges(
@@ -73,6 +74,7 @@ interface FdGraphMoveSession extends FdGraphPointerSessionBase {
   readonly kind: 'move'
   readonly clickedNodeID: FdGraphElementID
   readonly clickSelection: ReadonlySet<FdGraphElementID>
+  readonly clickSelectionMode: FdGraphSelectionMode
   readonly baseFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
   readonly baseBounds: FdCanvasRect
   readonly canMove: boolean
@@ -165,9 +167,12 @@ export class FdGraphCanvasInteractionController {
     if (!session || event.pointerId !== session.pointerID) return
     if (!session.moved) {
       if (session.kind === 'move') {
-        this.delegate.setSelection(session.clickSelection, { phase: 'ended', source: 'pointer' })
+        this.delegate.setSelection(session.clickSelection, session.clickSelectionMode, {
+          phase: 'ended',
+          source: 'pointer',
+        })
       } else if (session.kind === 'marquee' && session.mode === 'replace') {
-        this.delegate.setSelection(new Set(), { phase: 'ended', source: 'pointer' })
+        this.delegate.setSelection(new Set(), 'replace', { phase: 'ended', source: 'pointer' })
       }
     } else if (session.kind === 'move' || session.kind === 'resize') {
       const changes = this.frameChanges(session.baseFrames, session.latestFrames)
@@ -179,13 +184,13 @@ export class FdGraphCanvasInteractionController {
           changes,
         )
       } else {
-        this.delegate.setSelection(this.delegate.selectedNodeIDs, {
+        this.delegate.setSelection(this.delegate.selectedNodeIDs, 'extend', {
           phase: 'ended',
           source: 'pointer',
         })
       }
     } else {
-      this.delegate.setSelection(this.delegate.selectedNodeIDs, {
+      this.delegate.setSelection(this.delegate.selectedNodeIDs, session.mode, {
         phase: 'ended',
         source: 'pointer',
       })
@@ -209,7 +214,10 @@ export class FdGraphCanvasInteractionController {
     const dragSelection = initial.has(nodeID)
       ? new Set(initial)
       : resolveGraphSelection(initial, nodeID, mode, configuration.selection)
-    this.delegate.setSelection(dragSelection, { phase: 'continuous', source: 'pointer' })
+    this.delegate.setSelection(dragSelection, initial.has(nodeID) ? 'extend' : mode, {
+      phase: 'continuous',
+      source: 'pointer',
+    })
 
     const selectedNodes = [...dragSelection].flatMap((id) => {
       const selected = this.delegate.graphIndex.nodes.get(id)
@@ -244,6 +252,7 @@ export class FdGraphCanvasInteractionController {
       ),
       clickedNodeID: nodeID,
       clickSelection,
+      clickSelectionMode: mode,
       baseFrames,
       baseBounds,
       canMove: baseFrames.size > 0,
@@ -326,7 +335,10 @@ export class FdGraphCanvasInteractionController {
       moved: false,
     }
     if (mode === 'replace') {
-      this.delegate.setSelection(new Set(), { phase: 'continuous', source: 'pointer' })
+      this.delegate.setSelection(new Set(), 'replace', {
+        phase: 'continuous',
+        source: 'pointer',
+      })
     }
     return true
   }
@@ -481,7 +493,10 @@ export class FdGraphCanvasInteractionController {
       this.delegate.resolvedConfiguration.selection,
       this.delegate.resolvedConfiguration.marquee,
     )
-    this.delegate.setSelection(selection, { phase: 'continuous', source: 'pointer' })
+    this.delegate.setSelection(selection, session.mode, {
+      phase: 'continuous',
+      source: 'pointer',
+    })
     this.delegate.setPresentation({ frames: new Map(), guides: [], marquee })
   }
 
@@ -680,8 +695,10 @@ export class FdGraphCanvasInteractionController {
       .composedPath()
       .some(
         (candidate) =>
-          candidate instanceof HTMLElement &&
-          candidate.matches('button, input, select, textarea, a[href], [contenteditable="true"]'),
+          candidate instanceof Element &&
+          candidate.matches(
+            'button, input, select, textarea, a[href], [contenteditable="true"], [data-fd-graph-port], [data-fd-graph-edge]',
+          ),
       )
   }
 

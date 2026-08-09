@@ -1,20 +1,26 @@
 import type { FdCanvasRect } from '../geometry.js'
-import type { FdAnyGraphSnapshot, FdGraphElementID, FdGraphPort } from '../graph/model.js'
-import { graphElementKey, graphPortPoint } from '../graph/model.js'
+import type {
+  FdAnyGraphSnapshot,
+  FdGraphElementID,
+  FdGraphElementReference,
+  FdGraphPort,
+} from '../graph/model.js'
+import {
+  graphEdgeReference,
+  graphElementReferenceKey,
+  graphNodeReference,
+  graphPortPoint,
+  graphPortReference,
+} from '../graph/model.js'
 import type { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
 import type {
   FdGraphAccessibilityDescription,
   FdResolvedGraphCanvasAccessibilityConfiguration,
 } from './configuration.js'
 
-export type FdGraphAccessibilityElementKind = 'node' | 'port' | 'edge'
+export type FdGraphAccessibilityElementKind = FdGraphElementReference['kind']
 
-export interface FdGraphAccessibilityElementReference {
-  readonly kind: FdGraphAccessibilityElementKind
-  readonly nodeID?: FdGraphElementID
-  readonly portID?: FdGraphElementID
-  readonly edgeID?: FdGraphElementID
-}
+export type FdGraphAccessibilityElementReference = FdGraphElementReference
 
 export interface FdGraphAccessibilityItem {
   readonly key: string
@@ -25,10 +31,12 @@ export interface FdGraphAccessibilityItem {
   readonly relatedElementKeys: readonly string[]
 }
 
-const nodeKey = (nodeID: FdGraphElementID): string => `node:${graphElementKey(nodeID)}`
-const edgeKey = (edgeID: FdGraphElementID): string => `edge:${graphElementKey(edgeID)}`
+const nodeKey = (nodeID: FdGraphElementID): string =>
+  graphElementReferenceKey(graphNodeReference(nodeID))
+const edgeKey = (edgeID: FdGraphElementID): string =>
+  graphElementReferenceKey(graphEdgeReference(edgeID))
 const portKey = (nodeID: FdGraphElementID, portID: FdGraphElementID): string =>
-  `port:${graphElementKey(nodeID)}:${graphElementKey(portID)}`
+  graphElementReferenceKey(graphPortReference(nodeID, portID))
 
 const portFrame = (node: FdAnyGraphSnapshot['nodes'][number], port: FdGraphPort): FdCanvasRect => {
   const point = graphPortPoint(node, port.id)

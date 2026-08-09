@@ -75,12 +75,19 @@ export class FdGraphCanvasConnectionController {
     this.update(this.delegate.viewport.transform.removePoint(viewportPoint))
   }
 
-  pointerEnd(event: PointerEvent): void {
+  pointerEnd(event: PointerEvent): FdGraphConnectionEndpoint | undefined {
     const session = this.pointerSession
-    if (!session || event.pointerId !== session.pointerID) return
+    if (!session || event.pointerId !== session.pointerID) return undefined
+    const clickedEndpoint =
+      !session.moved && this.connection
+        ? this.connection.origin.kind === 'new'
+          ? this.connection.origin.source
+          : this.connection.origin.original
+        : undefined
     this.pointerSession = undefined
     if (session.moved) this.finish()
     else this.cancel({ kind: 'cancelled' })
+    return clickedEndpoint
   }
 
   begin(origin: FdGraphConnectionOrigin): boolean {

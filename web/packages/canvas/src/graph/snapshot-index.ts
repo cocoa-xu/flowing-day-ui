@@ -273,8 +273,8 @@ export class FdGraphSnapshotIndex {
     return this.orderedValues(this.nodeGrid.query(rect, options), this.nodes, this.nodeOrder)
   }
 
-  edgesIn(rect: FdCanvasRect): readonly FdAnyGraphEdge[] {
-    return this.orderedValues(this.edgeGrid.query(rect), this.edges, this.edgeOrder)
+  edgesIn(rect: FdCanvasRect, options: FdGraphSpatialQueryOptions = {}): readonly FdAnyGraphEdge[] {
+    return this.orderedValues(this.edgeGrid.query(rect, options), this.edges, this.edgeOrder)
   }
 
   endpointPoint(edge: FdAnyGraphEdge, endpoint: 'source' | 'target'): FdCanvasPoint {

@@ -5,7 +5,7 @@ import type {
   FdGraphConnectionOrigin,
   FdGraphTransientConnection,
 } from '../interactions/connection.js'
-import type { FdGraphElementID } from './model.js'
+import type { FdGraphElementID, FdGraphElementReference } from './model.js'
 
 export type FdGraphInteractionPhase = 'continuous' | 'ended'
 export type FdGraphSelectionSource = 'pointer' | 'keyboard' | 'accessibility' | 'programmatic'
@@ -13,6 +13,7 @@ export type FdGraphNodeFrameChangeKind = 'drag' | 'resize' | 'keyboard' | 'arran
 export type FdGraphFocusSource = 'pointer' | 'keyboard' | 'accessibility' | 'programmatic'
 
 export interface FdGraphSelectionChangeDetail {
+  readonly selectedElements: readonly FdGraphElementReference[]
   readonly selectedNodeIDs: ReadonlySet<FdGraphElementID>
   readonly phase: FdGraphInteractionPhase
   readonly source: FdGraphSelectionSource
@@ -33,6 +34,7 @@ export interface FdGraphNodeFramesChangeDetail {
 }
 
 export interface FdGraphFocusChangeDetail {
+  readonly focusedElement?: FdGraphElementReference
   readonly focusedNodeID?: FdGraphElementID
   readonly source: FdGraphFocusSource
 }

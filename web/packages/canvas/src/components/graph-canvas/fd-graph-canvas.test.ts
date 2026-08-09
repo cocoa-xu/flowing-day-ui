@@ -11,6 +11,12 @@ import type {
   FdGraphSelectionChangeDetail,
 } from '../../graph/events.js'
 import type { FdAnyGraphSnapshot } from '../../graph/model.js'
+import {
+  graphEdgeReference,
+  graphElementReferenceKey,
+  graphNodeReference,
+  graphPortReference,
+} from '../../graph/model.js'
 import type {
   FdGraphCanvasHistoryConflictDetail,
   FdGraphCanvasHistoryStateDetail,
@@ -181,6 +187,26 @@ describe('fd-graph-canvas rendering boundary', () => {
     expect(updated).toBe(original)
     expect(updated?.style.transform).toContain('120px')
     expect(updated?.textContent).toContain('Moved source')
+  })
+
+  it('removes selected and focused elements that disappear from a snapshot', async () => {
+    const element = await mount(graphSnapshot(), 'dom')
+    element.selectedElements = [
+      graphPortReference('source', 'output'),
+      graphEdgeReference('connection'),
+    ]
+    element.focusedElement = graphEdgeReference('connection')
+    await element.updateComplete
+
+    element.snapshot = {
+      id: 'graph-without-connections',
+      nodes: graphSnapshot().nodes.map((node) => ({ ...node, ports: [] })),
+      edges: [],
+    }
+    await element.updateComplete
+
+    expect(element.selectedElements).toEqual([])
+    expect(element.focusedElement).toBeUndefined()
   })
 
   it('accepts a consumer-supplied rendering backend', async () => {
@@ -714,9 +740,80 @@ describe('fd-graph-canvas pointer editing', () => {
     )
     expect(element.viewport.transform.zoom).toBeGreaterThan(initial.zoom)
   })
+
+  it('selects and focuses ports and edges with typed identities', async () => {
+    const element = await mount(graphSnapshot(), 'dom')
+    const changes: FdGraphSelectionChangeDetail[] = []
+    element.addEventListener('fd-graph-selection-change', (event) => changes.push(event.detail))
+    const port = element.shadowRoot?.querySelector<HTMLElement>(
+      '[data-fd-graph-node="s:source"][data-fd-graph-port="s:output"]',
+    )
+    const edge = element.shadowRoot?.querySelector<SVGPathElement>(
+      '[data-fd-graph-edge="s:connection"]',
+    )
+    if (!port || !edge) throw new Error('missing selectable graph elements')
+
+    port.dispatchEvent(new MouseEvent('click', { button: 0, bubbles: true, composed: true }))
+    await nextFrame()
+
+    expect(element.selectedElements).toEqual([graphPortReference('source', 'output')])
+    expect(element.focusedElement).toEqual(graphPortReference('source', 'output'))
+    expect(port.hasAttribute('data-selected')).toBe(true)
+    expect(port.hasAttribute('data-focused')).toBe(true)
+
+    edge.dispatchEvent(
+      new MouseEvent('click', { button: 0, shiftKey: true, bubbles: true, composed: true }),
+    )
+    await nextFrame()
+
+    expect(element.selectedElements).toEqual([
+      graphPortReference('source', 'output'),
+      graphEdgeReference('connection'),
+    ])
+    expect(element.focusedElement).toEqual(graphEdgeReference('connection'))
+    expect(edge.hasAttribute('data-selected')).toBe(true)
+    expect(edge.hasAttribute('data-focused')).toBe(true)
+    expect(changes.at(-1)?.selectedElements).toEqual(element.selectedElements)
+  })
+
+  it('enforces single-selection policy across element kinds', async () => {
+    const element = await mount()
+    element.interactionConfiguration = { selection: 'single' }
+    element.selectedElements = [graphPortReference('source', 'output')]
+    await element.updateComplete
+
+    expect(element.jumpToElement('target', { selection: 'add', animated: false })).toBe(true)
+    expect(element.selectedElements).toEqual([graphNodeReference('target')])
+  })
 })
 
 describe('fd-graph-canvas connection editing', () => {
+  it('treats a port click as selection without mistaking the captured click for an edge', async () => {
+    const element = await mount(graphSnapshot(), 'dom')
+    const canvas = preparePointerInput(element)
+    element.connectionEditingConfiguration = { enabled: true }
+    await element.updateComplete
+    const sourcePort = element.shadowRoot?.querySelector<HTMLElement>(
+      '[data-fd-graph-node="s:source"][data-fd-graph-port="s:output"]',
+    )
+    if (!sourcePort) throw new Error('missing source port')
+    const point = clientPoint(element, { x: 220, y: 124 })
+
+    dispatchPointer(sourcePort, 'pointerdown', point)
+    dispatchPointer(canvas, 'pointerup', point)
+    canvas.dispatchEvent(
+      new MouseEvent('click', {
+        clientX: point.x,
+        clientY: point.y,
+        button: 0,
+        bubbles: true,
+        composed: true,
+      }),
+    )
+
+    expect(element.selectedElements).toEqual([graphPortReference('source', 'output')])
+  })
+
   it('previews and completes a new connection without mutating the snapshot', async () => {
     const snapshot = graphSnapshot()
     const element = await mount(snapshot)
@@ -879,7 +976,11 @@ describe('fd-graph-canvas keyboard editing', () => {
 
     expect(element.focusedNodeID).toBe('target')
     expect(element.selectedNodeIDs).toEqual(new Set(['target']))
-    expect(focusChanges.at(-1)).toEqual({ focusedNodeID: 'target', source: 'keyboard' })
+    expect(focusChanges.at(-1)).toEqual({
+      focusedElement: graphNodeReference('target'),
+      focusedNodeID: 'target',
+      source: 'keyboard',
+    })
     expect(
       element.shadowRoot
         ?.querySelector('[data-fd-graph-node="s:target"]')
@@ -991,7 +1092,11 @@ describe('fd-graph-canvas navigation', () => {
     expect(element.focusedNodeID).toBe('target')
     expect(element.viewport.transform.zoom).toBeCloseTo(1.4)
     expect(selectionChanges.at(-1)?.source).toBe('programmatic')
-    expect(focusChanges.at(-1)).toEqual({ focusedNodeID: 'target', source: 'programmatic' })
+    expect(focusChanges.at(-1)).toEqual({
+      focusedElement: graphNodeReference('target'),
+      focusedNodeID: 'target',
+      source: 'programmatic',
+    })
   })
 
   it('supports preserved and additive selection and ignores missing nodes', async () => {
@@ -1056,9 +1161,13 @@ describe('fd-graph-canvas accessibility', () => {
     expect(element.shadowRoot?.querySelectorAll('.accessibility-item')).toHaveLength(3)
 
     surface?.focus()
-    expect(surface?.getAttribute('aria-activedescendant')).toContain('node%3As%3Asource')
+    expect(surface?.getAttribute('aria-activedescendant')).toContain(
+      encodeURIComponent(graphElementReferenceKey(graphNodeReference('source'))),
+    )
     dispatchKey(surface ?? element, 'ArrowDown')
-    expect(surface?.getAttribute('aria-activedescendant')).toContain('node%3As%3Atarget')
+    expect(surface?.getAttribute('aria-activedescendant')).toContain(
+      encodeURIComponent(graphElementReferenceKey(graphNodeReference('target'))),
+    )
     dispatchKey(surface ?? element, 'ArrowDown')
     await nextFrame()
     expect(
@@ -1066,6 +1175,18 @@ describe('fd-graph-canvas accessibility', () => {
         ?.querySelector('[data-fd-graph-edge="s:connection"]')
         ?.hasAttribute('data-focused'),
     ).toBe(true)
+    dispatchKey(surface ?? element, ' ')
+    await nextFrame()
+    expect(element.selectedElements).toEqual([graphEdgeReference('connection')])
+    expect(
+      element.shadowRoot
+        ?.querySelector('[data-fd-graph-edge="s:connection"]')
+        ?.hasAttribute('data-selected'),
+    ).toBe(true)
+    const activeID = surface?.getAttribute('aria-activedescendant')
+    expect(
+      activeID ? element.shadowRoot?.getElementById(activeID)?.getAttribute('aria-selected') : null,
+    ).toBe('true')
   })
 
   it('keeps consumer semantics and capabilities independent from mechanics', async () => {
@@ -1152,7 +1273,9 @@ describe('fd-graph-canvas accessibility', () => {
 
     surface?.focus()
     dispatchKey(surface ?? element, 'ArrowRight', { altKey: true })
-    expect(surface?.getAttribute('aria-activedescendant')).toContain('node%3As%3Atarget')
+    expect(surface?.getAttribute('aria-activedescendant')).toContain(
+      encodeURIComponent(graphElementReferenceKey(graphNodeReference('target'))),
+    )
 
     dispatchKey(surface ?? element, 'i')
 

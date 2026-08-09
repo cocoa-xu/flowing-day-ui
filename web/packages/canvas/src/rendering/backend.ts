@@ -1,5 +1,10 @@
 import type { FdCanvasPoint, FdCanvasRect, FdCanvasViewport } from '../geometry.js'
-import type { FdAnyGraphEdge, FdAnyGraphNode, FdGraphElementID } from '../graph/model.js'
+import type {
+  FdAnyGraphEdge,
+  FdAnyGraphNode,
+  FdGraphElementID,
+  FdGraphElementReference,
+} from '../graph/model.js'
 
 export type FdGraphRenderingBackendPreference = 'automatic' | 'webgl2' | 'dom'
 export type FdGraphRenderingBackendKind = 'webgl2' | 'dom' | (string & {})
@@ -33,7 +38,11 @@ export interface FdGraphRenderFrame {
   readonly renderWorldRect: FdCanvasRect
   readonly nodes: readonly FdGraphRenderNode[]
   readonly edges: readonly FdGraphRenderEdge[]
+  readonly selectedElements: readonly FdGraphElementReference[]
   readonly selectedNodeIDs: ReadonlySet<FdGraphElementID>
+  readonly selectedEdgeIDs: ReadonlySet<FdGraphElementID>
+  readonly selectedPortIDsByNode: ReadonlyMap<FdGraphElementID, ReadonlySet<FdGraphElementID>>
+  readonly focusedElement?: FdGraphElementReference
   readonly focusedNodeID?: FdGraphElementID
   readonly hoveredNodeID?: FdGraphElementID
   readonly pixelRatio: number

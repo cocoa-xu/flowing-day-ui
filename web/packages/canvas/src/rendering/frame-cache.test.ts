@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FdAnyGraphNode, FdAnyGraphSnapshot } from '../graph/model.js'
+import { graphEdgeReference, graphNodeReference } from '../graph/model.js'
 import { FdGraphRenderGeometryCache } from './frame-cache.js'
 
 const snapshot: FdAnyGraphSnapshot = {
@@ -21,7 +22,8 @@ describe('graph render geometry cache', () => {
       nodes: snapshot.nodes,
       edges: snapshot.edges,
       selectedNodeIDs: new Set([1]),
-      focusedNodeID: 1,
+      selectedEdgeIDs: new Set<number>(),
+      focusedElement: graphNodeReference(1),
       nodeFrame: (node: (typeof snapshot.nodes)[number]) => node.frame,
       edgeEndpoint: (_edge: (typeof snapshot.edges)[number], endpoint: 'source' | 'target') => {
         endpointCalls += 1
@@ -45,14 +47,20 @@ describe('graph render geometry cache', () => {
       nodes: snapshot.nodes,
       edges: snapshot.edges,
       selectedNodeIDs: new Set<number>(),
+      selectedEdgeIDs: new Set([3]),
       nodeFrame: (node: (typeof snapshot.nodes)[number]) => node.frame,
       edgeEndpoint: (_edge: (typeof snapshot.edges)[number], endpoint: 'source' | 'target') =>
         endpoint === 'source' ? { x: 40, y: 20 } : { x: 100, y: 20 },
     }
     const first = cache.resolve(base)
-    const second = cache.resolve({ ...base, presentationRevision: 2, focusedEdgeID: 3 })
+    const second = cache.resolve({
+      ...base,
+      presentationRevision: 2,
+      focusedElement: graphEdgeReference(3),
+    })
 
     expect(second).not.toBe(first)
+    expect(second.edges[0]?.selected).toBe(true)
     expect(second.edges[0]?.focused).toBe(true)
   })
 
@@ -69,6 +77,7 @@ describe('graph render geometry cache', () => {
       nodes,
       edges: [],
       selectedNodeIDs: new Set<number>(),
+      selectedEdgeIDs: new Set<number>(),
       nodeFrame: (node: FdAnyGraphNode) => {
         frameCalls += 1
         return node.frame

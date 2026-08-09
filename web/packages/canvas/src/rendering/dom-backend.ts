@@ -19,6 +19,7 @@ const svgNamespace = 'http://www.w3.org/2000/svg'
 export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
   readonly kind = 'dom'
   private readonly nodeElements = new Map<string, HTMLElement>()
+  private readonly portElementsByNode = new Map<string, readonly HTMLElement[]>()
   private readonly edgeElements = new Map<string, SVGPathElement>()
   private readonly edgeLabelElements = new Map<string, SVGTextElement>()
   private readonly edgeLayer = document.createElementNS(svgNamespace, 'svg')
@@ -63,6 +64,7 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     this.edgeLayer.replaceChildren()
     this.nodeLayer.replaceChildren()
     this.nodeElements.clear()
+    this.portElementsByNode.clear()
     this.edgeElements.clear()
     this.edgeLabelElements.clear()
     this.surface = undefined
@@ -74,6 +76,7 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     if (this.configuration.rendersNodes === false) {
       this.nodeLayer.replaceChildren()
       this.nodeElements.clear()
+      this.portElementsByNode.clear()
       return
     }
     const visibleKeys = new Set<string>()
@@ -107,14 +110,18 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
         rendered.node.accessibilityLabel ?? rendered.node.label ?? String(rendered.node.id),
       )
       if (element.dataset.fdSnapshotRevision !== String(frame.snapshotRevision)) {
-        element.replaceChildren(this.nodeContent(rendered), ...this.portElements(rendered.node))
+        const ports = this.portElements(rendered.node)
+        element.replaceChildren(this.nodeContent(rendered), ...ports)
+        this.portElementsByNode.set(key, ports)
         element.dataset.fdSnapshotRevision = String(frame.snapshotRevision)
       }
+      this.updatePortSelection(this.portElementsByNode.get(key) ?? [], rendered.node, frame)
     }
     for (const [key, element] of this.nodeElements) {
       if (visibleKeys.has(key)) continue
       element.remove()
       this.nodeElements.delete(key)
+      this.portElementsByNode.delete(key)
     }
   }
 
@@ -153,6 +160,25 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
       if (port.label) element.title = port.label
       return element
     })
+  }
+
+  private updatePortSelection(
+    elements: readonly HTMLElement[],
+    node: FdGraphRenderFrame['nodes'][number]['node'],
+    frame: FdGraphRenderFrame,
+  ): void {
+    const selectedPortIDs = frame.selectedPortIDsByNode.get(node.id)
+    for (const [index, port] of (node.ports ?? []).entries()) {
+      const element = elements[index]
+      if (!element) continue
+      element.toggleAttribute('data-selected', selectedPortIDs?.has(port.id) === true)
+      element.toggleAttribute(
+        'data-focused',
+        frame.focusedElement?.kind === 'port' &&
+          frame.focusedElement.nodeID === node.id &&
+          frame.focusedElement.portID === port.id,
+      )
+    }
   }
 
   private updateEdges(edges: readonly FdGraphRenderEdge[]): void {

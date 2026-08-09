@@ -10,7 +10,6 @@ import type { FdGraphAccessibilityActionDetail } from '../../accessibility/event
 import {
   createGraphAccessibilitySnapshot,
   FdGraphAccessibilitySnapshot,
-  graphNodeAccessibilityKey,
 } from '../../accessibility/snapshot.js'
 import type {
   FdCanvasConfiguration,
@@ -44,8 +43,17 @@ import type {
   FdAnyGraphNode,
   FdAnyGraphSnapshot,
   FdGraphElementID,
+  FdGraphElementReference,
 } from '../../graph/model.js'
-import { graphElementIDFromKey, graphElementKey, graphPortPoint } from '../../graph/model.js'
+import {
+  graphEdgeReference,
+  graphElementIDFromKey,
+  graphElementKey,
+  graphElementReferenceKey,
+  graphNodeReference,
+  graphPortPoint,
+  graphPortReference,
+} from '../../graph/model.js'
 import { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
 import { FdGraphHistoryDriver } from '../../history/driver.js'
 import type {
@@ -94,6 +102,11 @@ import {
   resolveGraphCanvasKeyboardConfiguration,
 } from '../../interactions/keyboard.js'
 import type { FdGraphJumpToElementOptions } from '../../interactions/navigation.js'
+import {
+  type FdGraphSelectionMode,
+  graphEdgeDistance,
+  graphSelectionMode,
+} from '../../interactions/selection.js'
 import type { FdGraphMiniMapConfiguration } from '../../minimap/configuration.js'
 import type {
   FdGraphRenderFrame,
@@ -127,6 +140,13 @@ import {
 } from './interaction-controller.js'
 
 const emptySnapshot: FdAnyGraphSnapshot = { id: 'empty', nodes: [], edges: [] }
+const edgeHitTestMaximumCandidates = 512
+const edgeHitTestViewportTolerance = 8
+const edgeHitTestMinimumTolerance = 6
+const edgeHitTestPadding = 4
+const minimumElementFocusFrameSize = 22
+const suppressedConnectionClickDuration = 500
+const suppressedConnectionClickTolerance = 4
 
 @customElement('fd-graph-canvas')
 export class FdGraphCanvas
@@ -199,10 +219,15 @@ export class FdGraphCanvas
       stroke-linecap: round;
       stroke-width: var(--fd-graph-edge-width, 2);
       vector-effect: non-scaling-stroke;
+      pointer-events: stroke;
     }
 
     .graph-edge[data-dashed] {
       stroke-dasharray: 7 6;
+    }
+
+    .graph-edge[data-selected] {
+      stroke: var(--fd-canvas-accent-color, #6d9ea5);
     }
 
     .graph-edge[data-focused] {
@@ -306,6 +331,17 @@ export class FdGraphCanvas
       box-shadow:
         0 0 0 1px var(--fd-canvas-node-border-color, #d7dcd8),
         0 0 0 4px color-mix(in srgb, var(--fd-canvas-accent-color, #6d9ea5) 22%, transparent);
+    }
+
+    .graph-port[data-selected] {
+      box-shadow:
+        0 0 0 1px var(--fd-canvas-node-border-color, #d7dcd8),
+        0 0 0 4px color-mix(in srgb, var(--fd-canvas-accent-color, #6d9ea5) 24%, transparent);
+    }
+
+    .graph-port[data-focused] {
+      outline: 2px solid var(--fd-graph-focus-color, var(--fd-canvas-focus-color, Highlight));
+      outline-offset: 3px;
     }
 
     .graph-port[data-connection-state='valid'] {
@@ -653,15 +689,52 @@ export class FdGraphCanvas
   @property({ attribute: false }) miniMapConfiguration: FdGraphMiniMapConfiguration | undefined
   @property({ attribute: false }) guideRenderer: FdGraphGuideRenderer =
     new FdGraphDefaultGuideRenderer()
+
+  @property({ attribute: false })
+  get selectedElements(): readonly FdGraphElementReference[] {
+    return this.selectedElementValues
+  }
+
+  set selectedElements(value: readonly FdGraphElementReference[]) {
+    const previousElements = this.selectedElementValues
+    const previousNodeIDs = this.selectionValue
+    this.assignSelection(value)
+    if (!this.referenceArraysEqual(previousElements, this.selectedElementValues)) {
+      this.requestUpdate('selectedElements', previousElements)
+    }
+    if (!this.setsEqual(previousNodeIDs, this.selectionValue)) {
+      this.requestUpdate('selectedNodeIDs', previousNodeIDs)
+    }
+  }
+
   @property({ attribute: false })
   get selectedNodeIDs(): ReadonlySet<FdGraphElementID> {
     return this.selectionValue
   }
 
   set selectedNodeIDs(value: ReadonlySet<FdGraphElementID>) {
-    const previous = this.selectionValue
-    this.selectionValue = new Set(value)
-    this.requestUpdate('selectedNodeIDs', previous)
+    this.selectedElements = [...value].map(graphNodeReference)
+  }
+
+  @property({ attribute: false })
+  get focusedElement(): FdGraphElementReference | undefined {
+    return this.focusedElementValue
+  }
+
+  set focusedElement(value: FdGraphElementReference | undefined) {
+    const previousElement = this.focusedElementValue
+    const previousNodeID = this.focusedNodeValue
+    if (this.referencesEqual(previousElement, value)) return
+    this.focusedElementValue = value
+    this.focusedNodeValue = value?.kind === 'node' ? value.nodeID : undefined
+    if (value) {
+      const key = graphElementReferenceKey(value)
+      if (this.accessibilitySnapshot.contains(key)) this.accessibilityFocusedElementKey = key
+    }
+    this.requestUpdate('focusedElement', previousElement)
+    if (previousNodeID !== this.focusedNodeValue) {
+      this.requestUpdate('focusedNodeID', previousNodeID)
+    }
   }
 
   @property({ attribute: false })
@@ -670,14 +743,7 @@ export class FdGraphCanvas
   }
 
   set focusedNodeID(value: FdGraphElementID | undefined) {
-    const previous = this.focusedNodeValue
-    if (previous === value) return
-    this.focusedNodeValue = value
-    if (value !== undefined) {
-      const key = graphNodeAccessibilityKey(value)
-      if (this.accessibilitySnapshot.contains(key)) this.accessibilityFocusedElementKey = key
-    }
-    this.requestUpdate('focusedNodeID', previous)
+    this.focusedElement = value === undefined ? undefined : graphNodeReference(value)
   }
 
   @query('fd-canvas') private canvas!: FdCanvas
@@ -723,7 +789,13 @@ export class FdGraphCanvas
   private accessibilityFocusedElementKey: string | undefined
   private keyboardCandidates: FdGraphKeyboardNavigationCandidate[] = []
   private readonly keyboardCandidateIndices = new Map<FdGraphElementID, number>()
+  private selectedElementValues: readonly FdGraphElementReference[] = []
+  private selectedElementKeys = new Set<string>()
   private selectionValue: ReadonlySet<FdGraphElementID> = new Set()
+  private selectedEdgeIDsValue: ReadonlySet<FdGraphElementID> = new Set()
+  private selectedPortIDsByNodeValue: ReadonlyMap<FdGraphElementID, ReadonlySet<FdGraphElementID>> =
+    new Map()
+  private focusedElementValue: FdGraphElementReference | undefined
   private focusedNodeValue: FdGraphElementID | undefined
   private resizeHandlesVisible = false
   private localSnapshotSequence = 0
@@ -742,6 +814,9 @@ export class FdGraphCanvas
   private arrangementTransactionSequence = 0
   private historyTransactionSequence = 0
   private readonly connectionPortElements = new Set<HTMLElement>()
+  private suppressedConnectionClick:
+    | { readonly clientX: number; readonly clientY: number; readonly timestamp: number }
+    | undefined
   private guideElements: HTMLElement[] = []
 
   get viewport(): FdCanvasViewport {
@@ -879,6 +954,7 @@ export class FdGraphCanvas
     this.canvas.addEventListener('pointermove', this.handleGraphPointerMove, { capture: true })
     this.canvas.addEventListener('pointerup', this.handleGraphPointerEnd, { capture: true })
     this.canvas.addEventListener('pointercancel', this.handleGraphPointerCancel, { capture: true })
+    this.canvas.addEventListener('click', this.handleGraphClick, { capture: true })
     this.activateBackend()
     this.rebuildSnapshot()
   }
@@ -932,7 +1008,7 @@ export class FdGraphCanvas
     if (changed.has('accessibilityConfiguration') && !changed.has('snapshot')) {
       this.rebuildAccessibilitySnapshot()
     }
-    if (changed.has('selectedNodeIDs')) {
+    if (changed.has('selectedElements') || changed.has('selectedNodeIDs')) {
       this.reconcileSelection()
       this.refreshResizeHandleVisibility()
       this.presentationRevision += 1
@@ -940,7 +1016,7 @@ export class FdGraphCanvas
       this.syncAccessibilityBridge()
       this.scheduleRenderFrame()
     }
-    if (changed.has('focusedNodeID')) {
+    if (changed.has('focusedElement') || changed.has('focusedNodeID')) {
       this.reconcileKeyboardFocus()
       this.presentationRevision += 1
       this.syncAccessibilityBridge()
@@ -1014,7 +1090,10 @@ export class FdGraphCanvas
           ? new Set(this.selectedNodeIDs)
           : new Set<FdGraphElementID>()
       selectedNodeIDs.add(nodeID)
-      this.setSelection(selectedNodeIDs, { phase: 'ended', source: 'programmatic' })
+      this.setSelection(selectedNodeIDs, selection === 'add' ? 'extend' : 'replace', {
+        phase: 'ended',
+        source: 'programmatic',
+      })
     }
     this.setFocusedNode(nodeID, 'programmatic', false, false)
     this.canvas.focusRect(node.frame, options.zoom, { animated: options.animated ?? true })
@@ -1077,7 +1156,7 @@ export class FdGraphCanvas
     return this.connectionController?.cancel() ?? false
   }
 
-  viewportPoint(event: PointerEvent): FdCanvasPoint {
+  viewportPoint(event: MouseEvent): FdCanvasPoint {
     const bounds = this.canvas.getBoundingClientRect()
     return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
   }
@@ -1100,21 +1179,68 @@ export class FdGraphCanvas
 
   setSelection(
     selection: ReadonlySet<FdGraphElementID>,
-    detail: Omit<FdGraphSelectionChangeDetail, 'selectedNodeIDs'>,
+    mode: FdGraphSelectionMode,
+    detail: Omit<FdGraphSelectionChangeDetail, 'selectedElements' | 'selectedNodeIDs'>,
   ): void {
-    const next = new Set(selection)
-    const changed = !this.setsEqual(this.selectedNodeIDs, next)
+    const nonNodes =
+      mode !== 'replace' && this.resolvedInteractionConfiguration.selection === 'multiple'
+        ? this.selectedElements.filter((reference) => reference.kind !== 'node')
+        : []
+    this.setElementSelection([...nonNodes, ...[...selection].map(graphNodeReference)], detail)
+  }
+
+  private selectElementReference(
+    reference: FdGraphElementReference,
+    mode: FdGraphSelectionMode,
+    source: FdGraphSelectionChangeDetail['source'],
+  ): boolean {
+    const behavior = this.resolvedInteractionConfiguration.selection
+    if (
+      behavior === 'none' ||
+      !this.validElementReference(reference) ||
+      (reference.kind === 'node' &&
+        this.index.nodes.get(reference.nodeID)?.capabilities?.selectable === false)
+    ) {
+      return false
+    }
+    const key = graphElementReferenceKey(reference)
+    let selection: readonly FdGraphElementReference[]
+    if (behavior === 'single' || mode === 'replace') {
+      selection = [reference]
+    } else if (mode === 'toggle' && this.selectedElementKeys.has(key)) {
+      selection = this.selectedElements.filter(
+        (candidate) => graphElementReferenceKey(candidate) !== key,
+      )
+    } else {
+      selection = [...this.selectedElements, reference]
+    }
+    this.setElementSelection(selection, { phase: 'ended', source })
+    this.setFocusedElement(reference, source, false)
+    return true
+  }
+
+  private setElementSelection(
+    selection: readonly FdGraphElementReference[],
+    detail: Omit<FdGraphSelectionChangeDetail, 'selectedElements' | 'selectedNodeIDs'>,
+  ): void {
+    const previousKeys = this.selectedElementKeys
+    this.assignSelection(selection)
+    const changed = !this.setsEqual(previousKeys, this.selectedElementKeys)
     if (changed) {
-      this.selectionValue = next
       this.refreshResizeHandleVisibility()
       this.presentationRevision += 1
       this.syncInteractionOverlay()
+      this.syncAccessibilityBridge()
       this.scheduleRenderFrame()
     }
     if (!changed && detail.phase === 'continuous') return
     this.dispatchEvent(
       new CustomEvent<FdGraphSelectionChangeDetail>('fd-graph-selection-change', {
-        detail: { ...detail, selectedNodeIDs: next },
+        detail: {
+          ...detail,
+          selectedElements: this.selectedElements,
+          selectedNodeIDs: this.selectedNodeIDs,
+        },
         bubbles: true,
         composed: true,
       }),
@@ -1199,7 +1325,19 @@ export class FdGraphCanvas
   private handleGraphPointerEnd = (event: PointerEvent): void => {
     if (this.connectionController?.activePointerID === event.pointerId) {
       event.preventDefault()
-      this.connectionController.pointerEnd(event)
+      const clickedEndpoint = this.connectionController.pointerEnd(event)
+      if (clickedEndpoint) {
+        this.selectElementReference(
+          graphPortReference(clickedEndpoint.nodeID, clickedEndpoint.portID),
+          graphSelectionMode(event.shiftKey, event.metaKey, event.ctrlKey),
+          'pointer',
+        )
+        this.suppressedConnectionClick = {
+          clientX: event.clientX,
+          clientY: event.clientY,
+          timestamp: performance.now(),
+        }
+      }
       if (this.canvas.hasPointerCapture(event.pointerId)) {
         this.canvas.releasePointerCapture(event.pointerId)
       }
@@ -1224,6 +1362,97 @@ export class FdGraphCanvas
     this.interactionController.cancel()
     if (this.canvas.hasPointerCapture(event.pointerId))
       this.canvas.releasePointerCapture(event.pointerId)
+  }
+
+  private handleGraphClick = (event: MouseEvent): void => {
+    if (this.tool !== 'select' || event.button !== 0) return
+    const suppressed = this.suppressedConnectionClick
+    this.suppressedConnectionClick = undefined
+    if (
+      suppressed &&
+      performance.now() - suppressed.timestamp < suppressedConnectionClickDuration &&
+      Math.hypot(event.clientX - suppressed.clientX, event.clientY - suppressed.clientY) <
+        suppressedConnectionClickTolerance
+    ) {
+      return
+    }
+    const path = event.composedPath()
+    if (
+      path.some(
+        (candidate) =>
+          candidate instanceof Element &&
+          candidate.matches(
+            'button, input, select, textarea, a[href], [contenteditable="true"], fd-graph-minimap',
+          ),
+      )
+    ) {
+      return
+    }
+    const explicit = this.elementReference(path)
+    if (explicit?.kind === 'node') return
+    const reference = explicit ?? this.edgeReferenceAtViewportPoint(this.viewportPoint(event))
+    if (!reference) return
+    this.selectElementReference(
+      reference,
+      graphSelectionMode(event.shiftKey, event.metaKey, event.ctrlKey),
+      'pointer',
+    )
+  }
+
+  private elementReference(path: readonly EventTarget[]): FdGraphElementReference | undefined {
+    for (const candidate of path) {
+      if (!(candidate instanceof HTMLElement || candidate instanceof SVGElement)) continue
+      const nodeKey = candidate.dataset.fdGraphNode
+      const portKey = candidate.dataset.fdGraphPort
+      if (nodeKey && portKey) {
+        const nodeID = graphElementIDFromKey(nodeKey)
+        const portID = graphElementIDFromKey(portKey)
+        if (nodeID !== undefined && portID !== undefined) {
+          return graphPortReference(nodeID, portID)
+        }
+      }
+      const edgeKey = candidate.dataset.fdGraphEdge
+      if (edgeKey) {
+        const edgeID = graphElementIDFromKey(edgeKey)
+        if (edgeID !== undefined) return graphEdgeReference(edgeID)
+      }
+      if (nodeKey) {
+        const nodeID = graphElementIDFromKey(nodeKey)
+        if (nodeID !== undefined) return graphNodeReference(nodeID)
+      }
+    }
+    return undefined
+  }
+
+  private edgeReferenceAtViewportPoint(
+    viewportPoint: FdCanvasPoint,
+  ): FdGraphElementReference | undefined {
+    const zoom = this.canvas.viewport.transform.zoom
+    const worldPoint = this.canvas.viewport.transform.removePoint(viewportPoint)
+    const tolerance = edgeHitTestViewportTolerance / zoom
+    const candidates = this.index.edgesIn(
+      {
+        x: worldPoint.x - tolerance,
+        y: worldPoint.y - tolerance,
+        width: tolerance * 2,
+        height: tolerance * 2,
+      },
+      { maximumCount: edgeHitTestMaximumCandidates },
+    )
+    let nearest: { readonly edgeID: FdGraphElementID; readonly distance: number } | undefined
+    for (const edge of candidates) {
+      const distance = graphEdgeDistance(
+        worldPoint,
+        this.endpointPoint(edge, 'source'),
+        this.endpointPoint(edge, 'target'),
+      )
+      const hitTolerance =
+        Math.max(edgeHitTestMinimumTolerance, (edge.style?.width ?? 2) / 2 + edgeHitTestPadding) /
+        zoom
+      if (distance > hitTolerance || (nearest && nearest.distance <= distance)) continue
+      nearest = { edgeID: edge.id, distance }
+    }
+    return nearest ? graphEdgeReference(nearest.edgeID) : undefined
   }
 
   private activateBackend(): void {
@@ -1419,23 +1648,32 @@ export class FdGraphCanvas
   }
 
   private reconcileSelection(): void {
-    const valid = [...this.selectedNodeIDs].filter(
-      (id) => this.index.nodes.get(id)?.capabilities?.selectable !== false,
+    const valid = this.selectedElements.filter(
+      (reference) =>
+        this.validElementReference(reference) &&
+        (reference.kind !== 'node' ||
+          this.index.nodes.get(reference.nodeID)?.capabilities?.selectable !== false),
     )
-    const next = new Set(
+    const next =
       this.resolvedInteractionConfiguration.selection === 'none'
         ? []
         : this.resolvedInteractionConfiguration.selection === 'single'
           ? valid.slice(0, 1)
-          : valid,
-    )
-    if (!this.setsEqual(this.selectedNodeIDs, next)) this.selectedNodeIDs = next
+          : valid
+    if (!this.referenceArraysEqual(this.selectedElements, next)) this.assignSelection(next)
   }
 
   private reconcileKeyboardFocus(): void {
-    if (this.focusedNodeID === undefined) return
-    const node = this.index.nodes.get(this.focusedNodeID)
-    if (node && node.capabilities?.keyboardNavigable !== false) return
+    const reference = this.focusedElement
+    if (!reference) return
+    if (
+      this.validElementReference(reference) &&
+      (reference.kind !== 'node' ||
+        this.index.nodes.get(reference.nodeID)?.capabilities?.keyboardNavigable !== false)
+    ) {
+      return
+    }
+    this.focusedElementValue = undefined
     this.focusedNodeValue = undefined
   }
 
@@ -1444,10 +1682,9 @@ export class FdGraphCanvas
       this.snapshot,
       this.resolvedAccessibilityConfiguration,
     )
-    const focusedNodeKey =
-      this.focusedNodeID === undefined ? undefined : graphNodeAccessibilityKey(this.focusedNodeID)
     this.accessibilityFocusedElementKey = this.accessibilitySnapshot.reconciledFocus(
-      focusedNodeKey ?? this.accessibilityFocusedElementKey,
+      (this.focusedElement && graphElementReferenceKey(this.focusedElement)) ??
+        this.accessibilityFocusedElementKey,
     )
     this.syncAccessibilityBridge()
   }
@@ -1456,7 +1693,7 @@ export class FdGraphCanvas
     this.accessibilityBridge?.update({
       snapshot: this.accessibilitySnapshot,
       configuration: this.resolvedAccessibilityConfiguration,
-      selectedNodeIDs: this.selectedNodeIDs,
+      selectedElementKeys: this.selectedElementKeys,
       allowsMultipleSelection: this.resolvedInteractionConfiguration.selection === 'multiple',
       ...(this.accessibilityFocusedElementKey
         ? { focusedElementKey: this.accessibilityFocusedElementKey }
@@ -1468,9 +1705,7 @@ export class FdGraphCanvas
     if (!this.resolvedAccessibilityConfiguration.enabled) return
     const key = this.accessibilitySnapshot.reconciledFocus(
       this.accessibilityFocusedElementKey ??
-        (this.focusedNodeID === undefined
-          ? undefined
-          : graphNodeAccessibilityKey(this.focusedNodeID)),
+        (this.focusedElement ? graphElementReferenceKey(this.focusedElement) : undefined),
     )
     if (key) this.focusAccessibilityElement(key)
   }
@@ -1522,20 +1757,11 @@ export class FdGraphCanvas
     if (!item) return false
     if (!this.dispatchAccessibilityAction(item.reference, { kind: 'focus' })) return true
     this.accessibilityFocusedElementKey = key
-    this.presentationRevision += 1
-    if (item.kind === 'node' && item.reference.nodeID !== undefined) {
-      this.setFocusedNode(
-        item.reference.nodeID,
-        'accessibility',
-        false,
-        this.resolvedAccessibilityConfiguration.keepsFocusedElementVisible,
-      )
-    } else if (
-      this.resolvedAccessibilityConfiguration.keepsFocusedElementVisible &&
-      !canvasRectContains(this.canvas.viewport.visibleWorldRect, item.frame)
-    ) {
-      this.canvas.focusRect(item.frame, this.canvas.viewport.transform.zoom)
-    }
+    this.setFocusedElement(
+      item.reference,
+      'accessibility',
+      this.resolvedAccessibilityConfiguration.keepsFocusedElementVisible,
+    )
     this.syncAccessibilityBridge()
     this.scheduleRenderFrame()
     return true
@@ -1544,17 +1770,9 @@ export class FdGraphCanvas
   private selectAccessibilityElement(key: string | undefined): boolean {
     if (!key || !this.resolvedAccessibilityConfiguration.capabilities.selection) return false
     const item = this.accessibilitySnapshot.item(key)
-    const nodeID = item?.reference.nodeID
-    if (item?.kind !== 'node' || nodeID === undefined) return false
+    if (!item) return false
     if (!this.dispatchAccessibilityAction(item.reference, { kind: 'select' })) return true
-    if (this.index.nodes.get(nodeID)?.capabilities?.selectable === false) return false
-    const selection = new Set(this.selectedNodeIDs)
-    if (this.resolvedInteractionConfiguration.selection === 'none') return false
-    if (this.resolvedInteractionConfiguration.selection === 'single') selection.clear()
-    if (selection.has(nodeID)) selection.delete(nodeID)
-    else selection.add(nodeID)
-    this.setSelection(selection, { phase: 'ended', source: 'accessibility' })
-    return true
+    return this.selectElementReference(item.reference, 'replace', 'accessibility')
   }
 
   private activateAccessibilityElement(key: string | undefined): boolean {
@@ -1580,13 +1798,16 @@ export class FdGraphCanvas
   ): boolean {
     if (!key || !this.resolvedAccessibilityConfiguration.capabilities.movement) return false
     const item = this.accessibilitySnapshot.item(key)
-    const nodeID = item?.reference.nodeID
-    if (item?.kind !== 'node' || nodeID === undefined) return false
+    if (item?.reference.kind !== 'node') return false
+    const nodeID = item.reference.nodeID
     if (!this.dispatchAccessibilityAction(item.reference, { kind: 'move', direction, large })) {
       return true
     }
     if (!this.selectedNodeIDs.has(nodeID)) {
-      this.setSelection(new Set([nodeID]), { phase: 'ended', source: 'accessibility' })
+      this.setSelection(new Set([nodeID]), 'replace', {
+        phase: 'ended',
+        source: 'accessibility',
+      })
     }
     this.focusedNodeID = nodeID
     return this.nudgeKeyboardSelection(direction, large)
@@ -1651,7 +1872,7 @@ export class FdGraphCanvas
       case 'selectAll':
         return this.selectAllKeyboardNodes()
       case 'clearSelection':
-        this.setSelection(new Set(), { phase: 'ended', source: 'keyboard' })
+        this.setSelection(new Set(), 'replace', { phase: 'ended', source: 'keyboard' })
         return true
       case 'activate':
         return this.activateFocusedNode('keyboard')
@@ -1692,23 +1913,41 @@ export class FdGraphCanvas
   ): void {
     const node = this.index.nodes.get(nodeID)
     if (!node || node.capabilities?.keyboardNavigable === false) return
-    const changed = this.focusedNodeID !== nodeID
-    this.focusedNodeID = nodeID
-    this.syncAccessibilityBridge()
     if (
       updatesSelection &&
       this.resolvedKeyboardConfiguration.selectionBehavior === 'replace' &&
       node.capabilities?.selectable !== false
     ) {
-      this.setSelection(new Set([nodeID]), { phase: 'ended', source: 'keyboard' })
+      this.setSelection(new Set([nodeID]), 'replace', { phase: 'ended', source: 'keyboard' })
     }
-    if (keepsVisible && !canvasRectContains(this.canvas.viewport.visibleWorldRect, node.frame)) {
-      this.canvas.focusRect(node.frame, this.canvas.viewport.transform.zoom)
+    this.setFocusedElement(graphNodeReference(nodeID), source, keepsVisible)
+  }
+
+  private setFocusedElement(
+    reference: FdGraphElementReference,
+    source: FdGraphFocusChangeDetail['source'],
+    keepsVisible: boolean,
+  ): void {
+    if (!this.validElementReference(reference)) return
+    const changed = !this.referencesEqual(this.focusedElement, reference)
+    this.focusedElement = reference
+    this.syncAccessibilityBridge()
+    const frame = this.elementFrame(reference)
+    if (
+      keepsVisible &&
+      frame &&
+      !canvasRectContains(this.canvas.viewport.visibleWorldRect, frame)
+    ) {
+      this.canvas.focusRect(frame, this.canvas.viewport.transform.zoom)
     }
     if (!changed) return
     this.dispatchEvent(
       new CustomEvent<FdGraphFocusChangeDetail>('fd-graph-focus-change', {
-        detail: { focusedNodeID: nodeID, source },
+        detail: {
+          focusedElement: reference,
+          ...(reference.kind === 'node' ? { focusedNodeID: reference.nodeID } : {}),
+          source,
+        },
         bubbles: true,
         composed: true,
       }),
@@ -1724,7 +1963,7 @@ export class FdGraphCanvas
     if (this.resolvedInteractionConfiguration.selection === 'single') selection.clear()
     if (selection.has(nodeID)) selection.delete(nodeID)
     else selection.add(nodeID)
-    this.setSelection(selection, { phase: 'ended', source: 'keyboard' })
+    this.setSelection(selection, 'toggle', { phase: 'ended', source: 'keyboard' })
     return true
   }
 
@@ -1735,7 +1974,7 @@ export class FdGraphCanvas
         this.index.nodes.get(id)?.capabilities?.selectable === false ? [] : [id],
       ),
     )
-    this.setSelection(selection, { phase: 'ended', source: 'keyboard' })
+    this.setSelection(selection, 'replace', { phase: 'ended', source: 'keyboard' })
     return true
   }
 
@@ -1813,10 +2052,100 @@ export class FdGraphCanvas
       )
   }
 
-  private setsEqual(
-    first: ReadonlySet<FdGraphElementID>,
-    second: ReadonlySet<FdGraphElementID>,
+  private assignSelection(selection: readonly FdGraphElementReference[]): void {
+    const references = new Map<string, FdGraphElementReference>()
+    for (const reference of selection) {
+      const key = graphElementReferenceKey(reference)
+      if (!references.has(key)) references.set(key, reference)
+    }
+    this.selectedElementValues = [...references.values()]
+    this.selectedElementKeys = new Set(references.keys())
+    this.selectionValue = new Set(
+      this.selectedElementValues.flatMap((reference) =>
+        reference.kind === 'node' ? [reference.nodeID] : [],
+      ),
+    )
+    this.selectedEdgeIDsValue = new Set(
+      this.selectedElementValues.flatMap((reference) =>
+        reference.kind === 'edge' ? [reference.edgeID] : [],
+      ),
+    )
+    const portIDsByNode = new Map<FdGraphElementID, Set<FdGraphElementID>>()
+    for (const reference of this.selectedElementValues) {
+      if (reference.kind !== 'port') continue
+      const portIDs = portIDsByNode.get(reference.nodeID) ?? new Set<FdGraphElementID>()
+      portIDs.add(reference.portID)
+      portIDsByNode.set(reference.nodeID, portIDs)
+    }
+    this.selectedPortIDsByNodeValue = portIDsByNode
+  }
+
+  private referenceArraysEqual(
+    first: readonly FdGraphElementReference[],
+    second: readonly FdGraphElementReference[],
   ): boolean {
+    if (first.length !== second.length) return false
+    return first.every((reference, index) => this.referencesEqual(reference, second[index]))
+  }
+
+  private referencesEqual(
+    first: FdGraphElementReference | undefined,
+    second: FdGraphElementReference | undefined,
+  ): boolean {
+    if (!first || !second) return first === second
+    return graphElementReferenceKey(first) === graphElementReferenceKey(second)
+  }
+
+  private validElementReference(reference: FdGraphElementReference): boolean {
+    switch (reference.kind) {
+      case 'node':
+        return this.index.nodes.has(reference.nodeID)
+      case 'port':
+        return (
+          this.index.nodes
+            .get(reference.nodeID)
+            ?.ports?.some(({ id }) => id === reference.portID) === true
+        )
+      case 'edge':
+        return this.index.edges.has(reference.edgeID)
+    }
+  }
+
+  private elementFrame(reference: FdGraphElementReference): FdCanvasRect | undefined {
+    switch (reference.kind) {
+      case 'node':
+        return (
+          this.interactionPresentation.frames.get(reference.nodeID) ??
+          this.index.nodes.get(reference.nodeID)?.frame
+        )
+      case 'port': {
+        const node = this.index.nodes.get(reference.nodeID)
+        if (!node?.ports?.some(({ id }) => id === reference.portID)) return undefined
+        const frame = this.interactionPresentation.frames.get(reference.nodeID)
+        const point = graphPortPoint(frame ? { ...node, frame } : node, reference.portID)
+        return {
+          x: point.x - minimumElementFocusFrameSize / 2,
+          y: point.y - minimumElementFocusFrameSize / 2,
+          width: minimumElementFocusFrameSize,
+          height: minimumElementFocusFrameSize,
+        }
+      }
+      case 'edge': {
+        const edge = this.index.edges.get(reference.edgeID)
+        if (!edge) return undefined
+        const source = this.endpointPoint(edge, 'source')
+        const target = this.endpointPoint(edge, 'target')
+        return {
+          x: Math.min(source.x, target.x),
+          y: Math.min(source.y, target.y),
+          width: Math.max(Math.abs(target.x - source.x), minimumElementFocusFrameSize),
+          height: Math.max(Math.abs(target.y - source.y), minimumElementFocusFrameSize),
+        }
+      }
+    }
+  }
+
+  private setsEqual<Value>(first: ReadonlySet<Value>, second: ReadonlySet<Value>): boolean {
     if (first.size !== second.size) return false
     for (const id of first) if (!second.has(id)) return false
     return true
@@ -2064,19 +2393,14 @@ export class FdGraphCanvas
 
   private renderBackendFrame(): void {
     if (!this.backend || !this.canvas) return
-    const accessibilityFocus = this.accessibilityFocusedElementKey
-      ? this.accessibilitySnapshot.item(this.accessibilityFocusedElementKey)
-      : undefined
     const geometry = this.renderGeometryCache.resolve({
       snapshotRevision: this.snapshotRevision,
       presentationRevision: this.presentationRevision,
       nodes: this.visibleNodes,
       edges: this.visibleEdges,
       selectedNodeIDs: this.selectedNodeIDs,
-      ...(this.focusedNodeID === undefined ? {} : { focusedNodeID: this.focusedNodeID }),
-      ...(accessibilityFocus?.kind === 'edge'
-        ? { focusedEdgeID: accessibilityFocus.reference.edgeID }
-        : {}),
+      selectedEdgeIDs: this.selectedEdgeIDsValue,
+      ...(this.focusedElement ? { focusedElement: this.focusedElement } : {}),
       nodeFrame: (node) => this.interactionPresentation.frames.get(node.id) ?? node.frame,
       edgeEndpoint: (edge, endpoint) => this.endpointPoint(edge, endpoint),
     })
@@ -2088,7 +2412,11 @@ export class FdGraphCanvas
       renderWorldRect: this.renderWorldRect,
       nodes: geometry.nodes,
       edges: geometry.edges,
+      selectedElements: this.selectedElements,
       selectedNodeIDs: this.selectedNodeIDs,
+      selectedEdgeIDs: this.selectedEdgeIDsValue,
+      selectedPortIDsByNode: this.selectedPortIDsByNodeValue,
+      ...(this.focusedElement ? { focusedElement: this.focusedElement } : {}),
       ...(this.focusedNodeID === undefined ? {} : { focusedNodeID: this.focusedNodeID }),
       pixelRatio: window.devicePixelRatio,
     }

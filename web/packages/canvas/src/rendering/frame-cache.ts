@@ -1,5 +1,10 @@
 import type { FdCanvasPoint, FdCanvasRect } from '../geometry.js'
-import type { FdAnyGraphEdge, FdAnyGraphNode, FdGraphElementID } from '../graph/model.js'
+import type {
+  FdAnyGraphEdge,
+  FdAnyGraphNode,
+  FdGraphElementID,
+  FdGraphElementReference,
+} from '../graph/model.js'
 import type { FdGraphRenderEdge, FdGraphRenderNode } from './backend.js'
 
 export interface FdGraphRenderGeometryInput {
@@ -8,8 +13,8 @@ export interface FdGraphRenderGeometryInput {
   readonly nodes: readonly FdAnyGraphNode[]
   readonly edges: readonly FdAnyGraphEdge[]
   readonly selectedNodeIDs: ReadonlySet<FdGraphElementID>
-  readonly focusedNodeID?: FdGraphElementID
-  readonly focusedEdgeID?: FdGraphElementID
+  readonly selectedEdgeIDs: ReadonlySet<FdGraphElementID>
+  readonly focusedElement?: FdGraphElementReference
   readonly nodeFrame: (node: FdAnyGraphNode) => FdCanvasRect
   readonly edgeEndpoint: (edge: FdAnyGraphEdge, endpoint: 'source' | 'target') => FdCanvasPoint
 }
@@ -38,15 +43,15 @@ export class FdGraphRenderGeometryCache {
         node,
         frame: input.nodeFrame(node),
         selected: input.selectedNodeIDs.has(node.id),
-        focused: input.focusedNodeID === node.id,
+        focused: input.focusedElement?.kind === 'node' && input.focusedElement.nodeID === node.id,
         hovered: false,
       })),
       edges: input.edges.map((edge) => ({
         edge,
         source: input.edgeEndpoint(edge, 'source'),
         target: input.edgeEndpoint(edge, 'target'),
-        selected: false,
-        focused: input.focusedEdgeID === edge.id,
+        selected: input.selectedEdgeIDs.has(edge.id),
+        focused: input.focusedElement?.kind === 'edge' && input.focusedElement.edgeID === edge.id,
         hovered: false,
       })),
     }

@@ -15,6 +15,7 @@ import {
   resolveGraphCanvasInteractionConfiguration,
 } from './configuration.js'
 import {
+  graphEdgeDistance,
   graphSelectionMode,
   resolveGraphMarqueeSelection,
   resolveGraphSelection,
@@ -31,6 +32,15 @@ const nodes: FdAnyGraphNode[] = [
 ]
 
 describe('graph selection', () => {
+  it('hit-tests the rendered cubic edge instead of its bounding box', () => {
+    const source = { x: 0, y: 0 }
+    const target = { x: 200, y: 100 }
+
+    expect(graphEdgeDistance({ x: 100, y: 50 }, source, target)).toBeLessThan(1)
+    expect(graphEdgeDistance({ x: 100, y: 90 }, source, target)).toBeGreaterThan(30)
+    expect(() => graphEdgeDistance({ x: 0, y: 0 }, source, target, 0)).toThrow(RangeError)
+  })
+
   it('maps desktop modifiers to selection modes', () => {
     expect(graphSelectionMode(false, false, false)).toBe('replace')
     expect(graphSelectionMode(true, false, false)).toBe('extend')

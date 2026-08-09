@@ -370,7 +370,12 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
     const accent = this.cssColor('--fd-canvas-accent-color', '#6d9ea5')
     let offset = 0
     for (const rendered of frame.edges) {
-      const color = rendered.focused ? focus : this.color(rendered.edge.style?.color, defaultEdge)
+      const color =
+        rendered.focused || rendered.selected
+          ? rendered.focused
+            ? focus
+            : accent
+          : this.color(rendered.edge.style?.color, defaultEdge)
       edgeData.set(
         [
           rendered.source.x,

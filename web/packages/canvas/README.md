@@ -51,3 +51,7 @@ node, port, and edge identities, connected-element navigation, and consumer-defi
 Because ARIA has no AppKit-style custom action API, products bind those actions through the
 replaceable command resolver or `performFocusedAccessibilityAction()` and handle them through the
 canvas accessibility event.
+
+Selection and focus use discriminated node, port, and edge references. The canvas preserves those
+typed identities across pointer, keyboard, accessibility, DOM/SVG, and WebGL2 interaction while
+retaining `selectedNodeIDs` and `focusedNodeID` as node-editing conveniences.
