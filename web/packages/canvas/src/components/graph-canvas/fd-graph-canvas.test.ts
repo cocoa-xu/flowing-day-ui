@@ -323,6 +323,36 @@ describe('fd-graph-canvas pointer editing', () => {
     expect(element.viewport.transform).toEqual(initialTransform)
   })
 
+  it('lets a consumer admit only part of a multi-node drag', async () => {
+    const element = await mount()
+    const canvas = preparePointerInput(element)
+    element.selectedNodeIDs = new Set(['source', 'target'])
+    element.interactionConfiguration = {
+      frameUpdates: 'local',
+      snapping: { enabled: false },
+      admitNodeDrag: ({ anchorNode, selectedNodes, candidateNodes, snapshotID }) => {
+        expect(anchorNode.id).toBe('source')
+        expect(selectedNodes.map(({ id }) => id)).toEqual(['source', 'target'])
+        expect(candidateNodes.map(({ id }) => id)).toEqual(['source', 'target'])
+        expect(snapshotID).toBe('graph-1')
+        return { kind: 'allowOnly', nodeIDs: new Set(['source']) }
+      },
+    }
+    await element.updateComplete
+    const source = element.shadowRoot?.querySelector(
+      '[data-fd-graph-node="s:source"]',
+    ) as HTMLElement
+    const start = clientPoint(element, { x: 100, y: 120 })
+    const end = clientPoint(element, { x: 130, y: 140 })
+
+    dispatchPointer(source, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', end)
+    dispatchPointer(canvas, 'pointerup', end)
+
+    expect(element.snapshot.nodes[0]?.frame.x).toBe(70)
+    expect(element.snapshot.nodes[1]?.frame.x).toBe(420)
+  })
+
   it('emits intent updates without mutating a consumer-owned snapshot', async () => {
     const snapshot = graphSnapshot()
     const element = await mount(snapshot)
@@ -532,6 +562,66 @@ describe('fd-graph-canvas pointer editing', () => {
 
     expect(element.snapshot.nodes[0]?.frame.width).toBeCloseTo(220)
     expect(element.snapshot.nodes[0]?.frame.height).toBeCloseTo(118)
+  })
+
+  it('enforces consumer-provided maximum node sizes during resize', async () => {
+    const element = await mount()
+    const canvas = preparePointerInput(element)
+    element.selectedNodeIDs = new Set(['source'])
+    element.interactionConfiguration = {
+      frameUpdates: 'local',
+      snapping: { enabled: false },
+      nodeSizeConstraints: ({ id }) =>
+        id === 'source' ? { maximumWidth: 200, maximumHeight: 100 } : undefined,
+    }
+    await element.updateComplete
+    const handle = element.shadowRoot?.querySelector<HTMLElement>(
+      '[data-fd-resize-handle="bottomRight"]',
+    )
+    if (!handle) throw new Error('missing resize handle')
+    const start = clientPoint(element, { x: 220, y: 168 })
+    const end = clientPoint(element, { x: 420, y: 368 })
+
+    dispatchPointer(handle, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', end)
+    dispatchPointer(canvas, 'pointerup', end)
+
+    expect(element.snapshot.nodes[0]?.frame.x).toBe(40)
+    expect(element.snapshot.nodes[0]?.frame.y).toBe(80)
+    expect(element.snapshot.nodes[0]?.frame.width).toBeCloseTo(200)
+    expect(element.snapshot.nodes[0]?.frame.height).toBeCloseTo(100)
+  })
+
+  it('lets a consumer admit only part of a group resize', async () => {
+    const element = await mount()
+    const canvas = preparePointerInput(element)
+    element.selectedNodeIDs = new Set(['source', 'target'])
+    element.interactionConfiguration = {
+      frameUpdates: 'local',
+      snapping: { enabled: false },
+      admitNodeResize: ({ anchorNode, candidateNodes, baseFrames, handle }) => {
+        expect(anchorNode.id).toBe('source')
+        expect(candidateNodes.map(({ id }) => id)).toEqual(['source', 'target'])
+        expect([...baseFrames.keys()]).toEqual(['source', 'target'])
+        expect(handle).toBe('bottomRight')
+        return { kind: 'allowOnly', nodeIDs: new Set(['source']) }
+      },
+    }
+    await element.updateComplete
+    const handle = element.shadowRoot?.querySelector<HTMLElement>(
+      '[data-fd-resize-handle="bottomRight"]',
+    )
+    if (!handle) throw new Error('missing resize handle')
+    const start = clientPoint(element, { x: 600, y: 308 })
+    const end = clientPoint(element, { x: 620, y: 328 })
+
+    dispatchPointer(handle, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', end)
+    dispatchPointer(canvas, 'pointerup', end)
+
+    expect(element.snapshot.nodes[0]?.frame.width).toBeCloseTo(200)
+    expect(element.snapshot.nodes[0]?.frame.height).toBeCloseTo(108)
+    expect(element.snapshot.nodes[1]?.frame).toEqual({ x: 420, y: 220, width: 180, height: 88 })
   })
 
   it('reuses guide elements while presenting resize measurements', async () => {
@@ -809,6 +899,23 @@ describe('fd-graph-canvas keyboard editing', () => {
     expect(element.snapshot.nodes[0]?.frame.x).toBe(42)
     dispatchKey(canvas, 'ArrowDown', { shiftKey: true })
     expect(element.snapshot.nodes[0]?.frame.y).toBe(98)
+  })
+
+  it('applies drag admission to keyboard movement', async () => {
+    const element = await mount()
+    const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
+    element.interactionConfiguration = {
+      frameUpdates: 'local',
+      admitNodeDrag: () => ({ kind: 'allowOnly', nodeIDs: new Set(['source']) }),
+    }
+    element.focusedNodeID = 'source'
+    element.selectedNodeIDs = new Set(['source', 'target'])
+    await element.updateComplete
+
+    dispatchKey(canvas, 'ArrowRight')
+
+    expect(element.snapshot.nodes[0]?.frame.x).toBe(41)
+    expect(element.snapshot.nodes[1]?.frame.x).toBe(420)
   })
 
   it('allows the consumer to replace every default key binding', async () => {

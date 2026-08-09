@@ -1,11 +1,43 @@
-import type { FdAnyGraphNode } from '../graph/model.js'
-import type { FdGraphSnappingStrategy } from './arrangement.js'
+import type { FdCanvasRect } from '../geometry.js'
+import type { FdAnyGraphNode, FdGraphElementID } from '../graph/model.js'
+import type { FdGraphResizeHandle, FdGraphSnappingStrategy } from './arrangement.js'
 
 export type FdGraphSelectionBehavior = 'none' | 'single' | 'multiple'
 export type FdGraphMarqueeBehavior = 'disabled' | 'intersects' | 'contains'
 export type FdGraphGridRoundingPolicy = 'nearest' | 'down' | 'up' | 'towardZero' | 'awayFromZero'
 export type FdGraphFrameUpdateBehavior = 'intent' | 'local'
 export type FdGraphCanvasTool = 'select' | 'pan'
+
+export interface FdGraphNodeSizeConstraints {
+  readonly minimumWidth?: number
+  readonly minimumHeight?: number
+  readonly maximumWidth?: number
+  readonly maximumHeight?: number
+}
+
+export interface FdResolvedGraphNodeSizeConstraints {
+  readonly minimumWidth: number
+  readonly minimumHeight: number
+  readonly maximumWidth?: number
+  readonly maximumHeight?: number
+}
+
+export type FdGraphNodeInteractionAdmission =
+  | { readonly kind: 'deny' }
+  | { readonly kind: 'allowAll' }
+  | { readonly kind: 'allowOnly'; readonly nodeIDs: ReadonlySet<FdGraphElementID> }
+
+export interface FdGraphNodeDragAdmissionRequest {
+  readonly anchorNode: FdAnyGraphNode
+  readonly selectedNodes: readonly FdAnyGraphNode[]
+  readonly candidateNodes: readonly FdAnyGraphNode[]
+  readonly snapshotID: string | number
+}
+
+export interface FdGraphNodeResizeAdmissionRequest extends FdGraphNodeDragAdmissionRequest {
+  readonly baseFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
+  readonly handle: FdGraphResizeHandle
+}
 
 export interface FdGraphGridConfiguration {
   readonly enabled?: boolean
@@ -41,11 +73,16 @@ export interface FdGraphCanvasInteractionConfiguration {
   readonly groupResizing?: boolean
   readonly minimumNodeWidth?: number
   readonly minimumNodeHeight?: number
+  readonly nodeSizeConstraints?: (node: FdAnyGraphNode) => FdGraphNodeSizeConstraints | undefined
   readonly frameUpdates?: FdGraphFrameUpdateBehavior
   readonly snapping?: FdGraphSnappingConfiguration
   readonly snappingStrategy?: FdGraphSnappingStrategy
-  readonly canDragNodes?: (nodes: readonly FdAnyGraphNode[]) => boolean
-  readonly canResizeNodes?: (nodes: readonly FdAnyGraphNode[]) => boolean
+  readonly admitNodeDrag?: (
+    request: FdGraphNodeDragAdmissionRequest,
+  ) => FdGraphNodeInteractionAdmission
+  readonly admitNodeResize?: (
+    request: FdGraphNodeResizeAdmissionRequest,
+  ) => FdGraphNodeInteractionAdmission
 }
 
 export interface FdResolvedGraphGridConfiguration {
@@ -82,11 +119,16 @@ export interface FdResolvedGraphCanvasInteractionConfiguration {
   readonly groupResizing: boolean
   readonly minimumNodeWidth: number
   readonly minimumNodeHeight: number
+  readonly nodeSizeConstraints: (node: FdAnyGraphNode) => FdResolvedGraphNodeSizeConstraints
   readonly frameUpdates: FdGraphFrameUpdateBehavior
   readonly snapping: FdResolvedGraphSnappingConfiguration
   readonly snappingStrategy?: FdGraphSnappingStrategy
-  readonly canDragNodes: (nodes: readonly FdAnyGraphNode[]) => boolean
-  readonly canResizeNodes: (nodes: readonly FdAnyGraphNode[]) => boolean
+  readonly admitNodeDrag: (
+    request: FdGraphNodeDragAdmissionRequest,
+  ) => FdGraphNodeInteractionAdmission
+  readonly admitNodeResize: (
+    request: FdGraphNodeResizeAdmissionRequest,
+  ) => FdGraphNodeInteractionAdmission
 }
 
 const positive = (value: number, name: string): number => {
@@ -104,6 +146,26 @@ const positiveInteger = (value: number, name: string): number => {
   return value
 }
 
+const resolvedMaximum = (value: number | undefined, minimum: number, name: string) => {
+  if (value === undefined) return undefined
+  const maximum = positive(value, name)
+  if (maximum < minimum) throw new RangeError(`${name} must not be smaller than its minimum`)
+  return maximum
+}
+
+export function admittedGraphNodeIDs(
+  request: FdGraphNodeDragAdmissionRequest,
+  admission: FdGraphNodeInteractionAdmission,
+): ReadonlySet<FdGraphElementID> {
+  if (admission.kind === 'deny') return new Set()
+  const candidates = new Set(request.candidateNodes.map(({ id }) => id))
+  const admitted =
+    admission.kind === 'allowAll'
+      ? candidates
+      : new Set([...admission.nodeIDs].filter((nodeID) => candidates.has(nodeID)))
+  return admitted.has(request.anchorNode.id) ? admitted : new Set()
+}
+
 export function resolveGraphCanvasInteractionConfiguration(
   configuration: FdGraphCanvasInteractionConfiguration,
 ): FdResolvedGraphCanvasInteractionConfiguration {
@@ -112,6 +174,8 @@ export function resolveGraphCanvasInteractionConfiguration(
   if (releaseDistance < acquisitionDistance) {
     throw new RangeError('snap release distance must not be smaller than acquisition distance')
   }
+  const minimumNodeWidth = positive(configuration.minimumNodeWidth ?? 40, 'minimum node width')
+  const minimumNodeHeight = positive(configuration.minimumNodeHeight ?? 32, 'minimum node height')
   return {
     selection: configuration.selection ?? 'multiple',
     marquee: configuration.marquee ?? 'intersects',
@@ -119,8 +183,35 @@ export function resolveGraphCanvasInteractionConfiguration(
     multipleNodeDragging: configuration.multipleNodeDragging ?? true,
     nodeResizing: configuration.nodeResizing ?? true,
     groupResizing: configuration.groupResizing ?? true,
-    minimumNodeWidth: positive(configuration.minimumNodeWidth ?? 40, 'minimum node width'),
-    minimumNodeHeight: positive(configuration.minimumNodeHeight ?? 32, 'minimum node height'),
+    minimumNodeWidth,
+    minimumNodeHeight,
+    nodeSizeConstraints: (node) => {
+      const constraints = configuration.nodeSizeConstraints?.(node)
+      const resolvedMinimumWidth = positive(
+        constraints?.minimumWidth ?? minimumNodeWidth,
+        'minimum node width',
+      )
+      const resolvedMinimumHeight = positive(
+        constraints?.minimumHeight ?? minimumNodeHeight,
+        'minimum node height',
+      )
+      const maximumWidth = resolvedMaximum(
+        constraints?.maximumWidth,
+        resolvedMinimumWidth,
+        'maximum node width',
+      )
+      const maximumHeight = resolvedMaximum(
+        constraints?.maximumHeight,
+        resolvedMinimumHeight,
+        'maximum node height',
+      )
+      return {
+        minimumWidth: resolvedMinimumWidth,
+        minimumHeight: resolvedMinimumHeight,
+        ...(maximumWidth === undefined ? {} : { maximumWidth }),
+        ...(maximumHeight === undefined ? {} : { maximumHeight }),
+      }
+    },
     frameUpdates: configuration.frameUpdates ?? 'intent',
     ...(configuration.snappingStrategy ? { snappingStrategy: configuration.snappingStrategy } : {}),
     snapping: {
@@ -148,7 +239,7 @@ export function resolveGraphCanvasInteractionConfiguration(
       showsGuides: configuration.snapping?.showsGuides ?? true,
       guideOffset: nonnegative(configuration.snapping?.guideOffset ?? 8, 'guide offset'),
     },
-    canDragNodes: configuration.canDragNodes ?? (() => true),
-    canResizeNodes: configuration.canResizeNodes ?? (() => true),
+    admitNodeDrag: configuration.admitNodeDrag ?? (() => ({ kind: 'allowAll' })),
+    admitNodeResize: configuration.admitNodeResize ?? (() => ({ kind: 'allowAll' })),
   }
 }

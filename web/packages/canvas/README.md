@@ -29,6 +29,11 @@ Translation and resize solvers are replaceable independently, and custom solvers
 `snapGraphTranslationRequest()` or `snapGraphResize()` before refining the standard result. These
 callbacks run synchronously in the pointer hot path and should remain deterministic and bounded.
 
+Drag and resize admission callbacks can allow all candidates, deny the operation, or admit a
+subset while requiring the interaction anchor to remain included. Per-node size constraints can
+set independent minimum and maximum dimensions without putting product policy into the graph
+model.
+
 The standard solver supports alignment, configurable grid rounding, equal-spacing chains,
 equal-size resizing, hysteresis, and measurement guides. Candidate lookup is constrained by
 `searchRadius` and `maximumCandidates` so dense graphs do not turn pointer input into a full graph

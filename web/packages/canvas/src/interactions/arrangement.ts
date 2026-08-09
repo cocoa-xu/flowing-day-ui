@@ -84,6 +84,7 @@ export interface FdGraphResizeSnapRequest {
   readonly candidates: readonly FdGraphSnapCandidate[]
   readonly configuration: FdResolvedGraphSnappingConfiguration
   readonly minimumSize: FdCanvasSize
+  readonly maximumSize?: FdCanvasSize
   readonly zoom: number
   readonly previous: FdGraphSnapState
   readonly preservesAspectRatio: boolean
@@ -498,6 +499,7 @@ export function resizeGraphBounds(
   handle: FdGraphResizeHandle,
   translation: FdCanvasSize,
   minimumSize: FdCanvasSize,
+  maximumSize: FdCanvasSize | undefined,
   preservesAspectRatio: boolean,
   resizesFromCenter: boolean,
 ): FdCanvasRect {
@@ -521,9 +523,24 @@ export function resizeGraphBounds(
   let height = Math.max(bottom - top, minimumSize.height)
   if (preservesAspectRatio && bounds.height > 0) {
     const ratio = bounds.width / bounds.height
-    if (Math.abs(width / bounds.width - 1) >= Math.abs(height / bounds.height - 1))
-      height = width / ratio
-    else width = height * ratio
+    const requestedScale =
+      Math.abs(width / bounds.width - 1) >= Math.abs(height / bounds.height - 1)
+        ? width / bounds.width
+        : height / bounds.height
+    const minimumScale = Math.max(
+      minimumSize.width / bounds.width,
+      minimumSize.height / bounds.height,
+    )
+    const maximumScale = Math.min(
+      (maximumSize?.width ?? Number.MAX_VALUE) / bounds.width,
+      (maximumSize?.height ?? Number.MAX_VALUE) / bounds.height,
+    )
+    const scale = Math.min(Math.max(requestedScale, minimumScale), maximumScale)
+    width = bounds.width * scale
+    height = width / ratio
+  } else if (maximumSize) {
+    width = Math.min(width, maximumSize.width)
+    height = Math.min(height, maximumSize.height)
   }
   if (movesLeft && !movesRight) left = right - width
   else if (movesRight && !movesLeft) right = left + width
@@ -589,6 +606,7 @@ export function snapGraphResize(request: FdGraphResizeSnapRequest): FdGraphResiz
       height: request.proposedTranslation.height + (movesVertically ? (y?.correction ?? 0) : 0),
     },
     request.minimumSize,
+    request.maximumSize,
     request.preservesAspectRatio,
     request.resizesFromCenter,
   )

@@ -71,7 +71,10 @@ import type {
   FdGraphCanvasTool,
   FdResolvedGraphCanvasInteractionConfiguration,
 } from '../../interactions/configuration.js'
-import { resolveGraphCanvasInteractionConfiguration } from '../../interactions/configuration.js'
+import {
+  admittedGraphNodeIDs,
+  resolveGraphCanvasInteractionConfiguration,
+} from '../../interactions/configuration.js'
 import {
   type FdGraphConnectionEditingConfiguration,
   type FdGraphConnectionOrigin,
@@ -1716,19 +1719,12 @@ export class FdGraphCanvas
   }
 
   private nudgeKeyboardSelection(direction: FdGraphNavigationDirection, large: boolean): boolean {
-    const nodes = [...this.selectedNodeIDs].flatMap((id) => {
+    const selectedNodes = [...this.selectedNodeIDs].flatMap((id) => {
       const node = this.index.nodes.get(id)
       return node ? [node] : []
     })
-    if (
-      nodes.length === 0 ||
-      nodes.some(({ capabilities }) => capabilities?.draggable === false) ||
-      !this.resolvedInteractionConfiguration.nodeDragging ||
-      (nodes.length > 1 && !this.resolvedInteractionConfiguration.multipleNodeDragging) ||
-      !this.resolvedInteractionConfiguration.canDragNodes(nodes)
-    ) {
-      return false
-    }
+    const nodes = this.admittedKeyboardDragNodes(selectedNodes)
+    if (nodes.length === 0) return false
     const distance = large
       ? this.resolvedKeyboardConfiguration.largeNudgeStep
       : this.resolvedKeyboardConfiguration.nudgeStep
@@ -1750,6 +1746,26 @@ export class FdGraphCanvas
       changes,
     )
     return true
+  }
+
+  private admittedKeyboardDragNodes(
+    selectedNodes: readonly FdAnyGraphNode[],
+  ): readonly FdAnyGraphNode[] {
+    const configuration = this.resolvedInteractionConfiguration
+    if (!configuration.nodeDragging || selectedNodes.length === 0) return []
+    const anchorNode = selectedNodes.find(({ id }) => id === this.focusedNodeID) ?? selectedNodes[0]
+    if (!anchorNode || anchorNode.capabilities?.draggable === false) return []
+    const candidateNodes = (
+      configuration.multipleNodeDragging ? selectedNodes : [anchorNode]
+    ).filter(({ capabilities }) => capabilities?.draggable !== false)
+    const request = {
+      anchorNode,
+      selectedNodes,
+      candidateNodes,
+      snapshotID: this.snapshot.id,
+    }
+    const admitted = admittedGraphNodeIDs(request, configuration.admitNodeDrag(request))
+    return candidateNodes.filter(({ id }) => admitted.has(id))
   }
 
   private activateFocusedNode(source: FdGraphNodeActivateDetail['source']): boolean {
@@ -1914,7 +1930,8 @@ export class FdGraphCanvas
 
   private syncSelectionBounds(): void {
     const frames = new Map<FdGraphElementID, FdCanvasRect>()
-    for (const id of this.selectedNodeIDs) {
+    const selectionNodeIDs = this.interactionPresentation.selectionNodeIDs ?? this.selectedNodeIDs
+    for (const id of selectionNodeIDs) {
       const frame = this.interactionPresentation.frames.get(id) ?? this.index.nodes.get(id)?.frame
       if (frame) frames.set(id, frame)
     }
@@ -1945,9 +1962,7 @@ export class FdGraphCanvas
       return node ? [node] : []
     })
     this.resizeHandlesVisible =
-      nodes.length === this.selectedNodeIDs.size &&
-      nodes.every(({ capabilities }) => capabilities?.resizable !== false) &&
-      this.resolvedInteractionConfiguration.canResizeNodes(nodes)
+      nodes.length === this.selectedNodeIDs.size && nodes[0]?.capabilities?.resizable !== false
   }
 
   private syncMarquee(): void {

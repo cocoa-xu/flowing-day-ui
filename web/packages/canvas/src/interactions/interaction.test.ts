@@ -10,7 +10,10 @@ import {
   snapGraphTranslation,
   snapGraphTranslationRequest,
 } from './arrangement.js'
-import { resolveGraphCanvasInteractionConfiguration } from './configuration.js'
+import {
+  admittedGraphNodeIDs,
+  resolveGraphCanvasInteractionConfiguration,
+} from './configuration.js'
 import {
   graphSelectionMode,
   resolveGraphMarqueeSelection,
@@ -56,6 +59,55 @@ describe('graph selection', () => {
         'intersects',
       ),
     ]).toEqual(['one', 'two'])
+  })
+})
+
+describe('graph interaction policy', () => {
+  const request = {
+    anchorNode: nodes[0] as FdAnyGraphNode,
+    selectedNodes: nodes.slice(0, 2),
+    candidateNodes: nodes.slice(0, 2),
+    snapshotID: 'policy',
+  }
+
+  it('admits only candidate nodes while requiring the anchor', () => {
+    expect([
+      ...admittedGraphNodeIDs(request, {
+        kind: 'allowOnly',
+        nodeIDs: new Set(['one', 'missing']),
+      }),
+    ]).toEqual(['one'])
+    expect(
+      admittedGraphNodeIDs(request, {
+        kind: 'allowOnly',
+        nodeIDs: new Set(['two']),
+      }).size,
+    ).toBe(0)
+  })
+
+  it('resolves and validates per-node size constraints', () => {
+    const configuration = resolveGraphCanvasInteractionConfiguration({
+      minimumNodeWidth: 44,
+      minimumNodeHeight: 32,
+      nodeSizeConstraints: ({ id }) =>
+        id === 'one' ? { minimumWidth: 80, maximumWidth: 160, maximumHeight: 120 } : undefined,
+    })
+
+    expect(configuration.nodeSizeConstraints(nodes[0] as FdAnyGraphNode)).toEqual({
+      minimumWidth: 80,
+      minimumHeight: 32,
+      maximumWidth: 160,
+      maximumHeight: 120,
+    })
+    expect(configuration.nodeSizeConstraints(nodes[1] as FdAnyGraphNode)).toEqual({
+      minimumWidth: 44,
+      minimumHeight: 32,
+    })
+    expect(() =>
+      resolveGraphCanvasInteractionConfiguration({
+        nodeSizeConstraints: () => ({ minimumWidth: 80, maximumWidth: 40 }),
+      }).nodeSizeConstraints(nodes[0] as FdAnyGraphNode),
+    ).toThrow('maximum node width must not be smaller than its minimum')
   })
 })
 
@@ -193,6 +245,7 @@ describe('graph group resizing', () => {
       'bottomRight',
       { width: 300, height: 150 },
       { width: 40, height: 32 },
+      undefined,
       false,
       false,
     )
@@ -209,10 +262,36 @@ describe('graph group resizing', () => {
         'right',
         { width: 50, height: 0 },
         { width: 40, height: 32 },
+        undefined,
         false,
         true,
       ),
     ).toEqual({ x: 50, y: 100, width: 300, height: 100 })
+  })
+
+  it('clamps ordinary and aspect-ratio resize to maximum bounds', () => {
+    expect(
+      resizeGraphBounds(
+        { x: 0, y: 0, width: 100, height: 50 },
+        'bottomRight',
+        { width: 200, height: 200 },
+        { width: 40, height: 32 },
+        { width: 180, height: 90 },
+        false,
+        false,
+      ),
+    ).toEqual({ x: 0, y: 0, width: 180, height: 90 })
+    expect(
+      resizeGraphBounds(
+        { x: 0, y: 0, width: 100, height: 50 },
+        'bottomRight',
+        { width: 200, height: 10 },
+        { width: 40, height: 32 },
+        { width: 180, height: 90 },
+        true,
+        false,
+      ),
+    ).toEqual({ x: 0, y: 0, width: 180, height: 90 })
   })
 
   it('exposes the standard resize solver through a reusable request', () => {
