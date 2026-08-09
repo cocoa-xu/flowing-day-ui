@@ -32,11 +32,17 @@ hot-reloads the page instead of waiting on a rebuild.
 | `pnpm dev` | Serve the landing page |
 | `pnpm build` | ESM output, type declarations, `theme.css` and the custom elements manifest |
 | `pnpm test` | Run the suite in Chromium, Firefox and WebKit via Vitest browser mode |
+| `pnpm test:ui` | Run opt-in headed interaction tests in Chromium, Firefox and WebKit |
+| `pnpm test:ui:headless` | Run the same opt-in interaction tests without browser windows |
 | `pnpm typecheck` | Type-check both packages without emitting |
+| `pnpm typecheck:ui` | Type-check the local Playwright interaction suite |
 | `pnpm lint` / `pnpm format` | Biome check / write |
 | `pnpm tokens:swift` | Regenerate the Swift theme from `tokens.json` |
 | `pnpm tokens:check` | Verify that the committed Swift theme is current |
 | `pnpm benchmark:canvas` | Run the headed graph benchmark on the main display |
+
+The Playwright UI suite is intentionally local-only. It exercises trusted pointer, keyboard,
+top-layer, canvas, minimap, and accessibility interactions, and is not part of the CI workflow.
 
 `pnpm --filter @flowing-day/ui check:exports` validates the published entry points with
 publint and are-the-types-wrong.

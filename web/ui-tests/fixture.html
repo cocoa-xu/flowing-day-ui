@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FlowingDayUI Browser Tests</title>
+    <script type="module" src="/ui-tests/fixture.ts"></script>
+  </head>
+  <body>
+    <main>
+      <section class="controls">
+        <fd-slider id="slider" min="0" max="10" step="1" value="2"></fd-slider>
+        <fd-popup id="popup" value="standard">
+          <fd-option value="standard">Standard</fd-option>
+          <fd-option value="compact">Compact</fd-option>
+          <fd-option value="detailed">Detailed</fd-option>
+        </fd-popup>
+      </section>
+      <fd-graph-canvas id="graph"></fd-graph-canvas>
+    </main>
+  </body>
+</html>

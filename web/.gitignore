@@ -5,3 +5,4 @@ dist/
 custom-elements.json
 .vitest-attachments/
 __screenshots__/
+test-results/

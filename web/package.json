@@ -10,6 +10,9 @@
     "build": "pnpm --filter './packages/*' build",
     "dev": "pnpm --filter @flowing-day/docs dev",
     "test": "pnpm -r --if-present test",
+    "test:ui": "pnpm typecheck:ui && playwright test --config playwright.ui.config.ts --headed",
+    "test:ui:headless": "pnpm typecheck:ui && playwright test --config playwright.ui.config.ts",
+    "typecheck:ui": "tsc -p ui-tests/tsconfig.json --noEmit",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "biome check .",
     "format": "biome check --write .",
@@ -20,6 +23,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.7",
-    "typescript": "5.9.3"
+    "@playwright/test": "1.62.1",
+    "typescript": "5.9.3",
+    "vite": "^8.2.0"
   }
 }
