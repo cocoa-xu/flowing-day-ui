@@ -31,7 +31,7 @@ hot-reloads the page instead of waiting on a rebuild.
 | --- | --- |
 | `pnpm dev` | Serve the landing page |
 | `pnpm build` | ESM output, type declarations, `theme.css` and the custom elements manifest |
-| `pnpm test` | Run the suite in a real Chromium via Vitest browser mode |
+| `pnpm test` | Run the suite in Chromium, Firefox and WebKit via Vitest browser mode |
 | `pnpm typecheck` | Type-check both packages without emitting |
 | `pnpm lint` / `pnpm format` | Biome check / write |
 | `pnpm tokens:swift` | Regenerate the Swift theme from `tokens.json` |

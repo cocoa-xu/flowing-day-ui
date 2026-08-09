@@ -215,7 +215,7 @@ export class FdSlider extends FdElement {
     if (this.disabled) return
     event.preventDefault()
     this.#dragging = true
-    this.setPointerCapture(event.pointerId)
+    if (event.isTrusted) this.setPointerCapture(event.pointerId)
     this.#commit(event.clientX)
   }
 

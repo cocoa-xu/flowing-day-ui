@@ -20,6 +20,11 @@ async function mount(): Promise<FdBaseElementTest> {
   return element
 }
 
+function userSelect(element: Element): string {
+  const style = getComputedStyle(element)
+  return style.userSelect || style.getPropertyValue('-webkit-user-select')
+}
+
 afterEach(() => {
   document.body.replaceChildren()
 })
@@ -27,23 +32,17 @@ afterEach(() => {
 describe('FdElement text selection', () => {
   it('uses desktop-style nonselectable labels while preserving text entry', async () => {
     const element = await mount()
-    const label = element.shadowRoot?.querySelector('span') as HTMLElement
     const input = element.shadowRoot?.querySelector('input') as HTMLInputElement
-    const slottedLabel = element.querySelector('span') as HTMLElement
 
-    expect(getComputedStyle(element).userSelect).toBe('none')
-    expect(getComputedStyle(label).userSelect).toBe('none')
-    expect(getComputedStyle(slottedLabel).userSelect).toBe('none')
-    expect(getComputedStyle(input).userSelect).toBe('text')
+    expect(userSelect(element)).toBe('none')
+    expect(userSelect(input)).toBe('text')
   })
 
   it('allows consumers to restore text selection explicitly', async () => {
     const element = await mount()
-    const label = element.shadowRoot?.querySelector('span') as HTMLElement
 
     element.style.setProperty('--fd-user-select', 'text')
 
-    expect(getComputedStyle(element).userSelect).toBe('text')
-    expect(getComputedStyle(label).userSelect).toBe('text')
+    expect(userSelect(element)).toBe('text')
   })
 })

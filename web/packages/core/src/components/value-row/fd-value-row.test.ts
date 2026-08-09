@@ -14,6 +14,11 @@ async function mount(html: string): Promise<FdValueRow> {
 const partOf = (element: FdValueRow, selector: string) =>
   element.shadowRoot?.querySelector(selector) as HTMLElement
 
+function userSelect(element: Element): string {
+  const style = getComputedStyle(element)
+  return style.userSelect || style.getPropertyValue('-webkit-user-select')
+}
+
 afterEach(() => {
   document.body.replaceChildren()
 })
@@ -80,7 +85,7 @@ describe('fd-value-row', () => {
 
   it('leaves the value selectable', async () => {
     const element = await mount('<fd-value-row label="Version" value="1.4.2"></fd-value-row>')
-    expect(getComputedStyle(partOf(element, '.value')).userSelect).toBe('text')
+    expect(userSelect(partOf(element, '.value'))).toBe('text')
   })
 
   it('places a trailing control 10px after the value', async () => {

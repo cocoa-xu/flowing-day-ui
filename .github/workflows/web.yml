@@ -62,8 +62,8 @@ jobs:
       - name: Validate published entry points
         run: pnpm --filter @flowing-day/ui check:exports
 
-      - name: Install Chromium
-        run: pnpm --filter @flowing-day/ui exec playwright install --with-deps chromium
+      - name: Install browsers
+        run: pnpm --filter @flowing-day/ui exec playwright install --with-deps chromium firefox webkit
 
       - name: Run tests
         run: pnpm test
