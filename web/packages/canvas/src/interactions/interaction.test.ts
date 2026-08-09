@@ -116,6 +116,23 @@ describe('graph snapping', () => {
       ).translation,
     ).toEqual({ width: 25, height: 25 })
   })
+
+  it('resolves dense alignment candidates without materializing every guide', () => {
+    const candidates = Array.from({ length: 10_000 }, (_, index) => ({
+      id: index,
+      frame: { x: 120, y: index * 80, width: 80, height: 60 },
+    }))
+    const result = snapGraphTranslation(
+      { x: 0, y: 0, width: 80, height: 60 },
+      { width: 37, height: 0 },
+      candidates,
+      configuration,
+      1,
+    )
+
+    expect(result.translation.width).toBe(40)
+    expect(result.guides[0]?.upperBound).toBe(799_980)
+  })
 })
 
 describe('graph group resizing', () => {

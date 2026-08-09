@@ -19,6 +19,7 @@ export type FdGraphResizeHandle =
   | 'topLeft'
 
 type FdGraphAnchor = 'minimum' | 'center' | 'maximum'
+const graphAnchors: readonly FdGraphAnchor[] = ['minimum', 'center', 'maximum']
 
 export interface FdGraphGuide {
   readonly axis: FdGraphGuideAxis
@@ -83,6 +84,11 @@ interface AxisCandidate {
   readonly guide: FdGraphGuide
 }
 
+interface AxisCandidateSeed {
+  readonly correction: number
+  readonly state: FdGraphSnapAxisState
+}
+
 const axisCandidate = (
   axis: 'x' | 'y',
   movingBounds: FdCanvasRect,
@@ -106,21 +112,24 @@ const axisCandidate = (
     }
   }
 
-  const options: AxisCandidate[] = []
+  let best: AxisCandidateSeed | undefined
+  const consider = (candidate: AxisCandidateSeed): void => {
+    if (!best || Math.abs(candidate.correction) < Math.abs(best.correction)) best = candidate
+  }
   if (configuration.alignment) {
     for (const candidate of candidates) {
       const anchors =
         axis === 'x'
           ? axisAnchors(candidate.frame.x, candidate.frame.width)
           : axisAnchors(candidate.frame.y, candidate.frame.height)
-      for (const movingAnchor of Object.keys(moving) as FdGraphAnchor[]) {
-        for (const target of Object.values(anchors)) {
+      for (const movingAnchor of graphAnchors) {
+        for (const targetAnchor of graphAnchors) {
+          const target = anchors[targetAnchor]
           const correction = target - moving[movingAnchor]
           if (Math.abs(correction) * zoom > configuration.acquisitionDistance) continue
-          options.push({
+          consider({
             correction,
             state: { anchor: movingAnchor, target, kind: 'alignment' },
-            guide: guideFor(axis, target, movingBounds, candidates, 'alignment'),
           })
         }
       }
@@ -131,20 +140,21 @@ const axisCandidate = (
   if (grid.enabled && (axis === 'x' ? grid.snapsX : grid.snapsY)) {
     const spacing = axis === 'x' ? grid.width : grid.height
     const origin = axis === 'x' ? grid.originX : grid.originY
-    for (const movingAnchor of Object.keys(moving) as FdGraphAnchor[]) {
+    for (const movingAnchor of graphAnchors) {
       const target = roundedGridValue(moving[movingAnchor], origin, spacing, grid.rounding)
       const correction = target - moving[movingAnchor]
       if (Math.abs(correction) * zoom > configuration.acquisitionDistance) continue
-      options.push({
+      consider({
         correction,
         state: { anchor: movingAnchor, target, kind: 'grid' },
-        guide: guideFor(axis, target, movingBounds, [], 'grid'),
       })
     }
   }
-  return options.sort(
-    (first, second) => Math.abs(first.correction) - Math.abs(second.correction),
-  )[0]
+  if (!best) return undefined
+  return {
+    ...best,
+    guide: guideFor(axis, best.state.target, movingBounds, candidates, best.state.kind),
+  }
 }
 
 const guideFor = (
@@ -154,27 +164,16 @@ const guideFor = (
   candidates: readonly FdGraphSnapCandidate[],
   kind: FdGraphGuideKind,
 ): FdGraphGuide => {
-  const related = candidates.filter(({ frame }) => {
+  let lower = axis === 'x' ? movingBounds.y : movingBounds.x
+  let upper =
+    axis === 'x' ? movingBounds.y + movingBounds.height : movingBounds.x + movingBounds.width
+  for (const { frame } of candidates) {
     const anchors =
-      axis === 'x'
-        ? Object.values(axisAnchors(frame.x, frame.width))
-        : Object.values(axisAnchors(frame.y, frame.height))
-    return anchors.some((value) => Math.abs(value - position) < 0.001)
-  })
-  const lower =
-    axis === 'x'
-      ? Math.min(movingBounds.y, ...related.map(({ frame }) => frame.y))
-      : Math.min(movingBounds.x, ...related.map(({ frame }) => frame.x))
-  const upper =
-    axis === 'x'
-      ? Math.max(
-          movingBounds.y + movingBounds.height,
-          ...related.map(({ frame }) => frame.y + frame.height),
-        )
-      : Math.max(
-          movingBounds.x + movingBounds.width,
-          ...related.map(({ frame }) => frame.x + frame.width),
-        )
+      axis === 'x' ? axisAnchors(frame.x, frame.width) : axisAnchors(frame.y, frame.height)
+    if (!graphAnchors.some((anchor) => Math.abs(anchors[anchor] - position) < 0.001)) continue
+    lower = Math.min(lower, axis === 'x' ? frame.y : frame.x)
+    upper = Math.max(upper, axis === 'x' ? frame.y + frame.height : frame.x + frame.width)
+  }
   return {
     axis: axis === 'x' ? 'vertical' : 'horizontal',
     position,
