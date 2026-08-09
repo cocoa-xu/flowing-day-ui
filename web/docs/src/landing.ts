@@ -14,6 +14,7 @@ import type {
 } from '@flowing-day/ui'
 import { namedAccentFamilies, namedAccents } from '@flowing-day/ui'
 import { makeMovableByBackground } from './drag.js'
+import { resolveScheme } from './scheme.js'
 import { installTheme, registerIcons } from './shared.js'
 
 installTheme()
@@ -104,6 +105,8 @@ document.querySelector<HTMLButtonElement>('#canvas-fit')?.addEventListener('clic
 
 const preferencesWindow = document.querySelector<FdPreferencesWindow>('#window')
 const preferencesAppIcon = document.querySelector<HTMLImageElement>('#preferences-app-icon')
+const brandAppIcon = document.querySelector<HTMLImageElement>('#brand-app-icon')
+const canvasAppIcon = document.querySelector<HTMLImageElement>('#canvas-app-icon')
 const lightAppIcon = new URL('./app-icon.svg', import.meta.url).href
 const darkAppIcon = new URL('./app-icon-dark.svg', import.meta.url).href
 
@@ -210,17 +213,28 @@ const TEXT_SIZE: Record<string, { title: string; caption: string; page: string }
   large: { title: '14.5px', caption: '12px', page: '28px' },
 }
 
-onSegment('scheme', (value) => {
-  if (!preferencesWindow) return
-  const scheme =
-    value === 'system'
-      ? matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'
-      : value
-  preferencesWindow.dataset.fdScheme = scheme
-  preferencesWindow.style.colorScheme = scheme
-  if (preferencesAppIcon) preferencesAppIcon.src = scheme === 'dark' ? darkAppIcon : lightAppIcon
+const systemScheme = matchMedia('(prefers-color-scheme: dark)')
+const schemeControl = document.querySelector<FdSegmentedRow>('#scheme')
+
+function applyScheme(value: string): void {
+  const scheme = resolveScheme(value, systemScheme.matches)
+  document.documentElement.dataset.fdScheme = scheme
+  document.documentElement.dataset.landingScheme = scheme
+  document.documentElement.style.colorScheme = scheme
+
+  if (preferencesWindow) {
+    preferencesWindow.dataset.fdScheme = scheme
+    preferencesWindow.style.colorScheme = scheme
+  }
+  const icon = scheme === 'dark' ? darkAppIcon : lightAppIcon
+  for (const image of [preferencesAppIcon, brandAppIcon, canvasAppIcon]) {
+    if (image) image.src = icon
+  }
+}
+
+onSegment('scheme', applyScheme)
+systemScheme.addEventListener('change', () => {
+  if (schemeControl?.value === 'system') applyScheme('system')
 })
 
 function applyAccent(hex: string): void {

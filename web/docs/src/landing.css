@@ -3,16 +3,100 @@ html {
   scroll-behavior: smooth;
 }
 
+html[data-landing-scheme="dark"] {
+  color-scheme: dark;
+}
+
 body {
   --landing-accent: #d67084;
   --landing-honey: #ac9326;
   --landing-sprout: #60ab32;
+  --landing-page: #f7f6f2;
+  --landing-ink: #1d1d1b;
+  --landing-heading: #20201e;
+  --landing-muted: #696b65;
+  --landing-faint: #676962;
+  --landing-accent-foreground: oklch(from var(--landing-accent) 0.5 calc(c * 0.82) h);
+  --landing-navigation-border: rgb(29 29 27 / 0.08);
+  --landing-navigation-surface: rgb(255 255 253 / 0.82);
+  --landing-navigation-shadow:
+    0 12px 34px rgb(64 78 68 / 0.11), inset 0 1px rgb(255 255 255 / 0.84);
+  --landing-map-neutral: #d4d7d0;
+  --landing-map-surface: rgb(255 255 252 / 0.72);
+  --landing-map-ink: #5f635d;
+  --landing-map-shadow: 0 12px 32px rgb(67 74 64 / 0.055), inset 0 1px rgb(255 255 255 / 0.84);
+  --landing-map-marker-ring: #fff;
+  --landing-canvas: #fff;
+  --landing-grid: #c4c8c2;
+  --landing-edge: #b3b7b1;
+  --landing-node-border: #d9dcd7;
+  --landing-node-surface: rgb(255 255 255 / 0.96);
+  --landing-node-shadow: 0 14px 34px rgb(49 54 50 / 0.08), inset 0 1px #fff;
+  --landing-source-border: #aeb3ac;
+  --landing-source-surface: #f5f6f3;
+  --landing-contract-border: #bfc4bd;
+  --landing-contract-surface: #f8f9f6;
+  --landing-mark-surface: #eff1ed;
+  --landing-mark-ink: #646963;
+  --landing-source-mark-ink: #464a45;
+  --landing-node-title: #2a2b28;
+  --landing-node-caption: #777a73;
+  --landing-toolbar-border: rgb(29 29 27 / 0.08);
+  --landing-toolbar-surface: rgb(255 255 253 / 0.9);
+  --landing-toolbar-shadow: 0 10px 30px rgb(56 65 59 / 0.13);
+  --landing-toolbar-ink: #5f625c;
+  --landing-toolbar-hover: #eceeea;
+  --landing-toolbar-active: #383b37;
+  --landing-focus: #a4aaa2;
+  --landing-window-shadow:
+    0 30px 90px color-mix(in srgb, var(--landing-accent) 17%, transparent),
+    0 8px 28px rgb(60 60 58 / 0.08);
 
   margin: 0;
   min-height: 100dvh;
-  background: #f7f6f2;
-  color: #1d1d1b;
+  background: var(--landing-page);
+  color: var(--landing-ink);
   font-family: var(--fd-font-standard);
+}
+
+html[data-landing-scheme="dark"] body {
+  --landing-page: #10120f;
+  --landing-ink: #eff0eb;
+  --landing-heading: #f4f3ee;
+  --landing-muted: #a8aca3;
+  --landing-faint: #b3b7ae;
+  --landing-accent-foreground: oklch(from var(--landing-accent) 0.78 calc(c * 0.54) h);
+  --landing-navigation-border: rgb(255 255 255 / 0.09);
+  --landing-navigation-surface: rgb(28 31 27 / 0.84);
+  --landing-navigation-shadow: 0 14px 38px rgb(0 0 0 / 0.32), inset 0 1px rgb(255 255 255 / 0.07);
+  --landing-map-neutral: #3d423a;
+  --landing-map-surface: rgb(25 28 24 / 0.76);
+  --landing-map-ink: #9ca298;
+  --landing-map-shadow: 0 14px 36px rgb(0 0 0 / 0.2), inset 0 1px rgb(255 255 255 / 0.055);
+  --landing-map-marker-ring: #1b1e1a;
+  --landing-canvas: #151714;
+  --landing-grid: #484d46;
+  --landing-edge: #5a6057;
+  --landing-node-border: #3b4039;
+  --landing-node-surface: rgb(30 33 29 / 0.97);
+  --landing-node-shadow: 0 16px 38px rgb(0 0 0 / 0.24), inset 0 1px rgb(255 255 255 / 0.045);
+  --landing-source-border: #555c51;
+  --landing-source-surface: #242721;
+  --landing-contract-border: #4c5348;
+  --landing-contract-surface: #20231e;
+  --landing-mark-surface: #2b2f29;
+  --landing-mark-ink: #bec3b9;
+  --landing-source-mark-ink: #d6d9d1;
+  --landing-node-title: #eff0eb;
+  --landing-node-caption: #9da298;
+  --landing-toolbar-border: rgb(255 255 255 / 0.09);
+  --landing-toolbar-surface: rgb(29 32 28 / 0.9);
+  --landing-toolbar-shadow: 0 12px 34px rgb(0 0 0 / 0.3);
+  --landing-toolbar-ink: #b9beb4;
+  --landing-toolbar-hover: #333831;
+  --landing-toolbar-active: #f0f1ec;
+  --landing-focus: #737b70;
+  --landing-window-shadow: 0 34px 100px rgb(0 0 0 / 0.42), 0 8px 30px rgb(0 0 0 / 0.22);
 }
 
 .landing-backdrop {
@@ -49,6 +133,30 @@ body {
     linear-gradient(180deg, #fffef9 0%, #f7f7f0 100%);
 }
 
+.landing-canvas-surface::after {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse 44rem 35rem at 12% 3%,
+      oklch(from var(--landing-honey) 0.3 calc(c * 0.42) h / 0.46),
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 46rem 38rem at 88% 8%,
+      oklch(from var(--landing-sprout) 0.28 calc(c * 0.36) h / 0.4),
+      transparent 74%
+    ),
+    linear-gradient(180deg, #171912 0%, var(--landing-page) 100%);
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+}
+
+html[data-landing-scheme="dark"] .landing-canvas-surface::after {
+  opacity: 1;
+}
+
 .landing-canvas-grid::before,
 .landing-canvas-grid::after {
   position: absolute;
@@ -58,7 +166,7 @@ body {
     color-mix(
         in oklab,
         color-mix(in oklab, var(--landing-honey) 46%, var(--landing-sprout)) 38%,
-        #9da199
+        var(--landing-map-ink)
       )
       1px,
     transparent 1.25px
@@ -98,7 +206,7 @@ body {
   stroke: color-mix(
     in oklab,
     color-mix(in oklab, var(--landing-honey) 48%, var(--landing-sprout)) 42%,
-    #a6aaa1
+    var(--landing-map-ink)
   );
   stroke-linecap: round;
   stroke-width: 1.5;
@@ -121,13 +229,11 @@ body {
   box-sizing: border-box;
   gap: 10px;
   padding: 0 17px 0 13px;
-  border: 1px solid color-mix(in oklab, var(--map-accent) 16%, #d4d7d0);
+  border: 1px solid color-mix(in oklab, var(--map-accent) 16%, var(--landing-map-neutral));
   border-radius: 15px;
-  background: rgb(255 255 252 / 0.72);
-  box-shadow:
-    0 12px 32px rgb(67 74 64 / 0.055),
-    inset 0 1px rgb(255 255 255 / 0.84);
-  color: color-mix(in oklab, var(--map-accent) 30%, #5f635d);
+  background: var(--landing-map-surface);
+  box-shadow: var(--landing-map-shadow);
+  color: color-mix(in oklab, var(--map-accent) 30%, var(--landing-map-ink));
   font-family: var(--fd-font-rounded);
   font-size: 13px;
   font-weight: 610;
@@ -143,7 +249,7 @@ body {
   width: 8px;
   height: 8px;
   flex: none;
-  border: 3px solid color-mix(in oklab, var(--map-accent) 18%, #fff);
+  border: 3px solid color-mix(in oklab, var(--map-accent) 18%, var(--landing-map-marker-ring));
   border-radius: 50%;
   background: var(--map-accent);
   box-shadow: 0 0 0 1px color-mix(in oklab, var(--map-accent) 32%, transparent);
@@ -188,12 +294,10 @@ body {
   display: flex;
   gap: 3px;
   padding: 5px;
-  border: 1px solid rgb(29 29 27 / 0.08);
+  border: 1px solid var(--landing-navigation-border);
   border-radius: 999px;
-  background: rgb(255 255 253 / 0.82);
-  box-shadow:
-    0 12px 34px rgb(64 78 68 / 0.11),
-    inset 0 1px rgb(255 255 255 / 0.84);
+  background: var(--landing-navigation-surface);
+  box-shadow: var(--landing-navigation-shadow);
   backdrop-filter: blur(18px) saturate(130%);
   translate: -50% 0;
   pointer-events: auto;
@@ -202,7 +306,7 @@ body {
 .site-nav a {
   padding: 8px 14px;
   border-radius: 999px;
-  color: #676962;
+  color: var(--landing-faint);
   font-size: 12px;
   font-weight: 550;
   line-height: 1;
@@ -228,7 +332,7 @@ body {
 .site-nav a:hover,
 .site-nav a:focus-visible {
   background: color-mix(in srgb, var(--landing-accent) 11%, transparent);
-  color: oklch(from var(--landing-accent) 0.46 calc(c * 0.78) h);
+  color: var(--landing-accent-foreground);
 }
 
 .site-nav a:focus-visible {
@@ -260,7 +364,7 @@ body {
 
 .hero-kicker {
   margin: 0 0 13px;
-  color: oklch(from var(--landing-accent) 0.5 calc(c * 0.82) h);
+  color: var(--landing-accent-foreground);
   font-family: var(--fd-font-rounded);
   font-size: 12px;
   font-weight: 680;
@@ -271,7 +375,7 @@ body {
 .hero h1 {
   margin: 0;
   text-wrap: balance;
-  color: #20201e;
+  color: var(--landing-heading);
   font-family: var(--fd-font-rounded);
   font-size: clamp(48px, 3.5vw, 58px);
   font-weight: 680;
@@ -283,7 +387,7 @@ body {
   max-width: 650px;
   margin: 22px 0 0;
   text-wrap: balance;
-  color: #696b65;
+  color: var(--landing-muted);
   font-size: clamp(15px, 1.4vw, 18px);
   font-weight: 430;
   letter-spacing: -0.012em;
@@ -293,9 +397,7 @@ body {
 .hero fd-preferences-window {
   grid-column: 2;
   grid-row: 1;
-  box-shadow:
-    0 30px 90px color-mix(in srgb, var(--landing-accent) 17%, transparent),
-    0 8px 28px rgb(60 60 58 / 0.08);
+  box-shadow: var(--landing-window-shadow);
   cursor: grab;
   pointer-events: auto;
 }
@@ -326,7 +428,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
   width: 100%;
   height: max(100dvh, 720px);
   overflow: visible;
-  background: #fff;
+  background: var(--landing-canvas);
   pointer-events: auto;
   scroll-margin-top: 88px;
 }
@@ -338,7 +440,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
   right: 0;
   left: 0;
   height: min(18vh, 180px);
-  background: linear-gradient(180deg, transparent, #fff);
+  background: linear-gradient(180deg, transparent, var(--landing-canvas));
   content: "";
   pointer-events: none;
   transform: translateY(-100%);
@@ -355,7 +457,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
 
 .section-kicker {
   margin: 0 0 10px;
-  color: oklch(from var(--landing-accent) 0.5 calc(c * 0.82) h);
+  color: var(--landing-accent-foreground);
   font-family: var(--fd-font-rounded);
   font-size: 12px;
   font-weight: 680;
@@ -366,7 +468,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
 .canvas-showcase h2 {
   margin: 0;
   text-wrap: balance;
-  color: #20201e;
+  color: var(--landing-heading);
   font-family: var(--fd-font-rounded);
   font-size: clamp(34px, 4vw, 56px);
   font-weight: 680;
@@ -376,7 +478,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
 
 .canvas-showcase-header > p:last-child {
   margin: 15px 0 0;
-  color: #696b65;
+  color: var(--landing-muted);
   font-size: 16px;
   line-height: 1.45;
 }
@@ -386,7 +488,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
   inset: 0;
   overflow: hidden;
   border-radius: 0;
-  background: #fff;
+  background: var(--landing-canvas);
   pointer-events: auto;
 }
 
@@ -412,7 +514,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
 .canvas-grid::after {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, #c4c8c2 1px, transparent 1.35px);
+  background-image: radial-gradient(circle, var(--landing-grid) 1px, transparent 1.35px);
   background-position: var(--grid-x) var(--grid-y);
   content: "";
 }
@@ -443,7 +545,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
   overflow: visible;
   fill: none;
   pointer-events: none;
-  stroke: #b3b7b1;
+  stroke: var(--landing-edge);
   stroke-linecap: round;
   stroke-width: 2;
 }
@@ -454,7 +556,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
 }
 
 .canvas-edges marker path {
-  fill: #b3b7b1;
+  fill: var(--landing-edge);
   stroke: none;
 }
 
@@ -469,17 +571,15 @@ fd-preferences-window[data-separators="off"] fd-separator {
   box-sizing: border-box;
   gap: 14px;
   padding: 18px;
-  border: 1px solid #d9dcd7;
+  border: 1px solid var(--landing-node-border);
   border-radius: 18px;
-  background: rgb(255 255 255 / 0.96);
-  box-shadow:
-    0 14px 34px rgb(49 54 50 / 0.08),
-    inset 0 1px #fff;
+  background: var(--landing-node-surface);
+  box-shadow: var(--landing-node-shadow);
 }
 
 .canvas-node-source {
-  border-color: #aeb3ac;
-  background: #f5f6f3;
+  border-color: var(--landing-source-border);
+  background: var(--landing-source-surface);
 }
 
 .canvas-node-platform {
@@ -488,8 +588,8 @@ fd-preferences-window[data-separators="off"] fd-separator {
 
 .canvas-node-contract {
   width: 260px;
-  border-color: #bfc4bd;
-  background: #f8f9f6;
+  border-color: var(--landing-contract-border);
+  background: var(--landing-contract-surface);
 }
 
 .canvas-node-mark {
@@ -498,8 +598,8 @@ fd-preferences-window[data-separators="off"] fd-separator {
   width: 42px;
   height: 42px;
   border-radius: 13px;
-  background: #eff1ed;
-  color: #646963;
+  background: var(--landing-mark-surface);
+  color: var(--landing-mark-ink);
   font-family: var(--fd-font-rounded);
   font-size: 11px;
   font-weight: 700;
@@ -507,7 +607,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
 }
 
 .canvas-node-source .canvas-node-mark {
-  color: #464a45;
+  color: var(--landing-source-mark-ink);
   font-size: 11px;
   letter-spacing: -0.02em;
 }
@@ -533,14 +633,14 @@ fd-preferences-window[data-separators="off"] fd-separator {
 }
 
 .canvas-node strong {
-  color: #2a2b28;
+  color: var(--landing-node-title);
   font-size: 14px;
   font-weight: 650;
   letter-spacing: -0.01em;
 }
 
 .canvas-node small {
-  color: #777a73;
+  color: var(--landing-node-caption);
   font-size: 11px;
 }
 
@@ -552,10 +652,10 @@ fd-preferences-window[data-separators="off"] fd-separator {
   overflow: hidden;
   align-items: center;
   padding: 4px;
-  border: 1px solid rgb(29 29 27 / 0.08);
+  border: 1px solid var(--landing-toolbar-border);
   border-radius: 13px;
-  background: rgb(255 255 253 / 0.9);
-  box-shadow: 0 10px 30px rgb(56 65 59 / 0.13);
+  background: var(--landing-toolbar-surface);
+  box-shadow: var(--landing-toolbar-shadow);
   backdrop-filter: blur(18px) saturate(130%);
 }
 
@@ -565,7 +665,7 @@ fd-preferences-window[data-separators="off"] fd-separator {
   height: 30px;
   border: 0;
   background: transparent;
-  color: #5f625c;
+  color: var(--landing-toolbar-ink);
   font: inherit;
   font-size: 11px;
   font-weight: 600;
@@ -581,12 +681,12 @@ fd-preferences-window[data-separators="off"] fd-separator {
 
 .canvas-toolbar button:hover,
 .canvas-toolbar button:focus-visible {
-  background: #eceeea;
-  color: #383b37;
+  background: var(--landing-toolbar-hover);
+  color: var(--landing-toolbar-active);
 }
 
 .canvas-toolbar button:focus-visible {
-  outline: 2px solid #a4aaa2;
+  outline: 2px solid var(--landing-focus);
   outline-offset: -1px;
 }
 
@@ -625,6 +725,41 @@ fd-preferences-window[data-separators="off"] fd-separator {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body,
+  .site-nav,
+  .landing-map-node,
+  .canvas-showcase,
+  .canvas-frame,
+  .canvas-node,
+  .canvas-node-mark,
+  .canvas-toolbar,
+  .canvas-toolbar button,
+  .hero h1,
+  .hero-summary,
+  .canvas-showcase h2,
+  .canvas-showcase-header > p:last-child {
+    transition:
+      color 180ms ease-out,
+      background-color 180ms ease-out,
+      border-color 180ms ease-out,
+      box-shadow 180ms ease-out;
+  }
+
+  .landing-canvas-surface::after {
+    transition: opacity 220ms ease-out;
+  }
+
+  .landing-canvas-routes,
+  .canvas-edges {
+    transition: stroke 180ms ease-out;
+  }
+
+  .canvas-edges marker path {
+    transition: fill 180ms ease-out;
   }
 }
 

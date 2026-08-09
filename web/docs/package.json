@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -14,6 +15,7 @@
     "@flowing-day/ui": "workspace:*"
   },
   "devDependencies": {
+    "vitest": "4.1.10",
     "vite": "^8.2.0",
     "typescript": "5.9.3",
     "@types/node": "^24.13.3"
