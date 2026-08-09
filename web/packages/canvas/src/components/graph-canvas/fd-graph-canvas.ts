@@ -76,17 +76,16 @@ import {
 } from '../../interactions/keyboard.js'
 import type { FdGraphMiniMapConfiguration } from '../../minimap/configuration.js'
 import type {
-  FdGraphRenderEdge,
   FdGraphRenderFrame,
   FdGraphRenderingBackend,
   FdGraphRenderingBackendPreference,
-  FdGraphRenderNode,
 } from '../../rendering/backend.js'
 import {
   graphRenderingCapabilities,
   resolveGraphRenderingBackendKind,
 } from '../../rendering/backend.js'
 import { FdGraphDOMRenderingBackend } from '../../rendering/dom-backend.js'
+import { FdGraphRenderGeometryCache } from '../../rendering/frame-cache.js'
 import { FdGraphWebGL2RenderingBackend } from '../../rendering/webgl2-backend.js'
 import type { FdCanvas, FdCanvasTransformOptions } from '../canvas/fd-canvas.js'
 import '../canvas/fd-canvas.js'
@@ -495,6 +494,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
 
   private index = new FdGraphSnapshotIndex(emptySnapshot)
   private backend: FdGraphRenderingBackend | undefined
+  private readonly renderGeometryCache = new FdGraphRenderGeometryCache()
   private visibleNodes: readonly FdAnyGraphNode[] = []
   private visibleEdges: readonly FdAnyGraphEdge[] = []
   private renderWorldRect: FdCanvasRect = { x: 0, y: 0, width: 1, height: 1 }
@@ -730,6 +730,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     if (this.renderFrameRequest !== undefined) cancelAnimationFrame(this.renderFrameRequest)
     this.renderFrameRequest = undefined
     this.backend?.unmount()
+    this.renderGeometryCache.invalidate()
     this.activeBackendSource = undefined
     super.disconnectedCallback()
   }
@@ -1555,30 +1556,27 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     const accessibilityFocus = this.accessibilityFocusedElementKey
       ? this.accessibilitySnapshot.item(this.accessibilityFocusedElementKey)
       : undefined
-    const nodes: FdGraphRenderNode[] = this.visibleNodes.map((node) => ({
-      node,
-      frame: this.interactionPresentation.frames.get(node.id) ?? node.frame,
-      selected: this.selectedNodeIDs.has(node.id),
-      focused: this.focusedNodeID === node.id,
-      hovered: false,
-    }))
-    const edges: FdGraphRenderEdge[] = this.visibleEdges.map((edge) => ({
-      edge,
-      source: this.endpointPoint(edge, 'source'),
-      target: this.endpointPoint(edge, 'target'),
-      selected: false,
-      focused:
-        accessibilityFocus?.kind === 'edge' && accessibilityFocus.reference.edgeID === edge.id,
-      hovered: false,
-    }))
+    const geometry = this.renderGeometryCache.resolve({
+      snapshotRevision: this.snapshotRevision,
+      presentationRevision: this.presentationRevision,
+      nodes: this.visibleNodes,
+      edges: this.visibleEdges,
+      selectedNodeIDs: this.selectedNodeIDs,
+      ...(this.focusedNodeID === undefined ? {} : { focusedNodeID: this.focusedNodeID }),
+      ...(accessibilityFocus?.kind === 'edge'
+        ? { focusedEdgeID: accessibilityFocus.reference.edgeID }
+        : {}),
+      nodeFrame: (node) => this.interactionPresentation.frames.get(node.id) ?? node.frame,
+      edgeEndpoint: (edge, endpoint) => this.endpointPoint(edge, endpoint),
+    })
     const frame: FdGraphRenderFrame = {
       snapshotID: this.snapshot.id,
       snapshotRevision: this.snapshotRevision,
       presentationRevision: this.presentationRevision,
       viewport: this.canvas.viewport,
       renderWorldRect: this.renderWorldRect,
-      nodes,
-      edges,
+      nodes: geometry.nodes,
+      edges: geometry.edges,
       selectedNodeIDs: this.selectedNodeIDs,
       ...(this.focusedNodeID === undefined ? {} : { focusedNodeID: this.focusedNodeID }),
       pixelRatio: window.devicePixelRatio,
