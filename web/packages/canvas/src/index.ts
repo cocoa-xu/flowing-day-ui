@@ -1,10 +1,13 @@
 import './events.js'
 import './graph/events.js'
+import './graph/minimap-events.js'
 import './components/canvas/fd-canvas.js'
 import './components/graph-canvas/fd-graph-canvas.js'
+import './components/graph-minimap/fd-graph-minimap.js'
 
 export { FdCanvas, type FdCanvasTransformOptions } from './components/canvas/fd-canvas.js'
 export { FdGraphCanvas } from './components/graph-canvas/fd-graph-canvas.js'
+export { FdGraphMiniMap } from './components/graph-minimap/fd-graph-minimap.js'
 export * from './configuration.js'
 export type * from './events.js'
 export * from './geometry.js'

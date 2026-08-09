@@ -116,7 +116,9 @@ export function resolveGraphMiniMapConfiguration(
   configuration: FdGraphMiniMapConfiguration,
 ): FdResolvedGraphMiniMapConfiguration {
   const size = configuration.size ?? { width: 220, height: 144 }
-  const nodeStyles = configuration.style?.nodeStyles ?? [{ fill: 'rgb(115 120 114 / 0.52)' }]
+  const nodeStyles = configuration.style?.nodeStyles ?? [
+    { fill: 'color-mix(in srgb, CanvasText 52%, transparent)' },
+  ]
   if (nodeStyles.length === 0) throw new RangeError('node styles must not be empty')
   return {
     size: {
@@ -168,11 +170,13 @@ export function resolveGraphMiniMapConfiguration(
     ),
     accessibilityLabel: configuration.accessibilityLabel ?? 'Graph overview',
     style: {
-      background: configuration.style?.background ?? 'rgb(255 255 255 / 0.96)',
-      border: configuration.style?.border ?? 'rgb(115 120 114 / 0.18)',
-      edge: configuration.style?.edge ?? 'rgb(115 120 114 / 0.24)',
-      viewportFill: configuration.style?.viewportFill ?? 'rgb(109 158 165 / 0.1)',
-      viewportStroke: configuration.style?.viewportStroke ?? 'rgb(109 158 165 / 0.88)',
+      background: configuration.style?.background ?? 'color-mix(in srgb, Canvas 96%, transparent)',
+      border: configuration.style?.border ?? 'color-mix(in srgb, CanvasText 18%, transparent)',
+      edge: configuration.style?.edge ?? 'color-mix(in srgb, CanvasText 24%, transparent)',
+      viewportFill:
+        configuration.style?.viewportFill ?? 'color-mix(in srgb, AccentColor 10%, transparent)',
+      viewportStroke:
+        configuration.style?.viewportStroke ?? 'color-mix(in srgb, AccentColor 88%, transparent)',
       nodeStyles: nodeStyles.map((style) => ({
         fill: style.fill,
         stroke: style.stroke ?? 'transparent',

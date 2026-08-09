@@ -404,3 +404,34 @@ describe('fd-graph-canvas pointer editing', () => {
     expect(element.viewport.transform.zoom).toBeGreaterThan(initial.zoom)
   })
 })
+
+describe('fd-graph-canvas minimap integration', () => {
+  it('shares the indexed snapshot and drives the canvas viewport', async () => {
+    const element = await mount()
+    element.miniMapConfiguration = { visibility: 'always' }
+    await element.updateComplete
+    await nextFrame()
+    await nextFrame()
+    const miniMap = element.shadowRoot?.querySelector('fd-graph-minimap')
+    expect(miniMap?.snapshot).toBe(element.snapshot)
+    expect(miniMap?.snapshotIndex).toBe(element.graphIndex)
+    const initialOffset = element.viewport.transform.offset
+
+    miniMap?.dispatchEvent(
+      new CustomEvent('fd-graph-minimap-navigation', {
+        detail: {
+          kind: 'center',
+          worldPoint: { x: 500, y: 400 },
+          phase: 'ended',
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+
+    expect(element.viewport.transform.offset).not.toEqual(initialOffset)
+    expect(
+      element.viewport.visibleWorldRect.x + element.viewport.visibleWorldRect.width / 2,
+    ).toBeCloseTo(500)
+  })
+})

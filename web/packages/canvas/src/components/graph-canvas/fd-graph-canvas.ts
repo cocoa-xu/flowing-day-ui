@@ -1,4 +1,4 @@
-import { type CSSResultGroup, css, html, LitElement, type PropertyValues } from 'lit'
+import { type CSSResultGroup, css, html, LitElement, nothing, type PropertyValues } from 'lit'
 import { customElement, property, query } from 'lit/decorators.js'
 import type {
   FdCanvasConfiguration,
@@ -6,19 +6,21 @@ import type {
   FdCanvasRequest,
 } from '../../configuration.js'
 import type { FdCanvasViewportChangeDetail } from '../../events.js'
-import type {
-  FdCanvasInsets,
-  FdCanvasPoint,
-  FdCanvasRect,
+import {
+  type FdCanvasInsets,
+  type FdCanvasPoint,
+  type FdCanvasRect,
+  FdCanvasTransform,
   FdCanvasViewport,
+  zeroCanvasInsets,
 } from '../../geometry.js'
-import { zeroCanvasInsets } from '../../geometry.js'
 import type {
   FdGraphNodeFrameChange,
   FdGraphNodeFrameChangeKind,
   FdGraphNodeFramesChangeDetail,
   FdGraphSelectionChangeDetail,
 } from '../../graph/events.js'
+import type { FdGraphMiniMapNavigationDetail } from '../../graph/minimap-events.js'
 import type {
   FdAnyGraphEdge,
   FdAnyGraphNode,
@@ -34,6 +36,7 @@ import type {
   FdResolvedGraphCanvasInteractionConfiguration,
 } from '../../interactions/configuration.js'
 import { resolveGraphCanvasInteractionConfiguration } from '../../interactions/configuration.js'
+import type { FdGraphMiniMapConfiguration } from '../../minimap/configuration.js'
 import type {
   FdGraphRenderEdge,
   FdGraphRenderFrame,
@@ -44,6 +47,8 @@ import type {
 import { FdGraphDOMRenderingBackend } from '../../rendering/dom-backend.js'
 import type { FdCanvas, FdCanvasTransformOptions } from '../canvas/fd-canvas.js'
 import '../canvas/fd-canvas.js'
+import type { FdGraphMiniMap } from '../graph-minimap/fd-graph-minimap.js'
+import '../graph-minimap/fd-graph-minimap.js'
 import {
   FdGraphCanvasInteractionController,
   type FdGraphCanvasInteractionDelegate,
@@ -363,6 +368,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   @property({ reflect: true }) tool: FdGraphCanvasTool = 'select'
   @property({ attribute: false }) interactionConfiguration: FdGraphCanvasInteractionConfiguration =
     {}
+  @property({ attribute: false }) miniMapConfiguration: FdGraphMiniMapConfiguration | undefined
   @property({ attribute: false })
   get selectedNodeIDs(): ReadonlySet<FdGraphElementID> {
     return this.selectionValue
@@ -381,6 +387,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   @query('.selection-bounds') private selectionBoundsElement!: HTMLElement
   @query('.selection-marquee') private marqueeElement!: HTMLElement
   @query('.guide-layer') private guideLayer!: HTMLElement
+  @query('fd-graph-minimap') private miniMap: FdGraphMiniMap | undefined
 
   private index = new FdGraphSnapshotIndex(emptySnapshot)
   private backend: FdGraphRenderingBackend | undefined
@@ -400,6 +407,11 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
   private resizeHandlesVisible = false
   private localSnapshotSequence = 0
   private localSnapshotBaseID: string | number | undefined
+  private miniMapViewport = new FdCanvasViewport(
+    FdCanvasTransform.identity,
+    { width: 1, height: 1 },
+    { x: 0, y: 0, width: 1, height: 1 },
+  )
   private activeBackendSource:
     | FdGraphRenderingBackendPreference
     | FdGraphRenderingBackend
@@ -457,6 +469,20 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
           </div>
         </div>
         <div class="consumer-overlay" slot="overlay"><slot name="overlay"></slot></div>
+        ${
+          this.miniMapConfiguration
+            ? html`
+              <fd-graph-minimap
+                slot="overlay"
+                .snapshot=${this.snapshot}
+                .snapshotIndex=${this.index}
+                .viewport=${this.miniMapViewport}
+                .configuration=${this.miniMapConfiguration}
+                @fd-graph-minimap-navigation=${this.handleMiniMapNavigation}
+              ></fd-graph-minimap>
+            `
+            : nothing
+        }
       </fd-canvas>
     `
   }
@@ -496,6 +522,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
       this.scheduleRenderFrame()
     }
     if (changed.has('tool')) this.interactionController?.cancel()
+    if (changed.has('miniMapConfiguration')) this.syncMiniMap()
   }
 
   override connectedCallback(): void {
@@ -518,6 +545,14 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
 
   setZoom(zoom: number, options: FdCanvasTransformOptions = {}): void {
     this.canvas.setZoom(zoom, options)
+  }
+
+  center(
+    worldPoint: FdCanvasPoint,
+    zoom = this.canvas.viewport.transform.zoom,
+    options: FdCanvasTransformOptions = {},
+  ): void {
+    this.canvas.center(worldPoint, zoom, options)
   }
 
   focusRect(rect: FdCanvasRect, zoom?: number, options: FdCanvasTransformOptions = {}): void {
@@ -647,6 +682,7 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
     this.reconcileSelection()
     this.refreshResizeHandleVisibility()
     this.syncInteractionOverlay()
+    this.syncMiniMap()
     if (!this.canvas) return
     this.canvas.contentRect = this.index.contentBounds
     this.refreshVisibleElements(this.canvas.renderWorldRect)
@@ -776,8 +812,30 @@ export class FdGraphCanvas extends LitElement implements FdGraphCanvasInteractio
 
   private handleViewportChange(event: CustomEvent<FdCanvasViewportChangeDetail>): void {
     if (event.target !== this.canvas) return
+    this.miniMapViewport = event.detail.viewport
+    if (this.miniMap) this.miniMap.viewport = event.detail.viewport
     this.syncInteractionScale()
     this.scheduleRenderFrame()
+  }
+
+  private handleMiniMapNavigation = (event: CustomEvent<FdGraphMiniMapNavigationDetail>): void => {
+    const detail = event.detail
+    if (detail.kind === 'center') {
+      this.canvas.center(detail.worldPoint, this.canvas.viewport.transform.zoom, {
+        animated: false,
+        phase: detail.phase,
+      })
+    } else {
+      this.canvas.setZoom(detail.zoom, { animated: false, phase: detail.phase })
+    }
+  }
+
+  private syncMiniMap(): void {
+    if (!this.miniMap || !this.miniMapConfiguration) return
+    this.miniMap.snapshot = this.snapshot
+    this.miniMap.snapshotIndex = this.index
+    this.miniMap.viewport = this.miniMapViewport
+    this.miniMap.configuration = this.miniMapConfiguration
   }
 
   private refreshVisibleElements(rect: FdCanvasRect): void {
