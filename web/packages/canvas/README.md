@@ -34,3 +34,9 @@ equal-size resizing, hysteresis, and measurement guides. Candidate lookup is con
 `searchRadius` and `maximumCandidates` so dense graphs do not turn pointer input into a full graph
 scan. `arrangeSelectedNodes()` applies align and distribute actions through the same semantic
 frame-change and undo boundary as direct manipulation.
+
+The default guide renderer exposes `guide`, kind-specific guide parts, `guide-line`, `guide-tick`,
+and `guide-label`, plus CSS variables for line and label colors. Use
+`FdGraphDefaultGuideRenderer` to customize measurement formatting, or assign a
+`FdGraphGuideRenderer` for completely custom incremental rendering. Guide elements are pooled and
+updated in place during pointer movement.

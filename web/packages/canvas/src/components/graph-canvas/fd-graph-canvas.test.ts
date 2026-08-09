@@ -534,6 +534,63 @@ describe('fd-graph-canvas pointer editing', () => {
     expect(element.snapshot.nodes[0]?.frame.height).toBeCloseTo(118)
   })
 
+  it('reuses guide elements while presenting resize measurements', async () => {
+    const element = await mount()
+    const canvas = preparePointerInput(element)
+    element.selectedNodeIDs = new Set(['source'])
+    element.interactionConfiguration = {
+      snapping: { alignment: false, equalSpacing: false, equalSize: false },
+    }
+    await element.updateComplete
+    const handle = element.shadowRoot?.querySelector<HTMLElement>(
+      '[data-fd-resize-handle="bottomRight"]',
+    )
+    if (!handle) throw new Error('missing resize handle')
+    const start = clientPoint(element, { x: 220, y: 168 })
+    const first = clientPoint(element, { x: 260, y: 198 })
+    const second = clientPoint(element, { x: 280, y: 208 })
+
+    dispatchPointer(handle, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', first)
+    const guide = element.shadowRoot?.querySelector<HTMLElement>('.graph-guide')
+    expect(guide?.querySelector('.guide-label')?.textContent).toBe('220')
+    expect(guide?.getAttribute('part')).toContain('guide-resize')
+
+    dispatchPointer(canvas, 'pointermove', second)
+    expect(element.shadowRoot?.querySelector('.graph-guide')).toBe(guide)
+    dispatchPointer(canvas, 'pointerup', second)
+    expect(guide?.hidden).toBe(true)
+  })
+
+  it('supports a consumer-supplied incremental guide renderer', async () => {
+    const element = await mount()
+    const canvas = preparePointerInput(element)
+    const createElement = vi.fn(() => document.createElement('output'))
+    const updateElement = vi.fn((guide: HTMLElement) => {
+      guide.textContent = 'Custom guide'
+    })
+    element.guideRenderer = { createElement, updateElement }
+    element.selectedNodeIDs = new Set(['source'])
+    element.interactionConfiguration = {
+      snapping: { alignment: false, equalSpacing: false, equalSize: false },
+    }
+    await element.updateComplete
+    const handle = element.shadowRoot?.querySelector<HTMLElement>('[data-fd-resize-handle="right"]')
+    if (!handle) throw new Error('missing resize handle')
+    const start = clientPoint(element, { x: 220, y: 124 })
+    const first = clientPoint(element, { x: 250, y: 124 })
+    const second = clientPoint(element, { x: 260, y: 124 })
+
+    dispatchPointer(handle, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', first)
+    dispatchPointer(canvas, 'pointermove', second)
+
+    expect(createElement).toHaveBeenCalledTimes(1)
+    expect(updateElement).toHaveBeenCalledTimes(2)
+    expect(element.shadowRoot?.querySelector('output')?.textContent).toBe('Custom guide')
+    dispatchPointer(canvas, 'pointerup', second)
+  })
+
   it('keeps wheel pan and pinch input active while the selection tool is enabled', async () => {
     const element = await mount()
     const viewport = element.shadowRoot

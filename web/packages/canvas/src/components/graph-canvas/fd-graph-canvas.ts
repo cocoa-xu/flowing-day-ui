@@ -103,6 +103,10 @@ import {
 } from '../../rendering/backend.js'
 import { FdGraphDOMRenderingBackend } from '../../rendering/dom-backend.js'
 import { FdGraphRenderGeometryCache } from '../../rendering/frame-cache.js'
+import {
+  FdGraphDefaultGuideRenderer,
+  type FdGraphGuideRenderer,
+} from '../../rendering/guide-renderer.js'
 import { FdGraphWebGL2RenderingBackend } from '../../rendering/webgl2-backend.js'
 import type { FdCanvas, FdCanvasTransformOptions } from '../canvas/fd-canvas.js'
 import '../canvas/fd-canvas.js'
@@ -347,7 +351,7 @@ export class FdGraphCanvas
 
     .selection-bounds,
     .selection-marquee,
-    .alignment-guide,
+    .graph-guide,
     .connection-feedback {
       position: absolute;
       box-sizing: border-box;
@@ -483,16 +487,110 @@ export class FdGraphCanvas
       );
     }
 
-    .alignment-guide {
-      background: var(--fd-graph-guide-color, var(--fd-canvas-accent-color, #6d9ea5));
+    .graph-guide {
+      --_fd-graph-guide-color: var(
+        --fd-graph-guide-color,
+        var(--fd-canvas-accent-color, #6d9ea5)
+      );
+
+      pointer-events: none;
+      user-select: none;
     }
 
-    .alignment-guide[data-axis='vertical'] {
-      width: var(--fd-graph-world-pixel);
+    .guide-line,
+    .guide-tick,
+    .guide-label {
+      position: absolute;
+      box-sizing: border-box;
     }
 
-    .alignment-guide[data-axis='horizontal'] {
+    .graph-guide[data-axis='horizontal'] .guide-line {
+      top: calc(-0.5 * var(--fd-graph-world-pixel));
+      right: 0;
+      left: 0;
       height: var(--fd-graph-world-pixel);
+      background: var(--_fd-graph-guide-color);
+    }
+
+    .graph-guide[data-axis='vertical'] .guide-line {
+      top: 0;
+      bottom: 0;
+      left: calc(-0.5 * var(--fd-graph-world-pixel));
+      width: var(--fd-graph-world-pixel);
+      background: var(--_fd-graph-guide-color);
+    }
+
+    .graph-guide[data-kind='grid'][data-axis='horizontal'] .guide-line {
+      background: repeating-linear-gradient(
+        to right,
+        var(--_fd-graph-guide-color) 0,
+        var(--_fd-graph-guide-color) calc(3 * var(--fd-graph-world-pixel)),
+        transparent calc(3 * var(--fd-graph-world-pixel)),
+        transparent calc(6 * var(--fd-graph-world-pixel))
+      );
+    }
+
+    .graph-guide[data-kind='grid'][data-axis='vertical'] .guide-line {
+      background: repeating-linear-gradient(
+        to bottom,
+        var(--_fd-graph-guide-color) 0,
+        var(--_fd-graph-guide-color) calc(3 * var(--fd-graph-world-pixel)),
+        transparent calc(3 * var(--fd-graph-world-pixel)),
+        transparent calc(6 * var(--fd-graph-world-pixel))
+      );
+    }
+
+    .guide-tick {
+      background: var(--_fd-graph-guide-color);
+    }
+
+    .graph-guide[data-axis='horizontal'] .guide-tick {
+      top: calc(-3.5 * var(--fd-graph-world-pixel));
+      width: var(--fd-graph-world-pixel);
+      height: calc(7 * var(--fd-graph-world-pixel));
+    }
+
+    .graph-guide[data-axis='vertical'] .guide-tick {
+      left: calc(-3.5 * var(--fd-graph-world-pixel));
+      width: calc(7 * var(--fd-graph-world-pixel));
+      height: var(--fd-graph-world-pixel);
+    }
+
+    .graph-guide[data-axis='horizontal'] .guide-tick-start {
+      left: 0;
+    }
+
+    .graph-guide[data-axis='vertical'] .guide-tick-start {
+      top: 0;
+    }
+
+    .graph-guide[data-axis='horizontal'] .guide-tick-end {
+      right: 0;
+    }
+
+    .graph-guide[data-axis='vertical'] .guide-tick-end {
+      bottom: 0;
+    }
+
+    .guide-label {
+      top: 50%;
+      left: 50%;
+      padding: calc(2 * var(--fd-graph-world-pixel))
+        calc(5 * var(--fd-graph-world-pixel));
+      border-radius: calc(999 * var(--fd-graph-world-pixel));
+      background: var(--fd-graph-guide-label-background, var(--_fd-graph-guide-color));
+      color: var(--fd-graph-guide-label-color, white);
+      font-size: calc(9 * var(--fd-graph-world-pixel));
+      font-weight: 600;
+      line-height: 1.2;
+      transform: translate(-50%, -50%);
+      white-space: nowrap;
+    }
+
+    .guide-tick[hidden],
+    .guide-label[hidden],
+    .graph-guide[hidden] {
+      display: none;
     }
 
     .consumer-background,
@@ -550,6 +648,8 @@ export class FdGraphCanvas
   @property({ attribute: false })
   connectionEditingConfiguration: FdGraphConnectionEditingConfiguration = {}
   @property({ attribute: false }) miniMapConfiguration: FdGraphMiniMapConfiguration | undefined
+  @property({ attribute: false }) guideRenderer: FdGraphGuideRenderer =
+    new FdGraphDefaultGuideRenderer()
   @property({ attribute: false })
   get selectedNodeIDs(): ReadonlySet<FdGraphElementID> {
     return this.selectionValue
@@ -639,6 +739,7 @@ export class FdGraphCanvas
   private arrangementTransactionSequence = 0
   private historyTransactionSequence = 0
   private readonly connectionPortElements = new Set<HTMLElement>()
+  private guideElements: HTMLElement[] = []
 
   get viewport(): FdCanvasViewport {
     return this.canvas.viewport
@@ -841,6 +942,11 @@ export class FdGraphCanvas
     if (changed.has('tool')) {
       this.interactionController?.cancel()
       this.connectionController?.cancel()
+    }
+    if (changed.has('guideRenderer')) {
+      this.guideElements = []
+      this.guideLayer.replaceChildren()
+      this.syncGuides(this.interactionPresentation.guides)
     }
     if (changed.has('miniMapConfiguration')) this.syncMiniMap()
   }
@@ -1854,21 +1960,21 @@ export class FdGraphCanvas
   }
 
   private syncGuides(guides: readonly FdGraphGuide[]): void {
-    const elements = guides.map((guide) => {
-      const element = document.createElement('span')
-      element.className = 'alignment-guide'
-      element.dataset.axis = guide.axis
-      element.dataset.kind = guide.kind
-      if (guide.axis === 'vertical') {
-        element.style.transform = `translate3d(${guide.position}px, ${guide.lowerBound}px, 0)`
-        element.style.height = `${guide.upperBound - guide.lowerBound}px`
-      } else {
-        element.style.transform = `translate3d(${guide.lowerBound}px, ${guide.position}px, 0)`
-        element.style.width = `${guide.upperBound - guide.lowerBound}px`
+    while (this.guideElements.length < guides.length) {
+      const element = this.guideRenderer.createElement()
+      this.guideElements.push(element)
+      this.guideLayer.append(element)
+    }
+    const zoom = this.canvas.viewport.transform.zoom
+    for (const [index, element] of this.guideElements.entries()) {
+      const guide = guides[index]
+      if (!guide) {
+        element.hidden = true
+        continue
       }
-      return element
-    })
-    this.guideLayer.replaceChildren(...elements)
+      element.hidden = false
+      this.guideRenderer.updateElement(element, { guide, index, zoom })
+    }
   }
 
   private handleRenderWorldRectChange(event: CustomEvent<{ readonly rect: FdCanvasRect }>): void {
