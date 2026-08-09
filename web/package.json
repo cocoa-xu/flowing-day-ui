@@ -13,6 +13,7 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "biome check .",
     "format": "biome check --write .",
+    "benchmark:canvas": "pnpm --filter @flowing-day/canvas-benchmarks benchmark",
     "manifest": "pnpm --filter @flowing-day/ui manifest",
     "tokens:swift": "node ../scripts/generate-swift-theme.mjs",
     "tokens:check": "node ../scripts/generate-swift-theme.mjs --check"
