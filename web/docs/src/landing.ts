@@ -2,8 +2,8 @@ import type {
   FdColorPickerRow,
   FdDependentRows,
   FdExpandableRow,
+  FdPopupRow,
   FdPreferencesWindow,
-  FdSearchPickerRow,
   FdSegmentedRow,
   FdSelectableTag,
   FdSliderRow,
@@ -13,12 +13,11 @@ import type {
 } from '@flowing-day/ui'
 import { namedAccentFamilies, namedAccents } from '@flowing-day/ui'
 import { makeMovableByBackground } from './drag.js'
-import { type IconStyle, installTheme, registerIcons } from './shared.js'
+import { installTheme, registerIcons } from './shared.js'
 
 installTheme()
 registerIcons()
 
-const root = document.documentElement
 const preferencesWindow = document.querySelector<FdPreferencesWindow>('#window')
 
 if (preferencesWindow) makeMovableByBackground(preferencesWindow)
@@ -62,7 +61,7 @@ const isNamedAccent = (value: string): value is NamedAccentName =>
   Object.hasOwn(namedAccents, value)
 
 function populateNamedAccents(): void {
-  const library = document.querySelector<FdSearchPickerRow>('#accent-library')
+  const popup = document.querySelector<FdPopupRow>('#accent')
   const grid = document.querySelector<HTMLElement>('#accent-chips')
 
   for (const names of Object.values(namedAccentFamilies)) {
@@ -70,21 +69,28 @@ function populateNamedAccents(): void {
       const value = namedAccents[name]
       const title = accentTitle(name)
 
-      if (library) {
+      if (popup) {
         const option = document.createElement('fd-option')
-        option.value = value
+        option.value = name
         option.label = title
-        library.append(option)
+        popup.append(option)
       }
 
       if (grid) {
         const chip = document.createElement('fd-chip')
-        chip.value = value
+        chip.value = name
         chip.textContent = title
         chip.style.setProperty('--fd-accent', value)
         grid.append(chip)
       }
     }
+  }
+
+  if (popup) {
+    const custom = document.createElement('fd-option')
+    custom.value = 'custom'
+    custom.label = 'Custom'
+    popup.append(custom)
   }
 }
 
@@ -109,31 +115,32 @@ const TEXT_SIZE: Record<string, { title: string; caption: string; page: string }
 }
 
 onSegment('scheme', (value) => {
-  if (value === 'system') {
-    delete root.dataset.fdScheme
-    root.style.colorScheme = ''
-  } else {
-    root.dataset.fdScheme = value
-    root.style.colorScheme = value
-  }
+  if (!preferencesWindow) return
+  const scheme =
+    value === 'system'
+      ? matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+      : value
+  preferencesWindow.dataset.fdScheme = scheme
+  preferencesWindow.style.colorScheme = scheme
 })
 
-/**
- * Every accent control on the page ends here. One custom property is the whole knob, so
- * a segmented row, a searchable list, a colour well and a grid of chips can all drive it
- * without knowing about one another.
- */
 function applyAccent(hex: string): void {
   set('--fd-accent', hex)
-  const readout = document.querySelector<FdValueRow>('#accent-readout')
-  if (readout) readout.value = hex.toUpperCase()
   const well = document.querySelector<FdColorPickerRow>('#custom-accent')
   if (well) well.value = hex.toLowerCase()
 }
 
-onSegment('accent', (value) => {
-  if (isNamedAccent(value)) applyAccent(namedAccents[value])
+const accentPopup = document.querySelector<FdPopupRow>('#accent')
+accentPopup?.addEventListener('fd-change', (event) => {
+  if (event.detail.value && isNamedAccent(event.detail.value)) {
+    applyAccent(namedAccents[event.detail.value])
+  }
 })
+if (accentPopup?.value && isNamedAccent(accentPopup.value)) {
+  applyAccent(namedAccents[accentPopup.value])
+}
 
 onSegment('corners', (value) => {
   const corners = CORNERS[value]
@@ -176,36 +183,24 @@ onSegment('heading-font', (value) => {
   set('--fd-text-brand-title-family', `var(--fd-font-${value})`)
 })
 
-onSegment('motion-speed', (value) => set('--fd-motion-disclosure', value))
-
-// Re-registering under the same names swaps every icon already on the page.
-onSegment('icon-style', (value) => registerIcons(value as IconStyle))
-
 document.querySelector<FdSwitchRow>('#separators')?.addEventListener('fd-change', (event) => {
   if (preferencesWindow) preferencesWindow.dataset.separators = event.detail.checked ? 'on' : 'off'
 })
 
 document
-  .querySelector<FdSearchPickerRow>('#accent-library')
-  ?.addEventListener('fd-change', (event) => {
-    if (event.detail.value) applyAccent(event.detail.value)
-  })
-
-document
   .querySelector<FdColorPickerRow>('#custom-accent')
   ?.addEventListener('fd-change', (event) => {
-    if (event.detail.value) applyAccent(event.detail.value)
+    if (!event.detail.value) return
+    applyAccent(event.detail.value)
+    if (accentPopup) accentPopup.value = 'custom'
   })
 
-/** fd-chip reports the press and nothing else, so the value it carries is the accent. */
 document.querySelector<HTMLElement>('#accent-chips')?.addEventListener('fd-activate', (event) => {
-  if (event.detail.value) applyAccent(event.detail.value)
+  if (!event.detail.value || !isNamedAccent(event.detail.value)) return
+  applyAccent(namedAccents[event.detail.value])
+  if (accentPopup) accentPopup.value = event.detail.value
 })
 
-/**
- * The tag reports the press; the selection belongs to whoever owns it. That is the
- * SwiftUI contract — `PreferencesSelectableTag` takes `isSelected` and hands back an action.
- */
 document.querySelector<HTMLElement>('#tag-group')?.addEventListener('fd-activate', (event) => {
   const pressed = event.target as FdSelectableTag
   for (const tag of document.querySelectorAll<FdSelectableTag>('#tag-group fd-selectable-tag')) {
@@ -213,7 +208,6 @@ document.querySelector<HTMLElement>('#tag-group')?.addEventListener('fd-activate
   }
 })
 
-/** Pairs a disclosure row with the rows it reveals. */
 function discloses(rowId: string, rowsId: string): void {
   const row = document.querySelector<FdExpandableRow>(`#${rowId}`)
   const rows = document.querySelector<FdDependentRows>(`#${rowsId}`)
@@ -227,16 +221,19 @@ function discloses(rowId: string, rowsId: string): void {
 discloses('advanced', 'advanced-rows')
 discloses('reference-expand', 'reference-expand-rows')
 
-/**
- * A reload rather than a token sweep: the controls hold the state that produced the
- * tokens, so clearing one without the other would leave the window and the rows
- * disagreeing. The inline `translate` the drag writes is not ours to clear either.
- */
-document.querySelector<HTMLElement>('#restore')?.addEventListener('fd-activate', () => {
-  location.reload()
+let pressCount = 0
+document.querySelector<HTMLElement>('#press')?.addEventListener('fd-activate', () => {
+  pressCount += 1
+  const readout = document.querySelector<FdValueRow>('#press-readout')
+  if (readout) readout.value = `Pressed ${pressCount} ${pressCount === 1 ? 'time' : 'times'}`
 })
 
+for (const link of document.querySelectorAll<HTMLAnchorElement>('[data-page]')) {
+  link.addEventListener('click', () => {
+    if (preferencesWindow && link.dataset.page) preferencesWindow.page = link.dataset.page
+  })
+}
+
 preferencesWindow?.addEventListener('fd-close', () => {
-  // Nothing to close in an embed; the SwiftUI original calls through to NSPanel.close().
   preferencesWindow.animate([{ opacity: 1 }, { opacity: 0.4 }, { opacity: 1 }], { duration: 260 })
 })

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-fd-scheme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,11 +7,20 @@
     <link rel="stylesheet" href="./src/landing.css" />
   </head>
   <body>
-    <header class="masthead">
-      <span class="wordmark">FlowingDayUI</span>
+    <header class="site-header">
+      <a class="brand" href="#demo" aria-label="FlowingDayUI home">
+        <img class="brand-mark" src="./src/app-icon.svg" alt="" />
+        <span class="wordmark">FlowingDayUI</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a href="#demo" data-page="appearance">Preferences</a>
+        <a href="#demo" data-page="components">Components</a>
+        <a href="https://github.com/cocoa-xu/flowing-day-ui">GitHub</a>
+      </nav>
     </header>
 
-    <main class="stage">
+    <main class="stage" id="demo">
       <fd-preferences-window
         id="window"
         app-name="FlowingDayUI"
@@ -25,19 +34,19 @@
           <fd-page
             page-id="appearance"
             label="Appearance"
-            subtitle="One property retints the whole window"
+            subtitle="Theme and surface components, live"
             symbol="paintbrush"
           >
             <fd-pane-stack>
               <fd-section
                 label="Theme"
-                footer="An accent is one colour. The fill, foreground, wash and veil all derive from it, in both appearances, so a single custom property retints every component."
+                footer="These controls update PreferencesViewConfiguration for the window that contains them."
               >
                 <fd-segmented-row
                   id="scheme"
-                  symbol="circle"
+                  symbol="circle.lefthalf.filled"
                   label="Appearance"
-                  value="dark"
+                  value="light"
                   control-width="240"
                 >
                   <fd-option value="system">System</fd-option>
@@ -45,40 +54,26 @@
                   <fd-option value="dark">Dark</fd-option>
                 </fd-segmented-row>
                 <fd-separator leading-edge="icon-text"></fd-separator>
-                <fd-segmented-row
+                <fd-popup-row
                   id="accent"
                   symbol="swatchpalette"
                   label="Accent"
                   value="celadon"
-                  control-width="280"
-                >
-                  <fd-option value="celadon">Celadon</fd-option>
-                  <fd-option value="poppy">Poppy</fd-option>
-                  <fd-option value="bloom">Bloom</fd-option>
-                  <fd-option value="leaf">Leaf</fd-option>
-                </fd-segmented-row>
-                <fd-separator leading-edge="icon-text"></fd-separator>
-                <fd-search-picker-row
-                  id="accent-library"
-                  symbol="swatchpalette"
-                  label="Accent library"
-                  caption="Too long for a popup menu, so it expands into a searchable list."
-                  value="#6D9EA5"
-                  max-visible-options="6"
-                ></fd-search-picker-row>
+                  min-width="180"
+                ></fd-popup-row>
                 <fd-separator leading-edge="icon-text"></fd-separator>
                 <fd-color-picker-row
                   id="custom-accent"
-                  symbol="circle"
-                  label="Custom accent"
-                  caption="Any colour at all. The whole set re-derives from it."
+                  symbol="eyedropper"
+                  label="Custom Accent"
+                  caption="Choosing a color selects the Custom accent preset."
                   value="#6d9ea5"
                 ></fd-color-picker-row>
               </fd-section>
 
               <fd-section
                 label="Surfaces"
-                footer="Corner radii come from PreferencesMetrics: 18 for the window, 14 for cards, 9 for controls."
+                footer="Window, card, and control radii come from PreferencesViewConfiguration and PreferencesMetrics."
               >
                 <fd-segmented-row id="corners" label="Corners" value="soft" control-width="260">
                   <fd-option value="soft">Soft</fd-option>
@@ -88,8 +83,8 @@
                 <fd-separator></fd-separator>
                 <fd-switch-row
                   id="separators"
-                  label="Row separators"
-                  caption="Hairlines between rows, inset past the symbol gutter."
+                  label="Row Separators"
+                  caption="Hairlines between the rows in this page."
                   checked
                 ></fd-switch-row>
               </fd-section>
@@ -99,17 +94,17 @@
           <fd-page
             page-id="layout"
             label="Layout"
-            subtitle="Spacing, measure and the sidebar"
+            subtitle="Spacing, measure, and the sidebar"
             symbol="ruler"
           >
             <fd-pane-stack>
               <fd-section
                 label="Density"
-                footer="PreferencesMetrics.standard: rowInset 18, sectionSpacing 20, contentWidth 720."
+                footer="Row insets and section spacing are live PreferencesMetrics values."
               >
                 <fd-segmented-row
                   id="density"
-                  label="Row density"
+                  label="Row Density"
                   value="default"
                   control-width="260"
                 >
@@ -121,22 +116,22 @@
 
               <fd-section
                 label="Measure"
-                footer="Content can fill the pane or remain centered at a maximum width."
+                footer="Content can fill the window or remain centered at a maximum width."
               >
-                <fd-connected-segmented-row
+                <fd-segmented-row
                   id="content-layout"
-                  symbol="arrow"
-                  label="Content layout"
+                  symbol="rectangle.center.inset.filled"
+                  label="Content Layout"
                   value="centered"
                   control-width="240"
                 >
                   <fd-option value="centered">Centered</fd-option>
                   <fd-option value="fluid">Fluid</fd-option>
-                </fd-connected-segmented-row>
+                </fd-segmented-row>
                 <fd-dependent-rows id="content-maximum-width" visible>
                   <fd-segmented-row
                     id="content-width"
-                    label="Maximum width"
+                    label="Maximum Width"
                     value="720"
                     control-width="240"
                   >
@@ -148,8 +143,8 @@
                 <fd-separator></fd-separator>
                 <fd-slider-row
                   id="sidebar-width"
-                  label="Sidebar width"
-                  caption="Continuous, and the sidebar follows the knob."
+                  label="Sidebar Width"
+                  caption="PreferencesViewConfiguration.sidebarWidth follows the slider."
                   min="180"
                   max="320"
                   step="1"
@@ -162,17 +157,17 @@
           <fd-page
             page-id="typography"
             label="Typography"
-            subtitle="Seventeen roles, one scale"
+            subtitle="Seventeen semantic text roles"
             symbol="textformat"
           >
             <fd-pane-stack>
               <fd-section
                 label="Scale"
-                footer="PreferencesTypography names a role per use: rowTitle 13, rowCaption 11, pageTitle 25 rounded, sectionHeader 10.5 semibold, and thirteen more."
+                footer="PreferencesTypography exposes a semantic text style for each role in the window."
               >
                 <fd-segmented-row
                   id="text-size"
-                  label="Type scale"
+                  label="Type Scale"
                   value="default"
                   control-width="260"
                 >
@@ -183,7 +178,7 @@
                 <fd-separator></fd-separator>
                 <fd-segmented-row
                   id="heading-font"
-                  label="Heading face"
+                  label="Heading Face"
                   caption="Applies to the page title and the brand block."
                   value="rounded"
                   control-width="300"
@@ -198,36 +193,30 @@
           </fd-page>
         </fd-page-group>
 
-        <fd-page-group label="Behaviour">
+        <fd-page-group label="Behavior">
           <fd-page
             page-id="motion"
             label="Motion"
-            subtitle="Disclosure, and what Reduce Motion changes"
+            subtitle="Disclosure and Reduce Motion behavior"
             symbol="bolt"
           >
             <fd-pane-stack>
               <fd-section
-                label="Disclosure"
-                footer="PreferencesDependentRowsMotion: 0.18s easeOut with a -5pt entry offset, collapsing to 0.12s linear with no offset under Reduce Motion."
+                label="Switch Group"
+                footer="PreferencesSwitchGroup coordinates its switch with PreferencesDependentRows."
               >
-                <fd-segmented-row
-                  id="motion-speed"
-                  label="Speed"
-                  value="180ms"
-                  control-width="260"
+                <fd-switch-group
+                  symbol="hare"
+                  label="PreferencesSwitchGroup"
+                  caption="Toggle the component to reveal or collapse its rows."
+                  checked
                 >
-                  <fd-option value="1ms">Off</fd-option>
-                  <fd-option value="180ms">Standard</fd-option>
-                  <fd-option value="700ms">Slow</fd-option>
-                </fd-segmented-row>
-                <fd-separator></fd-separator>
-                <fd-switch-group symbol="hare" label="Try it" checked>
                   <fd-row
-                    label="A dependent row"
-                    caption="Height, opacity and offset animate together."
+                    label="PreferencesDependentRows"
+                    caption="Height, opacity, and offset animate together."
                   ></fd-row>
                   <fd-separator leading-edge="icon-text"></fd-separator>
-                  <fd-multi-select-row label="And another" control-width="300">
+                  <fd-multi-select-row label="Transition" control-width="300">
                     <fd-option value="a" selected>Fade</fd-option>
                     <fd-option value="b" selected>Offset</fd-option>
                     <fd-option value="c">Clip</fd-option>
@@ -236,20 +225,20 @@
               </fd-section>
 
               <fd-section
-                label="Disclosure by row"
-                footer="PreferencesExpandableRow turns its chevron over 0.18s easeOut and reports the new state. Reduce Motion drops the animation outright rather than shortening it, which is why it reads a different token from the one above."
+                label="Expandable Row"
+                footer="Reduce Motion removes nonessential movement while preserving state changes."
               >
                 <fd-expandable-row
                   id="advanced"
                   symbol="bolt"
-                  label="Advanced"
-                  caption="The whole row is the hit target, padding included."
+                  label="PreferencesExpandableRow"
+                  caption="The complete row is the disclosure target."
                 ></fd-expandable-row>
                 <fd-dependent-rows id="advanced-rows">
-                  <fd-row
-                    label="Revealed by the row above"
-                    caption="The row owns the chevron; fd-dependent-rows owns the reveal."
-                  ></fd-row>
+                  <fd-empty-row
+                    symbol="list.bullet"
+                    message="PreferencesDependentRows owns this reveal."
+                  ></fd-empty-row>
                 </fd-dependent-rows>
               </fd-section>
             </fd-pane-stack>
@@ -258,37 +247,36 @@
           <fd-page
             page-id="icons"
             label="Icons"
-            subtitle="Bring your own set"
+            subtitle="SF Symbols and page-level accents"
             symbol="sparkles"
-            accent="#8286C4"
+            accent="#968AC7"
           >
             <fd-pane-stack>
               <fd-section
-                label="Registry"
-                footer="SF Symbols cannot be redistributed, so the core ships the interface and no icon data. These stand-ins are registered under SF Symbol names, and re-registering swaps every icon already on screen."
+                label="SF Symbols"
+                footer="Rows accept SF Symbol names directly; pages can also use app or custom image artwork."
               >
-                <fd-segmented-row
-                  id="icon-style"
+                <fd-row
                   symbol="sparkles"
-                  label="Stroke weight"
-                  caption="Watch the sidebar and the header while you change it."
-                  value="outline"
-                  control-width="260"
-                >
-                  <fd-option value="hairline">Hairline</fd-option>
-                  <fd-option value="outline">Outline</fd-option>
-                  <fd-option value="bold">Bold</fd-option>
-                </fd-segmented-row>
+                  label="Symbol Gutter"
+                  caption="Pass symbol to any component that supports a leading icon."
+                ></fd-row>
+                <fd-separator leading-edge="icon-text"></fd-separator>
+                <fd-row
+                  symbol="app.dashed"
+                  label="Page Icons"
+                  caption="Pages support registered symbols, application icons, and custom artwork."
+                ></fd-row>
               </fd-section>
 
               <fd-section
-                label="Accent scope"
-                footer="This page carries its own accent. It retints the sidebar, the header and everything below without touching the rest of the window."
+                label="Accent Scope"
+                footer="This page declares its own accent without changing the other pages."
               >
                 <fd-row
                   symbol="swatchpalette"
-                  label="Per-page accent"
-                  caption="PreferencesPage(accent:) — declared on the page, applied to its subtree."
+                  label="Page Accent"
+                  caption="The sidebar item, page header, and controls share the scoped accent."
                 ></fd-row>
               </fd-section>
             </fd-pane-stack>
@@ -299,28 +287,28 @@
           <fd-page
             page-id="components"
             label="Components"
-            subtitle="Every row type, live"
+            subtitle="Every control type, live"
             symbol="list.bullet"
           >
             <fd-pane-stack>
               <fd-section label="Rows">
                 <fd-row
                   symbol="list.bullet"
-                  label="fd-row"
-                  caption="Symbol gutter, title, caption and a trailing slot."
+                  label="PreferencesRow"
+                  caption="Symbol gutter, title, caption, and a trailing view."
                 ></fd-row>
                 <fd-separator leading-edge="icon-text"></fd-separator>
-                <fd-switch-row label="fd-switch-row" checked></fd-switch-row>
+                <fd-switch-row label="PreferencesSwitchRow" checked></fd-switch-row>
                 <fd-separator></fd-separator>
-                <fd-popup-row label="fd-popup-row" value="two" min-width="180">
-                  <fd-option value="one">First choice</fd-option>
-                  <fd-option value="two">Second choice</fd-option>
-                  <fd-option value="three">Third choice</fd-option>
+                <fd-popup-row label="PreferencesPopupRow" value="two" min-width="180">
+                  <fd-option value="one">One</fd-option>
+                  <fd-option value="two">Two</fd-option>
+                  <fd-option value="three">Three</fd-option>
                 </fd-popup-row>
                 <fd-separator></fd-separator>
                 <fd-slider-row
-                  label="fd-slider-row"
-                  caption="Title and formatted value on one line, slider beneath."
+                  label="PreferencesSliderRow"
+                  caption="Formatted value above the native slider."
                   min="0"
                   max="100"
                   step="1"
@@ -328,54 +316,57 @@
                 ></fd-slider-row>
                 <fd-separator></fd-separator>
                 <fd-value-row
-                  id="accent-readout"
-                  symbol="swatchpalette"
-                  label="fd-value-row"
-                  value="#6D9EA5"
+                  id="press-readout"
+                  symbol="number"
+                  label="PreferencesValueRow"
+                  value="Pressed 0 times"
                 ></fd-value-row>
                 <fd-separator leading-edge="icon-text"></fd-separator>
                 <fd-button-row
-                  id="restore"
-                  label="fd-button-row"
-                  caption="Reloads the page, putting every token back to its default."
-                  button-label="Restore"
+                  id="press"
+                  label="PreferencesButtonRow"
+                  caption="Invokes the action supplied by its owner."
+                  button-label="Press"
                 ></fd-button-row>
                 <fd-separator></fd-separator>
                 <fd-link-row
-                  label="fd-link-row"
-                  caption="A soft button that opens away from Preferences, with a tooltip."
-                  button-label="Source"
+                  label="PreferencesLinkRow"
+                  caption="Opens a URL with a tooltip."
+                  button-label="GitHub"
                   href="https://github.com/cocoa-xu/flowing-day-ui"
                   help="Open the repository on GitHub"
                 ></fd-link-row>
                 <fd-separator></fd-separator>
                 <fd-color-picker-row
-                  label="fd-color-picker-row"
-                  caption="ColorPicker, which is the platform picker on both sides."
+                  label="PreferencesColorPickerRow"
+                  caption="Uses the native platform color picker."
                   value="#6d9ea5"
                 ></fd-color-picker-row>
               </fd-section>
 
               <fd-section
                 label="Disclosure"
-                footer="fd-empty-row is the empty state a section falls back to: 14px of vertical padding rather than the 10 a populated row takes."
+                footer="PreferencesEmptyRow provides the empty state for a section."
               >
                 <fd-expandable-row
                   id="reference-expand"
-                  label="fd-expandable-row"
-                  caption="Reports its state; pair it with fd-dependent-rows."
+                  label="PreferencesExpandableRow"
+                  caption="Pair it with PreferencesDependentRows."
                 ></fd-expandable-row>
                 <fd-dependent-rows id="reference-expand-rows">
-                  <fd-empty-row symbol="list.bullet" message="fd-empty-row — nothing here yet."></fd-empty-row>
+                  <fd-empty-row
+                    symbol="list.bullet"
+                    message="PreferencesEmptyRow — nothing here yet."
+                  ></fd-empty-row>
                 </fd-dependent-rows>
               </fd-section>
 
               <fd-section
                 label="Search"
-                footer="fd-search-picker-row is the picker for a list too long for a popup menu: an empty query matches everything, and anything else is a trimmed, case-insensitive substring test."
+                footer="PreferencesSearchPickerRow is designed for a list too long for a popup menu."
               >
                 <fd-search-picker-row
-                  label="fd-search-picker-row"
+                  label="PreferencesSearchPickerRow"
                   value="dublin"
                   max-visible-options="4"
                 >
@@ -390,18 +381,15 @@
                 </fd-search-picker-row>
               </fd-section>
 
-              <fd-section
-                label="Selection"
-                footer="Single-select strips are radio groups: one tab stop, arrow keys to move between segments."
-              >
-                <fd-segmented-row label="fd-segmented-row" value="b" control-width="240">
+              <fd-section label="Selection">
+                <fd-segmented-row label="PreferencesSegmentedRow" value="b" control-width="240">
                   <fd-option value="a">One</fd-option>
                   <fd-option value="b">Two</fd-option>
                   <fd-option value="c">Three</fd-option>
                 </fd-segmented-row>
                 <fd-separator></fd-separator>
                 <fd-connected-segmented-row
-                  label="fd-connected-segmented-row"
+                  label="PreferencesConnectedSegmentedRow"
                   value="b"
                   control-width="240"
                 >
@@ -411,7 +399,7 @@
                 </fd-connected-segmented-row>
                 <fd-separator></fd-separator>
                 <fd-symbol-segmented-row
-                  label="fd-symbol-segmented-row"
+                  label="PreferencesSymbolSegmentedRow"
                   value="eye"
                   control-width="180"
                 >
@@ -420,7 +408,7 @@
                   <fd-option value="hare" symbol="hare">Hare</fd-option>
                 </fd-symbol-segmented-row>
                 <fd-separator></fd-separator>
-                <fd-multi-select-row label="fd-multi-select-row" control-width="300">
+                <fd-multi-select-row label="PreferencesMultiSelectRow" control-width="300">
                   <fd-option value="x" selected>Alpha</fd-option>
                   <fd-option value="y">Beta</fd-option>
                   <fd-option value="z" disabled>Locked</fd-option>
@@ -428,10 +416,38 @@
               </fd-section>
 
               <fd-section
-                label="Pills"
-                footer="fd-tag is static and monospaced. fd-selectable-tag carries four hover × selected treatments and leaves the selection to whoever owns it, exactly as the SwiftUI original does."
+                label="Icon Selection"
+                footer="PreferencesIconSelectionButton combines an icon, label, and check indicator."
               >
-                <fd-row label="fd-tag" caption="In an fd-flow-grid, which wraps at 7px on both axes."></fd-row>
+                <div class="icon-selection-grid">
+                  <fd-icon-selection-button
+                    symbol="eye"
+                    label="Eye"
+                    tint="#6D9EA5"
+                    selected
+                  ></fd-icon-selection-button>
+                  <fd-icon-selection-button
+                    symbol="bolt"
+                    label="Bolt"
+                    tint="#A483C7"
+                  ></fd-icon-selection-button>
+                  <fd-icon-selection-button
+                    symbol="hare"
+                    label="Hare"
+                    tint="#76A454"
+                    selected
+                  ></fd-icon-selection-button>
+                </div>
+              </fd-section>
+
+              <fd-section
+                label="Pills"
+                footer="PreferencesFlowGrid wraps static and selectable tags at the available width."
+              >
+                <fd-row
+                  label="PreferencesTag"
+                  caption="Static, monospaced labels in a PreferencesFlowGrid."
+                ></fd-row>
                 <fd-flow-grid>
                   <fd-tag>PreferencesRow</fd-tag>
                   <fd-tag>PreferencesSlider</fd-tag>
@@ -450,7 +466,10 @@
                   <fd-tag>PreferencesSoftButtonStyle</fd-tag>
                 </fd-flow-grid>
                 <fd-separator></fd-separator>
-                <fd-row label="fd-selectable-tag" caption="Click one. The tag reports the press; the page decides."></fd-row>
+                <fd-row
+                  label="PreferencesSelectableTag"
+                  caption="The owner keeps selection state."
+                ></fd-row>
                 <fd-flow-grid id="tag-group">
                   <fd-selectable-tag value="fill" selected>fill</fd-selectable-tag>
                   <fd-selectable-tag value="foreground">foreground</fd-selectable-tag>
@@ -462,7 +481,7 @@
 
               <fd-section
                 label="Grid"
-                footer="Forty-nine named accents share the same seven-family order as Swift. Each chip retints the window."
+                footer="Named accents are grouped into seven families with seven candidates each."
               >
                 <fd-grid id="accent-chips"></fd-grid>
               </fd-section>
@@ -472,29 +491,30 @@
           <fd-page
             page-id="about"
             label="About"
-            subtitle="A SwiftUI toolkit, ported to the platform"
+            subtitle="The package behind this window"
             symbol="info.circle"
           >
             <fd-pane-stack>
               <fd-section label="FlowingDayUI">
-                <fd-row label="Package" caption="@flowing-day/ui"></fd-row>
+                <fd-value-row
+                  symbol="shippingbox"
+                  label="Package"
+                  value="@flowing-day/ui"
+                ></fd-value-row>
+                <fd-separator leading-edge="icon-text"></fd-separator>
+                <fd-value-row label="License" value="Apache-2.0"></fd-value-row>
                 <fd-separator></fd-separator>
-                <fd-row label="Licence" caption="Apache-2.0"></fd-row>
-                <fd-separator></fd-separator>
-                <fd-row
-                  label="Built on"
-                  caption="Standard custom elements. No framework required, and none refused."
-                ></fd-row>
+                <fd-value-row label="Built With" value="Web Components + Lit"></fd-value-row>
               </fd-section>
 
-              <fd-section
-                label="Ported from"
-                footer="Metrics, colours, type and motion are taken from the Swift sources rather than eyeballed, and the tests pin the literals."
-              >
-                <fd-row
-                  label="FlowingDayPreferences"
-                  caption="The SwiftUI package this mirrors, one component at a time."
-                ></fd-row>
+              <fd-section label="Source">
+                <fd-link-row
+                  symbol="chevron.left.forwardslash.chevron.right"
+                  label="Repository"
+                  button-label="GitHub"
+                  href="https://github.com/cocoa-xu/flowing-day-ui"
+                  help="Open FlowingDayUI on GitHub"
+                ></fd-link-row>
               </fd-section>
             </fd-pane-stack>
           </fd-page>

@@ -23,6 +23,16 @@ const PATHS: Record<string, string> = {
   'info.circle': '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>',
   swatchpalette:
     '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>',
+  'circle.lefthalf.filled':
+    '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17Z" fill="currentColor" stroke="none"/>',
+  'rectangle.center.inset.filled':
+    '<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><rect x="7" y="8" width="10" height="8" rx="1.5" fill="currentColor" stroke="none"/>',
+  eyedropper: '<path d="m5 19 3.5-1 10-10-2.5-2.5-10 10Z"/><path d="m14.5 7 2.5 2.5M4 20h5"/>',
+  'app.dashed':
+    '<rect x="3.5" y="3.5" width="17" height="17" rx="4" stroke-dasharray="3 2"/><circle cx="12" cy="12" r="3"/>',
+  number: '<path d="M9 3 7 21M17 3l-2 18M4 9h16M3 15h16"/>',
+  shippingbox: '<path d="m4 7 8-4 8 4-8 4Z"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/>',
+  'chevron.left.forwardslash.chevron.right': '<path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/>',
   arrow: '<path d="M3.5 12h17M8 7.5 3.5 12 8 16.5M16 7.5 20.5 12 16 16.5"/>',
   eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
   circle: '<circle cx="12" cy="12" r="8.5"/>',
