@@ -376,8 +376,8 @@ struct ComponentsShowcase: View {
       searchComponent
       checkboxComponents
       multiSelectComponents
-      selectionComponents
       iconSelectionComponents
+      selectionComponents
       pillComponents
       gridComponents
     }
