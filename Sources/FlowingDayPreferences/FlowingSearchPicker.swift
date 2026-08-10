@@ -11,6 +11,7 @@ public struct FlowingSearchPicker<Value: Hashable>: View {
   @Environment(\.preferencesAccent) private var accent
   @Environment(\.preferencesStrings) private var strings
   @Environment(\.preferencesTypography) private var typography
+  @FocusState private var isSearchFocused: Bool
   @State private var localQuery = ""
   @Binding private var selection: Value
   private let label: String
@@ -62,12 +63,21 @@ public struct FlowingSearchPicker<Value: Hashable>: View {
         .textFieldStyle(.plain)
         .font(typography.value.font)
         .foregroundStyle(PreferencesPalette.ink)
+        .focused($isSearchFocused)
     }
     .padding(.horizontal, 10)
     .frame(height: 30)
     .background(accent.veil, in: fieldShape)
     .overlay {
       fieldShape.strokeBorder(accent.fill.opacity(0.16))
+    }
+    .overlay {
+      FlowingFocusDismissalBoundary(
+        isFocused: Binding(
+          get: { isSearchFocused },
+          set: { isSearchFocused = $0 }
+        )
+      )
     }
   }
 
@@ -104,6 +114,7 @@ public struct FlowingSearchPicker<Value: Hashable>: View {
   private func optionButton(_ option: FlowingSelectOption<Value>) -> some View {
     let isSelected = option.value == selection
     return Button {
+      isSearchFocused = false
       selection = option.value
       query.wrappedValue = ""
       onSelect?(option.value)

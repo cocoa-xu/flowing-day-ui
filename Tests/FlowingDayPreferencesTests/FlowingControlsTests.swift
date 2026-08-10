@@ -89,6 +89,47 @@ final class FlowingControlsTests: XCTestCase {
     XCTAssertGreaterThan(fittingHeight(content), 100)
   }
 
+  @MainActor
+  func testSearchFocusDismissesOnlyForClicksOutsideItsBoundary() throws {
+    final class FocusState {
+      var isFocused = true
+    }
+
+    let focusState = FocusState()
+    let window = NSWindow(
+      contentRect: NSRect(x: 0, y: 0, width: 240, height: 120),
+      styleMask: .borderless,
+      backing: .buffered,
+      defer: false
+    )
+    let contentView = try XCTUnwrap(window.contentView)
+    let boundary = FlowingFocusDismissalBoundary.BoundaryView(
+      frame: NSRect(x: 20, y: 20, width: 180, height: 30)
+    )
+    let coordinator = FlowingFocusDismissalBoundary.Coordinator(
+      isFocused: Binding(
+        get: { focusState.isFocused },
+        set: { focusState.isFocused = $0 }
+      )
+    )
+    boundary.coordinator = coordinator
+    contentView.addSubview(boundary)
+    coordinator.attach(to: boundary)
+    defer { coordinator.detach() }
+
+    let insideEvent = try XCTUnwrap(
+      mouseDownEvent(in: window, location: NSPoint(x: 30, y: 30))
+    )
+    let outsideEvent = try XCTUnwrap(
+      mouseDownEvent(in: window, location: NSPoint(x: 10, y: 10))
+    )
+
+    XCTAssertFalse(coordinator.shouldDismiss(for: insideEvent))
+    XCTAssertTrue(coordinator.shouldDismiss(for: outsideEvent))
+    focusState.isFocused = false
+    XCTAssertFalse(coordinator.shouldDismiss(for: outsideEvent))
+  }
+
   func testSliderMathClampsValuesAndFractions() {
     let range = 10.0...20.0
 
@@ -248,6 +289,21 @@ final class FlowingControlsTests: XCTestCase {
     hostingView.layoutSubtreeIfNeeded()
     return hostingView.fittingSize.height
   }
+}
+
+@MainActor
+private func mouseDownEvent(in window: NSWindow, location: NSPoint) -> NSEvent? {
+  NSEvent.mouseEvent(
+    with: .leftMouseDown,
+    location: location,
+    modifierFlags: [],
+    timestamp: 0,
+    windowNumber: window.windowNumber,
+    context: nil,
+    eventNumber: 0,
+    clickCount: 1,
+    pressure: 1
+  )
 }
 
 private struct TestItem: Identifiable {
