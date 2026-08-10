@@ -242,7 +242,7 @@ describe('tokenGroups', () => {
     expect(flat.get('palette-canvas')).toEqual({ light: '#FCFCFB', dark: '#161617' })
     expect(flat.get('palette-card')).toEqual({ light: '#F2F2EF', dark: '#232326' })
     expect(flat.get('palette-control')).toEqual({ light: '#FFFFFF', dark: '#2E2E31' })
-    expect(flat.get('palette-field')).toEqual({ light: '#E9E9E5', dark: '#2A2A2D' })
+    expect(flat.get('palette-field')).toEqual({ light: '#FFFFFF', dark: '#2A2A2D' })
     expect(flat.get('palette-ink')).toEqual({ light: '#1D1D1B', dark: '#F1F1EF' })
     expect(flat.get('palette-muted')).toEqual({ light: '#6C6C66', dark: '#9B9B96' })
     expect(flat.get('palette-faint')).toEqual({ light: '#91918A', dark: '#8A8A84' })

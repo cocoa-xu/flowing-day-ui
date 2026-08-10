@@ -229,7 +229,7 @@ extension PreferencesPalette {
   public static let canvas = PreferencesPalette.dynamic(light: 0xFCFCFB, dark: 0x161617)
   public static let card = PreferencesPalette.dynamic(light: 0xF2F2EF, dark: 0x232326)
   public static let control = PreferencesPalette.dynamic(light: 0xFFFFFF, dark: 0x2E2E31)
-  public static let field = PreferencesPalette.dynamic(light: 0xE9E9E5, dark: 0x2A2A2D)
+  public static let field = PreferencesPalette.dynamic(light: 0xFFFFFF, dark: 0x2A2A2D)
   public static let ink = PreferencesPalette.dynamic(light: 0x1D1D1B, dark: 0xF1F1EF)
   public static let muted = PreferencesPalette.dynamic(light: 0x6C6C66, dark: 0x9B9B96)
   public static let faint = PreferencesPalette.dynamic(light: 0x91918A, dark: 0x8A8A84)
