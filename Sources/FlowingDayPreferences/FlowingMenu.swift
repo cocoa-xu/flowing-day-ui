@@ -69,6 +69,10 @@ public struct FlowingMenu<Content: View>: View {
     .menuStyle(.borderlessButton)
     .menuIndicator(.hidden)
     .fixedSize(horizontal: !fillsAvailableWidth, vertical: false)
+    .frame(
+      minWidth: minimumWidth,
+      maxWidth: fillsAvailableWidth ? .infinity : nil
+    )
     .opacity(isEnabled ? 1 : FlowingMenuMetrics.disabledOpacity)
     .onHover { isHovering = $0 }
     .help(title)
