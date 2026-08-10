@@ -557,9 +557,12 @@ public struct PreferencesColorPickerRow: View {
 
   public var body: some View {
     PreferencesRow(symbol: symbol, title: title, caption: caption) {
-      ColorPicker("", selection: $selection, supportsOpacity: supportsOpacity)
-        .labelsHidden()
-        .controlSize(.small)
+      FlowingColorPicker(
+        selection: $selection,
+        supportsOpacity: supportsOpacity
+      )
+      .labelsHidden()
+      .accessibilityLabel(title)
     }
   }
 }
@@ -849,7 +852,6 @@ public struct PreferencesExpandableRow: View {
 }
 
 public struct PreferencesValueRow<Trailing: View>: View {
-  @Environment(\.preferencesTypography) private var typography
   private let symbol: String?
   private let title: String
   private let value: String
@@ -870,12 +872,7 @@ public struct PreferencesValueRow<Trailing: View>: View {
   public var body: some View {
     PreferencesRow(symbol: symbol, title: title) {
       HStack(spacing: 10) {
-        Text(value)
-          .font(typography.value.font)
-          .foregroundStyle(PreferencesPalette.muted)
-          .lineLimit(1)
-          .truncationMode(.middle)
-          .textSelection(.enabled)
+        FlowingValueText(value)
         trailing
       }
     }
@@ -890,7 +887,6 @@ extension PreferencesValueRow where Trailing == EmptyView {
 
 public struct PreferencesEmptyRow: View {
   @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesTypography) private var typography
   private let message: String
   private let symbol: String?
 
@@ -900,16 +896,11 @@ public struct PreferencesEmptyRow: View {
   }
 
   public var body: some View {
-    HStack(alignment: .firstTextBaseline, spacing: PreferencesRowLayout.symbolSpacing) {
-      if let symbol {
-        Image(systemName: symbol)
-          .frame(width: PreferencesRowLayout.symbolWidth)
-      }
-      Text(message)
-        .fixedSize(horizontal: false, vertical: true)
-    }
-    .font(typography.value.font)
-    .foregroundStyle(PreferencesPalette.faint)
+    FlowingEmptyState(
+      message,
+      systemImage: symbol,
+      layout: .inline
+    )
     .padding(.horizontal, metrics.rowInset)
     .padding(.vertical, 14)
     .frame(maxWidth: .infinity, alignment: .leading)

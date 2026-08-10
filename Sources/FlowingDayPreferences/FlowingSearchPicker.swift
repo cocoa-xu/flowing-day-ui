@@ -55,22 +55,14 @@ public struct FlowingSearchPicker<Value: Hashable>: View {
   }
 
   private var searchField: some View {
-    HStack(spacing: 8) {
-      Image(systemName: "magnifyingglass")
-        .font(.system(size: 11, weight: .medium))
-        .foregroundStyle(accent.foreground.opacity(0.72))
-      TextField(strings.search, text: query)
-        .textFieldStyle(.plain)
-        .font(typography.value.font)
-        .foregroundStyle(PreferencesPalette.ink)
-        .focused($isSearchFocused)
-    }
-    .padding(.horizontal, 10)
-    .frame(height: 30)
-    .background(accent.veil, in: fieldShape)
-    .overlay {
-      fieldShape.strokeBorder(accent.fill.opacity(0.16))
-    }
+    FlowingTextField(
+      label,
+      text: query,
+      placeholder: strings.search,
+      systemImage: "magnifyingglass",
+      emphasis: .accented
+    )
+    .focused($isSearchFocused)
     .overlay {
       FlowingFocusDismissalBoundary(
         isFocused: Binding(

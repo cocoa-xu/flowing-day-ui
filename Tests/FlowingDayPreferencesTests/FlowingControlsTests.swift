@@ -152,6 +152,91 @@ final class FlowingControlsTests: XCTestCase {
     XCTAssertGreaterThan(fittingHeight(content), 30)
   }
 
+  @MainActor
+  func testFieldAndValueControlsComposeOutsidePreferencesRows() {
+    let content = VStack {
+      FlowingTextField(
+        "Project name",
+        text: .constant("Flowing Day"),
+        systemImage: "text.cursor"
+      )
+      FlowingTextField(
+        "Search",
+        text: .constant("Petal"),
+        systemImage: "magnifyingglass",
+        emphasis: .accented
+      )
+      FlowingColorPicker("Color", selection: .constant(.pink))
+      FlowingValueText("cocoa@flowing.day")
+    }
+    .frame(width: 240)
+
+    XCTAssertGreaterThan(fittingHeight(content), 90)
+  }
+
+  @MainActor
+  func testTextFieldHasCompactIntrinsicHeight() {
+    let height = fittingHeight(
+      FlowingTextField("Name", text: .constant("Flowing Day"))
+        .frame(width: 240)
+    )
+
+    XCTAssertEqual(height, FlowingTextFieldMetrics.height, accuracy: 0.5)
+  }
+
+  @MainActor
+  func testColorPickerPreservesOpacityConfiguration() {
+    let opaque = FlowingColorPicker("Color", selection: .constant(.pink))
+    let translucent = FlowingColorPicker(
+      "Color",
+      selection: .constant(.pink),
+      supportsOpacity: true
+    )
+
+    XCTAssertFalse(opaque.supportsOpacity)
+    XCTAssertTrue(translucent.supportsOpacity)
+  }
+
+  @MainActor
+  func testEmptyStateSupportsInlineAndStackedLayouts() {
+    let inline = fittingHeight(
+      FlowingEmptyState(
+        "No recent items",
+        systemImage: "tray",
+        layout: .inline
+      )
+      .frame(width: 240)
+    )
+    let stacked = fittingHeight(
+      FlowingEmptyState(
+        "No recent items",
+        systemImage: "tray",
+        layout: .stacked
+      )
+      .frame(width: 240)
+    )
+
+    XCTAssertGreaterThan(inline, 0)
+    XCTAssertGreaterThan(stacked, inline)
+  }
+
+  @MainActor
+  func testInlineEmptyStateKeepsWrappedContentVisible() {
+    let short = fittingHeight(
+      FlowingEmptyState("No items", layout: .inline)
+        .frame(width: 120)
+    )
+    let wrapped = fittingHeight(
+      FlowingEmptyState(
+        "No items match the current set of filters",
+        layout: .inline
+      )
+      .frame(width: 120)
+    )
+
+    XCTAssertGreaterThan(wrapped, short)
+  }
+
   func testConnectedSegmentedControlUsesAHairlineSelectionBorder() {
     XCTAssertEqual(FlowingConnectedSegmentedControlMetrics.selectedBorderWidth, 1)
   }
