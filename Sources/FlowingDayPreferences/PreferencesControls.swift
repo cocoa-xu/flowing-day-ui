@@ -261,36 +261,7 @@ public struct PreferencesSwitchRow: View {
   }
 }
 
-enum PreferencesDependentRowsMotion {
-  static let standardDuration = PreferencesMotion.disclosure
-  static let reducedMotionDuration = PreferencesMotion.reducedDisclosure
-  static let detailOffset = PreferencesMotion.disclosureOffset
-
-  static func duration(reduceMotion: Bool) -> TimeInterval {
-    reduceMotion ? reducedMotionDuration : standardDuration
-  }
-
-  static func offset(reduceMotion: Bool) -> CGFloat {
-    reduceMotion ? PreferencesMotion.reducedDisclosureOffset : detailOffset
-  }
-
-  static func animation(reduceMotion: Bool) -> Animation {
-    let duration = duration(reduceMotion: reduceMotion)
-    return reduceMotion
-      ? .linear(duration: duration)
-      : .easeOut(duration: duration)
-  }
-
-  static func transition(reduceMotion: Bool) -> AnyTransition {
-    let offset = offset(reduceMotion: reduceMotion)
-    return offset == 0
-      ? .opacity
-      : .opacity.combined(with: .offset(y: offset))
-  }
-}
-
 public struct PreferencesDependentRows<Content: View>: View {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   private let isVisible: Bool
   private let showsSeparator: Bool
   private let separatorLeadingEdge: PreferencesRowSeparatorLeadingEdge?
@@ -309,22 +280,14 @@ public struct PreferencesDependentRows<Content: View>: View {
   }
 
   public var body: some View {
-    VStack(spacing: 0) {
-      if isVisible {
-        VStack(spacing: 0) {
-          if showsSeparator {
-            PreferencesRowSeparator(leadingEdge: separatorLeadingEdge)
-          }
-          content
+    FlowingDisclosureContent(isExpanded: isVisible) {
+      VStack(spacing: 0) {
+        if showsSeparator {
+          PreferencesRowSeparator(leadingEdge: separatorLeadingEdge)
         }
-        .transition(PreferencesDependentRowsMotion.transition(reduceMotion: reduceMotion))
+        content
       }
     }
-    .clipped()
-    .animation(
-      PreferencesDependentRowsMotion.animation(reduceMotion: reduceMotion),
-      value: isVisible
-    )
   }
 }
 
@@ -836,9 +799,6 @@ public struct PreferencesLinkRow: View {
 }
 
 public struct PreferencesExpandableRow: View {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Environment(\.preferencesAccent) private var accent
-  @Environment(\.preferencesStrings) private var strings
   @Environment(\.preferencesMetrics) private var metrics
   @Environment(\.preferencesTypography) private var typography
   private let symbol: String?
@@ -859,9 +819,16 @@ public struct PreferencesExpandableRow: View {
   }
 
   public var body: some View {
-    Button {
-      isExpanded.toggle()
-    } label: {
+    FlowingDisclosure(
+      isExpanded: $isExpanded,
+      minimumHeaderHeight: PreferencesRowLayout.minimumHeight,
+      contentInsets: EdgeInsets(
+        top: PreferencesRowLayout.verticalPadding(hasCaption: caption != nil),
+        leading: metrics.rowInset,
+        bottom: PreferencesRowLayout.verticalPadding(hasCaption: caption != nil),
+        trailing: metrics.rowInset
+      )
+    ) {
       HStack(alignment: .center, spacing: PreferencesRowLayout.symbolSpacing) {
         if let symbol {
           Image(systemName: symbol)
@@ -880,20 +847,10 @@ public struct PreferencesExpandableRow: View {
               .fixedSize(horizontal: false, vertical: true)
           }
         }
-        Spacer(minLength: 10)
-        Image(systemName: "chevron.down")
-          .font(.system(size: 10, weight: .semibold))
-          .foregroundStyle(accent.foreground)
-          .rotationEffect(.degrees(isExpanded ? 180 : 0))
       }
-      .padding(.horizontal, metrics.rowInset)
-      .padding(.vertical, PreferencesRowLayout.verticalPadding(hasCaption: caption != nil))
-      .frame(minHeight: PreferencesRowLayout.minimumHeight)
-      .contentShape(Rectangle())
+    } content: {
+      EmptyView()
     }
-    .buttonStyle(.plain)
-    .animation(reduceMotion ? nil : .easeOut(duration: PreferencesMotion.expand), value: isExpanded)
-    .accessibilityValue(isExpanded ? strings.expanded : strings.collapsed)
     .preference(key: PreferencesRowIconPresenceKey.self, value: Set([symbol != nil]))
   }
 }

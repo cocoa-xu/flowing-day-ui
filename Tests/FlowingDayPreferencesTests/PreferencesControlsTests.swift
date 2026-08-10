@@ -279,19 +279,6 @@ final class PreferencesControlsTests: XCTestCase {
     XCTAssertTrue(state.value)
   }
 
-  func testDependentRowsMotionRespectsReduceMotion() {
-    XCTAssertEqual(
-      PreferencesDependentRowsMotion.duration(reduceMotion: false),
-      0.18
-    )
-    XCTAssertEqual(
-      PreferencesDependentRowsMotion.duration(reduceMotion: true),
-      0.12
-    )
-    XCTAssertEqual(PreferencesDependentRowsMotion.offset(reduceMotion: false), -5)
-    XCTAssertEqual(PreferencesDependentRowsMotion.offset(reduceMotion: true), 0)
-  }
-
   @MainActor
   func testIconCheckboxTogglesItsBinding() {
     let state = BooleanState(false)

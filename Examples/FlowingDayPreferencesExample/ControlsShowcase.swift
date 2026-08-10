@@ -10,6 +10,7 @@ struct ControlsShowcase: View {
   @State private var sliderValue = 0.62
   @State private var selectValue = ExampleSelection.second
   @State private var searchValue = "Dublin"
+  @State private var disclosureExpanded = true
   @State private var alphaSelected = true
   @State private var betaSelected = false
   @State private var lockedSelected = false
@@ -26,6 +27,7 @@ struct ControlsShowcase: View {
     ExampleLabel("FlowingSlider"),
     ExampleLabel("FlowingSelect"),
     ExampleLabel("FlowingSearchPicker"),
+    ExampleLabel("FlowingDisclosure"),
     ExampleLabel("FlowingMultiSelect"),
     ExampleLabel("FlowingSegmentedControl"),
     ExampleLabel("FlowingConnectedSegmentedControl"),
@@ -41,6 +43,7 @@ struct ControlsShowcase: View {
     PreferencesPaneStack {
       switchAndSliderComponents
       selectComponents
+      disclosureComponents
       checkboxComponents
       multiSelectComponents
       iconCheckboxComponents
@@ -48,6 +51,23 @@ struct ControlsShowcase: View {
       pillComponents
       layoutComponents
       buttonStyleComponents
+    }
+  }
+
+  private var disclosureComponents: some View {
+    PreferencesSection(
+      "Disclosure",
+      footer: "The label and expanded content are ordinary SwiftUI views."
+    ) {
+      FlowingDisclosure("Rendering details", isExpanded: $disclosureExpanded) {
+        Text("Reduced motion automatically replaces the offset transition with opacity.")
+          .font(typography.value.font)
+          .foregroundStyle(.secondary)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.horizontal, 10)
+          .padding(.bottom, 10)
+      }
+      .padding(3)
     }
   }
 

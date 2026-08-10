@@ -4,6 +4,48 @@ import XCTest
 @testable import FlowingDayPreferences
 
 final class FlowingControlsTests: XCTestCase {
+  func testDisclosureMotionRespectsReduceMotion() {
+    XCTAssertEqual(FlowingDisclosureMotion.duration(reduceMotion: false), 0.18)
+    XCTAssertEqual(FlowingDisclosureMotion.duration(reduceMotion: true), 0.12)
+    XCTAssertEqual(FlowingDisclosureMotion.offset(reduceMotion: false), -5)
+    XCTAssertEqual(FlowingDisclosureMotion.offset(reduceMotion: true), 0)
+  }
+
+  @MainActor
+  func testDisclosureContentOnlyOccupiesSpaceWhenExpanded() {
+    let collapsed = fittingHeight(
+      FlowingDisclosureContent(isExpanded: false) {
+        Text("Details").frame(height: 24)
+      }
+    )
+    let expanded = fittingHeight(
+      FlowingDisclosureContent(isExpanded: true) {
+        Text("Details").frame(height: 24)
+      }
+    )
+
+    XCTAssertEqual(collapsed, 0)
+    XCTAssertEqual(expanded, 24)
+  }
+
+  @MainActor
+  func testDisclosureComposesOutsidePreferencesRows() {
+    let collapsed = fittingHeight(
+      FlowingDisclosure("Details", isExpanded: .constant(false)) {
+        Text("Expanded content").frame(height: 30)
+      }
+      .frame(width: 240)
+    )
+    let expanded = fittingHeight(
+      FlowingDisclosure("Details", isExpanded: .constant(true)) {
+        Text("Expanded content").frame(height: 30)
+      }
+      .frame(width: 240)
+    )
+
+    XCTAssertGreaterThan(expanded, collapsed)
+  }
+
   func testSelectOptionCanCarryItsOwnAccent() {
     let option = FlowingSelectOption(
       "petal",
