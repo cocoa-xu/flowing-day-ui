@@ -9,7 +9,7 @@ public enum FlowingStatusTone: String, CaseIterable, Hashable, Sendable {
   case warning
   case critical
 
-  fileprivate func color(accent: PreferencesAccent) -> Color {
+  func color(accent: PreferencesAccent) -> Color {
     switch self {
     case .neutral: PreferencesPalette.muted
     case .accent: accent.foreground

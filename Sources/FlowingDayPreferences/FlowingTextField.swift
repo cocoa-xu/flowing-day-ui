@@ -18,15 +18,21 @@ enum FlowingTextFieldMetrics {
 struct FlowingSingleLineField<Editor: View>: View {
   private let editor: Editor
   private let emphasis: FlowingTextFieldEmphasis
+  private let isFocused: Bool
   private let systemImage: String?
+  private let validation: FlowingFieldValidation
 
   init(
     systemImage: String?,
     emphasis: FlowingTextFieldEmphasis,
+    validation: FlowingFieldValidation,
+    isFocused: Bool,
     @ViewBuilder editor: () -> Editor
   ) {
     self.systemImage = systemImage
     self.emphasis = emphasis
+    self.validation = validation
+    self.isFocused = isFocused
     self.editor = editor()
   }
 
@@ -37,7 +43,13 @@ struct FlowingSingleLineField<Editor: View>: View {
     }
     .padding(.horizontal, FlowingTextFieldMetrics.horizontalInset)
     .frame(height: FlowingTextFieldMetrics.height)
-    .modifier(FlowingFieldChrome(emphasis: emphasis))
+    .modifier(
+      FlowingFieldChrome(
+        emphasis: emphasis,
+        validation: validation,
+        isFocused: isFocused
+      )
+    )
   }
 }
 
@@ -73,6 +85,8 @@ struct FlowingFieldChrome: ViewModifier {
   @Environment(\.preferencesAccent) private var accent
   @Environment(\.preferencesSurfaces) private var surfaces
   let emphasis: FlowingTextFieldEmphasis
+  let validation: FlowingFieldValidation
+  let isFocused: Bool
 
   func body(content: Content) -> some View {
     content
@@ -91,7 +105,13 @@ struct FlowingFieldChrome: ViewModifier {
   }
 
   private var borderColor: Color {
-    switch emphasis {
+    if validation != .none {
+      return validation.color(accent: accent).opacity(0.58)
+    }
+    if isFocused {
+      return accent.foreground.opacity(0.46)
+    }
+    return switch emphasis {
     case .standard: PreferencesPalette.hairline
     case .accented: accent.fill.opacity(0.16)
     }
@@ -107,12 +127,15 @@ struct FlowingFieldChrome: ViewModifier {
 
 public struct FlowingTextField: View {
   @Environment(\.preferencesTypography) private var typography
+  @FocusState private var isFocused: Bool
   @Binding private var text: String
   private let emphasis: FlowingTextFieldEmphasis
   private let label: String
   private let onSubmit: () -> Void
   private let placeholder: String
+  private let supportingText: String?
   private let systemImage: String?
+  private let validation: FlowingFieldValidation
 
   public init(
     _ label: String,
@@ -120,6 +143,8 @@ public struct FlowingTextField: View {
     placeholder: String? = nil,
     systemImage: String? = nil,
     emphasis: FlowingTextFieldEmphasis = .standard,
+    supportingText: String? = nil,
+    validation: FlowingFieldValidation = .none,
     onSubmit: @escaping () -> Void = {}
   ) {
     self.label = label
@@ -127,17 +152,27 @@ public struct FlowingTextField: View {
     self.placeholder = placeholder ?? label
     self.systemImage = systemImage
     self.emphasis = emphasis
+    self.supportingText = supportingText
+    self.validation = validation
     self.onSubmit = onSubmit
   }
 
   public var body: some View {
-    FlowingSingleLineField(systemImage: systemImage, emphasis: emphasis) {
-      TextField(placeholder, text: $text)
-        .textFieldStyle(.plain)
-        .font(typography.value.font)
-        .foregroundStyle(PreferencesPalette.ink)
-        .onSubmit(onSubmit)
-        .accessibilityLabel(label)
+    FlowingFieldContainer(validation: validation, supportingText: supportingText) {
+      FlowingSingleLineField(
+        systemImage: systemImage,
+        emphasis: emphasis,
+        validation: validation,
+        isFocused: isFocused
+      ) {
+        TextField(placeholder, text: $text)
+          .textFieldStyle(.plain)
+          .font(typography.value.font)
+          .foregroundStyle(PreferencesPalette.ink)
+          .focused($isFocused)
+          .onSubmit(onSubmit)
+          .accessibilityLabel(label)
+      }
     }
   }
 }

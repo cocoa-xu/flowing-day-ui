@@ -2,12 +2,15 @@ import SwiftUI
 
 public struct FlowingSecureField: View {
   @Environment(\.preferencesTypography) private var typography
+  @FocusState private var isFocused: Bool
   @Binding private var text: String
   private let emphasis: FlowingTextFieldEmphasis
   private let label: String
   private let onSubmit: () -> Void
   private let placeholder: String
+  private let supportingText: String?
   private let systemImage: String?
+  private let validation: FlowingFieldValidation
 
   public init(
     _ label: String,
@@ -15,6 +18,8 @@ public struct FlowingSecureField: View {
     placeholder: String? = nil,
     systemImage: String? = nil,
     emphasis: FlowingTextFieldEmphasis = .standard,
+    supportingText: String? = nil,
+    validation: FlowingFieldValidation = .none,
     onSubmit: @escaping () -> Void = {}
   ) {
     self.label = label
@@ -22,17 +27,27 @@ public struct FlowingSecureField: View {
     self.placeholder = placeholder ?? label
     self.systemImage = systemImage
     self.emphasis = emphasis
+    self.supportingText = supportingText
+    self.validation = validation
     self.onSubmit = onSubmit
   }
 
   public var body: some View {
-    FlowingSingleLineField(systemImage: systemImage, emphasis: emphasis) {
-      SecureField(placeholder, text: $text)
-        .textFieldStyle(.plain)
-        .font(typography.value.font)
-        .foregroundStyle(PreferencesPalette.ink)
-        .onSubmit(onSubmit)
-        .accessibilityLabel(label)
+    FlowingFieldContainer(validation: validation, supportingText: supportingText) {
+      FlowingSingleLineField(
+        systemImage: systemImage,
+        emphasis: emphasis,
+        validation: validation,
+        isFocused: isFocused
+      ) {
+        SecureField(placeholder, text: $text)
+          .textFieldStyle(.plain)
+          .font(typography.value.font)
+          .foregroundStyle(PreferencesPalette.ink)
+          .focused($isFocused)
+          .onSubmit(onSubmit)
+          .accessibilityLabel(label)
+      }
     }
   }
 }
