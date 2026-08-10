@@ -137,6 +137,13 @@ final class PreferencesControlsTests: XCTestCase {
         widthPolicy: .fitContent()
       )
     )
+    let cappedShortWidth = fittingWidth(
+      FlowingCheckbox(
+        "Short",
+        isOn: .constant(false),
+        widthPolicy: .fitContent(maximumWidth: 108)
+      )
+    )
     let constrainedWidth = fittingWidth(
       FlowingCheckbox(
         "A deliberately long checkbox label",
@@ -147,6 +154,7 @@ final class PreferencesControlsTests: XCTestCase {
     )
 
     XCTAssertLessThan(intrinsicWidth, 108)
+    XCTAssertEqual(cappedShortWidth, intrinsicWidth, accuracy: 0.5)
     XCTAssertEqual(constrainedWidth, 108, accuracy: 0.5)
   }
 

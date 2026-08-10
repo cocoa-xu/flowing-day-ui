@@ -462,6 +462,16 @@ struct ComponentsShowcase: View {
             options: multiSelectOptions
           )
         }
+
+        componentMode("Vertical · Fit content") {
+          FlowingMultiSelect(
+            axis: .vertical,
+            itemWidthPolicy: .fitContent(maximumWidth: 112),
+            contentAlignment: .leading,
+            truncationMode: .middle,
+            options: multiSelectOptions
+          )
+        }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(13)

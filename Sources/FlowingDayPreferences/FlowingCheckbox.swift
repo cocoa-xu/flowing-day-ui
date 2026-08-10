@@ -129,10 +129,49 @@ private struct FlowingCheckboxToggleStyle: ToggleStyle {
     case .fill:
       content.frame(maxWidth: .infinity, alignment: contentAlignment.frameAlignment)
     case .fitContent:
-      content
-        .frame(maxWidth: widthPolicy.maximumWidth, alignment: contentAlignment.frameAlignment)
-        .fixedSize(horizontal: widthPolicy.maximumWidth == nil, vertical: false)
+      FlowingFitContentLayout(maximumWidth: widthPolicy.maximumWidth) {
+        content
+      }
     }
+  }
+}
+
+private struct FlowingFitContentLayout: Layout {
+  let maximumWidth: CGFloat?
+
+  func sizeThatFits(
+    proposal: ProposedViewSize,
+    subviews: Subviews,
+    cache: inout ()
+  ) -> CGSize {
+    guard let subview = subviews.first else { return .zero }
+
+    let intrinsicSize = subview.sizeThatFits(.unspecified)
+    let availableWidth = proposal.width.flatMap { width in
+      width.isFinite ? max(0, width) : nil
+    }
+    let width = min(
+      intrinsicSize.width,
+      min(maximumWidth ?? .infinity, availableWidth ?? .infinity)
+    )
+    let constrainedSize = subview.sizeThatFits(
+      ProposedViewSize(width: width, height: proposal.height)
+    )
+    return CGSize(width: width, height: constrainedSize.height)
+  }
+
+  func placeSubviews(
+    in bounds: CGRect,
+    proposal: ProposedViewSize,
+    subviews: Subviews,
+    cache: inout ()
+  ) {
+    guard let subview = subviews.first else { return }
+    subview.place(
+      at: bounds.origin,
+      anchor: .topLeading,
+      proposal: ProposedViewSize(width: bounds.width, height: bounds.height)
+    )
   }
 }
 
