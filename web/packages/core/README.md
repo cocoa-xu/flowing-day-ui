@@ -116,7 +116,8 @@ Icons already on the page pick up a later registration.
 **Selection** — `fd-segmented-row`, `fd-symbol-segmented-row`, `fd-multi-select-row`,
 `fd-switch-group`, `fd-check-toggle`, `fd-icon-selection-button`, `fd-option`.
 
-**Controls** — `fd-switch`, `fd-slider`, `fd-popup`.
+**Controls** — `fd-switch`, `fd-slider`, `fd-popup`, `fd-text-field`, `fd-secure-field`,
+`fd-text-area`, `fd-icon-button`, `fd-progress`.
 
 **Pills and layout** — `fd-chip`, `fd-tag`, `fd-selectable-tag`, `fd-flow-grid`, `fd-grid`.
 

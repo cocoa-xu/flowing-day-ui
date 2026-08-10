@@ -35,6 +35,7 @@ declare global {
   interface HTMLElementEventMap {
     'fd-change': CustomEvent<FdChangeDetail>
     'fd-activate': CustomEvent<FdActivateDetail>
+    'fd-submit': CustomEvent<undefined>
     'fd-page-change': CustomEvent<{ page: string }>
     'fd-close': CustomEvent<undefined>
   }
