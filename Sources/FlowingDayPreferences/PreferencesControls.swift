@@ -1053,8 +1053,7 @@ public struct PreferencesSegmentedRow<Value: Hashable>: View {
           PreferencesSelectionButton(
             title: option.label,
             isSelected: selection == option.value,
-            isCompact: true,
-            style: .single
+            isCompact: true
           ) {
             selection = option.value
           }
@@ -1410,13 +1409,11 @@ public struct PreferencesMultiSelectRow: View {
     PreferencesRow(symbol: symbol, title: title, caption: caption) {
       HStack(spacing: 6) {
         ForEach(options) { option in
-          PreferencesSelectionButton(
-            title: option.label,
-            isSelected: option.isSelected,
-            style: .multiple
-          ) {
-            option.toggle()
-          }
+          FlowingCheckbox(
+            option.label,
+            isOn: option.isOn,
+            contentAlignment: .center
+          )
           .disabled(!option.isEnabled)
         }
       }
@@ -1428,79 +1425,61 @@ public struct PreferencesMultiSelectRow: View {
 
 public struct PreferencesCheckToggle: View {
   private let title: String
+  let contentAlignment: FlowingCheckboxContentAlignment
   @Binding private var isOn: Bool
 
-  public init(_ title: String, isOn: Binding<Bool>) {
+  public init(
+    _ title: String,
+    isOn: Binding<Bool>,
+    contentAlignment: FlowingCheckboxContentAlignment = .center
+  ) {
     self.title = title
     _isOn = isOn
+    self.contentAlignment = contentAlignment
   }
 
   public var body: some View {
-    PreferencesSelectionButton(
-      title: title,
-      isSelected: isOn,
-      style: .multiple
-    ) {
-      isOn.toggle()
-    }
-  }
-}
-
-enum PreferencesSelectionStyle {
-  case single
-  case multiple
-
-  func symbol(isSelected: Bool) -> String? {
-    switch (self, isSelected) {
-    case (.single, _): nil
-    case (.multiple, true): "checkmark.circle.fill"
-    case (.multiple, false): "circle"
-    }
+    FlowingCheckbox(
+      title,
+      isOn: $isOn,
+      contentAlignment: contentAlignment
+    )
   }
 }
 
 private struct PreferencesSelectionButton: View {
   @Environment(\.preferencesAccent) private var accent
-  @Environment(\.preferencesStrings) private var strings
   @Environment(\.preferencesMetrics) private var metrics
   @Environment(\.preferencesTypography) private var typography
   @Environment(\.preferencesSurfaces) private var surfaces
   let title: String
   let isSelected: Bool
   var isCompact = false
-  let style: PreferencesSelectionStyle
   let action: () -> Void
 
   var body: some View {
     Button(action: action) {
-      HStack(spacing: 6) {
-        if let symbol = style.symbol(isSelected: isSelected) {
-          Image(systemName: symbol)
-            .font(.system(size: 11, weight: .semibold))
+      Text(title)
+        .font(typography.selectionLabel.font)
+        .lineLimit(1)
+        .minimumScaleFactor(isCompact ? 0.72 : 1)
+        .foregroundStyle(isSelected ? accent.foreground : PreferencesPalette.muted)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, isCompact ? 6 : 9)
+        .padding(.vertical, 7)
+        .background(
+          isSelected ? accent.wash : surfaces.control,
+          in: RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
+        )
+        .overlay {
+          RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
+            .strokeBorder(
+              isSelected ? accent.foreground.opacity(0.22) : PreferencesPalette.hairline
+            )
         }
-        Text(title)
-          .font(typography.selectionLabel.font)
-          .lineLimit(1)
-          .minimumScaleFactor(isCompact ? 0.72 : 1)
-      }
-      .foregroundStyle(isSelected ? accent.foreground : PreferencesPalette.muted)
-      .frame(maxWidth: .infinity)
-      .padding(.horizontal, isCompact ? 6 : 9)
-      .padding(.vertical, 7)
-      .background(
-        isSelected ? accent.wash : surfaces.control,
-        in: RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
-      )
-      .overlay {
-        RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
-          .strokeBorder(
-            isSelected ? accent.foreground.opacity(0.22) : PreferencesPalette.hairline
-          )
-      }
     }
     .buttonStyle(.plain)
     .animation(.default, value: isSelected)
-    .accessibilityValue(isSelected ? strings.selected : strings.notSelected)
   }
 }
 

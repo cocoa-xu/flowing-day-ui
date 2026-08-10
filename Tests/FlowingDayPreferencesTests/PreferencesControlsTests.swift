@@ -93,17 +93,40 @@ final class PreferencesControlsTests: XCTestCase {
     XCTAssertEqual(PreferencesSliderMath.value(atFraction: 2, in: range), 20)
   }
 
-  func testSelectionIndicatorsDistinguishSingleAndMultipleChoice() {
-    XCTAssertNil(PreferencesSelectionStyle.single.symbol(isSelected: true))
-    XCTAssertNil(PreferencesSelectionStyle.single.symbol(isSelected: false))
-    XCTAssertEqual(
-      PreferencesSelectionStyle.multiple.symbol(isSelected: true),
-      "checkmark.circle.fill"
+  func testCheckboxAlignmentUsesSemanticGuides() {
+    XCTAssertEqual(FlowingCheckboxContentAlignment.leading.frameAlignment, .leading)
+    XCTAssertEqual(FlowingCheckboxContentAlignment.center.frameAlignment, .center)
+    XCTAssertEqual(FlowingCheckboxContentAlignment.trailing.frameAlignment, .trailing)
+  }
+
+  func testCheckboxDefaultsMatchPrimitiveAndPreferencesContexts() {
+    let primitive = FlowingCheckbox("Primitive", isOn: .constant(false))
+    let preferences = PreferencesCheckToggle("Preferences", isOn: .constant(false))
+    let trailing = PreferencesCheckToggle(
+      "Trailing",
+      isOn: .constant(false),
+      contentAlignment: .trailing
     )
-    XCTAssertEqual(
-      PreferencesSelectionStyle.multiple.symbol(isSelected: false),
-      "circle"
+
+    XCTAssertEqual(primitive.contentAlignment, .leading)
+    XCTAssertEqual(preferences.contentAlignment, .center)
+    XCTAssertEqual(trailing.contentAlignment, .trailing)
+  }
+
+  @MainActor
+  func testCheckboxTogglesItsBinding() {
+    let state = BooleanState(false)
+    let checkbox = FlowingCheckbox(
+      "Quiet Motion",
+      isOn: Binding(
+        get: { state.value },
+        set: { state.value = $0 }
+      )
     )
+
+    checkbox.toggle()
+
+    XCTAssertTrue(state.value)
   }
 
   func testConnectedSegmentNavigationWrapsInBothDirections() {

@@ -338,6 +338,9 @@ struct ComponentsShowcase: View {
   @State private var alphaSelected = true
   @State private var betaSelected = false
   @State private var lockedSelected = false
+  @State private var leadingCheckbox = true
+  @State private var centeredCheckbox = true
+  @State private var trailingCheckbox = true
   @State private var eyeSelected = true
   @State private var boltSelected = false
   @State private var hareSelected = true
@@ -370,10 +373,38 @@ struct ComponentsShowcase: View {
       rowComponents
       disclosureComponents
       searchComponent
+      checkboxComponents
       selectionComponents
       iconSelectionComponents
       pillComponents
       gridComponents
+    }
+  }
+
+  private var checkboxComponents: some View {
+    PreferencesSection(
+      "Checkbox",
+      footer: "FlowingCheckbox defaults to leading content. PreferencesCheckToggle composes it with centered content."
+    ) {
+      VStack(spacing: 8) {
+        FlowingCheckbox(
+          "Leading",
+          isOn: $leadingCheckbox,
+          contentAlignment: .leading
+        )
+        FlowingCheckbox(
+          "Center",
+          isOn: $centeredCheckbox,
+          contentAlignment: .center
+        )
+        FlowingCheckbox(
+          "Trailing",
+          isOn: $trailingCheckbox,
+          contentAlignment: .trailing
+        )
+      }
+      .frame(width: 300)
+      .padding(13)
     }
   }
 
