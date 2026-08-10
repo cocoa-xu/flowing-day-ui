@@ -33,6 +33,8 @@ struct ExampleTabsPreview: View {
   let sizing: FlowingTabsSizing
   let overflowBehavior: FlowingTabsOverflowBehavior
   let labelContent: FlowingTabLabelContent
+  let stripAlignment: FlowingTabsAlignment
+  let itemAlignment: FlowingTabsAlignment
 
   var body: some View {
     FlowingCard {
@@ -45,7 +47,9 @@ struct ExampleTabsPreview: View {
         style: style,
         sizing: sizing,
         overflowBehavior: overflowBehavior,
-        labelContent: labelContent
+        labelContent: labelContent,
+        stripAlignment: stripAlignment,
+        itemAlignment: itemAlignment
       )
       FlowingSeparator()
       HStack(spacing: 11) {

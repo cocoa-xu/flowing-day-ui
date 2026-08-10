@@ -51,6 +51,8 @@ struct ControlsShowcase: View {
   @State private var tabsSizing = FlowingTabsSizing.equal
   @State private var tabsOverflowBehavior = FlowingTabsOverflowBehavior.compress
   @State private var tabLabelContent = FlowingTabLabelContent.iconAndText
+  @State private var tabsStripAlignment = FlowingTabsAlignment.leading
+  @State private var tabsItemAlignment = FlowingTabsAlignment.center
 
   private let controlTags = [
     ExampleLabel("FlowingCheckbox"),
@@ -126,7 +128,9 @@ struct ControlsShowcase: View {
             style: .underline,
             sizing: tabsSizing,
             overflowBehavior: tabsOverflowBehavior,
-            labelContent: tabLabelContent
+            labelContent: tabLabelContent,
+            stripAlignment: tabsStripAlignment,
+            itemAlignment: tabsItemAlignment
           )
         }
         componentMode("Soft Surface") {
@@ -135,7 +139,9 @@ struct ControlsShowcase: View {
             style: .softSurface,
             sizing: tabsSizing,
             overflowBehavior: tabsOverflowBehavior,
-            labelContent: tabLabelContent
+            labelContent: tabLabelContent,
+            stripAlignment: tabsStripAlignment,
+            itemAlignment: tabsItemAlignment
           )
         }
         componentMode("Options") {
@@ -163,6 +169,24 @@ struct ControlsShowcase: View {
                 label: "Tab overflow behavior",
                 selection: $tabsOverflowBehavior,
                 options: FlowingTabsOverflowBehavior.allCases.map {
+                  FlowingSegmentOption($0, label: $0.title)
+                }
+              )
+            }
+            playgroundOption("Strip alignment") {
+              FlowingConnectedSegmentedControl(
+                label: "Tab strip alignment",
+                selection: $tabsStripAlignment,
+                options: FlowingTabsAlignment.allCases.map {
+                  FlowingSegmentOption($0, label: $0.title)
+                }
+              )
+            }
+            playgroundOption("Item alignment") {
+              FlowingConnectedSegmentedControl(
+                label: "Tab item alignment",
+                selection: $tabsItemAlignment,
+                options: FlowingTabsAlignment.allCases.map {
                   FlowingSegmentOption($0, label: $0.title)
                 }
               )
@@ -1102,6 +1126,10 @@ extension FlowingTabLabelContent {
 }
 
 extension FlowingTabsOverflowBehavior {
+  fileprivate var title: String { rawValue.capitalized }
+}
+
+extension FlowingTabsAlignment {
   fileprivate var title: String { rawValue.capitalized }
 }
 
