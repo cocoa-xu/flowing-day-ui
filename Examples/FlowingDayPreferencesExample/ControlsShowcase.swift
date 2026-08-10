@@ -139,6 +139,7 @@ struct ControlsShowcase: View {
       footer: "Each icon option can provide its own accent and place the indicator at either semantic edge."
     ) {
       FlowingMultiSelect(
+        contentAlignment: .leading,
         indicatorPlacement: .trailing,
         options: [
           FlowingMultiSelectOption(
@@ -191,7 +192,6 @@ struct ControlsShowcase: View {
           FlowingSegmentOption(.third, label: "Large"),
         ]
       )
-      .frame(maxWidth: 320)
       .padding(13)
     }
   }

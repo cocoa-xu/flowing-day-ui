@@ -207,6 +207,24 @@ final class PreferencesControlsTests: XCTestCase {
   }
 
   @MainActor
+  func testIconMultiSelectCanLeadAlignLabelsWithTrailingIndicators() {
+    let multiSelect = FlowingMultiSelect(
+      contentAlignment: .leading,
+      indicatorPlacement: .trailing,
+      options: [
+        FlowingMultiSelectOption(
+          "Network",
+          systemImage: "network",
+          isOn: .constant(true)
+        )
+      ]
+    )
+
+    XCTAssertEqual(multiSelect.contentAlignment, .leading)
+    XCTAssertEqual(multiSelect.indicatorPlacement, .trailing)
+  }
+
+  @MainActor
   func testCheckboxTogglesItsBinding() {
     let state = BooleanState(false)
     let checkbox = FlowingCheckbox(

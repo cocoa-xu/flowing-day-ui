@@ -81,6 +81,7 @@ public struct FlowingConnectedSegmentedControl<Value: Hashable>: View {
         }
       }
     }
+    .frame(maxWidth: .infinity)
     .padding(FlowingConnectedSegmentedControlMetrics.containerInset)
     .background(surfaces.control, in: containerShape)
     .overlay {
