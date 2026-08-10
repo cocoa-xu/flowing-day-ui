@@ -8,6 +8,8 @@ struct ControlsShowcase: View {
   @State private var trailingCheckbox = true
   @State private var switchValue = true
   @State private var sliderValue = 0.62
+  @State private var selectValue = ExampleSelection.second
+  @State private var searchValue = "Dublin"
   @State private var alphaSelected = true
   @State private var betaSelected = false
   @State private var lockedSelected = false
@@ -22,6 +24,8 @@ struct ControlsShowcase: View {
     ExampleLabel("FlowingCheckbox"),
     ExampleLabel("FlowingSwitch"),
     ExampleLabel("FlowingSlider"),
+    ExampleLabel("FlowingSelect"),
+    ExampleLabel("FlowingSearchPicker"),
     ExampleLabel("FlowingMultiSelect"),
     ExampleLabel("FlowingConnectedSegmentedControl"),
     ExampleLabel("FlowingChip"),
@@ -35,6 +39,7 @@ struct ControlsShowcase: View {
   var body: some View {
     PreferencesPaneStack {
       switchAndSliderComponents
+      selectComponents
       checkboxComponents
       multiSelectComponents
       iconCheckboxComponents
@@ -42,6 +47,41 @@ struct ControlsShowcase: View {
       pillComponents
       layoutComponents
       buttonStyleComponents
+    }
+  }
+
+  private var selectComponents: some View {
+    PreferencesSection(
+      "Select",
+      footer: "Use the compact select for short lists and the search picker for larger collections."
+    ) {
+      VStack(alignment: .leading, spacing: 16) {
+        FlowingSelect(
+          label: "Preview size",
+          selection: $selectValue,
+          options: [
+            FlowingSelectOption(.first, label: "Small"),
+            FlowingSelectOption(.second, label: "Medium"),
+            FlowingSelectOption(.third, label: "Large"),
+          ],
+          minimumWidth: 150
+        )
+        .fixedSize()
+
+        FlowingSearchPicker(
+          label: "City",
+          selection: $searchValue,
+          options: [
+            FlowingSelectOption("Amsterdam", label: "Amsterdam"),
+            FlowingSelectOption("Berlin", label: "Berlin"),
+            FlowingSelectOption("Copenhagen", label: "Copenhagen"),
+            FlowingSelectOption("Dublin", label: "Dublin"),
+            FlowingSelectOption("Edinburgh", label: "Edinburgh"),
+          ],
+          maximumVisibleOptions: 3
+        )
+      }
+      .padding(13)
     }
   }
 

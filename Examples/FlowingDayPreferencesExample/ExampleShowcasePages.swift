@@ -22,9 +22,9 @@ struct AppearanceShowcase: View {
           controlWidth: 240,
           selection: $appearance,
           options: [
-            PreferencesPopupOption(.system, label: "System"),
-            PreferencesPopupOption(.light, label: "Light"),
-            PreferencesPopupOption(.dark, label: "Dark"),
+            FlowingSelectOption(.system, label: "System"),
+            FlowingSelectOption(.light, label: "Light"),
+            FlowingSelectOption(.dark, label: "Dark"),
           ]
         )
         separator
@@ -68,9 +68,9 @@ struct AppearanceShowcase: View {
           controlWidth: 260,
           selection: $corners,
           options: [
-            PreferencesPopupOption(.soft, label: "Soft"),
-            PreferencesPopupOption(.medium, label: "Medium"),
-            PreferencesPopupOption(.sharp, label: "Sharp"),
+            FlowingSelectOption(.soft, label: "Soft"),
+            FlowingSelectOption(.medium, label: "Medium"),
+            FlowingSelectOption(.sharp, label: "Sharp"),
           ]
         )
         separator
@@ -115,16 +115,16 @@ struct AppearanceShowcase: View {
     )
   }
 
-  private var accentMenuOptions: [PreferencesPopupOption<ExampleAccentMenuSelection>] {
+  private var accentMenuOptions: [FlowingSelectOption<ExampleAccentMenuSelection>] {
     ExampleAccent.featured.map {
-      PreferencesPopupOption(
+      FlowingSelectOption(
         .accent($0),
         label: $0.title,
         accent: $0.value(customColor: customAccent)
       )
     } + [
-      PreferencesPopupOption(.allColors, label: "All Colors…"),
-      PreferencesPopupOption(
+      FlowingSelectOption(.allColors, label: "All Colors…"),
+      FlowingSelectOption(
         .accent(.custom),
         label: "Custom",
         accent: .init(fill: customAccent, foreground: customAccent)
@@ -150,9 +150,9 @@ struct LayoutShowcase: View {
           controlWidth: 260,
           selection: $density,
           options: [
-            PreferencesPopupOption(.compact, label: "Compact"),
-            PreferencesPopupOption(.standard, label: "Default"),
-            PreferencesPopupOption(.roomy, label: "Roomy"),
+            FlowingSelectOption(.compact, label: "Compact"),
+            FlowingSelectOption(.standard, label: "Default"),
+            FlowingSelectOption(.roomy, label: "Roomy"),
           ]
         )
       }
@@ -167,8 +167,8 @@ struct LayoutShowcase: View {
           controlWidth: 240,
           selection: $contentLayout,
           options: [
-            PreferencesPopupOption(.centered, label: "Centered"),
-            PreferencesPopupOption(.fluid, label: "Fluid"),
+            FlowingSelectOption(.centered, label: "Centered"),
+            FlowingSelectOption(.fluid, label: "Fluid"),
           ]
         )
         PreferencesDependentRows(isVisible: contentLayout == .centered) {
@@ -177,9 +177,9 @@ struct LayoutShowcase: View {
             controlWidth: 240,
             selection: $contentWidth,
             options: [
-              PreferencesPopupOption(.narrow, label: "560"),
-              PreferencesPopupOption(.standard, label: "720"),
-              PreferencesPopupOption(.wide, label: "860"),
+              FlowingSelectOption(.narrow, label: "560"),
+              FlowingSelectOption(.standard, label: "720"),
+              FlowingSelectOption(.wide, label: "860"),
             ]
           )
         }
@@ -211,9 +211,9 @@ struct TypographyShowcase: View {
           controlWidth: 260,
           selection: $textScale,
           options: [
-            PreferencesPopupOption(.small, label: "Small"),
-            PreferencesPopupOption(.standard, label: "Default"),
-            PreferencesPopupOption(.large, label: "Large"),
+            FlowingSelectOption(.small, label: "Small"),
+            FlowingSelectOption(.standard, label: "Default"),
+            FlowingSelectOption(.large, label: "Large"),
           ]
         )
         PreferencesRowSeparator()
@@ -223,10 +223,10 @@ struct TypographyShowcase: View {
           controlWidth: 300,
           selection: $headingFace,
           options: [
-            PreferencesPopupOption(.standard, label: "System"),
-            PreferencesPopupOption(.rounded, label: "Rounded"),
-            PreferencesPopupOption(.serif, label: "Serif"),
-            PreferencesPopupOption(.monospaced, label: "Mono"),
+            FlowingSelectOption(.standard, label: "System"),
+            FlowingSelectOption(.rounded, label: "Rounded"),
+            FlowingSelectOption(.serif, label: "Serif"),
+            FlowingSelectOption(.monospaced, label: "Mono"),
           ]
         )
       }
@@ -435,14 +435,14 @@ struct PreferencesComponentsShowcase: View {
         maximumVisibleOptions: 4,
         selection: $searchValue,
         options: [
-          PreferencesPopupOption("Amsterdam", label: "Amsterdam"),
-          PreferencesPopupOption("Berlin", label: "Berlin"),
-          PreferencesPopupOption("Copenhagen", label: "Copenhagen"),
-          PreferencesPopupOption("Dublin", label: "Dublin"),
-          PreferencesPopupOption("Edinburgh", label: "Edinburgh"),
-          PreferencesPopupOption("Florence", label: "Florence"),
-          PreferencesPopupOption("Geneva", label: "Geneva"),
-          PreferencesPopupOption("Helsinki", label: "Helsinki"),
+          FlowingSelectOption("Amsterdam", label: "Amsterdam"),
+          FlowingSelectOption("Berlin", label: "Berlin"),
+          FlowingSelectOption("Copenhagen", label: "Copenhagen"),
+          FlowingSelectOption("Dublin", label: "Dublin"),
+          FlowingSelectOption("Edinburgh", label: "Edinburgh"),
+          FlowingSelectOption("Florence", label: "Florence"),
+          FlowingSelectOption("Geneva", label: "Geneva"),
+          FlowingSelectOption("Helsinki", label: "Helsinki"),
         ]
       )
     }
@@ -512,11 +512,11 @@ struct PreferencesComponentsShowcase: View {
     }
   }
 
-  private var selectionOptions: [PreferencesPopupOption<ExampleSelection>] {
+  private var selectionOptions: [FlowingSelectOption<ExampleSelection>] {
     [
-      PreferencesPopupOption(.first, label: "One"),
-      PreferencesPopupOption(.second, label: "Two"),
-      PreferencesPopupOption(.third, label: "Three"),
+      FlowingSelectOption(.first, label: "One"),
+      FlowingSelectOption(.second, label: "Two"),
+      FlowingSelectOption(.third, label: "Three"),
     ]
   }
 }

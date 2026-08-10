@@ -4,16 +4,6 @@ import XCTest
 @testable import FlowingDayPreferences
 
 final class PreferencesControlsTests: XCTestCase {
-  func testPopupOptionCanCarryItsOwnAccent() {
-    let option = PreferencesPopupOption(
-      "petal",
-      label: "Petal",
-      accent: PreferencesAccent.petal
-    )
-
-    XCTAssertEqual(option.accent, .petal)
-  }
-
   func testSectionSeparatorsFollowHomogeneousRowIconPresence() {
     XCTAssertEqual(
       PreferencesSectionSeparatorResolver.resolve(
@@ -236,8 +226,8 @@ final class PreferencesControlsTests: XCTestCase {
         title: "Layout",
         selection: .constant("first"),
         options: [
-          PreferencesPopupOption("first", label: "First"),
-          PreferencesPopupOption("second", label: "Second"),
+          FlowingSelectOption("first", label: "First"),
+          FlowingSelectOption("second", label: "Second"),
         ]
       )
     )
@@ -287,12 +277,6 @@ final class PreferencesControlsTests: XCTestCase {
     XCTAssertEqual(option.id, "network-chart")
     XCTAssertTrue(option.isSelected)
     XCTAssertTrue(state.value)
-  }
-
-  func testOptionSearchIgnoresCaseAndSurroundingWhitespace() {
-    XCTAssertTrue(PreferencesOptionSearch.matches("Asia/Tokyo", query: "  TOKYO "))
-    XCTAssertTrue(PreferencesOptionSearch.matches("Europe/London", query: ""))
-    XCTAssertFalse(PreferencesOptionSearch.matches("Europe/London", query: "Tokyo"))
   }
 
   func testDependentRowsMotionRespectsReduceMotion() {
@@ -356,7 +340,7 @@ final class PreferencesControlsTests: XCTestCase {
       PreferencesPopupRow(
         title: "Background",
         selection: .constant("Canvas"),
-        options: [PreferencesPopupOption("Canvas", label: "Canvas")]
+        options: [FlowingSelectOption("Canvas", label: "Canvas")]
       )
     )
     let detailedHeight = fittingHeight(
@@ -364,7 +348,7 @@ final class PreferencesControlsTests: XCTestCase {
         title: "Background",
         caption: "Choose how the exported canvas is rendered.",
         selection: .constant("Canvas"),
-        options: [PreferencesPopupOption("Canvas", label: "Canvas")]
+        options: [FlowingSelectOption("Canvas", label: "Canvas")]
       )
     )
 

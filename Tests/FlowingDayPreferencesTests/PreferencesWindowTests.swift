@@ -121,7 +121,7 @@ final class PreferencesWindowTests: XCTestCase {
     window.isReleasedWhenClosed = false
     defer { window.close() }
 
-    let button = PreferencesPopupButton(
+    let button = FlowingSelectButton(
       frame: NSRect(x: 100, y: 100, width: 160, height: 30)
     )
     var selectedIndex: Int?
@@ -159,7 +159,7 @@ final class PreferencesWindowTests: XCTestCase {
 
   func testPopupValueUsesTheConfiguredAccent() throws {
     let foreground = NSColor(calibratedRed: 0.22, green: 0.47, blue: 0.68, alpha: 1)
-    let button = PreferencesPopupButton()
+    let button = FlowingSelectButton()
     button.configure(
       labels: ["Selected"],
       selectedIndex: 0,

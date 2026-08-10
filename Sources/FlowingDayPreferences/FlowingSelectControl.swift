@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 
-struct PreferencesPopupControl<Value: Hashable>: NSViewRepresentable {
+struct FlowingSelectRepresentable<Value: Hashable>: NSViewRepresentable {
   @Binding var selection: Value
-  let options: [PreferencesPopupOption<Value>]
+  let options: [FlowingSelectOption<Value>]
   let minimumWidth: CGFloat
   let accent: PreferencesAccent
   let strings: PreferencesStrings
@@ -16,18 +16,18 @@ struct PreferencesPopupControl<Value: Hashable>: NSViewRepresentable {
     Coordinator(self)
   }
 
-  func makeNSView(context: Context) -> PreferencesPopupButton {
-    let button = PreferencesPopupButton()
+  func makeNSView(context: Context) -> FlowingSelectButton {
+    let button = FlowingSelectButton()
     update(button, coordinator: context.coordinator)
     return button
   }
 
-  func updateNSView(_ button: PreferencesPopupButton, context: Context) {
+  func updateNSView(_ button: FlowingSelectButton, context: Context) {
     context.coordinator.parent = self
     update(button, coordinator: context.coordinator)
   }
 
-  private func update(_ button: PreferencesPopupButton, coordinator: Coordinator) {
+  private func update(_ button: FlowingSelectButton, coordinator: Coordinator) {
     button.configure(
       labels: options.map(\.label),
       optionAccents: options.map(\.accent),
@@ -44,9 +44,9 @@ struct PreferencesPopupControl<Value: Hashable>: NSViewRepresentable {
   }
 
   final class Coordinator {
-    var parent: PreferencesPopupControl
+    var parent: FlowingSelectRepresentable
 
-    init(_ parent: PreferencesPopupControl) {
+    init(_ parent: FlowingSelectRepresentable) {
       self.parent = parent
     }
 
@@ -59,7 +59,7 @@ struct PreferencesPopupControl<Value: Hashable>: NSViewRepresentable {
 }
 
 @MainActor
-final class PreferencesPopupButton: NSButton {
+final class FlowingSelectButton: NSButton {
   private static let controlHeight: CGFloat = 30
 
   var onSelect: ((Int) -> Void)?
@@ -73,7 +73,7 @@ final class PreferencesPopupButton: NSButton {
   private var textFont = PreferencesTypography.standard.value.appKitFont
   private var optionFont = PreferencesTypography.standard.selectionLabel.appKitFont
   private var menuBackgroundColor = NSColor(PreferencesPalette.control)
-  private var menuPanel: PreferencesPopupPanel?
+  private var menuPanel: FlowingSelectPanel?
   private var localMonitor: Any?
   private var globalMonitor: Any?
   private var observers: [NSObjectProtocol] = []
@@ -147,7 +147,7 @@ final class PreferencesPopupButton: NSButton {
     if structureChanged, menuPanel != nil {
       dismiss()
     }
-    if let menu = menuPanel?.contentView as? PreferencesPopupMenuView {
+    if let menu = menuPanel?.contentView as? FlowingSelectMenuView {
       menu.selectedIndex = selectedIndex
     }
     setAccessibilityValue(selectedIndex.flatMap { labels[safe: $0] } ?? "")
@@ -262,7 +262,7 @@ final class PreferencesPopupButton: NSButton {
     let menuWidth = min(
       max(
         bounds.width,
-        PreferencesPopupMenuView.preferredWidth(
+        FlowingSelectMenuView.preferredWidth(
           for: labels,
           font: optionFont,
           showsSwatches: optionAccents.contains { $0 != nil }
@@ -270,11 +270,11 @@ final class PreferencesPopupButton: NSButton {
       ),
       visibleFrame.width - 16
     )
-    let menuSize = PreferencesPopupMenuView.menuSize(
+    let menuSize = FlowingSelectMenuView.menuSize(
       width: menuWidth,
       itemCount: labels.count
     )
-    let panel = PreferencesPopupPanel(
+    let panel = FlowingSelectPanel(
       contentRect: NSRect(origin: .zero, size: menuSize),
       styleMask: [.borderless, .nonactivatingPanel],
       backing: .buffered,
@@ -287,7 +287,7 @@ final class PreferencesPopupButton: NSButton {
     panel.hidesOnDeactivate = false
     panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
     panel.appearance = effectiveAppearance
-    panel.contentView = PreferencesPopupMenuView(
+    panel.contentView = FlowingSelectMenuView(
       frame: NSRect(origin: .zero, size: menuSize),
       labels: labels,
       optionAccents: optionAccents,
@@ -346,7 +346,7 @@ final class PreferencesPopupButton: NSButton {
   }
 
   private func updateKeyboardHighlight() {
-    (menuPanel?.contentView as? PreferencesPopupMenuView)?
+    (menuPanel?.contentView as? FlowingSelectMenuView)?
       .keyboardHighlightedIndex = highlightedIndex
   }
 
@@ -372,7 +372,7 @@ final class PreferencesPopupButton: NSButton {
     ) { [weak self] event in
       guard let self, let panel = self.menuPanel else { return event }
       if event.type == .keyDown {
-        if PreferencesPanelShortcut.isClose(event) {
+        if FlowingSelectPanelShortcut.isClose(event) {
           self.dismiss()
           _ = parentWindow.performKeyEquivalent(with: event)
           return nil
@@ -464,7 +464,7 @@ final class PreferencesPopupButton: NSButton {
   }
 }
 
-private enum PreferencesPanelShortcut {
+private enum FlowingSelectPanelShortcut {
   static func isClose(_ event: NSEvent) -> Bool {
     let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift])
     return modifiers == .command
@@ -472,13 +472,13 @@ private enum PreferencesPanelShortcut {
   }
 }
 
-private final class PreferencesPopupPanel: NSPanel {
+private final class FlowingSelectPanel: NSPanel {
   override var canBecomeKey: Bool { true }
   override var canBecomeMain: Bool { false }
 }
 
 @MainActor
-private final class PreferencesPopupMenuView: NSView {
+private final class FlowingSelectMenuView: NSView {
   static let rowHeight: CGFloat = 36
   static let verticalInset: CGFloat = 8
 
@@ -493,7 +493,7 @@ private final class PreferencesPopupMenuView: NSView {
   private let accent: PreferencesAccent
   private let backgroundColor: NSColor
   private let controlRadius: CGFloat
-  private var buttons: [PreferencesPopupOptionButton] = []
+  private var buttons: [FlowingSelectOptionButton] = []
 
   init(
     frame: NSRect,
@@ -516,7 +516,7 @@ private final class PreferencesPopupMenuView: NSView {
     for (index, label) in labels.enumerated() {
       let y = bounds.height - Self.verticalInset - CGFloat(index + 1) * Self.rowHeight
       let itemAccent = optionAccents.indices.contains(index) ? optionAccents[index] : nil
-      let button = PreferencesPopupOptionButton(
+      let button = FlowingSelectOptionButton(
         frame: NSRect(x: 8, y: y + 2, width: bounds.width - 16, height: 32),
         title: label,
         accent: itemAccent ?? accent,
@@ -580,7 +580,7 @@ private final class PreferencesPopupMenuView: NSView {
   }
 }
 
-private final class PreferencesPopupOptionButton: NSButton {
+private final class FlowingSelectOptionButton: NSButton {
   private let optionTitle: String
   private let accent: PreferencesAccent
   private let strings: PreferencesStrings

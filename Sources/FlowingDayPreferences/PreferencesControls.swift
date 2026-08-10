@@ -434,31 +434,13 @@ public struct PreferencesSliderRow: View {
 }
 
 
-public struct PreferencesPopupOption<Value: Hashable>: Identifiable {
-  public let value: Value
-  public let label: String
-  public let accent: PreferencesAccent?
-  public var id: Value { value }
-
-  public init(_ value: Value, label: String, accent: PreferencesAccent? = nil) {
-    self.value = value
-    self.label = label
-    self.accent = accent
-  }
-}
-
 public struct PreferencesPopupRow<Value: Hashable>: View {
-  @Environment(\.preferencesAccent) private var accent
-  @Environment(\.preferencesStrings) private var strings
-  @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesTypography) private var typography
-  @Environment(\.preferencesSurfaces) private var surfaces
   private let symbol: String?
   private let title: String
   private let caption: String?
   private let minimumControlWidth: CGFloat?
   @Binding private var selection: Value
-  private let options: [PreferencesPopupOption<Value>]
+  private let options: [FlowingSelectOption<Value>]
 
   public init(
     symbol: String? = nil,
@@ -466,7 +448,7 @@ public struct PreferencesPopupRow<Value: Hashable>: View {
     caption: String? = nil,
     minimumControlWidth: CGFloat? = nil,
     selection: Binding<Value>,
-    options: [PreferencesPopupOption<Value>]
+    options: [FlowingSelectOption<Value>]
   ) {
     self.symbol = symbol
     self.title = title
@@ -478,26 +460,14 @@ public struct PreferencesPopupRow<Value: Hashable>: View {
 
   public var body: some View {
     PreferencesRow(symbol: symbol, title: title, caption: caption) {
-      PreferencesPopupControl(
+      FlowingSelect(
+        label: title,
         selection: $selection,
         options: options,
-        minimumWidth: minimumControlWidth ?? 0,
-        accent: accent,
-        strings: strings,
-        controlRadius: metrics.controlRadius,
-        textStyle: typography.value,
-        optionTextStyle: typography.selectionLabel,
-        menuBackgroundColor: surfaces.control
+        minimumWidth: minimumControlWidth ?? 0
       )
       .fixedSize()
     }
-  }
-}
-
-enum PreferencesOptionSearch {
-  static func matches(_ label: String, query: String) -> Bool {
-    let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
-    return query.isEmpty || label.localizedCaseInsensitiveContains(query)
   }
 }
 
@@ -505,7 +475,6 @@ public struct PreferencesSearchPickerRow<Value: Hashable>: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.preferencesAccent) private var accent
   @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesStrings) private var strings
   @Environment(\.preferencesTypography) private var typography
   @State private var isExpanded = false
   @State private var query = ""
@@ -514,7 +483,7 @@ public struct PreferencesSearchPickerRow<Value: Hashable>: View {
   private let caption: String?
   private let maximumVisibleOptions: Int
   @Binding private var selection: Value
-  private let options: [PreferencesPopupOption<Value>]
+  private let options: [FlowingSelectOption<Value>]
 
   public init(
     symbol: String? = nil,
@@ -522,7 +491,7 @@ public struct PreferencesSearchPickerRow<Value: Hashable>: View {
     caption: String? = nil,
     maximumVisibleOptions: Int = 6,
     selection: Binding<Value>,
-    options: [PreferencesPopupOption<Value>]
+    options: [FlowingSelectOption<Value>]
   ) {
     self.symbol = symbol
     self.title = title
@@ -538,8 +507,18 @@ public struct PreferencesSearchPickerRow<Value: Hashable>: View {
       VStack(spacing: 0) {
         if isExpanded {
           PreferencesRowSeparator()
-          picker
-            .transition(.opacity)
+          FlowingSearchPicker(
+            label: title,
+            selection: $selection,
+            options: options,
+            query: $query,
+            maximumVisibleOptions: maximumVisibleOptions
+          ) { _ in
+            isExpanded = false
+          }
+          .padding(.horizontal, metrics.rowInset)
+          .padding(.vertical, 12)
+          .transition(.opacity)
         }
       }
       .clipped()
@@ -550,10 +529,6 @@ public struct PreferencesSearchPickerRow<Value: Hashable>: View {
 
   private var selectedLabel: String {
     options.first { $0.value == selection }?.label ?? "—"
-  }
-
-  private var filteredOptions: [PreferencesPopupOption<Value>] {
-    options.filter { PreferencesOptionSearch.matches($0.label, query: query) }
   }
 
   private var header: some View {
@@ -601,86 +576,6 @@ public struct PreferencesSearchPickerRow<Value: Hashable>: View {
     .accessibilityValue(selectedLabel)
   }
 
-  private var picker: some View {
-    VStack(spacing: 8) {
-      HStack(spacing: 8) {
-        Image(systemName: "magnifyingglass")
-          .font(.system(size: 11, weight: .medium))
-          .foregroundStyle(accent.foreground.opacity(0.72))
-        TextField(strings.search, text: $query)
-          .textFieldStyle(.plain)
-          .font(typography.value.font)
-          .foregroundStyle(PreferencesPalette.ink)
-      }
-      .padding(.horizontal, 10)
-      .frame(height: 30)
-      .background(accent.veil, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-      .overlay {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-          .strokeBorder(accent.fill.opacity(0.16))
-      }
-
-      if filteredOptions.isEmpty {
-        Text(strings.noResults)
-          .font(typography.value.font)
-          .foregroundStyle(PreferencesPalette.faint)
-          .frame(maxWidth: .infinity, minHeight: 36)
-      } else {
-        ScrollViewReader { proxy in
-          ScrollView {
-            LazyVStack(spacing: 4) {
-              ForEach(filteredOptions) { option in
-                optionButton(option)
-                  .id(option.id)
-              }
-            }
-          }
-          .scrollIndicators(.automatic)
-          .frame(height: optionListHeight)
-          .onAppear {
-            proxy.scrollTo(selection, anchor: .center)
-          }
-        }
-      }
-    }
-    .padding(.horizontal, metrics.rowInset)
-    .padding(.vertical, 12)
-  }
-
-  private var optionListHeight: CGFloat {
-    CGFloat(min(filteredOptions.count, maximumVisibleOptions)) * 34
-  }
-
-  private func optionButton(_ option: PreferencesPopupOption<Value>) -> some View {
-    let isSelected = option.value == selection
-    return Button {
-      selection = option.value
-      query = ""
-      isExpanded = false
-    } label: {
-      HStack(spacing: 9) {
-        Text(option.label)
-          .font(typography.selectionLabel.font)
-          .foregroundStyle(isSelected ? accent.foreground : PreferencesPalette.ink)
-          .lineLimit(1)
-        Spacer(minLength: 8)
-        if isSelected {
-          Image(systemName: "checkmark")
-            .font(.system(size: 10, weight: .bold))
-            .foregroundStyle(accent.foreground)
-        }
-      }
-      .padding(.horizontal, 10)
-      .frame(height: 30)
-      .background(
-        isSelected ? accent.wash : Color.clear,
-        in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-      )
-      .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .accessibilityValue(isSelected ? strings.selected : strings.notSelected)
-  }
 }
 
 public struct PreferencesColorPickerRow: View {
@@ -719,7 +614,7 @@ public struct PreferencesSegmentedRow<Value: Hashable>: View {
   private let caption: String?
   private let controlWidth: CGFloat
   @Binding private var selection: Value
-  private let options: [PreferencesPopupOption<Value>]
+  private let options: [FlowingSelectOption<Value>]
 
   public init(
     symbol: String? = nil,
@@ -727,7 +622,7 @@ public struct PreferencesSegmentedRow<Value: Hashable>: View {
     caption: String? = nil,
     controlWidth: CGFloat = 300,
     selection: Binding<Value>,
-    options: [PreferencesPopupOption<Value>]
+    options: [FlowingSelectOption<Value>]
   ) {
     self.symbol = symbol
     self.title = title
@@ -761,7 +656,7 @@ public struct PreferencesConnectedSegmentedRow<Value: Hashable>: View {
   private let caption: String?
   private let controlWidth: CGFloat
   @Binding private var selection: Value
-  private let options: [PreferencesPopupOption<Value>]
+  private let options: [FlowingSelectOption<Value>]
 
   public init(
     symbol: String? = nil,
@@ -769,7 +664,7 @@ public struct PreferencesConnectedSegmentedRow<Value: Hashable>: View {
     caption: String? = nil,
     controlWidth: CGFloat = 300,
     selection: Binding<Value>,
-    options: [PreferencesPopupOption<Value>]
+    options: [FlowingSelectOption<Value>]
   ) {
     precondition(controlWidth > 0 && controlWidth.isFinite)
     self.symbol = symbol

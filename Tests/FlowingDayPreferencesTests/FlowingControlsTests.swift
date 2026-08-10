@@ -4,6 +4,49 @@ import XCTest
 @testable import FlowingDayPreferences
 
 final class FlowingControlsTests: XCTestCase {
+  func testSelectOptionCanCarryItsOwnAccent() {
+    let option = FlowingSelectOption(
+      "petal",
+      label: "Petal",
+      accent: PreferencesAccent.petal
+    )
+
+    XCTAssertEqual(option.id, "petal")
+    XCTAssertEqual(option.accent, .petal)
+  }
+
+  func testOptionSearchIgnoresCaseAndSurroundingWhitespace() {
+    XCTAssertTrue(FlowingOptionSearch.matches("Asia/Tokyo", query: "  TOKYO "))
+    XCTAssertTrue(FlowingOptionSearch.matches("Europe/London", query: ""))
+    XCTAssertFalse(FlowingOptionSearch.matches("Europe/London", query: "Tokyo"))
+  }
+
+  @MainActor
+  func testSelectAndSearchPickerComposeOutsidePreferencesRows() {
+    let options = [
+      FlowingSelectOption("one", label: "One"),
+      FlowingSelectOption("two", label: "Two"),
+      FlowingSelectOption("three", label: "Three"),
+    ]
+    let content = VStack {
+      FlowingSelect(
+        label: "Value",
+        selection: .constant("two"),
+        options: options
+      )
+      .fixedSize()
+      FlowingSearchPicker(
+        label: "Value",
+        selection: .constant("two"),
+        options: options,
+        maximumVisibleOptions: 2
+      )
+    }
+    .frame(width: 240)
+
+    XCTAssertGreaterThan(fittingHeight(content), 100)
+  }
+
   func testSliderMathClampsValuesAndFractions() {
     let range = 10.0...20.0
 
