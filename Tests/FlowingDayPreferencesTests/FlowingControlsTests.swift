@@ -214,6 +214,92 @@ final class FlowingControlsTests: XCTestCase {
     XCTAssertEqual(FlowingTextArea.standardMinimumHeight, 84)
   }
 
+  func testDatePickerComponentsMapToNativeComponents() {
+    XCTAssertEqual(FlowingDatePickerComponents.date.displayedComponents, [.date])
+    XCTAssertEqual(FlowingDatePickerComponents.time.displayedComponents, [.hourAndMinute])
+    XCTAssertEqual(
+      FlowingDatePickerComponents.dateAndTime.displayedComponents,
+      [.date, .hourAndMinute]
+    )
+  }
+
+  @MainActor
+  func testDatePickerComposesWithEveryComponentSet() {
+    let content = VStack {
+      ForEach(FlowingDatePickerComponents.allCases, id: \.self) { components in
+        FlowingDatePicker(
+          "Schedule",
+          selection: .constant(Date(timeIntervalSinceReferenceDate: 800_000_000)),
+          components: components
+        )
+      }
+    }
+    .frame(width: 300)
+
+    XCTAssertGreaterThan(fittingHeight(content), 60)
+  }
+
+  func testValidationPreservesItsMessageSemantics() {
+    XCTAssertNil(FlowingFieldValidation.none.message)
+    XCTAssertNil(FlowingFieldValidation.success(nil).message)
+    XCTAssertEqual(FlowingFieldValidation.success("Ready").message, "Ready")
+    XCTAssertEqual(FlowingFieldValidation.warning("Check this").message, "Check this")
+    XCTAssertEqual(FlowingFieldValidation.error("Required").message, "Required")
+  }
+
+  @MainActor
+  func testValidationFeedbackOnlyAddsHeightWhenVisible() {
+    let standardHeight = fittingHeight(
+      FlowingTextField("Name", text: .constant("Flowing Day"))
+        .frame(width: 240)
+    )
+    let helperHeight = fittingHeight(
+      FlowingTextField(
+        "Name",
+        text: .constant("Flowing Day"),
+        supportingText: "Use a memorable name."
+      )
+      .frame(width: 240)
+    )
+    let errorHeight = fittingHeight(
+      FlowingTextField(
+        "Name",
+        text: .constant(""),
+        validation: .error("A name is required.")
+      )
+      .frame(width: 240)
+    )
+
+    XCTAssertEqual(standardHeight, FlowingTextFieldMetrics.height, accuracy: 0.5)
+    XCTAssertGreaterThan(helperHeight, standardHeight)
+    XCTAssertGreaterThan(errorHeight, standardHeight)
+  }
+
+  @MainActor
+  func testGenericCardsAndSectionsComposeWithoutPreferencesRows() {
+    let cardHeight = fittingHeight(
+      FlowingCard(
+        contentInsets: EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12)
+      ) {
+        Text("Card content").frame(height: 20)
+      }
+      .frame(width: 240)
+    )
+    let sectionHeight = fittingHeight(
+      FlowingSection(
+        "Section",
+        footer: "Supporting copy",
+        contentInsets: EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12)
+      ) {
+        Text("Section content").frame(height: 20)
+      }
+      .frame(width: 240)
+    )
+
+    XCTAssertEqual(cardHeight, 40, accuracy: 0.5)
+    XCTAssertGreaterThan(sectionHeight, cardHeight)
+  }
+
   @MainActor
   func testIconButtonEmphasesComposeAtOneControlSize() {
     let height = fittingHeight(

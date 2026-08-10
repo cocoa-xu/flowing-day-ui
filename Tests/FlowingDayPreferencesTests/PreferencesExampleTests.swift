@@ -41,6 +41,14 @@ final class PreferencesExampleTests: XCTestCase {
       [.text, .secure, .multiline]
     )
     XCTAssertEqual(
+      ExampleInputValidation.allCases,
+      [.helper, .success, .warning, .error]
+    )
+    XCTAssertEqual(
+      FlowingDatePickerComponents.allCases,
+      [.date, .time, .dateAndTime]
+    )
+    XCTAssertEqual(
       ExampleControlAxis.allCases,
       [.horizontal, .vertical]
     )
