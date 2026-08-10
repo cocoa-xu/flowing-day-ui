@@ -1,4 +1,5 @@
 import AppKit
+import FlowingDayPreferences
 import XCTest
 
 @testable import FlowingDayPreferencesExample
@@ -54,6 +55,22 @@ final class PreferencesExampleTests: XCTestCase {
     XCTAssertEqual(
       ExampleProgressKind.allCases,
       [.determinate, .ongoing]
+    )
+    XCTAssertEqual(
+      ExampleRadioSelection.allCases,
+      [.quiet, .balanced, .vivid]
+    )
+    XCTAssertEqual(
+      FlowingStatusTone.allCases,
+      [.neutral, .accent, .informational, .success, .warning, .critical]
+    )
+    XCTAssertEqual(
+      FlowingBadgeEmphasis.allCases,
+      [.subtle, .strong]
+    )
+    XCTAssertEqual(
+      FlowingCalloutPresentation.allCases,
+      [.inline, .card]
     )
   }
 

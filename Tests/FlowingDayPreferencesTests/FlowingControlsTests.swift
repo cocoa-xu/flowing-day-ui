@@ -388,6 +388,188 @@ final class FlowingControlsTests: XCTestCase {
     )
   }
 
+  func testRadioOptionUsesItsValueAsStableIdentity() {
+    let option = FlowingRadioOption(
+      "balanced",
+      label: "Balanced",
+      systemImage: "circle.lefthalf.filled",
+      isEnabled: false
+    )
+
+    XCTAssertEqual(option.id, "balanced")
+    XCTAssertEqual(option.value, "balanced")
+    XCTAssertEqual(option.label, "Balanced")
+    XCTAssertEqual(option.systemImage, "circle.lefthalf.filled")
+    XCTAssertFalse(option.isEnabled)
+  }
+
+  func testRadioNavigationWrapsAcrossAvailableValues() {
+    let values = ["quiet", "balanced", "vivid"]
+
+    XCTAssertEqual(
+      FlowingRadioNavigation.destination(in: values, from: "vivid", offset: 1),
+      "quiet"
+    )
+    XCTAssertEqual(
+      FlowingRadioNavigation.destination(in: values, from: "quiet", offset: -1),
+      "vivid"
+    )
+    XCTAssertEqual(
+      FlowingRadioNavigation.destination(in: values, from: "missing", offset: 1),
+      "quiet"
+    )
+  }
+
+  @MainActor
+  func testRadioAndRadioGroupComposeOnBothAxes() {
+    let options = [
+      FlowingRadioOption("quiet", label: "Quiet", systemImage: "moon"),
+      FlowingRadioOption("balanced", label: "Balanced"),
+      FlowingRadioOption("vivid", label: "Vivid", isEnabled: false),
+    ]
+    let content = VStack {
+      FlowingRadio("Standalone", isSelected: true) {}
+      FlowingRadioGroup(
+        label: "Horizontal",
+        selection: .constant("balanced"),
+        options: options,
+        axis: .horizontal
+      )
+      FlowingRadioGroup(
+        label: "Vertical",
+        selection: .constant("quiet"),
+        options: options,
+        axis: .vertical
+      )
+    }
+    .frame(width: 320)
+
+    XCTAssertGreaterThan(fittingHeight(content), 100)
+  }
+
+  func testStepperMathClampsIntegersAtBothBounds() {
+    XCTAssertEqual(FlowingStepperMath.increment(3, in: 1...8, step: 2), 5)
+    XCTAssertEqual(FlowingStepperMath.increment(7, in: 1...8, step: 2), 8)
+    XCTAssertEqual(FlowingStepperMath.increment(8, in: 1...8, step: 2), 8)
+    XCTAssertEqual(FlowingStepperMath.decrement(4, in: 1...8, step: 2), 2)
+    XCTAssertEqual(FlowingStepperMath.decrement(2, in: 1...8, step: 2), 1)
+    XCTAssertEqual(FlowingStepperMath.decrement(1, in: 1...8, step: 2), 1)
+  }
+
+  func testStepperMathSupportsFractionalValues() {
+    XCTAssertEqual(
+      FlowingStepperMath.increment(0.75, in: 0.0...1.0, step: 0.5),
+      1,
+      accuracy: 0.000_1
+    )
+    XCTAssertEqual(
+      FlowingStepperMath.decrement(0.25, in: 0.0...1.0, step: 0.5),
+      0,
+      accuracy: 0.000_1
+    )
+  }
+
+  @MainActor
+  func testStepperComposesWithFormattedValue() {
+    let height = fittingHeight(
+      FlowingStepper(
+        "Preview count",
+        value: .constant(3),
+        in: 1...8,
+        step: 1
+      ) { "\($0) previews" }
+    )
+
+    XCTAssertEqual(height, FlowingStepperMetrics.controlHeight, accuracy: 0.5)
+  }
+
+  @MainActor
+  func testSeparatorsPreserveTheirRequestedThickness() {
+    let horizontal = fittingHeight(
+      FlowingSeparator(thickness: 2)
+        .frame(width: 120)
+    )
+    let vertical = fittingWidth(
+      FlowingSeparator(axis: .vertical, thickness: 3)
+        .frame(height: 40)
+    )
+
+    XCTAssertEqual(horizontal, 2, accuracy: 0.5)
+    XCTAssertEqual(vertical, 3, accuracy: 0.5)
+  }
+
+  @MainActor
+  func testBadgesComposeForEveryToneAndEmphasis() {
+    let content = VStack {
+      ForEach(FlowingStatusTone.allCases, id: \.self) { tone in
+        HStack {
+          FlowingBadge("Status", tone: tone)
+          FlowingBadge(
+            "Status",
+            systemImage: "circle.fill",
+            tone: tone,
+            emphasis: .strong
+          )
+        }
+      }
+    }
+
+    XCTAssertGreaterThan(fittingHeight(content), 120)
+  }
+
+  @MainActor
+  func testCalloutSupportsInlineAndCardPresentations() {
+    let inline = fittingHeight(
+      FlowingCallout(
+        "A short message",
+        title: "Status",
+        tone: .success,
+        presentation: .inline
+      )
+      .frame(width: 280)
+    )
+    let card = fittingHeight(
+      FlowingCallout(
+        "A short message",
+        title: "Status",
+        tone: .success,
+        presentation: .card
+      )
+      .frame(width: 280)
+    )
+
+    XCTAssertGreaterThan(inline, 0)
+    XCTAssertGreaterThan(card, inline)
+  }
+
+  @MainActor
+  func testCalloutAcceptsCustomContent() {
+    let height = fittingHeight(
+      FlowingCallout(title: "Custom", tone: .accent) {
+        HStack {
+          Text("Message")
+          FlowingBadge("New", tone: .accent)
+        }
+      }
+      .frame(width: 280)
+    )
+
+    XCTAssertGreaterThan(height, 40)
+  }
+
+  @MainActor
+  func testActionMenuHonorsItsMinimumWidth() {
+    let width = fittingWidth(
+      FlowingMenu("Actions", systemImage: "ellipsis", minimumWidth: 160) {
+        Button("Duplicate") {}
+        Divider()
+        Button("Remove", role: .destructive) {}
+      }
+    )
+
+    XCTAssertGreaterThanOrEqual(width, 160)
+  }
+
   @MainActor
   func testConnectedSegmentedControlFitsWithoutPreferencesRow() {
     let height = fittingHeight(
@@ -444,6 +626,13 @@ final class FlowingControlsTests: XCTestCase {
     let hostingView = NSHostingView(rootView: content)
     hostingView.layoutSubtreeIfNeeded()
     return hostingView.fittingSize.height
+  }
+
+  @MainActor
+  private func fittingWidth<Content: View>(_ content: Content) -> CGFloat {
+    let hostingView = NSHostingView(rootView: content)
+    hostingView.layoutSubtreeIfNeeded()
+    return hostingView.fittingSize.width
   }
 }
 
