@@ -110,6 +110,7 @@ final class PreferencesControlsTests: XCTestCase {
     )
 
     XCTAssertEqual(primitive.contentAlignment, .leading)
+    XCTAssertNil(primitive.accent)
     XCTAssertEqual(primitive.indicatorPlacement, .leading)
     XCTAssertEqual(primitive.widthPolicy, .fill)
     XCTAssertEqual(preferences.contentAlignment, .center)
@@ -283,6 +284,7 @@ final class PreferencesControlsTests: XCTestCase {
     let option = FlowingMultiSelectOption(
       "Activity",
       systemImage: "waveform.path.ecg",
+      accent: .seafoam,
       isOn: Binding(
         get: { state.value },
         set: { state.value = $0 }
@@ -291,6 +293,7 @@ final class PreferencesControlsTests: XCTestCase {
 
     XCTAssertEqual(option.id, "Activity")
     XCTAssertEqual(option.systemImage, "waveform.path.ecg")
+    XCTAssertEqual(option.accent, .seafoam)
     XCTAssertFalse(option.isSelected)
 
     option.toggle()
@@ -348,12 +351,14 @@ final class PreferencesControlsTests: XCTestCase {
         get: { state.value },
         set: { state.value = $0 }
       ),
+      accent: .brook,
       indicatorPlacement: .trailing
     )
 
     checkbox.toggle()
 
     XCTAssertTrue(state.value)
+    XCTAssertEqual(checkbox.accent, .brook)
   }
 
   @MainActor

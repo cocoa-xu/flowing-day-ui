@@ -125,16 +125,19 @@ struct ControlsShowcase: View {
           FlowingMultiSelectOption(
             "Eye",
             systemImage: "eye",
+            accent: .seafoam,
             isOn: $eyeSelected
           ),
           FlowingMultiSelectOption(
             "Bolt",
             systemImage: "bolt",
+            accent: .honey,
             isOn: $boltSelected
           ),
           FlowingMultiSelectOption(
             "Hare",
             systemImage: "hare",
+            accent: .wisteria,
             isOn: $hareSelected
           ),
         ]

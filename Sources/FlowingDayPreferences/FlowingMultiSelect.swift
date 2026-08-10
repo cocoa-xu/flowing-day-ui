@@ -18,12 +18,14 @@ public struct FlowingMultiSelectOption: Identifiable {
   public let id: String
   public let label: String
   public let systemImage: String?
+  public let accent: PreferencesAccent?
   public let isEnabled: Bool
   let isOn: Binding<Bool>
 
   public init(
     _ label: String,
     systemImage: String? = nil,
+    accent: PreferencesAccent? = nil,
     id: String? = nil,
     isOn: Binding<Bool>,
     isEnabled: Bool = true
@@ -31,6 +33,7 @@ public struct FlowingMultiSelectOption: Identifiable {
     self.id = id ?? label
     self.label = label
     self.systemImage = systemImage
+    self.accent = accent
     self.isOn = isOn
     self.isEnabled = isEnabled
   }
@@ -88,6 +91,7 @@ public struct FlowingMultiSelect: View {
         option.label,
         systemImage: systemImage,
         isOn: option.isOn,
+        accent: option.accent,
         contentAlignment: contentAlignment,
         indicatorPlacement: indicatorPlacement,
         widthPolicy: itemWidthPolicy.checkboxWidthPolicy,
@@ -98,6 +102,7 @@ public struct FlowingMultiSelect: View {
       FlowingCheckbox(
         option.label,
         isOn: option.isOn,
+        accent: option.accent,
         contentAlignment: contentAlignment,
         indicatorPlacement: indicatorPlacement,
         widthPolicy: itemWidthPolicy.checkboxWidthPolicy,

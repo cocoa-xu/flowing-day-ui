@@ -45,6 +45,7 @@ public enum FlowingCheckboxWidthPolicy: Equatable, Sendable {
 
 public struct FlowingCheckbox<Label: View>: View {
   @Binding private var isOn: Bool
+  let accent: PreferencesAccent?
   let contentAlignment: FlowingCheckboxContentAlignment
   let indicatorPlacement: FlowingCheckboxIndicatorPlacement
   let widthPolicy: FlowingCheckboxWidthPolicy
@@ -53,6 +54,7 @@ public struct FlowingCheckbox<Label: View>: View {
 
   public init(
     isOn: Binding<Bool>,
+    accent: PreferencesAccent? = nil,
     contentAlignment: FlowingCheckboxContentAlignment = .leading,
     indicatorPlacement: FlowingCheckboxIndicatorPlacement = .leading,
     widthPolicy: FlowingCheckboxWidthPolicy = .fill,
@@ -60,6 +62,7 @@ public struct FlowingCheckbox<Label: View>: View {
     @ViewBuilder label: () -> Label
   ) {
     _isOn = isOn
+    self.accent = accent
     self.contentAlignment = contentAlignment
     self.indicatorPlacement = indicatorPlacement
     self.widthPolicy = widthPolicy
@@ -73,6 +76,7 @@ public struct FlowingCheckbox<Label: View>: View {
     }
     .toggleStyle(
       FlowingCheckboxToggleStyle(
+        accentOverride: accent,
         contentAlignment: contentAlignment,
         indicatorPlacement: indicatorPlacement,
         widthPolicy: widthPolicy,
@@ -87,16 +91,21 @@ public struct FlowingCheckbox<Label: View>: View {
 }
 
 private struct FlowingCheckboxToggleStyle: ToggleStyle {
-  @Environment(\.preferencesAccent) private var accent
+  @Environment(\.preferencesAccent) private var inheritedAccent
   @Environment(\.preferencesStrings) private var strings
   @Environment(\.preferencesMetrics) private var metrics
   @Environment(\.preferencesTypography) private var typography
   @Environment(\.preferencesSurfaces) private var surfaces
 
+  let accentOverride: PreferencesAccent?
   let contentAlignment: FlowingCheckboxContentAlignment
   let indicatorPlacement: FlowingCheckboxIndicatorPlacement
   let widthPolicy: FlowingCheckboxWidthPolicy
   let truncationMode: Text.TruncationMode
+
+  private var accent: PreferencesAccent {
+    accentOverride ?? inheritedAccent
+  }
 
   func makeBody(configuration: Configuration) -> some View {
     Button {
@@ -209,6 +218,7 @@ extension FlowingCheckbox where Label == Text {
   public init(
     _ title: String,
     isOn: Binding<Bool>,
+    accent: PreferencesAccent? = nil,
     contentAlignment: FlowingCheckboxContentAlignment = .leading,
     indicatorPlacement: FlowingCheckboxIndicatorPlacement = .leading,
     widthPolicy: FlowingCheckboxWidthPolicy = .fill,
@@ -216,6 +226,7 @@ extension FlowingCheckbox where Label == Text {
   ) {
     self.init(
       isOn: isOn,
+      accent: accent,
       contentAlignment: contentAlignment,
       indicatorPlacement: indicatorPlacement,
       widthPolicy: widthPolicy,
@@ -250,6 +261,7 @@ extension FlowingCheckbox where Label == FlowingCheckboxIconLabel {
     _ title: String,
     systemImage: String,
     isOn: Binding<Bool>,
+    accent: PreferencesAccent? = nil,
     contentAlignment: FlowingCheckboxContentAlignment = .leading,
     indicatorPlacement: FlowingCheckboxIndicatorPlacement = .leading,
     widthPolicy: FlowingCheckboxWidthPolicy = .fill,
@@ -257,6 +269,7 @@ extension FlowingCheckbox where Label == FlowingCheckboxIconLabel {
   ) {
     self.init(
       isOn: isOn,
+      accent: accent,
       contentAlignment: contentAlignment,
       indicatorPlacement: indicatorPlacement,
       widthPolicy: widthPolicy,
