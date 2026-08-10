@@ -12,12 +12,31 @@ struct ControlsShowcase: View {
   @State private var eyeSelected = true
   @State private var boltSelected = false
   @State private var hareSelected = true
+  @State private var segmentSelection = ExampleSelection.second
+  @State private var selectedTag = "foreground"
+  @State private var buttonPressCount = 0
+
+  private let controlTags = [
+    ExampleLabel("FlowingCheckbox"),
+    ExampleLabel("FlowingMultiSelect"),
+    ExampleLabel("FlowingConnectedSegmentedControl"),
+    ExampleLabel("FlowingChip"),
+    ExampleLabel("FlowingTag"),
+    ExampleLabel("FlowingSelectableTag"),
+    ExampleLabel("FlowingSoftButtonStyle"),
+  ]
+
+  private let selectableTags = ["fill", "foreground", "wash", "veil", "hairline"]
 
   var body: some View {
     PreferencesPaneStack {
       checkboxComponents
       multiSelectComponents
       iconCheckboxComponents
+      segmentedControlComponents
+      pillComponents
+      layoutComponents
+      buttonStyleComponents
     }
   }
 
@@ -117,7 +136,7 @@ struct ControlsShowcase: View {
   private var iconCheckboxComponents: some View {
     PreferencesSection(
       "Icon Checkbox",
-      footer: "FlowingCheckbox accepts an SF Symbol and can place its indicator at either semantic edge."
+      footer: "Each icon option can provide its own accent and place the indicator at either semantic edge."
     ) {
       FlowingMultiSelect(
         indicatorPlacement: .trailing,
@@ -156,6 +175,93 @@ struct ControlsShowcase: View {
         isEnabled: false
       ),
     ]
+  }
+
+  private var segmentedControlComponents: some View {
+    PreferencesSection(
+      "Connected Segmented Control",
+      footer: "The standalone control supports keyboard navigation, RTL layout, and accessibility adjustment."
+    ) {
+      FlowingConnectedSegmentedControl(
+        label: "Preview size",
+        selection: $segmentSelection,
+        options: [
+          FlowingSegmentOption(.first, label: "Small"),
+          FlowingSegmentOption(.second, label: "Medium"),
+          FlowingSegmentOption(.third, label: "Large"),
+        ]
+      )
+      .frame(maxWidth: 320)
+      .padding(13)
+    }
+  }
+
+  private var pillComponents: some View {
+    PreferencesSection(
+      "Pills",
+      footer: "Tags and selectable tags can be placed directly or composed inside a wrapping grid."
+    ) {
+      VStack(alignment: .leading, spacing: 12) {
+        FlowingWrappingGrid(items: controlTags) { item in
+          FlowingTag(item.id)
+        }
+        FlowingWrappingGrid(items: selectableTags.map(ExampleLabel.init)) { item in
+          FlowingSelectableTag(
+            item.id,
+            isSelected: selectedTag == item.id
+          ) {
+            selectedTag = item.id
+          }
+        }
+      }
+      .padding(13)
+    }
+  }
+
+  private var layoutComponents: some View {
+    PreferencesSection(
+      "Grids",
+      footer: "Wrapping and adaptive grids contain no Preferences-specific padding or row assumptions."
+    ) {
+      VStack(alignment: .leading, spacing: 14) {
+        componentMode("Wrapping") {
+          FlowingWrappingGrid(items: selectableTags.map(ExampleLabel.init)) { item in
+            FlowingTag(item.id)
+          }
+        }
+        componentMode("Adaptive") {
+          FlowingAdaptiveGrid(
+            items: selectableTags.map(ExampleLabel.init),
+            minimumWidth: 88
+          ) { item in
+            FlowingChip(item.id.capitalized) {
+              selectedTag = item.id
+            }
+          }
+        }
+      }
+      .padding(13)
+    }
+  }
+
+  private var buttonStyleComponents: some View {
+    PreferencesSection(
+      "Button Style",
+      footer: "FlowingSoftButtonStyle works with any SwiftUI Button label."
+    ) {
+      HStack(spacing: 8) {
+        Button("Quiet · \(buttonPressCount)") {
+          buttonPressCount += 1
+        }
+        .buttonStyle(FlowingSoftButtonStyle())
+
+        Button("Prominent") {
+          buttonPressCount += 1
+        }
+        .buttonStyle(FlowingSoftButtonStyle(isProminent: true))
+      }
+      .padding(13)
+    }
   }
 
   private func componentMode<Content: View>(

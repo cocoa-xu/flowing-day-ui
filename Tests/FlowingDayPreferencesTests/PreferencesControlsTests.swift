@@ -222,46 +222,6 @@ final class PreferencesControlsTests: XCTestCase {
     XCTAssertTrue(state.value)
   }
 
-  func testConnectedSegmentNavigationWrapsInBothDirections() {
-    let values = ["first", "second", "third"]
-
-    XCTAssertEqual(
-      PreferencesConnectedSegmentedControlNavigation.destination(
-        in: values,
-        from: "third",
-        offset: 1
-      ),
-      "first"
-    )
-    XCTAssertEqual(
-      PreferencesConnectedSegmentedControlNavigation.destination(
-        in: values,
-        from: "first",
-        offset: -1
-      ),
-      "third"
-    )
-  }
-
-  func testConnectedSegmentNavigationStartsAtTheNearestBoundaryForAnUnknownSelection() {
-    XCTAssertEqual(
-      PreferencesConnectedSegmentedControlNavigation.destination(
-        in: ["first", "second", "third"],
-        from: "unknown",
-        offset: 1
-      ),
-      "first"
-    )
-    XCTAssertEqual(
-      PreferencesConnectedSegmentedControlNavigation.destination(
-        in: ["first", "second", "third"],
-        from: "unknown",
-        offset: -1
-      ),
-      "third"
-    )
-  }
-
   @MainActor
   func testConnectedSegmentedRowUsesCompactRowHeight() {
     let height = fittingHeight(

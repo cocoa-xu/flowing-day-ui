@@ -957,141 +957,6 @@ public struct PreferencesSegmentedRow<Value: Hashable>: View {
   }
 }
 
-enum PreferencesConnectedSegmentedControlMetrics {
-  static let horizontalInset: CGFloat = 9
-  static let verticalInset: CGFloat = 6
-  static let containerInset: CGFloat = 2
-  static let dividerHeight: CGFloat = 14
-  static let disabledOpacity = 0.42
-}
-
-enum PreferencesConnectedSegmentedControlNavigation {
-  static func destination<Value: Equatable>(
-    in values: [Value],
-    from currentValue: Value,
-    offset: Int
-  ) -> Value? {
-    guard !values.isEmpty, offset != 0 else { return nil }
-    guard let currentIndex = values.firstIndex(of: currentValue) else {
-      return offset > 0 ? values.first : values.last
-    }
-    let normalizedOffset = (offset % values.count + values.count) % values.count
-    let destinationIndex = (currentIndex + normalizedOffset) % values.count
-    return values[destinationIndex]
-  }
-}
-
-public struct PreferencesConnectedSegmentedControl<Value: Hashable>: View {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Environment(\.isEnabled) private var isEnabled
-  @Environment(\.layoutDirection) private var layoutDirection
-  @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesSurfaces) private var surfaces
-  @FocusState private var hasKeyboardFocus: Bool
-  @Namespace private var selectionNamespace
-  private let label: String
-  @Binding private var selection: Value
-  private let options: [PreferencesPopupOption<Value>]
-
-  public init(
-    label: String,
-    selection: Binding<Value>,
-    options: [PreferencesPopupOption<Value>]
-  ) {
-    precondition(!options.isEmpty)
-    precondition(Set(options.map(\.id)).count == options.count)
-    self.label = label
-    _selection = selection
-    self.options = options
-  }
-
-  public var body: some View {
-    HStack(spacing: 0) {
-      ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
-        PreferencesConnectedSegmentButton(
-          title: option.label,
-          isSelected: selection == option.value,
-          isFocused: hasKeyboardFocus && selection == option.value,
-          selectionNamespace: selectionNamespace
-        ) {
-          selection = option.value
-          hasKeyboardFocus = true
-        }
-        .overlay(alignment: .trailing) {
-          if index < options.index(before: options.endIndex) {
-            Rectangle()
-              .fill(PreferencesPalette.hairline)
-              .frame(width: 1, height: PreferencesConnectedSegmentedControlMetrics.dividerHeight)
-              .opacity(showsDivider(after: index) ? 1 : 0)
-          }
-        }
-      }
-    }
-    .padding(PreferencesConnectedSegmentedControlMetrics.containerInset)
-    .background(surfaces.control, in: containerShape)
-    .overlay {
-      containerShape.strokeBorder(PreferencesPalette.hairline)
-    }
-    .opacity(isEnabled ? 1 : PreferencesConnectedSegmentedControlMetrics.disabledOpacity)
-    .focusable()
-    .focused($hasKeyboardFocus)
-    .onMoveCommand(perform: moveSelection)
-    .accessibilityElement(children: .contain)
-    .accessibilityLabel(label)
-    .accessibilityAdjustableAction { direction in
-      switch direction {
-      case .increment:
-        select(offset: 1)
-      case .decrement:
-        select(offset: -1)
-      @unknown default:
-        break
-      }
-    }
-    .animation(
-      reduceMotion ? nil : .easeOut(duration: PreferencesMotion.selection),
-      value: selection
-    )
-  }
-
-  private var containerShape: RoundedRectangle {
-    RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
-  }
-
-  private func showsDivider(after index: Int) -> Bool {
-    selection != options[index].value && selection != options[index + 1].value
-  }
-
-  private func moveSelection(_ direction: MoveCommandDirection) {
-    let forwardOffset = layoutDirection == .leftToRight ? 1 : -1
-    switch direction {
-    case .left:
-      select(offset: -forwardOffset)
-    case .right:
-      select(offset: forwardOffset)
-    case .up:
-      select(offset: -1)
-    case .down:
-      select(offset: 1)
-    default:
-      break
-    }
-  }
-
-  private func select(offset: Int) {
-    guard isEnabled,
-      let destination = PreferencesConnectedSegmentedControlNavigation.destination(
-        in: options.map(\.value),
-        from: selection,
-        offset: offset
-      )
-    else {
-      return
-    }
-    selection = destination
-  }
-}
-
 public struct PreferencesConnectedSegmentedRow<Value: Hashable>: View {
   private let symbol: String?
   private let title: String
@@ -1119,78 +984,15 @@ public struct PreferencesConnectedSegmentedRow<Value: Hashable>: View {
 
   public var body: some View {
     PreferencesRow(symbol: symbol, title: title, caption: caption) {
-      PreferencesConnectedSegmentedControl(
+      FlowingConnectedSegmentedControl(
         label: title,
         selection: $selection,
-        options: options
+        options: options.map {
+          FlowingSegmentOption($0.value, label: $0.label)
+        }
       )
       .frame(width: controlWidth)
     }
-  }
-}
-
-private struct PreferencesConnectedSegmentButton: View {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Environment(\.isEnabled) private var isEnabled
-  @Environment(\.preferencesAccent) private var accent
-  @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesStrings) private var strings
-  @Environment(\.preferencesTypography) private var typography
-  @State private var isHovering = false
-  let title: String
-  let isSelected: Bool
-  let isFocused: Bool
-  let selectionNamespace: Namespace.ID
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) {
-      ZStack {
-        if isSelected {
-          selectionShape
-            .fill(accent.wash)
-            .overlay {
-              selectionShape.strokeBorder(accent.foreground.opacity(0.22))
-            }
-            .matchedGeometryEffect(id: "selection", in: selectionNamespace)
-        } else if isHovering && isEnabled {
-          selectionShape.fill(accent.veil)
-        }
-        Text(title)
-          .font(typography.selectionLabel.font)
-          .foregroundStyle(isSelected ? accent.foreground : PreferencesPalette.muted)
-          .lineLimit(1)
-          .minimumScaleFactor(0.72)
-          .padding(.horizontal, PreferencesConnectedSegmentedControlMetrics.horizontalInset)
-          .padding(.vertical, PreferencesConnectedSegmentedControlMetrics.verticalInset)
-          .frame(maxWidth: .infinity)
-      }
-      .contentShape(Rectangle())
-      .overlay {
-        if isFocused {
-          selectionShape.strokeBorder(accent.fill, lineWidth: 2)
-        }
-      }
-    }
-    .buttonStyle(.plain)
-    .onHover { isHovering = $0 }
-    .accessibilityLabel(title)
-    .accessibilityValue(isSelected ? strings.selected : strings.notSelected)
-    .accessibilityAddTraits(isSelected ? .isSelected : [])
-    .animation(
-      reduceMotion ? nil : .easeOut(duration: PreferencesMotion.hover),
-      value: isHovering
-    )
-  }
-
-  private var selectionShape: RoundedRectangle {
-    RoundedRectangle(
-      cornerRadius: max(
-        0,
-        metrics.controlRadius - PreferencesConnectedSegmentedControlMetrics.containerInset
-      ),
-      style: .continuous
-    )
   }
 }
 
@@ -1446,7 +1248,7 @@ public struct PreferencesButtonRow: View {
   public var body: some View {
     PreferencesRow(symbol: symbol, title: title, caption: caption) {
       Button(buttonTitle, action: action)
-        .buttonStyle(PreferencesSoftButtonStyle())
+        .buttonStyle(FlowingSoftButtonStyle())
     }
   }
 }
@@ -1478,7 +1280,7 @@ public struct PreferencesLinkRow: View {
   public var body: some View {
     PreferencesRow(symbol: symbol, title: title, caption: caption) {
       Link(buttonTitle, destination: destination)
-        .buttonStyle(PreferencesSoftButtonStyle())
+        .buttonStyle(FlowingSoftButtonStyle())
         .help(help)
     }
   }
@@ -1616,130 +1418,6 @@ public struct PreferencesEmptyRow: View {
   }
 }
 
-public struct PreferencesChip: View {
-  @Environment(\.preferencesAccent) private var accent
-  @Environment(\.preferencesTypography) private var typography
-  @State private var isHovering = false
-  private let title: String
-  private let action: () -> Void
-
-  public init(_ title: String, action: @escaping () -> Void) {
-    self.title = title
-    self.action = action
-  }
-
-  public var body: some View {
-    Button(action: action) {
-      Text(title)
-        .font(typography.selectionLabel.font)
-        .foregroundStyle(accent.foreground)
-        .lineLimit(1)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 6)
-        .background(
-          isHovering ? accent.wash : accent.veil,
-          in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-        )
-    }
-    .buttonStyle(.plain)
-    .onHover { isHovering = $0 }
-  }
-}
-
-public struct PreferencesTag: View {
-  @Environment(\.preferencesAccent) private var accent
-  @Environment(\.preferencesTypography) private var typography
-  private let title: String
-
-  public init(_ title: String) {
-    self.title = title
-  }
-
-  public var body: some View {
-    Text(title)
-      .font(typography.tag.font)
-      .foregroundStyle(accent.foreground)
-      .lineLimit(1)
-      .fixedSize(horizontal: true, vertical: false)
-      .padding(.horizontal, 10)
-      .padding(.vertical, 6)
-      .background(accent.veil, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-  }
-}
-
-public struct PreferencesSelectableTag: View {
-  @Environment(\.preferencesAccent) private var accent
-  @Environment(\.preferencesStrings) private var strings
-  @Environment(\.preferencesTypography) private var typography
-  @State private var isHovering = false
-  private let title: String
-  private let isSelected: Bool
-  private let inactiveAccent: PreferencesAccent?
-  private let action: () -> Void
-
-  public init(
-    _ title: String,
-    isSelected: Bool,
-    inactiveAccent: PreferencesAccent? = nil,
-    action: @escaping () -> Void
-  ) {
-    self.title = title
-    self.isSelected = isSelected
-    self.inactiveAccent = inactiveAccent
-    self.action = action
-  }
-
-  public var body: some View {
-    Button(action: action) {
-      Text(title)
-        .font(typography.tag.font)
-        .foregroundStyle(foreground)
-        .lineLimit(1)
-        .fixedSize(horizontal: true, vertical: false)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(background, in: shape)
-        .overlay {
-          shape.strokeBorder(border, lineWidth: 1)
-        }
-    }
-    .buttonStyle(.plain)
-    .onHover { isHovering = $0 }
-    .accessibilityValue(isSelected ? strings.on : strings.off)
-    .animation(.easeOut(duration: PreferencesMotion.selection), value: isSelected)
-    .animation(.easeOut(duration: PreferencesMotion.hover), value: isHovering)
-  }
-
-  private var inactive: PreferencesAccent {
-    inactiveAccent ?? accent
-  }
-
-  private var foreground: Color {
-    if isSelected {
-      return accent.foreground
-    }
-    return inactive.foreground.opacity(isHovering ? 0.8 : 0.62)
-  }
-
-  private var background: Color {
-    if isSelected {
-      return isHovering ? accent.wash : accent.veil
-    }
-    return isHovering ? inactive.wash : inactive.veil
-  }
-
-  private var border: Color {
-    if isSelected {
-      return accent.fill.opacity(isHovering ? 0.35 : 0.24)
-    }
-    return inactive.fill.opacity(isHovering ? 0.24 : 0.12)
-  }
-
-  private var shape: RoundedRectangle {
-    RoundedRectangle(cornerRadius: 8, style: .continuous)
-  }
-}
-
 public struct PreferencesFlowGrid<Item: Identifiable, Label: View>: View {
   @Environment(\.preferencesMetrics) private var metrics
   private let items: [Item]
@@ -1757,71 +1435,9 @@ public struct PreferencesFlowGrid<Item: Identifiable, Label: View>: View {
   }
 
   public var body: some View {
-    PreferencesWrappingLayout(spacing: spacing) {
-      ForEach(items) { label($0) }
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
+    FlowingWrappingGrid(items: items, spacing: spacing, label: label)
     .padding(.horizontal, metrics.rowInset)
     .padding(.vertical, 13)
-  }
-}
-
-private struct PreferencesWrappingLayout: Layout {
-  let spacing: CGFloat
-
-  func sizeThatFits(
-    proposal: ProposedViewSize,
-    subviews: Subviews,
-    cache: inout ()
-  ) -> CGSize {
-    layout(
-      subviews: subviews,
-      width: proposal.width ?? .greatestFiniteMagnitude
-    ).size
-  }
-
-  func placeSubviews(
-    in bounds: CGRect,
-    proposal: ProposedViewSize,
-    subviews: Subviews,
-    cache: inout ()
-  ) {
-    let result = layout(subviews: subviews, width: bounds.width)
-    for (index, origin) in result.origins.enumerated() {
-      subviews[index].place(
-        at: CGPoint(x: bounds.minX + origin.x, y: bounds.minY + origin.y),
-        proposal: .unspecified
-      )
-    }
-  }
-
-  private func layout(
-    subviews: Subviews,
-    width: CGFloat
-  ) -> (size: CGSize, origins: [CGPoint]) {
-    var origins: [CGPoint] = []
-    var x: CGFloat = 0
-    var y: CGFloat = 0
-    var rowHeight: CGFloat = 0
-    var usedWidth: CGFloat = 0
-
-    for subview in subviews {
-      let size = subview.sizeThatFits(.unspecified)
-      if x > 0, x + size.width > width {
-        x = 0
-        y += rowHeight + spacing
-        rowHeight = 0
-      }
-      origins.append(CGPoint(x: x, y: y))
-      x += size.width + spacing
-      rowHeight = max(rowHeight, size.height)
-      usedWidth = max(usedWidth, x - spacing)
-    }
-
-    return (
-      CGSize(width: min(usedWidth, width), height: y + rowHeight),
-      origins
-    )
   }
 }
 
@@ -1842,49 +1458,8 @@ public struct PreferencesGrid<Item: Identifiable, Label: View>: View {
   }
 
   public var body: some View {
-    LazyVGrid(
-      columns: [GridItem(.adaptive(minimum: minimumWidth), spacing: 7)],
-      spacing: 7
-    ) {
-      ForEach(items) { label($0) }
-    }
+    FlowingAdaptiveGrid(items: items, minimumWidth: minimumWidth, label: label)
     .padding(.horizontal, metrics.rowInset)
     .padding(.vertical, 13)
-  }
-}
-
-public struct PreferencesSoftButtonStyle: ButtonStyle {
-  @Environment(\.preferencesAccent) private var accent
-  @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesTypography) private var typography
-  private let isProminent: Bool
-
-  public init(isProminent: Bool = false) {
-    self.isProminent = isProminent
-  }
-
-  public func makeBody(configuration: Configuration) -> some View {
-    configuration.label
-      .font(typography.buttonLabel.font)
-      .foregroundStyle(
-        isProminent
-          ? AnyShapeStyle(Color.white)
-          : AnyShapeStyle(accent.foreground)
-      )
-      .padding(.horizontal, 12)
-      .padding(.vertical, 5)
-      .background {
-        RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
-          .fill(
-            isProminent
-              ? AnyShapeStyle(accent.fill)
-              : AnyShapeStyle(accent.veil)
-          )
-      }
-      .overlay {
-        RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
-          .strokeBorder(isProminent ? Color.clear : PreferencesPalette.hairline)
-      }
-      .opacity(configuration.isPressed ? 0.6 : 1)
   }
 }

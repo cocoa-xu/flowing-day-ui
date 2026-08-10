@@ -339,28 +339,7 @@ struct PreferencesComponentsShowcase: View {
   @State private var betaSelected = false
   @State private var lockedSelected = false
   @State private var expanded = false
-  @State private var selectedTag = "fill"
   @State private var pressCount = 0
-
-  private let componentTags = [
-    ExampleLabel("PreferencesRow"),
-    ExampleLabel("PreferencesSlider"),
-    ExampleLabel("PreferencesChip"),
-    ExampleLabel("PreferencesTag"),
-    ExampleLabel("PreferencesGrid"),
-    ExampleLabel("PreferencesFlowGrid"),
-    ExampleLabel("PreferencesEmptyRow"),
-    ExampleLabel("PreferencesValueRow"),
-    ExampleLabel("PreferencesLinkRow"),
-    ExampleLabel("PreferencesButtonRow"),
-    ExampleLabel("PreferencesExpandableRow"),
-    ExampleLabel("PreferencesSelectableTag"),
-    ExampleLabel("PreferencesColorPickerRow"),
-    ExampleLabel("PreferencesSearchPickerRow"),
-    ExampleLabel("PreferencesSoftButtonStyle"),
-  ]
-
-  private let selectableTags = ["fill", "foreground", "wash", "veil", "hairline"]
 
   var body: some View {
     PreferencesPaneStack {
@@ -368,7 +347,6 @@ struct PreferencesComponentsShowcase: View {
       disclosureComponents
       searchComponent
       selectionComponents
-      pillComponents
       gridComponents
     }
   }
@@ -517,34 +495,6 @@ struct PreferencesComponentsShowcase: View {
     ]
   }
 
-  private var pillComponents: some View {
-    PreferencesSection(
-      "Pills",
-      footer: "PreferencesFlowGrid wraps static and selectable tags at the available width."
-    ) {
-      PreferencesRow(
-        title: "PreferencesTag",
-        caption: "Static, monospaced labels in a PreferencesFlowGrid."
-      )
-      PreferencesFlowGrid(items: componentTags) {
-        PreferencesTag($0.id)
-      }
-      PreferencesRowSeparator()
-      PreferencesRow(
-        title: "PreferencesSelectableTag",
-        caption: "The owner keeps selection state."
-      )
-      PreferencesFlowGrid(items: selectableTags.map(ExampleLabel.init)) { item in
-        PreferencesSelectableTag(
-          item.id,
-          isSelected: selectedTag == item.id
-        ) {
-          selectedTag = item.id
-        }
-      }
-    }
-  }
-
   private var gridComponents: some View {
     PreferencesSection(
       "Grid",
@@ -587,7 +537,7 @@ private struct ExampleAccentFamilyGrid: View {
       ForEach(0..<family.displaySlotCount, id: \.self) { index in
         if family.accents.indices.contains(index) {
           let accent = family.accents[index]
-          PreferencesChip(accent.title) {
+          FlowingChip(accent.title) {
             selection = accent
           }
           .preferencesAccent(accent.value(customColor: customColor))
