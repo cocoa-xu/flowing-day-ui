@@ -327,6 +327,7 @@ struct IconsShowcase: View {
 }
 
 struct ComponentsShowcase: View {
+  @Environment(\.preferencesTypography) private var typography
   @Binding var accent: ExampleAccent
   @State private var switchValue = true
   @State private var popupValue = ExampleSelection.second
@@ -387,45 +388,49 @@ struct ComponentsShowcase: View {
       "Checkbox",
       footer: "Checkboxes can share available width or fit their content up to a configurable limit."
     ) {
-      VStack(alignment: .leading, spacing: 10) {
-        HStack(spacing: 8) {
-          FlowingCheckbox(
-            "Leading",
-            isOn: $leadingCheckbox,
-            contentAlignment: .leading
-          )
-          FlowingCheckbox(
-            "Center",
-            isOn: $centeredCheckbox,
-            contentAlignment: .center
-          )
-          FlowingCheckbox(
-            "Trailing",
-            isOn: $trailingCheckbox,
-            contentAlignment: .trailing
-          )
+      VStack(alignment: .leading, spacing: 14) {
+        componentMode("Equal width") {
+          HStack(spacing: 8) {
+            FlowingCheckbox(
+              "Leading",
+              isOn: $leadingCheckbox,
+              contentAlignment: .leading
+            )
+            FlowingCheckbox(
+              "Center",
+              isOn: $centeredCheckbox,
+              contentAlignment: .center
+            )
+            FlowingCheckbox(
+              "Trailing",
+              isOn: $trailingCheckbox,
+              contentAlignment: .trailing
+            )
+          }
         }
 
-        HStack(spacing: 8) {
-          FlowingCheckbox(
-            "Auto",
-            isOn: $leadingCheckbox,
-            widthPolicy: .fitContent()
-          )
-          FlowingCheckbox(
-            "Quiet",
-            isOn: $centeredCheckbox,
-            widthPolicy: .fitContent()
-          )
-          FlowingCheckbox(
-            "A very long option",
-            isOn: $trailingCheckbox,
-            widthPolicy: .fitContent(maximumWidth: 116),
-            truncationMode: .middle
-          )
+        componentMode("Fit content · Middle truncation") {
+          HStack(spacing: 8) {
+            FlowingCheckbox(
+              "Auto",
+              isOn: $leadingCheckbox,
+              widthPolicy: .fitContent()
+            )
+            FlowingCheckbox(
+              "Quiet",
+              isOn: $centeredCheckbox,
+              widthPolicy: .fitContent()
+            )
+            FlowingCheckbox(
+              "A very long option",
+              isOn: $trailingCheckbox,
+              widthPolicy: .fitContent(maximumWidth: 116),
+              truncationMode: .middle
+            )
+          }
         }
       }
-      .frame(width: 340)
+      .frame(maxWidth: .infinity, alignment: .leading)
       .padding(13)
     }
   }
@@ -435,27 +440,45 @@ struct ComponentsShowcase: View {
       "Multi-select",
       footer: "The standalone component supports horizontal or vertical layout with equal or content-sized items."
     ) {
-      VStack(alignment: .leading, spacing: 10) {
-        FlowingMultiSelect(
-          options: multiSelectOptions
-        )
+      VStack(alignment: .leading, spacing: 14) {
+        componentMode("Horizontal · Equal width") {
+          FlowingMultiSelect(
+            options: multiSelectOptions
+          )
+        }
 
-        FlowingMultiSelect(
-          itemWidthPolicy: .fitContent(maximumWidth: 112),
-          truncationMode: .middle,
-          options: multiSelectOptions
-        )
+        componentMode("Horizontal · Fit content") {
+          FlowingMultiSelect(
+            itemWidthPolicy: .fitContent(maximumWidth: 112),
+            truncationMode: .middle,
+            options: multiSelectOptions
+          )
+        }
 
-        FlowingMultiSelect(
-          axis: .vertical,
-          itemWidthPolicy: .fitContent(maximumWidth: 112),
-          contentAlignment: .leading,
-          options: multiSelectOptions
-        )
+        componentMode("Vertical · Equal width") {
+          FlowingMultiSelect(
+            axis: .vertical,
+            contentAlignment: .leading,
+            options: multiSelectOptions
+          )
+        }
       }
-      .frame(width: 340)
+      .frame(maxWidth: .infinity, alignment: .leading)
       .padding(13)
     }
+  }
+
+  private func componentMode<Content: View>(
+    _ title: String,
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Text(title.uppercased())
+        .font(typography.sectionHeader.font)
+        .foregroundStyle(.secondary)
+      content()
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   private var rowComponents: some View {
