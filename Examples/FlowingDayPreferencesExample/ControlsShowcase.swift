@@ -3,28 +3,39 @@ import SwiftUI
 
 struct ControlsShowcase: View {
   @Environment(\.preferencesTypography) private var typography
-  @State private var leadingCheckbox = true
-  @State private var centeredCheckbox = true
-  @State private var trailingCheckbox = true
+  @State private var checkboxValue = true
+  @State private var checkboxAlignment = FlowingCheckboxContentAlignment.leading
+  @State private var checkboxIndicator = FlowingCheckboxIndicatorPlacement.leading
+  @State private var checkboxWidth = ExampleControlWidth.fill
   @State private var switchValue = true
   @State private var sliderValue = 0.62
   @State private var selectValue = ExampleSelection.second
   @State private var searchValue = "Dublin"
   @State private var disclosureExpanded = true
-  @State private var horizontalEqualSelection = ExampleMultiSelectSelection()
-  @State private var horizontalFitSelection = ExampleMultiSelectSelection()
-  @State private var verticalEqualSelection = ExampleMultiSelectSelection()
-  @State private var verticalFitSelection = ExampleMultiSelectSelection()
+  @State private var multiSelectSelection = ExampleMultiSelectSelection()
+  @State private var multiSelectAxis = ExampleControlAxis.horizontal
+  @State private var multiSelectWidth = ExampleControlWidth.fill
+  @State private var multiSelectIndicator = FlowingCheckboxIndicatorPlacement.leading
   @State private var eyeSelected = true
   @State private var boltSelected = false
   @State private var hareSelected = true
-  @State private var textSegmentSelection = ExampleSelection.second
-  @State private var symbolSegmentSelection = ExampleSelection.second
-  @State private var connectedSegmentSelection = ExampleSelection.second
+  @State private var segmentSelection = ExampleSelection.second
+  @State private var segmentPresentation = ExampleSegmentPresentation.separated
+  @State private var segmentContent = ExampleSegmentContent.text
   @State private var selectedTag = "foreground"
   @State private var buttonPressCount = 0
   @State private var textFieldValue = "Flowing Day"
   @State private var colorValue = Color.pink
+  @State private var secureFieldValue = "gentle-morning"
+  @State private var textAreaValue = "A quiet place for longer thoughts."
+  @State private var inputKind = ExampleInputKind.text
+  @State private var inputEmphasis = FlowingTextFieldEmphasis.standard
+  @State private var inputHasIcon = true
+  @State private var iconButtonSelected = true
+  @State private var iconButtonEnabled = true
+  @State private var iconButtonEmphasis = FlowingIconButtonEmphasis.quiet
+  @State private var progressKind = ExampleProgressKind.determinate
+  @State private var progressValue = 0.62
 
   private let controlTags = [
     ExampleLabel("FlowingCheckbox"),
@@ -33,9 +44,13 @@ struct ControlsShowcase: View {
     ExampleLabel("FlowingSelect"),
     ExampleLabel("FlowingSearchPicker"),
     ExampleLabel("FlowingTextField"),
+    ExampleLabel("FlowingSecureField"),
+    ExampleLabel("FlowingTextArea"),
     ExampleLabel("FlowingColorPicker"),
     ExampleLabel("FlowingValueText"),
     ExampleLabel("FlowingEmptyState"),
+    ExampleLabel("FlowingIconButton"),
+    ExampleLabel("FlowingProgress"),
     ExampleLabel("FlowingDisclosure"),
     ExampleLabel("FlowingMultiSelect"),
     ExampleLabel("FlowingSegmentedControl"),
@@ -53,6 +68,8 @@ struct ControlsShowcase: View {
       switchAndSliderComponents
       selectComponents
       fieldAndValueComponents
+      iconButtonComponents
+      progressComponents
       emptyStateComponents
       disclosureComponents
       checkboxComponents
@@ -68,31 +85,115 @@ struct ControlsShowcase: View {
   private var fieldAndValueComponents: some View {
     PreferencesSection(
       "Fields & Values",
-      footer: "Fields, color selection, and read-only values compose without Preferences row assumptions."
+      footer: "Choose an input type and emphasis to inspect the same field family in place."
     ) {
-      VStack(alignment: .leading, spacing: 14) {
-        componentMode("Standard") {
-          FlowingTextField(
-            "Project name",
-            text: $textFieldValue,
-            systemImage: "text.cursor"
+      componentPlayground {
+        inputPreview
+      } options: {
+        playgroundOption("Input type") {
+          FlowingConnectedSegmentedControl(
+            label: "Input type",
+            selection: $inputKind,
+            options: ExampleInputKind.allCases.map {
+              FlowingSegmentOption($0, label: $0.title)
+            }
           )
         }
-        componentMode("Accented") {
-          FlowingTextField(
-            "Search",
-            text: $textFieldValue,
-            systemImage: "magnifyingglass",
-            emphasis: .accented
+        playgroundOption("Emphasis") {
+          FlowingConnectedSegmentedControl(
+            label: "Emphasis",
+            selection: $inputEmphasis,
+            options: FlowingTextFieldEmphasis.allCases.map {
+              FlowingSegmentOption($0, label: $0.title)
+            }
           )
         }
+        FlowingCheckbox(
+          "Leading icon",
+          isOn: $inputHasIcon,
+          widthPolicy: .fitContent()
+        )
         HStack(spacing: 16) {
           FlowingColorPicker("Color", selection: $colorValue)
           Spacer(minLength: 12)
           FlowingValueText("cocoa@flowing.day")
         }
       }
-      .padding(13)
+    }
+  }
+
+  private var iconButtonComponents: some View {
+    PreferencesSection(
+      "Icon Buttons",
+      footer: "Every icon-only action retains a tooltip and accessibility label."
+    ) {
+      componentPlayground {
+        FlowingIconButton(
+          "Pin",
+          systemImage: "pin",
+          emphasis: iconButtonEmphasis,
+          isSelected: iconButtonSelected
+        ) {
+          iconButtonSelected.toggle()
+        }
+        .disabled(!iconButtonEnabled)
+      } options: {
+        playgroundOption("Emphasis") {
+          FlowingConnectedSegmentedControl(
+            label: "Emphasis",
+            selection: $iconButtonEmphasis,
+            options: FlowingIconButtonEmphasis.allCases.map {
+              FlowingSegmentOption($0, label: $0.title)
+            }
+          )
+        }
+        HStack(spacing: 8) {
+          FlowingCheckbox(
+            "Selected",
+            isOn: $iconButtonSelected,
+            widthPolicy: .fitContent()
+          )
+          FlowingCheckbox(
+            "Enabled",
+            isOn: $iconButtonEnabled,
+            widthPolicy: .fitContent()
+          )
+        }
+      }
+    }
+  }
+
+  private var progressComponents: some View {
+    PreferencesSection(
+      "Progress",
+      footer: "The custom value track keeps its accent even when the window becomes inactive."
+    ) {
+      componentPlayground {
+        if progressKind == .determinate {
+          FlowingProgress("Preparing preview", value: progressValue)
+        } else {
+          FlowingProgress("Waiting for changes")
+        }
+      } options: {
+        playgroundOption("Progress type") {
+          FlowingConnectedSegmentedControl(
+            label: "Progress type",
+            selection: $progressKind,
+            options: ExampleProgressKind.allCases.map {
+              FlowingSegmentOption($0, label: $0.title)
+            }
+          )
+        }
+        FlowingDisclosureContent(isExpanded: progressKind == .determinate) {
+          HStack(spacing: 12) {
+            FlowingSlider(value: $progressValue, in: 0...1, step: 0.01)
+            Text(progressValue, format: .percent.precision(.fractionLength(0)))
+              .font(typography.value.font)
+              .foregroundStyle(.secondary)
+              .frame(width: 36, alignment: .trailing)
+          }
+        }
+      }
     }
   }
 
@@ -196,102 +297,103 @@ struct ControlsShowcase: View {
   private var checkboxComponents: some View {
     PreferencesSection(
       "Checkbox",
-      footer: "Checkboxes can share available width or fit their content up to a configurable limit."
+      footer: "Alignment, indicator placement, and width policy are independent choices."
     ) {
-      VStack(alignment: .leading, spacing: 14) {
-        componentMode("Equal width") {
-          HStack(spacing: 8) {
-            FlowingCheckbox(
-              "Leading",
-              isOn: $leadingCheckbox,
-              contentAlignment: .leading
-            )
-            FlowingCheckbox(
-              "Center",
-              isOn: $centeredCheckbox,
-              contentAlignment: .center
-            )
-            FlowingCheckbox(
-              "Trailing",
-              isOn: $trailingCheckbox,
-              contentAlignment: .trailing
+      componentPlayground {
+        FlowingCheckbox(
+          "Notifications",
+          isOn: $checkboxValue,
+          contentAlignment: checkboxAlignment,
+          indicatorPlacement: checkboxIndicator,
+          widthPolicy: checkboxWidth.checkboxPolicy
+        )
+      } options: {
+        playgroundOption("Content alignment") {
+          FlowingConnectedSegmentedControl(
+            label: "Content alignment",
+            selection: $checkboxAlignment,
+            options: FlowingCheckboxContentAlignment.allCases.map {
+              FlowingSegmentOption($0, label: $0.title)
+            }
+          )
+        }
+        HStack(spacing: 10) {
+          playgroundOption("Indicator") {
+            FlowingConnectedSegmentedControl(
+              label: "Indicator placement",
+              selection: $checkboxIndicator,
+              options: FlowingCheckboxIndicatorPlacement.allCases.map {
+                FlowingSegmentOption($0, label: $0.title)
+              }
             )
           }
-        }
-
-        componentMode("Fit content · Middle truncation") {
-          HStack(spacing: 8) {
-            FlowingCheckbox(
-              "Auto",
-              isOn: $leadingCheckbox,
-              widthPolicy: .fitContent()
-            )
-            FlowingCheckbox(
-              "Quiet",
-              isOn: $centeredCheckbox,
-              widthPolicy: .fitContent()
-            )
-            FlowingCheckbox(
-              "A very long option",
-              isOn: $trailingCheckbox,
-              widthPolicy: .fitContent(maximumWidth: 116),
-              truncationMode: .middle
+          playgroundOption("Width") {
+            FlowingConnectedSegmentedControl(
+              label: "Width policy",
+              selection: $checkboxWidth,
+              options: ExampleControlWidth.allCases.map {
+                FlowingSegmentOption($0, label: $0.title)
+              }
             )
           }
         }
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(13)
     }
   }
 
   private var multiSelectComponents: some View {
     PreferencesSection(
       "Multi-select",
-      footer: "The standalone component supports horizontal or vertical layout with equal or content-sized items."
+      footer: "One option model supports both axes, width policies, and indicator edges."
     ) {
-      VStack(alignment: .leading, spacing: 14) {
-        componentMode("Horizontal · Equal width") {
-          FlowingMultiSelect(
-            options: multiSelectOptions(selection: $horizontalEqualSelection)
-          )
+      componentPlayground {
+        FlowingMultiSelect(
+          axis: multiSelectAxis.axis,
+          itemWidthPolicy: multiSelectWidth.multiSelectPolicy,
+          contentAlignment: .leading,
+          indicatorPlacement: multiSelectIndicator,
+          truncationMode: .middle,
+          options: multiSelectOptions(selection: $multiSelectSelection)
+        )
+      } options: {
+        HStack(spacing: 10) {
+          playgroundOption("Axis") {
+            FlowingConnectedSegmentedControl(
+              label: "Axis",
+              selection: $multiSelectAxis,
+              options: ExampleControlAxis.allCases.map {
+                FlowingSegmentOption($0, label: $0.title)
+              }
+            )
+          }
+          playgroundOption("Width") {
+            FlowingConnectedSegmentedControl(
+              label: "Width policy",
+              selection: $multiSelectWidth,
+              options: ExampleControlWidth.allCases.map {
+                FlowingSegmentOption($0, label: $0.title)
+              }
+            )
+          }
         }
-
-        componentMode("Horizontal · Fit content") {
-          FlowingMultiSelect(
-            itemWidthPolicy: .fitContent(maximumWidth: 112),
-            truncationMode: .middle,
-            options: multiSelectOptions(selection: $horizontalFitSelection)
-          )
-        }
-
-        componentMode("Vertical · Equal width") {
-          FlowingMultiSelect(
-            axis: .vertical,
-            contentAlignment: .leading,
-            options: multiSelectOptions(selection: $verticalEqualSelection)
-          )
-        }
-
-        componentMode("Vertical · Fit content") {
-          FlowingMultiSelect(
-            axis: .vertical,
-            itemWidthPolicy: .fitContent(maximumWidth: 112),
-            contentAlignment: .leading,
-            truncationMode: .middle,
-            options: multiSelectOptions(selection: $verticalFitSelection)
+        playgroundOption("Indicator") {
+          FlowingConnectedSegmentedControl(
+            label: "Indicator placement",
+            selection: $multiSelectIndicator,
+            options: FlowingCheckboxIndicatorPlacement.allCases.map {
+              FlowingSegmentOption($0, label: $0.title)
+            }
           )
         }
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(13)
     }
   }
 
   private var iconCheckboxComponents: some View {
     PreferencesSection(
       "Icon Checkbox",
-      footer: "Each icon option can provide its own accent and place the indicator at either semantic edge."
+      footer: "Each icon option can provide its own accent and place the indicator "
+        + "at either semantic edge."
     ) {
       FlowingMultiSelect(
         contentAlignment: .leading,
@@ -338,38 +440,44 @@ struct ControlsShowcase: View {
   private var segmentedControlComponents: some View {
     PreferencesSection(
       "Segmented Controls",
-      footer: "Connected and separated controls share one option model, keyboard navigation, and accessibility behavior."
+      footer: "Connected and separated presentations share the same option model and selection."
     ) {
-      VStack(spacing: 12) {
-        FlowingSegmentedControl(
-          label: "Preview size",
-          selection: $textSegmentSelection,
-          options: [
-            FlowingSegmentOption(.first, label: "Small"),
-            FlowingSegmentOption(.second, label: "Medium"),
-            FlowingSegmentOption(.third, label: "Large"),
-          ]
-        )
-        FlowingSegmentedControl(
-          label: "Preview mode",
-          selection: $symbolSegmentSelection,
-          options: [
-            FlowingSegmentOption(.first, label: "List", systemImage: "list.bullet"),
-            FlowingSegmentOption(.second, label: "Grid", systemImage: "square.grid.2x2"),
-            FlowingSegmentOption(.third, label: "Canvas", systemImage: "point.3.connected.trianglepath.dotted"),
-          ]
-        )
-        FlowingConnectedSegmentedControl(
-          label: "Preview size",
-          selection: $connectedSegmentSelection,
-          options: [
-            FlowingSegmentOption(.first, label: "Small"),
-            FlowingSegmentOption(.second, label: "Medium"),
-            FlowingSegmentOption(.third, label: "Large"),
-          ]
-        )
+      componentPlayground {
+        if segmentPresentation == .connected {
+          FlowingConnectedSegmentedControl(
+            label: "Preview",
+            selection: $segmentSelection,
+            options: segmentOptions
+          )
+        } else {
+          FlowingSegmentedControl(
+            label: "Preview",
+            selection: $segmentSelection,
+            options: segmentOptions
+          )
+        }
+      } options: {
+        HStack(spacing: 10) {
+          playgroundOption("Presentation") {
+            FlowingConnectedSegmentedControl(
+              label: "Presentation",
+              selection: $segmentPresentation,
+              options: ExampleSegmentPresentation.allCases.map {
+                FlowingSegmentOption($0, label: $0.title)
+              }
+            )
+          }
+          playgroundOption("Content") {
+            FlowingConnectedSegmentedControl(
+              label: "Content",
+              selection: $segmentContent,
+              options: ExampleSegmentContent.allCases.map {
+                FlowingSegmentOption($0, label: $0.title)
+              }
+            )
+          }
+        }
       }
-      .padding(13)
     }
   }
 
@@ -398,7 +506,8 @@ struct ControlsShowcase: View {
   private var layoutComponents: some View {
     PreferencesSection(
       "Grids",
-      footer: "Wrapping and adaptive grids contain no Preferences-specific padding or row assumptions."
+      footer: "Wrapping and adaptive grids contain no Preferences-specific padding "
+        + "or row assumptions."
     ) {
       VStack(alignment: .leading, spacing: 14) {
         componentMode("Wrapping") {
@@ -441,6 +550,84 @@ struct ControlsShowcase: View {
     }
   }
 
+  @ViewBuilder
+  private var inputPreview: some View {
+    switch inputKind {
+    case .text:
+      FlowingTextField(
+        "Project name",
+        text: $textFieldValue,
+        systemImage: inputHasIcon ? "text.cursor" : nil,
+        emphasis: inputEmphasis
+      )
+    case .secure:
+      FlowingSecureField(
+        "Password",
+        text: $secureFieldValue,
+        systemImage: inputHasIcon ? "lock" : nil,
+        emphasis: inputEmphasis
+      )
+    case .multiline:
+      FlowingTextArea(
+        "Notes",
+        text: $textAreaValue,
+        systemImage: inputHasIcon ? "text.alignleft" : nil,
+        emphasis: inputEmphasis
+      )
+    }
+  }
+
+  private var segmentOptions: [FlowingSegmentOption<ExampleSelection>] {
+    switch segmentContent {
+    case .text:
+      [
+        FlowingSegmentOption(.first, label: "Small"),
+        FlowingSegmentOption(.second, label: "Medium"),
+        FlowingSegmentOption(.third, label: "Large"),
+      ]
+    case .symbols:
+      [
+        FlowingSegmentOption(.first, label: "List", systemImage: "list.bullet"),
+        FlowingSegmentOption(.second, label: "Grid", systemImage: "square.grid.2x2"),
+        FlowingSegmentOption(.third, label: "Columns", systemImage: "rectangle.split.3x1"),
+      ]
+    }
+  }
+
+  private func componentPlayground<Preview: View, Options: View>(
+    @ViewBuilder preview: () -> Preview,
+    @ViewBuilder options: () -> Options
+  ) -> some View {
+    VStack(alignment: .leading, spacing: 14) {
+      componentMode("Preview") {
+        preview()
+      }
+      Rectangle()
+        .fill(PreferencesPalette.hairline)
+        .frame(height: 1)
+      componentMode("Options") {
+        VStack(alignment: .leading, spacing: 10) {
+          options()
+        }
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(13)
+  }
+
+  private func playgroundOption<Content: View>(
+    _ title: String,
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    VStack(alignment: .leading, spacing: 5) {
+      Text(title)
+        .font(typography.rowCaption.font)
+        .foregroundStyle(.secondary)
+      content()
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
   private func componentMode<Content: View>(
     _ title: String,
     @ViewBuilder content: () -> Content
@@ -459,4 +646,95 @@ struct ExampleMultiSelectSelection: Equatable {
   var alpha = true
   var beta = false
   var locked = false
+}
+
+enum ExampleInputKind: String, CaseIterable, Hashable {
+  case text
+  case secure
+  case multiline
+
+  var title: String {
+    switch self {
+    case .text: "Text"
+    case .secure: "Secure"
+    case .multiline: "Multiline"
+    }
+  }
+}
+
+enum ExampleControlWidth: String, CaseIterable, Hashable {
+  case fill
+  case fit
+
+  var title: String {
+    switch self {
+    case .fill: "Fill"
+    case .fit: "Fit"
+    }
+  }
+
+  var checkboxPolicy: FlowingCheckboxWidthPolicy {
+    switch self {
+    case .fill: .fill
+    case .fit: .fitContent(maximumWidth: 160)
+    }
+  }
+
+  var multiSelectPolicy: FlowingMultiSelectItemWidthPolicy {
+    switch self {
+    case .fill: .equal
+    case .fit: .fitContent(maximumWidth: 112)
+    }
+  }
+}
+
+enum ExampleControlAxis: String, CaseIterable, Hashable {
+  case horizontal
+  case vertical
+
+  var title: String { rawValue.capitalized }
+
+  var axis: Axis {
+    switch self {
+    case .horizontal: .horizontal
+    case .vertical: .vertical
+    }
+  }
+}
+
+enum ExampleSegmentPresentation: String, CaseIterable, Hashable {
+  case separated
+  case connected
+
+  var title: String { rawValue.capitalized }
+}
+
+enum ExampleSegmentContent: String, CaseIterable, Hashable {
+  case text
+  case symbols
+
+  var title: String { rawValue.capitalized }
+}
+
+enum ExampleProgressKind: String, CaseIterable, Hashable {
+  case determinate
+  case ongoing
+
+  var title: String { rawValue.capitalized }
+}
+
+extension FlowingTextFieldEmphasis {
+  fileprivate var title: String { rawValue.capitalized }
+}
+
+extension FlowingIconButtonEmphasis {
+  fileprivate var title: String { rawValue.capitalized }
+}
+
+extension FlowingCheckboxContentAlignment {
+  fileprivate var title: String { rawValue.capitalized }
+}
+
+extension FlowingCheckboxIndicatorPlacement {
+  fileprivate var title: String { rawValue.capitalized }
 }

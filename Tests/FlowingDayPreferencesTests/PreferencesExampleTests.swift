@@ -34,15 +34,40 @@ final class PreferencesExampleTests: XCTestCase {
     )
   }
 
-  func testMultiSelectShowcasesCanKeepIndependentState() {
-    var first = ExampleMultiSelectSelection()
-    let second = ExampleMultiSelectSelection()
+  func testControlPlaygroundsExposeTheirPublicConfigurationAxes() {
+    XCTAssertEqual(
+      ExampleInputKind.allCases,
+      [.text, .secure, .multiline]
+    )
+    XCTAssertEqual(
+      ExampleControlAxis.allCases,
+      [.horizontal, .vertical]
+    )
+    XCTAssertEqual(
+      ExampleSegmentPresentation.allCases,
+      [.separated, .connected]
+    )
+    XCTAssertEqual(
+      ExampleSegmentContent.allCases,
+      [.text, .symbols]
+    )
+    XCTAssertEqual(
+      ExampleProgressKind.allCases,
+      [.determinate, .ongoing]
+    )
+  }
 
-    first.alpha = false
-    first.beta = true
-
-    XCTAssertEqual(first, ExampleMultiSelectSelection(alpha: false, beta: true))
-    XCTAssertEqual(second, ExampleMultiSelectSelection())
+  func testControlPlaygroundWidthChoicesMapToLibraryPolicies() {
+    XCTAssertEqual(ExampleControlWidth.fill.checkboxPolicy, .fill)
+    XCTAssertEqual(
+      ExampleControlWidth.fit.checkboxPolicy,
+      .fitContent(maximumWidth: 160)
+    )
+    XCTAssertEqual(ExampleControlWidth.fill.multiSelectPolicy, .equal)
+    XCTAssertEqual(
+      ExampleControlWidth.fit.multiSelectPolicy,
+      .fitContent(maximumWidth: 112)
+    )
   }
 
   func testLayoutPresetsMatchTheLandingPage() {
