@@ -30,7 +30,10 @@ struct ControlsShowcase: View {
   @State private var textAreaValue = "A quiet place for longer thoughts."
   @State private var inputKind = ExampleInputKind.text
   @State private var inputEmphasis = FlowingTextFieldEmphasis.standard
+  @State private var inputValidation = ExampleInputValidation.helper
   @State private var inputHasIcon = true
+  @State private var dateValue = Date.now
+  @State private var dateComponents = FlowingDatePickerComponents.dateAndTime
   @State private var iconButtonSelected = true
   @State private var iconButtonEnabled = true
   @State private var iconButtonEmphasis = FlowingIconButtonEmphasis.quiet
@@ -53,6 +56,7 @@ struct ControlsShowcase: View {
     ExampleLabel("FlowingTextField"),
     ExampleLabel("FlowingSecureField"),
     ExampleLabel("FlowingTextArea"),
+    ExampleLabel("FlowingDatePicker"),
     ExampleLabel("FlowingColorPicker"),
     ExampleLabel("FlowingValueText"),
     ExampleLabel("FlowingEmptyState"),
@@ -73,6 +77,8 @@ struct ControlsShowcase: View {
     ExampleLabel("FlowingBadge"),
     ExampleLabel("FlowingCallout"),
     ExampleLabel("FlowingMenu"),
+    ExampleLabel("FlowingCard"),
+    ExampleLabel("FlowingSection"),
   ]
 
   private let selectableTags = ["fill", "foreground", "wash", "veil", "hairline"]
@@ -82,10 +88,12 @@ struct ControlsShowcase: View {
       switchAndSliderComponents
       selectComponents
       fieldAndValueComponents
+      dateAndTimeComponents
       iconButtonComponents
       progressComponents
       radioAndStepperComponents
       statusComponents
+      containerComponents
       menuAndSeparatorComponents
       emptyStateComponents
       disclosureComponents
@@ -245,6 +253,15 @@ struct ControlsShowcase: View {
             }
           )
         }
+        playgroundOption("Validation") {
+          FlowingConnectedSegmentedControl(
+            label: "Validation",
+            selection: $inputValidation,
+            options: ExampleInputValidation.allCases.map {
+              FlowingSegmentOption($0, label: $0.title)
+            }
+          )
+        }
         FlowingCheckbox(
           "Leading icon",
           isOn: $inputHasIcon,
@@ -254,6 +271,53 @@ struct ControlsShowcase: View {
           FlowingColorPicker("Color", selection: $colorValue)
           Spacer(minLength: 12)
           FlowingValueText("cocoa@flowing.day")
+        }
+      }
+    }
+  }
+
+  private var dateAndTimeComponents: some View {
+    PreferencesSection(
+      "Date & Time",
+      footer: "The wrapper preserves native date editing, locale formatting, and keyboard behavior."
+    ) {
+      componentPlayground {
+        FlowingDatePicker(
+          "Scheduled for",
+          selection: $dateValue,
+          components: dateComponents
+        )
+      } options: {
+        playgroundOption("Components") {
+          FlowingConnectedSegmentedControl(
+            label: "Date components",
+            selection: $dateComponents,
+            options: FlowingDatePickerComponents.allCases.map {
+              FlowingSegmentOption($0, label: $0.title)
+            }
+          )
+        }
+      }
+    }
+  }
+
+  private var containerComponents: some View {
+    FlowingSection(
+      "Cards & Sections",
+      footer: "Both containers work independently from Preferences pages and rows.",
+      contentInsets: EdgeInsets(top: 13, leading: 13, bottom: 13, trailing: 13)
+    ) {
+      HStack(spacing: 11) {
+        Image(systemName: "square.stack.3d.up")
+          .font(.system(size: 16, weight: .medium))
+          .foregroundStyle(.secondary)
+          .frame(width: 28, height: 28)
+        VStack(alignment: .leading, spacing: 2) {
+          Text("Composable surfaces")
+            .font(typography.rowTitle.font)
+          Text("Cards provide the surface; sections add hierarchy and supporting copy.")
+            .font(typography.rowCaption.font)
+            .foregroundStyle(.secondary)
         }
       }
     }
@@ -695,21 +759,27 @@ struct ControlsShowcase: View {
         "Project name",
         text: $textFieldValue,
         systemImage: inputHasIcon ? "text.cursor" : nil,
-        emphasis: inputEmphasis
+        emphasis: inputEmphasis,
+        supportingText: inputValidation.supportingText,
+        validation: inputValidation.validation
       )
     case .secure:
       FlowingSecureField(
         "Password",
         text: $secureFieldValue,
         systemImage: inputHasIcon ? "lock" : nil,
-        emphasis: inputEmphasis
+        emphasis: inputEmphasis,
+        supportingText: inputValidation.supportingText,
+        validation: inputValidation.validation
       )
     case .multiline:
       FlowingTextArea(
         "Notes",
         text: $textAreaValue,
         systemImage: inputHasIcon ? "text.alignleft" : nil,
-        emphasis: inputEmphasis
+        emphasis: inputEmphasis,
+        supportingText: inputValidation.supportingText,
+        validation: inputValidation.validation
       )
     }
   }
@@ -795,6 +865,28 @@ enum ExampleInputKind: String, CaseIterable, Hashable {
     case .text: "Text"
     case .secure: "Secure"
     case .multiline: "Multiline"
+    }
+  }
+}
+
+enum ExampleInputValidation: String, CaseIterable, Hashable {
+  case helper
+  case success
+  case warning
+  case error
+
+  var title: String { rawValue.capitalized }
+
+  var supportingText: String? {
+    self == .helper ? "Use a short, memorable name." : nil
+  }
+
+  var validation: FlowingFieldValidation {
+    switch self {
+    case .helper: .none
+    case .success: .success("Ready to use.")
+    case .warning: .warning("This value may be difficult to recognize.")
+    case .error: .error("Enter a value before continuing.")
     }
   }
 }
@@ -911,6 +1003,16 @@ extension FlowingCalloutPresentation {
 
 extension FlowingTextFieldEmphasis {
   fileprivate var title: String { rawValue.capitalized }
+}
+
+extension FlowingDatePickerComponents {
+  fileprivate var title: String {
+    switch self {
+    case .date: "Date"
+    case .time: "Time"
+    case .dateAndTime: "Both"
+    }
+  }
 }
 
 extension FlowingIconButtonEmphasis {
