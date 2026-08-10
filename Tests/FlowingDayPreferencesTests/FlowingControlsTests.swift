@@ -185,6 +185,77 @@ final class FlowingControlsTests: XCTestCase {
   }
 
   @MainActor
+  func testInputFamilySharesCompactSingleLineMetrics() {
+    let textHeight = fittingHeight(
+      FlowingTextField("Name", text: .constant("Flowing Day"))
+        .frame(width: 240)
+    )
+    let secureHeight = fittingHeight(
+      FlowingSecureField("Password", text: .constant("secret"))
+        .frame(width: 240)
+    )
+
+    XCTAssertEqual(textHeight, FlowingTextFieldMetrics.height, accuracy: 0.5)
+    XCTAssertEqual(secureHeight, textHeight, accuracy: 0.5)
+  }
+
+  @MainActor
+  func testTextAreaHonorsItsMinimumHeight() {
+    let height = fittingHeight(
+      FlowingTextArea(
+        "Notes",
+        text: .constant("A multiline value"),
+        minimumHeight: 100
+      )
+      .frame(width: 240)
+    )
+
+    XCTAssertGreaterThanOrEqual(height, 100)
+    XCTAssertEqual(FlowingTextArea.standardMinimumHeight, 84)
+  }
+
+  @MainActor
+  func testIconButtonEmphasesComposeAtOneControlSize() {
+    let height = fittingHeight(
+      HStack {
+        FlowingIconButton("Quiet", systemImage: "ellipsis") {}
+        FlowingIconButton(
+          "Standard",
+          systemImage: "slider.horizontal.3",
+          emphasis: .standard,
+          isSelected: true
+        ) {}
+        FlowingIconButton(
+          "Prominent",
+          systemImage: "plus",
+          emphasis: .prominent
+        ) {}
+      }
+    )
+
+    XCTAssertEqual(height, FlowingIconButtonMetrics.size, accuracy: 0.5)
+  }
+
+  func testProgressMathClampsAndRejectsInvalidInputs() {
+    XCTAssertEqual(FlowingProgressMath.fraction(value: -1, total: 4), 0)
+    XCTAssertEqual(FlowingProgressMath.fraction(value: 1, total: 4), 0.25)
+    XCTAssertEqual(FlowingProgressMath.fraction(value: 8, total: 4), 1)
+    XCTAssertEqual(FlowingProgressMath.fraction(value: .nan, total: 4), 0)
+    XCTAssertEqual(FlowingProgressMath.fraction(value: 1, total: 0), 0)
+  }
+
+  @MainActor
+  func testProgressSupportsDeterminateAndIndeterminatePresentations() {
+    let content = VStack {
+      FlowingProgress("Loading", value: 0.4)
+      FlowingProgress("Waiting")
+    }
+    .frame(width: 240)
+
+    XCTAssertGreaterThan(fittingHeight(content), 40)
+  }
+
+  @MainActor
   func testColorPickerPreservesOpacityConfiguration() {
     let opaque = FlowingColorPicker("Color", selection: .constant(.pink))
     let translucent = FlowingColorPicker(

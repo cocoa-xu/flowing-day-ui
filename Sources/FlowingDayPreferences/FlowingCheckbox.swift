@@ -1,6 +1,6 @@
 import SwiftUI
 
-public enum FlowingCheckboxContentAlignment: String, CaseIterable, Sendable {
+public enum FlowingCheckboxContentAlignment: String, CaseIterable, Hashable, Sendable {
   case leading
   case center
   case trailing
@@ -22,7 +22,7 @@ public enum FlowingCheckboxContentAlignment: String, CaseIterable, Sendable {
   }
 }
 
-public enum FlowingCheckboxIndicatorPlacement: String, CaseIterable, Sendable {
+public enum FlowingCheckboxIndicatorPlacement: String, CaseIterable, Hashable, Sendable {
   case leading
   case trailing
 }
@@ -66,8 +66,8 @@ private struct FlowingCheckboxIconStateKey: EnvironmentKey {
   static let defaultValue: FlowingCheckboxIconState? = nil
 }
 
-private extension EnvironmentValues {
-  var flowingCheckboxIconState: FlowingCheckboxIconState? {
+extension EnvironmentValues {
+  fileprivate var flowingCheckboxIconState: FlowingCheckboxIconState? {
     get { self[FlowingCheckboxIconStateKey.self] }
     set { self[FlowingCheckboxIconStateKey.self] = newValue }
   }
