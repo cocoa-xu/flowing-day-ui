@@ -22,9 +22,9 @@ struct AppearanceShowcase: View {
           controlWidth: 240,
           selection: $appearance,
           options: [
-            FlowingSelectOption(.system, label: "System"),
-            FlowingSelectOption(.light, label: "Light"),
-            FlowingSelectOption(.dark, label: "Dark"),
+            FlowingSegmentOption(.system, label: "System"),
+            FlowingSegmentOption(.light, label: "Light"),
+            FlowingSegmentOption(.dark, label: "Dark"),
           ]
         )
         separator
@@ -68,9 +68,9 @@ struct AppearanceShowcase: View {
           controlWidth: 260,
           selection: $corners,
           options: [
-            FlowingSelectOption(.soft, label: "Soft"),
-            FlowingSelectOption(.medium, label: "Medium"),
-            FlowingSelectOption(.sharp, label: "Sharp"),
+            FlowingSegmentOption(.soft, label: "Soft"),
+            FlowingSegmentOption(.medium, label: "Medium"),
+            FlowingSegmentOption(.sharp, label: "Sharp"),
           ]
         )
         separator
@@ -150,9 +150,9 @@ struct LayoutShowcase: View {
           controlWidth: 260,
           selection: $density,
           options: [
-            FlowingSelectOption(.compact, label: "Compact"),
-            FlowingSelectOption(.standard, label: "Default"),
-            FlowingSelectOption(.roomy, label: "Roomy"),
+            FlowingSegmentOption(.compact, label: "Compact"),
+            FlowingSegmentOption(.standard, label: "Default"),
+            FlowingSegmentOption(.roomy, label: "Roomy"),
           ]
         )
       }
@@ -167,8 +167,8 @@ struct LayoutShowcase: View {
           controlWidth: 240,
           selection: $contentLayout,
           options: [
-            FlowingSelectOption(.centered, label: "Centered"),
-            FlowingSelectOption(.fluid, label: "Fluid"),
+            FlowingSegmentOption(.centered, label: "Centered"),
+            FlowingSegmentOption(.fluid, label: "Fluid"),
           ]
         )
         PreferencesDependentRows(isVisible: contentLayout == .centered) {
@@ -177,9 +177,9 @@ struct LayoutShowcase: View {
             controlWidth: 240,
             selection: $contentWidth,
             options: [
-              FlowingSelectOption(.narrow, label: "560"),
-              FlowingSelectOption(.standard, label: "720"),
-              FlowingSelectOption(.wide, label: "860"),
+              FlowingSegmentOption(.narrow, label: "560"),
+              FlowingSegmentOption(.standard, label: "720"),
+              FlowingSegmentOption(.wide, label: "860"),
             ]
           )
         }
@@ -211,9 +211,9 @@ struct TypographyShowcase: View {
           controlWidth: 260,
           selection: $textScale,
           options: [
-            FlowingSelectOption(.small, label: "Small"),
-            FlowingSelectOption(.standard, label: "Default"),
-            FlowingSelectOption(.large, label: "Large"),
+            FlowingSegmentOption(.small, label: "Small"),
+            FlowingSegmentOption(.standard, label: "Default"),
+            FlowingSegmentOption(.large, label: "Large"),
           ]
         )
         PreferencesRowSeparator()
@@ -223,10 +223,10 @@ struct TypographyShowcase: View {
           controlWidth: 300,
           selection: $headingFace,
           options: [
-            FlowingSelectOption(.standard, label: "System"),
-            FlowingSelectOption(.rounded, label: "Rounded"),
-            FlowingSelectOption(.serif, label: "Serif"),
-            FlowingSelectOption(.monospaced, label: "Mono"),
+            FlowingSegmentOption(.standard, label: "System"),
+            FlowingSegmentOption(.rounded, label: "Rounded"),
+            FlowingSegmentOption(.serif, label: "Serif"),
+            FlowingSegmentOption(.monospaced, label: "Mono"),
           ]
         )
       }
@@ -454,24 +454,24 @@ struct PreferencesComponentsShowcase: View {
         title: "PreferencesSegmentedRow",
         controlWidth: 240,
         selection: $segmentedValue,
-        options: selectionOptions
+        options: segmentOptions
       )
       PreferencesRowSeparator()
       PreferencesConnectedSegmentedRow(
         title: "PreferencesConnectedSegmentedRow",
         controlWidth: 240,
         selection: $segmentedValue,
-        options: selectionOptions
+        options: segmentOptions
       )
       PreferencesRowSeparator()
-      PreferencesSymbolSegmentedRow(
-        title: "PreferencesSymbolSegmentedRow",
+      PreferencesSegmentedRow(
+        title: "PreferencesSegmentedRow · Symbols",
         controlWidth: 180,
         selection: $symbolValue,
         options: [
-          PreferencesSymbolSegmentOption(.eye, label: "Eye", symbol: "eye"),
-          PreferencesSymbolSegmentOption(.bolt, label: "Bolt", symbol: "bolt"),
-          PreferencesSymbolSegmentOption(.hare, label: "Hare", symbol: "hare"),
+          FlowingSegmentOption(.eye, label: "Eye", systemImage: "eye"),
+          FlowingSegmentOption(.bolt, label: "Bolt", systemImage: "bolt"),
+          FlowingSegmentOption(.hare, label: "Hare", systemImage: "hare"),
         ]
       )
       PreferencesRowSeparator()
@@ -517,6 +517,14 @@ struct PreferencesComponentsShowcase: View {
       FlowingSelectOption(.first, label: "One"),
       FlowingSelectOption(.second, label: "Two"),
       FlowingSelectOption(.third, label: "Three"),
+    ]
+  }
+
+  private var segmentOptions: [FlowingSegmentOption<ExampleSelection>] {
+    [
+      FlowingSegmentOption(.first, label: "One"),
+      FlowingSegmentOption(.second, label: "Two"),
+      FlowingSegmentOption(.third, label: "Three"),
     ]
   }
 }

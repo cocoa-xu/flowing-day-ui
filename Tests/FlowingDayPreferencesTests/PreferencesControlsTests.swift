@@ -226,8 +226,8 @@ final class PreferencesControlsTests: XCTestCase {
         title: "Layout",
         selection: .constant("first"),
         options: [
-          FlowingSelectOption("first", label: "First"),
-          FlowingSelectOption("second", label: "Second"),
+          FlowingSegmentOption("first", label: "First"),
+          FlowingSegmentOption("second", label: "Second"),
         ]
       )
     )

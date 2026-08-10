@@ -74,18 +74,46 @@ final class FlowingControlsTests: XCTestCase {
   }
 
   func testSegmentOptionUsesItsValueAsStableIdentity() {
-    let option = FlowingSegmentOption("medium", label: "Medium")
+    let option = FlowingSegmentOption(
+      "medium",
+      label: "Medium",
+      systemImage: "circle"
+    )
 
     XCTAssertEqual(option.id, "medium")
     XCTAssertEqual(option.value, "medium")
     XCTAssertEqual(option.label, "Medium")
+    XCTAssertEqual(option.systemImage, "circle")
   }
 
-  func testConnectedSegmentNavigationWrapsInBothDirections() {
+  @MainActor
+  func testTextAndSymbolSegmentedControlsComposeOutsidePreferencesRows() {
+    let text = FlowingSegmentedControl(
+      label: "Size",
+      selection: .constant("medium"),
+      options: [
+        FlowingSegmentOption("small", label: "Small"),
+        FlowingSegmentOption("medium", label: "Medium"),
+      ]
+    )
+    let symbols = FlowingSegmentedControl(
+      label: "Mode",
+      selection: .constant("list"),
+      options: [
+        FlowingSegmentOption("list", label: "List", systemImage: "list.bullet"),
+        FlowingSegmentOption("grid", label: "Grid", systemImage: "square.grid.2x2"),
+      ]
+    )
+
+    XCTAssertGreaterThan(fittingHeight(text.frame(width: 220)), 20)
+    XCTAssertGreaterThan(fittingHeight(symbols.frame(width: 220)), 20)
+  }
+
+  func testSegmentNavigationWrapsInBothDirections() {
     let values = ["first", "second", "third"]
 
     XCTAssertEqual(
-      FlowingConnectedSegmentedControlNavigation.destination(
+      FlowingSegmentedControlNavigation.destination(
         in: values,
         from: "third",
         offset: 1
@@ -93,7 +121,7 @@ final class FlowingControlsTests: XCTestCase {
       "first"
     )
     XCTAssertEqual(
-      FlowingConnectedSegmentedControlNavigation.destination(
+      FlowingSegmentedControlNavigation.destination(
         in: values,
         from: "first",
         offset: -1
@@ -102,9 +130,9 @@ final class FlowingControlsTests: XCTestCase {
     )
   }
 
-  func testConnectedSegmentNavigationStartsAtBoundaryForUnknownSelection() {
+  func testSegmentNavigationStartsAtBoundaryForUnknownSelection() {
     XCTAssertEqual(
-      FlowingConnectedSegmentedControlNavigation.destination(
+      FlowingSegmentedControlNavigation.destination(
         in: ["first", "second", "third"],
         from: "unknown",
         offset: 1
@@ -112,7 +140,7 @@ final class FlowingControlsTests: XCTestCase {
       "first"
     )
     XCTAssertEqual(
-      FlowingConnectedSegmentedControlNavigation.destination(
+      FlowingSegmentedControlNavigation.destination(
         in: ["first", "second", "third"],
         from: "unknown",
         offset: -1

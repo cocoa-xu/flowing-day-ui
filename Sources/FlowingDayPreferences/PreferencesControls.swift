@@ -614,7 +614,7 @@ public struct PreferencesSegmentedRow<Value: Hashable>: View {
   private let caption: String?
   private let controlWidth: CGFloat
   @Binding private var selection: Value
-  private let options: [FlowingSelectOption<Value>]
+  private let options: [FlowingSegmentOption<Value>]
 
   public init(
     symbol: String? = nil,
@@ -622,8 +622,9 @@ public struct PreferencesSegmentedRow<Value: Hashable>: View {
     caption: String? = nil,
     controlWidth: CGFloat = 300,
     selection: Binding<Value>,
-    options: [FlowingSelectOption<Value>]
+    options: [FlowingSegmentOption<Value>]
   ) {
+    precondition(controlWidth > 0 && controlWidth.isFinite)
     self.symbol = symbol
     self.title = title
     self.caption = caption
@@ -634,17 +635,11 @@ public struct PreferencesSegmentedRow<Value: Hashable>: View {
 
   public var body: some View {
     PreferencesRow(symbol: symbol, title: title, caption: caption) {
-      HStack(spacing: 6) {
-        ForEach(options) { option in
-          PreferencesSelectionButton(
-            title: option.label,
-            isSelected: selection == option.value,
-            isCompact: true
-          ) {
-            selection = option.value
-          }
-        }
-      }
+      FlowingSegmentedControl(
+        label: title,
+        selection: $selection,
+        options: options
+      )
       .frame(width: controlWidth)
     }
   }
@@ -656,7 +651,7 @@ public struct PreferencesConnectedSegmentedRow<Value: Hashable>: View {
   private let caption: String?
   private let controlWidth: CGFloat
   @Binding private var selection: Value
-  private let options: [FlowingSelectOption<Value>]
+  private let options: [FlowingSegmentOption<Value>]
 
   public init(
     symbol: String? = nil,
@@ -664,7 +659,7 @@ public struct PreferencesConnectedSegmentedRow<Value: Hashable>: View {
     caption: String? = nil,
     controlWidth: CGFloat = 300,
     selection: Binding<Value>,
-    options: [FlowingSelectOption<Value>]
+    options: [FlowingSegmentOption<Value>]
   ) {
     precondition(controlWidth > 0 && controlWidth.isFinite)
     self.symbol = symbol
@@ -680,65 +675,8 @@ public struct PreferencesConnectedSegmentedRow<Value: Hashable>: View {
       FlowingConnectedSegmentedControl(
         label: title,
         selection: $selection,
-        options: options.map {
-          FlowingSegmentOption($0.value, label: $0.label)
-        }
+        options: options
       )
-      .frame(width: controlWidth)
-    }
-  }
-}
-
-public struct PreferencesSymbolSegmentOption<Value: Hashable>: Identifiable {
-  public let value: Value
-  public let label: String
-  public let symbol: String?
-  public var id: Value { value }
-
-  public init(_ value: Value, label: String, symbol: String? = nil) {
-    self.value = value
-    self.label = label
-    self.symbol = symbol
-  }
-}
-
-public struct PreferencesSymbolSegmentedRow<Value: Hashable>: View {
-  private let rowSymbol: String?
-  private let title: String
-  private let caption: String?
-  private let controlWidth: CGFloat
-  @Binding private var selection: Value
-  private let options: [PreferencesSymbolSegmentOption<Value>]
-
-  public init(
-    rowSymbol: String? = nil,
-    title: String,
-    caption: String? = nil,
-    controlWidth: CGFloat = 300,
-    selection: Binding<Value>,
-    options: [PreferencesSymbolSegmentOption<Value>]
-  ) {
-    self.rowSymbol = rowSymbol
-    self.title = title
-    self.caption = caption
-    self.controlWidth = controlWidth
-    _selection = selection
-    self.options = options
-  }
-
-  public var body: some View {
-    PreferencesRow(symbol: rowSymbol, title: title, caption: caption) {
-      HStack(spacing: 6) {
-        ForEach(options) { option in
-          PreferencesSymbolSelectionButton(
-            label: option.label,
-            symbol: option.symbol,
-            isSelected: selection == option.value
-          ) {
-            selection = option.value
-          }
-        }
-      }
       .frame(width: controlWidth)
     }
   }
@@ -832,88 +770,6 @@ public struct PreferencesCheckToggle: View {
       widthPolicy: widthPolicy,
       truncationMode: truncationMode
     )
-  }
-}
-
-private struct PreferencesSelectionButton: View {
-  @Environment(\.preferencesAccent) private var accent
-  @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesTypography) private var typography
-  @Environment(\.preferencesSurfaces) private var surfaces
-  let title: String
-  let isSelected: Bool
-  var isCompact = false
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) {
-      Text(title)
-        .font(typography.selectionLabel.font)
-        .lineLimit(1)
-        .minimumScaleFactor(isCompact ? 0.72 : 1)
-        .foregroundStyle(isSelected ? accent.foreground : PreferencesPalette.muted)
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, isCompact ? 6 : 9)
-        .padding(.vertical, 7)
-        .background(
-          isSelected ? accent.wash : surfaces.control,
-          in: RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
-        )
-        .overlay {
-          RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
-            .strokeBorder(
-              isSelected ? accent.foreground.opacity(0.22) : PreferencesPalette.hairline
-            )
-        }
-    }
-    .buttonStyle(.plain)
-    .animation(.default, value: isSelected)
-  }
-}
-
-private struct PreferencesSymbolSelectionButton: View {
-  @Environment(\.preferencesAccent) private var accent
-  @Environment(\.preferencesStrings) private var strings
-  @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesTypography) private var typography
-  @Environment(\.preferencesSurfaces) private var surfaces
-  let label: String
-  let symbol: String?
-  let isSelected: Bool
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) {
-      Group {
-        if let symbol {
-          Image(systemName: symbol)
-            .font(.system(size: 12, weight: .semibold))
-        } else {
-          Text(label)
-            .font(typography.selectionLabel.font)
-            .lineLimit(1)
-        }
-      }
-      .foregroundStyle(isSelected ? accent.foreground : PreferencesPalette.muted)
-      .frame(maxWidth: .infinity)
-      .padding(.horizontal, 6)
-      .padding(.vertical, 8)
-      .background(
-        isSelected ? accent.wash : surfaces.control,
-        in: RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
-      )
-      .overlay {
-        RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
-          .strokeBorder(
-            isSelected ? accent.foreground.opacity(0.22) : PreferencesPalette.hairline
-          )
-      }
-    }
-    .buttonStyle(.plain)
-    .help(label)
-    .accessibilityLabel(label)
-    .accessibilityValue(isSelected ? strings.selected : strings.notSelected)
-    .animation(.default, value: isSelected)
   }
 }
 

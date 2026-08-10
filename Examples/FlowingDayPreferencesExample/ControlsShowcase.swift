@@ -27,6 +27,7 @@ struct ControlsShowcase: View {
     ExampleLabel("FlowingSelect"),
     ExampleLabel("FlowingSearchPicker"),
     ExampleLabel("FlowingMultiSelect"),
+    ExampleLabel("FlowingSegmentedControl"),
     ExampleLabel("FlowingConnectedSegmentedControl"),
     ExampleLabel("FlowingChip"),
     ExampleLabel("FlowingTag"),
@@ -244,18 +245,38 @@ struct ControlsShowcase: View {
 
   private var segmentedControlComponents: some View {
     PreferencesSection(
-      "Connected Segmented Control",
-      footer: "The standalone control supports keyboard navigation, RTL layout, and accessibility adjustment."
+      "Segmented Controls",
+      footer: "Connected and separated controls share one option model, keyboard navigation, and accessibility behavior."
     ) {
-      FlowingConnectedSegmentedControl(
-        label: "Preview size",
-        selection: $segmentSelection,
-        options: [
-          FlowingSegmentOption(.first, label: "Small"),
-          FlowingSegmentOption(.second, label: "Medium"),
-          FlowingSegmentOption(.third, label: "Large"),
-        ]
-      )
+      VStack(spacing: 12) {
+        FlowingSegmentedControl(
+          label: "Preview size",
+          selection: $segmentSelection,
+          options: [
+            FlowingSegmentOption(.first, label: "Small"),
+            FlowingSegmentOption(.second, label: "Medium"),
+            FlowingSegmentOption(.third, label: "Large"),
+          ]
+        )
+        FlowingSegmentedControl(
+          label: "Preview mode",
+          selection: $segmentSelection,
+          options: [
+            FlowingSegmentOption(.first, label: "List", systemImage: "list.bullet"),
+            FlowingSegmentOption(.second, label: "Grid", systemImage: "square.grid.2x2"),
+            FlowingSegmentOption(.third, label: "Canvas", systemImage: "point.3.connected.trianglepath.dotted"),
+          ]
+        )
+        FlowingConnectedSegmentedControl(
+          label: "Preview size",
+          selection: $segmentSelection,
+          options: [
+            FlowingSegmentOption(.first, label: "Small"),
+            FlowingSegmentOption(.second, label: "Medium"),
+            FlowingSegmentOption(.third, label: "Large"),
+          ]
+        )
+      }
       .padding(13)
     }
   }

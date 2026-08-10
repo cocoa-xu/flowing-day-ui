@@ -1,22 +1,51 @@
 import SwiftUI
 
-enum FlowingConnectedSegmentedControlMetrics {
+public struct FlowingSegmentOption<Value: Hashable>: Identifiable {
+  public let value: Value
+  public let label: String
+  public let systemImage: String?
+  public var id: Value { value }
+
+  public init(
+    _ value: Value,
+    label: String,
+    systemImage: String? = nil
+  ) {
+    self.value = value
+    self.label = label
+    self.systemImage = systemImage
+  }
+}
+
+enum FlowingSegmentedControlMetrics {
+  static let spacing: CGFloat = 6
   static let horizontalInset: CGFloat = 9
-  static let verticalInset: CGFloat = 6
-  static let containerInset: CGFloat = 2
-  static let dividerHeight: CGFloat = 14
+  static let verticalInset: CGFloat = 7
   static let selectedBorderWidth: CGFloat = 1
   static let disabledOpacity = 0.42
 }
 
-public struct FlowingConnectedSegmentedControl<Value: Hashable>: View {
+enum FlowingSegmentedControlNavigation {
+  static func destination<Value: Equatable>(
+    in values: [Value],
+    from currentValue: Value,
+    offset: Int
+  ) -> Value? {
+    guard !values.isEmpty, offset != 0 else { return nil }
+    guard let currentIndex = values.firstIndex(of: currentValue) else {
+      return offset > 0 ? values.first : values.last
+    }
+    let normalizedOffset = (offset % values.count + values.count) % values.count
+    let destinationIndex = (currentIndex + normalizedOffset) % values.count
+    return values[destinationIndex]
+  }
+}
+
+public struct FlowingSegmentedControl<Value: Hashable>: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.isEnabled) private var isEnabled
   @Environment(\.layoutDirection) private var layoutDirection
-  @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesSurfaces) private var surfaces
   @FocusState private var hasKeyboardFocus: Bool
-  @Namespace private var selectionNamespace
   private let label: String
   @Binding private var selection: Value
   private let options: [FlowingSegmentOption<Value>]
@@ -34,33 +63,19 @@ public struct FlowingConnectedSegmentedControl<Value: Hashable>: View {
   }
 
   public var body: some View {
-    HStack(spacing: 0) {
-      ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
-        FlowingConnectedSegmentButton(
+    HStack(spacing: FlowingSegmentedControlMetrics.spacing) {
+      ForEach(options) { option in
+        FlowingSegmentButton(
           option: option,
-          isSelected: selection == option.value,
-          selectionNamespace: selectionNamespace
+          isSelected: selection == option.value
         ) {
           selection = option.value
           hasKeyboardFocus = true
         }
-        .overlay(alignment: .trailing) {
-          if index < options.index(before: options.endIndex) {
-            Rectangle()
-              .fill(PreferencesPalette.hairline)
-              .frame(width: 1, height: FlowingConnectedSegmentedControlMetrics.dividerHeight)
-              .opacity(showsDivider(after: index) ? 1 : 0)
-          }
-        }
       }
     }
     .frame(maxWidth: .infinity)
-    .padding(FlowingConnectedSegmentedControlMetrics.containerInset)
-    .background(surfaces.control, in: containerShape)
-    .overlay {
-      containerShape.strokeBorder(PreferencesPalette.hairline)
-    }
-    .opacity(isEnabled ? 1 : FlowingConnectedSegmentedControlMetrics.disabledOpacity)
+    .opacity(isEnabled ? 1 : FlowingSegmentedControlMetrics.disabledOpacity)
     .focusable()
     .modifier(FlowingFocusEffectDisabledModifier())
     .focused($hasKeyboardFocus)
@@ -81,14 +96,6 @@ public struct FlowingConnectedSegmentedControl<Value: Hashable>: View {
       reduceMotion ? nil : .easeOut(duration: PreferencesMotion.selection),
       value: selection
     )
-  }
-
-  private var containerShape: RoundedRectangle {
-    RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
-  }
-
-  private func showsDivider(after index: Int) -> Bool {
-    selection != options[index].value && selection != options[index + 1].value
   }
 
   private func moveSelection(_ direction: MoveCommandDirection) {
@@ -121,46 +128,38 @@ public struct FlowingConnectedSegmentedControl<Value: Hashable>: View {
   }
 }
 
-private struct FlowingConnectedSegmentButton<Value: Hashable>: View {
+private struct FlowingSegmentButton<Value: Hashable>: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.isEnabled) private var isEnabled
   @Environment(\.preferencesAccent) private var accent
   @Environment(\.preferencesMetrics) private var metrics
   @Environment(\.preferencesStrings) private var strings
+  @Environment(\.preferencesSurfaces) private var surfaces
   @Environment(\.preferencesTypography) private var typography
   @State private var isHovering = false
   let option: FlowingSegmentOption<Value>
   let isSelected: Bool
-  let selectionNamespace: Namespace.ID
   let action: () -> Void
 
   var body: some View {
     Button(action: action) {
-      ZStack {
-        if isSelected {
-          selectionShape
-            .fill(accent.wash)
-            .overlay {
-              selectionShape.strokeBorder(
-                accent.foreground.opacity(0.22),
-                lineWidth: FlowingConnectedSegmentedControlMetrics.selectedBorderWidth
-              )
-            }
-            .matchedGeometryEffect(id: "selection", in: selectionNamespace)
-        } else if isHovering && isEnabled {
-          selectionShape.fill(accent.veil)
+      segmentLabel
+        .foregroundStyle(isSelected ? accent.foreground : PreferencesPalette.muted)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, FlowingSegmentedControlMetrics.horizontalInset)
+        .padding(.vertical, FlowingSegmentedControlMetrics.verticalInset)
+        .background(background, in: shape)
+        .overlay {
+          shape.strokeBorder(
+            isSelected ? accent.foreground.opacity(0.22) : PreferencesPalette.hairline,
+            lineWidth: FlowingSegmentedControlMetrics.selectedBorderWidth
+          )
         }
-        segmentLabel
-          .foregroundStyle(isSelected ? accent.foreground : PreferencesPalette.muted)
-          .padding(.horizontal, FlowingConnectedSegmentedControlMetrics.horizontalInset)
-          .padding(.vertical, FlowingConnectedSegmentedControlMetrics.verticalInset)
-          .frame(maxWidth: .infinity)
-      }
-      .contentShape(Rectangle())
+        .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .onHover { isHovering = $0 }
     .help(option.label)
+    .onHover { isHovering = $0 }
     .accessibilityLabel(option.label)
     .accessibilityValue(isSelected ? strings.selected : strings.notSelected)
     .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -183,13 +182,28 @@ private struct FlowingConnectedSegmentButton<Value: Hashable>: View {
     }
   }
 
-  private var selectionShape: RoundedRectangle {
-    RoundedRectangle(
-      cornerRadius: max(
-        0,
-        metrics.controlRadius - FlowingConnectedSegmentedControlMetrics.containerInset
-      ),
-      style: .continuous
-    )
+  private var background: Color {
+    if isSelected {
+      return accent.wash
+    }
+    if isHovering && isEnabled {
+      return accent.veil
+    }
+    return surfaces.control
+  }
+
+  private var shape: RoundedRectangle {
+    RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
+  }
+}
+
+struct FlowingFocusEffectDisabledModifier: ViewModifier {
+  @ViewBuilder
+  func body(content: Content) -> some View {
+    if #available(macOS 14, *) {
+      content.focusEffectDisabled()
+    } else {
+      content
+    }
   }
 }
