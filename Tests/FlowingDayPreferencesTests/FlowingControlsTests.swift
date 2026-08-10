@@ -474,6 +474,136 @@ final class FlowingControlsTests: XCTestCase {
     )
   }
 
+  func testTabOptionUsesItsValueAsStableIdentity() {
+    let option = FlowingTabOption(
+      "components",
+      label: "Components",
+      systemImage: "square.grid.2x2",
+      isEnabled: false
+    )
+
+    XCTAssertEqual(option.id, "components")
+    XCTAssertEqual(option.value, "components")
+    XCTAssertEqual(option.label, "Components")
+    XCTAssertEqual(option.systemImage, "square.grid.2x2")
+    XCTAssertFalse(option.isEnabled)
+  }
+
+  func testTabNavigationSkipsDisabledOptionsAndWraps() {
+    let options = [
+      FlowingTabOption("overview", label: "Overview"),
+      FlowingTabOption("components", label: "Components", isEnabled: false),
+      FlowingTabOption("accessibility", label: "Accessibility"),
+    ]
+
+    XCTAssertEqual(
+      FlowingTabsNavigation.destination(in: options, from: "overview", offset: 1),
+      "accessibility"
+    )
+    XCTAssertEqual(
+      FlowingTabsNavigation.destination(in: options, from: "accessibility", offset: 1),
+      "overview"
+    )
+    XCTAssertEqual(
+      FlowingTabsNavigation.destination(in: options, from: "overview", offset: -1),
+      "accessibility"
+    )
+  }
+
+  func testTabNavigationReturnsNilWhenNoOptionIsEnabled() {
+    let options = [
+      FlowingTabOption("overview", label: "Overview", isEnabled: false),
+      FlowingTabOption("components", label: "Components", isEnabled: false),
+    ]
+
+    XCTAssertNil(
+      FlowingTabsNavigation.destination(in: options, from: "overview", offset: 1)
+    )
+  }
+
+  func testTabLayoutResolvesEqualAndContentSizedWidths() {
+    XCTAssertEqual(
+      FlowingTabsLayoutMetrics.widths(
+        idealWidths: [40, 60],
+        spacing: 4,
+        sizing: .equal,
+        availableWidth: nil
+      ),
+      [60, 60]
+    )
+    XCTAssertEqual(
+      FlowingTabsLayoutMetrics.widths(
+        idealWidths: [40, 60],
+        spacing: 4,
+        sizing: .equal,
+        availableWidth: 100
+      ),
+      [48, 48]
+    )
+    XCTAssertEqual(
+      FlowingTabsLayoutMetrics.widths(
+        idealWidths: [40, 60],
+        spacing: 4,
+        sizing: .fitContent,
+        availableWidth: 200
+      ),
+      [40, 60]
+    )
+    XCTAssertEqual(
+      FlowingTabsLayoutMetrics.widths(
+        idealWidths: [40, 60],
+        spacing: 4,
+        sizing: .fitContent,
+        availableWidth: 54
+      ),
+      [20, 30]
+    )
+  }
+
+  func testTabLayoutNormalizesInvalidIdealWidths() {
+    XCTAssertEqual(
+      FlowingTabsLayoutMetrics.widths(
+        idealWidths: [.nan, -20, 40],
+        spacing: 4,
+        sizing: .equal,
+        availableWidth: nil
+      ),
+      [40, 40, 40]
+    )
+  }
+
+  @MainActor
+  func testTabsComposeAcrossEveryPublicPresentationAxis() {
+    let options = [
+      FlowingTabOption("overview", label: "Overview", systemImage: "sparkles"),
+      FlowingTabOption("components", label: "Components", systemImage: "square.grid.2x2"),
+      FlowingTabOption("accessibility", label: "Accessibility", systemImage: "accessibility"),
+    ]
+
+    for style in FlowingTabsStyle.allCases {
+      for sizing in FlowingTabsSizing.allCases {
+        for overflow in FlowingTabsOverflowBehavior.allCases {
+          for labelContent in FlowingTabLabelContent.allCases {
+            let height = fittingHeight(
+              FlowingTabs(
+                label: "Library areas",
+                selection: .constant("overview"),
+                options: options,
+                style: style,
+                sizing: sizing,
+                overflowBehavior: overflow,
+                labelContent: labelContent
+              )
+              .frame(width: 320)
+            )
+            XCTAssertGreaterThan(height, 20)
+            XCTAssertLessThan(height, 60)
+          }
+        }
+      }
+    }
+  }
+
   func testRadioOptionUsesItsValueAsStableIdentity() {
     let option = FlowingRadioOption(
       "balanced",

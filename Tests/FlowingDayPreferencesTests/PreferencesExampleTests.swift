@@ -48,6 +48,10 @@ final class PreferencesExampleTests: XCTestCase {
       FlowingDatePickerComponents.allCases,
       [.date, .time, .dateAndTime]
     )
+    XCTAssertEqual(FlowingTabsStyle.allCases, [.underline, .softSurface])
+    XCTAssertEqual(FlowingTabsSizing.allCases, [.equal, .fitContent])
+    XCTAssertEqual(FlowingTabsOverflowBehavior.allCases, [.compress, .scroll])
+    XCTAssertEqual(FlowingTabLabelContent.allCases, [.text, .icon, .iconAndText])
     XCTAssertEqual(
       ExampleControlAxis.allCases,
       [.horizontal, .vertical]
