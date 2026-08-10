@@ -41,6 +41,20 @@ public enum FlowingTabLabelContent: String, CaseIterable, Hashable, Sendable {
   case iconAndText
 }
 
+public enum FlowingTabsAlignment: String, CaseIterable, Hashable, Sendable {
+  case leading
+  case center
+  case trailing
+
+  var frameAlignment: Alignment {
+    switch self {
+    case .leading: .leading
+    case .center: .center
+    case .trailing: .trailing
+    }
+  }
+}
+
 enum FlowingTabsMetrics {
   static let underlineHorizontalInset: CGFloat = 7
   static let underlineItemHorizontalInset: CGFloat = 10
@@ -103,6 +117,7 @@ enum FlowingTabsLayoutMetrics {
 }
 
 private struct FlowingTabsLayout: Layout {
+  let layoutDirection: LayoutDirection
   let sizing: FlowingTabsSizing
   let spacing: CGFloat
   let fillsAvailableWidth: Bool
@@ -134,15 +149,16 @@ private struct FlowingTabsLayout: Layout {
       idealSizes: idealSizes,
       availableWidth: fillsAvailableWidth ? bounds.width : nil
     )
-    var x = bounds.minX
+    let direction: CGFloat = layoutDirection == .leftToRight ? 1 : -1
+    var x = layoutDirection == .leftToRight ? bounds.minX : bounds.maxX
     for (index, subview) in subviews.enumerated() {
       let width = widths[index]
       subview.place(
-        at: CGPoint(x: x, y: bounds.midY),
-        anchor: .leading,
+        at: CGPoint(x: x + direction * width / 2, y: bounds.midY),
+        anchor: .center,
         proposal: ProposedViewSize(width: width, height: bounds.height)
       )
-      x += width + spacing
+      x += direction * (width + spacing)
     }
   }
 
@@ -173,10 +189,12 @@ public struct FlowingTabs<Value: Hashable>: View {
   @Namespace private var selectionNamespace
   private let label: String
   private let labelContent: FlowingTabLabelContent
+  private let itemAlignment: FlowingTabsAlignment
   private let options: [FlowingTabOption<Value>]
   private let overflowBehavior: FlowingTabsOverflowBehavior
   @Binding private var selection: Value
   private let sizing: FlowingTabsSizing
+  private let stripAlignment: FlowingTabsAlignment
   private let style: FlowingTabsStyle
 
   public init(
@@ -186,7 +204,9 @@ public struct FlowingTabs<Value: Hashable>: View {
     style: FlowingTabsStyle = .underline,
     sizing: FlowingTabsSizing = .equal,
     overflowBehavior: FlowingTabsOverflowBehavior = .compress,
-    labelContent: FlowingTabLabelContent = .iconAndText
+    labelContent: FlowingTabLabelContent = .iconAndText,
+    stripAlignment: FlowingTabsAlignment = .leading,
+    itemAlignment: FlowingTabsAlignment = .center
   ) {
     precondition(!options.isEmpty)
     precondition(Set(options.map(\.id)).count == options.count)
@@ -197,6 +217,8 @@ public struct FlowingTabs<Value: Hashable>: View {
     self.sizing = sizing
     self.overflowBehavior = overflowBehavior
     self.labelContent = labelContent
+    self.stripAlignment = stripAlignment
+    self.itemAlignment = itemAlignment
   }
 
   public var body: some View {
@@ -251,12 +273,13 @@ public struct FlowingTabs<Value: Hashable>: View {
       .scrollIndicators(.never)
     } else {
       tabLayout(spacing: spacing, fillsAvailableWidth: true)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: stripAlignment.frameAlignment)
     }
   }
 
   private func tabLayout(spacing: CGFloat, fillsAvailableWidth: Bool) -> some View {
     FlowingTabsLayout(
+      layoutDirection: layoutDirection,
       sizing: sizing,
       spacing: spacing,
       fillsAvailableWidth: fillsAvailableWidth
@@ -266,6 +289,7 @@ public struct FlowingTabs<Value: Hashable>: View {
           option: option,
           isSelected: selection == option.value,
           labelContent: labelContent,
+          itemAlignment: itemAlignment,
           style: style,
           selectionNamespace: selectionNamespace
         ) {
@@ -321,6 +345,7 @@ private struct FlowingTabButton<Value: Hashable>: View {
   let option: FlowingTabOption<Value>
   let isSelected: Bool
   let labelContent: FlowingTabLabelContent
+  let itemAlignment: FlowingTabsAlignment
   let style: FlowingTabsStyle
   let selectionNamespace: Namespace.ID
   let action: () -> Void
@@ -351,6 +376,7 @@ private struct FlowingTabButton<Value: Hashable>: View {
       tabLabel
         .foregroundStyle(labelColor)
         .lineLimit(1)
+        .frame(maxWidth: .infinity, alignment: itemAlignment.frameAlignment)
       ZStack {
         Color.clear
         if isSelected {
@@ -382,6 +408,7 @@ private struct FlowingTabButton<Value: Hashable>: View {
       tabLabel
         .foregroundStyle(labelColor)
         .lineLimit(1)
+        .frame(maxWidth: .infinity, alignment: itemAlignment.frameAlignment)
         .padding(.horizontal, FlowingTabsMetrics.itemHorizontalInset)
     }
     .frame(maxWidth: .infinity)
