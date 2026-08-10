@@ -36,6 +36,13 @@ struct ControlsShowcase: View {
   @State private var iconButtonEmphasis = FlowingIconButtonEmphasis.quiet
   @State private var progressKind = ExampleProgressKind.determinate
   @State private var progressValue = 0.62
+  @State private var radioSelection = ExampleRadioSelection.balanced
+  @State private var radioAxis = ExampleControlAxis.horizontal
+  @State private var stepperValue = 3
+  @State private var statusTone = FlowingStatusTone.informational
+  @State private var badgeEmphasis = FlowingBadgeEmphasis.subtle
+  @State private var calloutPresentation = FlowingCalloutPresentation.card
+  @State private var lastMenuAction = "None"
 
   private let controlTags = [
     ExampleLabel("FlowingCheckbox"),
@@ -59,6 +66,13 @@ struct ControlsShowcase: View {
     ExampleLabel("FlowingTag"),
     ExampleLabel("FlowingSelectableTag"),
     ExampleLabel("FlowingSoftButtonStyle"),
+    ExampleLabel("FlowingRadio"),
+    ExampleLabel("FlowingRadioGroup"),
+    ExampleLabel("FlowingStepper"),
+    ExampleLabel("FlowingSeparator"),
+    ExampleLabel("FlowingBadge"),
+    ExampleLabel("FlowingCallout"),
+    ExampleLabel("FlowingMenu"),
   ]
 
   private let selectableTags = ["fill", "foreground", "wash", "veil", "hairline"]
@@ -70,6 +84,9 @@ struct ControlsShowcase: View {
       fieldAndValueComponents
       iconButtonComponents
       progressComponents
+      radioAndStepperComponents
+      statusComponents
+      menuAndSeparatorComponents
       emptyStateComponents
       disclosureComponents
       checkboxComponents
@@ -79,6 +96,126 @@ struct ControlsShowcase: View {
       pillComponents
       layoutComponents
       buttonStyleComponents
+    }
+  }
+
+  private var radioAndStepperComponents: some View {
+    PreferencesSection(
+      "Radio & Stepper",
+      footer: "Radio groups preserve exclusive selection while steppers clamp values "
+        + "to their range."
+    ) {
+      componentPlayground {
+        HStack(spacing: 24) {
+          FlowingRadioGroup(
+            label: "Rendering priority",
+            selection: $radioSelection,
+            options: ExampleRadioSelection.allCases.map {
+              FlowingRadioOption($0, label: $0.title, systemImage: $0.systemImage)
+            },
+            axis: radioAxis.axis
+          )
+          Spacer(minLength: 12)
+          FlowingStepper(
+            "Preview count",
+            value: $stepperValue,
+            in: 1...8,
+            step: 1
+          ) { "\($0) previews" }
+        }
+      } options: {
+        playgroundOption("Radio axis") {
+          FlowingConnectedSegmentedControl(
+            label: "Radio axis",
+            selection: $radioAxis,
+            options: ExampleControlAxis.allCases.map {
+              FlowingSegmentOption($0, label: $0.title)
+            }
+          )
+        }
+      }
+    }
+  }
+
+  private var statusComponents: some View {
+    PreferencesSection(
+      "Status & Feedback",
+      footer: "Badges and callouts share semantic tones without fixing application-specific copy."
+    ) {
+      componentPlayground {
+        VStack(alignment: .leading, spacing: 12) {
+          FlowingWrappingGrid(items: FlowingStatusTone.allCases.map(ExampleStatusTone.init)) {
+            FlowingBadge(
+              $0.title,
+              systemImage: $0.value.defaultBadgeSystemImage,
+              tone: $0.value,
+              emphasis: badgeEmphasis
+            )
+          }
+          FlowingCallout(
+            "The preview updates immediately while the document remains unchanged.",
+            title: "Preview Ready",
+            tone: statusTone,
+            presentation: calloutPresentation
+          )
+        }
+      } options: {
+        playgroundOption("Tone") {
+          FlowingConnectedSegmentedControl(
+            label: "Status tone",
+            selection: $statusTone,
+            options: FlowingStatusTone.allCases.map {
+              FlowingSegmentOption($0, label: $0.title)
+            }
+          )
+        }
+        HStack(spacing: 10) {
+          playgroundOption("Badge") {
+            FlowingConnectedSegmentedControl(
+              label: "Badge emphasis",
+              selection: $badgeEmphasis,
+              options: FlowingBadgeEmphasis.allCases.map {
+                FlowingSegmentOption($0, label: $0.title)
+              }
+            )
+          }
+          playgroundOption("Callout") {
+            FlowingConnectedSegmentedControl(
+              label: "Callout presentation",
+              selection: $calloutPresentation,
+              options: FlowingCalloutPresentation.allCases.map {
+                FlowingSegmentOption($0, label: $0.title)
+              }
+            )
+          }
+        }
+      }
+    }
+  }
+
+  private var menuAndSeparatorComponents: some View {
+    PreferencesSection(
+      "Menu & Separator",
+      footer: "Action menus retain native menu behavior while separators remain layout-neutral."
+    ) {
+      VStack(alignment: .leading, spacing: 13) {
+        HStack(spacing: 12) {
+          FlowingMenu("Actions", systemImage: "ellipsis.circle", minimumWidth: 112) {
+            Button("Duplicate") { lastMenuAction = "Duplicate" }
+            Button("Archive") { lastMenuAction = "Archive" }
+            Divider()
+            Button("Remove", role: .destructive) { lastMenuAction = "Remove" }
+          }
+          FlowingSeparator(axis: .vertical)
+            .frame(height: 24)
+          FlowingValueText(lastMenuAction)
+        }
+        FlowingSeparator()
+        Text("Separators can divide either axis without inheriting Preferences row insets.")
+          .font(typography.body.font)
+          .foregroundStyle(.secondary)
+      }
+      .padding(13)
     }
   }
 
@@ -721,6 +858,55 @@ enum ExampleProgressKind: String, CaseIterable, Hashable {
   case ongoing
 
   var title: String { rawValue.capitalized }
+}
+
+enum ExampleRadioSelection: String, CaseIterable, Hashable {
+  case quiet
+  case balanced
+  case vivid
+
+  var title: String { rawValue.capitalized }
+
+  var systemImage: String {
+    switch self {
+    case .quiet: "moon"
+    case .balanced: "circle.lefthalf.filled"
+    case .vivid: "sun.max"
+    }
+  }
+}
+
+struct ExampleStatusTone: Identifiable {
+  let value: FlowingStatusTone
+  var id: FlowingStatusTone { value }
+  var title: String { value.title }
+
+  init(_ value: FlowingStatusTone) {
+    self.value = value
+  }
+}
+
+extension FlowingStatusTone {
+  fileprivate var title: String { rawValue.capitalized }
+
+  fileprivate var defaultBadgeSystemImage: String {
+    switch self {
+    case .neutral: "circle"
+    case .accent: "sparkles"
+    case .informational: "info.circle"
+    case .success: "checkmark.circle"
+    case .warning: "exclamationmark.triangle"
+    case .critical: "xmark.octagon"
+    }
+  }
+}
+
+extension FlowingBadgeEmphasis {
+  fileprivate var title: String { rawValue.capitalized }
+}
+
+extension FlowingCalloutPresentation {
+  fileprivate var title: String { rawValue.capitalized }
 }
 
 extension FlowingTextFieldEmphasis {
