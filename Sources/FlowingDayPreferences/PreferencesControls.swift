@@ -257,6 +257,7 @@ public struct PreferencesSwitchRow: View {
   public var body: some View {
     PreferencesRow(symbol: symbol, title: title, caption: caption) {
       FlowingSwitch(isOn: $isOn)
+        .accessibilityLabel(title)
     }
   }
 }
@@ -384,6 +385,7 @@ public struct PreferencesSliderRow: View {
           .foregroundStyle(PreferencesPalette.muted)
       }
       FlowingSlider(value: $value, in: range, step: step)
+        .accessibilityLabel(title)
       if let caption {
         Text(caption)
           .font(typography.rowCaption.font)
@@ -435,9 +437,9 @@ public struct PreferencesPopupRow<Value: Hashable>: View {
 }
 
 public struct PreferencesSearchPickerRow<Value: Hashable>: View {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.preferencesAccent) private var accent
   @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.preferencesStrings) private var strings
   @Environment(\.preferencesTypography) private var typography
   @State private var isExpanded = false
   @State private var query = ""
@@ -465,42 +467,16 @@ public struct PreferencesSearchPickerRow<Value: Hashable>: View {
   }
 
   public var body: some View {
-    VStack(spacing: 0) {
-      header
-      VStack(spacing: 0) {
-        if isExpanded {
-          PreferencesRowSeparator()
-          FlowingSearchPicker(
-            label: title,
-            selection: $selection,
-            options: options,
-            query: $query,
-            maximumVisibleOptions: maximumVisibleOptions
-          ) { _ in
-            isExpanded = false
-          }
-          .padding(.horizontal, metrics.rowInset)
-          .padding(.vertical, 12)
-          .transition(.opacity)
-        }
-      }
-      .clipped()
-    }
-    .animation(reduceMotion ? nil : .easeOut(duration: PreferencesMotion.expand), value: isExpanded)
-    .preference(key: PreferencesRowIconPresenceKey.self, value: Set([symbol != nil]))
-  }
-
-  private var selectedLabel: String {
-    options.first { $0.value == selection }?.label ?? "—"
-  }
-
-  private var header: some View {
-    Button {
-      isExpanded.toggle()
-      if !isExpanded {
-        query = ""
-      }
-    } label: {
+    FlowingDisclosure(
+      isExpanded: $isExpanded,
+      minimumHeaderHeight: PreferencesRowLayout.minimumHeight,
+      contentInsets: EdgeInsets(
+        top: PreferencesRowLayout.verticalPadding(hasCaption: caption != nil),
+        leading: metrics.rowInset,
+        bottom: PreferencesRowLayout.verticalPadding(hasCaption: caption != nil),
+        trailing: metrics.rowInset
+      )
+    ) {
       HStack(spacing: PreferencesRowLayout.symbolSpacing) {
         if let symbol {
           Image(systemName: symbol)
@@ -525,20 +501,37 @@ public struct PreferencesSearchPickerRow<Value: Hashable>: View {
           .foregroundStyle(accent.foreground)
           .lineLimit(1)
           .truncationMode(.middle)
-        Image(systemName: "chevron.down")
-          .font(.system(size: 9, weight: .semibold))
-          .foregroundStyle(PreferencesPalette.faint)
-          .rotationEffect(.degrees(isExpanded ? 180 : 0))
       }
-      .padding(.horizontal, metrics.rowInset)
-      .padding(.vertical, PreferencesRowLayout.verticalPadding(hasCaption: caption != nil))
-      .frame(minHeight: PreferencesRowLayout.minimumHeight)
-      .contentShape(Rectangle())
+    } content: {
+      VStack(spacing: 0) {
+        PreferencesRowSeparator()
+        FlowingSearchPicker(
+          label: title,
+          selection: $selection,
+          options: options,
+          query: $query,
+          maximumVisibleOptions: maximumVisibleOptions
+        ) { _ in
+          isExpanded = false
+        }
+        .padding(.horizontal, metrics.rowInset)
+        .padding(.vertical, 12)
+      }
     }
-    .buttonStyle(.plain)
-    .accessibilityValue(selectedLabel)
+    .onChange(of: isExpanded) { expanded in
+      if !expanded {
+        query = ""
+      }
+    }
+    .accessibilityValue(
+      Text("\(selectedLabel), \(isExpanded ? strings.expanded : strings.collapsed)")
+    )
+    .preference(key: PreferencesRowIconPresenceKey.self, value: Set([symbol != nil]))
   }
 
+  private var selectedLabel: String {
+    options.first { $0.value == selection }?.label ?? "—"
+  }
 }
 
 public struct PreferencesColorPickerRow: View {
