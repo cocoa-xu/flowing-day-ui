@@ -256,25 +256,8 @@ public struct PreferencesSwitchRow: View {
 
   public var body: some View {
     PreferencesRow(symbol: symbol, title: title, caption: caption) {
-      PreferencesSwitch(isOn: $isOn)
+      FlowingSwitch(isOn: $isOn)
     }
-  }
-}
-
-public struct PreferencesSwitch: View {
-  @Environment(\.preferencesAccent) private var accent
-  @Binding private var isOn: Bool
-
-  public init(isOn: Binding<Bool>) {
-    _isOn = isOn
-  }
-
-  public var body: some View {
-    Toggle("", isOn: $isOn)
-      .toggleStyle(.switch)
-      .labelsHidden()
-      .controlSize(.small)
-      .tint(accent.fill)
   }
 }
 
@@ -437,7 +420,7 @@ public struct PreferencesSliderRow: View {
           .font(typography.sliderValue.font)
           .foregroundStyle(PreferencesPalette.muted)
       }
-      PreferencesSlider(value: $value, range: range, step: step)
+      FlowingSlider(value: $value, in: range, step: step)
       if let caption {
         Text(caption)
           .font(typography.rowCaption.font)
@@ -450,191 +433,6 @@ public struct PreferencesSliderRow: View {
   }
 }
 
-public enum PreferencesSliderMath {
-  public static func fraction(
-    of value: Double,
-    in range: ClosedRange<Double>
-  ) -> Double {
-    let span = range.upperBound - range.lowerBound
-    guard span > 0 else { return 0 }
-    return min(max((value - range.lowerBound) / span, 0), 1)
-  }
-
-  public static func value(
-    atFraction fraction: Double,
-    in range: ClosedRange<Double>
-  ) -> Double {
-    let clamped = min(max(fraction, 0), 1)
-    return range.lowerBound + clamped * (range.upperBound - range.lowerBound)
-  }
-}
-
-public struct PreferencesSlider: View {
-  @Binding private var value: Double
-  private let range: ClosedRange<Double>
-  private let step: Double?
-  @Environment(\.preferencesAccent) private var accent
-
-  public init(
-    value: Binding<Double>,
-    range: ClosedRange<Double>,
-    step: Double? = nil
-  ) {
-    _value = value
-    self.range = range
-    self.step = step
-  }
-
-  public var body: some View {
-    PreferencesSliderRepresentable(value: $value, range: range, step: step, accent: accent)
-      .frame(height: 16)
-      .accessibilityElement()
-      .accessibilityValue(Text(String(format: "%.2f", value)))
-      .accessibilityAdjustableAction { direction in
-        let delta = step ?? (range.upperBound - range.lowerBound) / 20
-        let proposed = value + (direction == .increment ? delta : -delta)
-        value = min(max(proposed, range.lowerBound), range.upperBound)
-      }
-  }
-}
-
-private struct PreferencesSliderRepresentable: NSViewRepresentable {
-  @Binding var value: Double
-  let range: ClosedRange<Double>
-  let step: Double?
-  let accent: PreferencesAccent
-
-  func makeCoordinator() -> Coordinator {
-    Coordinator(value: $value)
-  }
-
-  func makeNSView(context: Context) -> PreferencesSliderControl {
-    let control = PreferencesSliderControl()
-    control.target = context.coordinator
-    control.action = #selector(Coordinator.valueChanged(_:))
-    return control
-  }
-
-  func updateNSView(_ control: PreferencesSliderControl, context: Context) {
-    context.coordinator.value = $value
-    control.value = value
-    control.range = range
-    control.step = step
-    control.accentColor = NSColor(accent.fill)
-    control.trackColor = NSColor(PreferencesPalette.hairline)
-    control.knobColor = PreferencesPalette.sliderKnobColor
-    control.knobBorderColor = PreferencesPalette.sliderKnobBorderColor
-    control.needsDisplay = true
-  }
-
-  final class Coordinator: NSObject {
-    var value: Binding<Double>
-
-    init(value: Binding<Double>) {
-      self.value = value
-    }
-
-    @MainActor
-    @objc func valueChanged(_ sender: PreferencesSliderControl) {
-      value.wrappedValue = sender.value
-    }
-  }
-}
-
-final class PreferencesSliderControl: NSControl {
-  var value = 0.0
-  var range = 0.0...1.0
-  var step: Double?
-  var accentColor = NSColor.controlAccentColor
-  var trackColor = NSColor.separatorColor
-  var knobColor = NSColor.controlBackgroundColor
-  var knobBorderColor = NSColor.separatorColor
-
-  private let knobDiameter: CGFloat = 13
-  private let trackHeight: CGFloat = 3
-
-  override var mouseDownCanMoveWindow: Bool { false }
-
-  override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
-    true
-  }
-
-  override func mouseDown(with event: NSEvent) {
-    updateValue(with: event)
-  }
-
-  override func mouseDragged(with event: NSEvent) {
-    updateValue(with: event)
-  }
-
-  override func draw(_ dirtyRect: NSRect) {
-    let usableWidth = max(bounds.width - knobDiameter, 1)
-    let fraction = PreferencesSliderMath.fraction(of: value, in: range)
-    let knobX = usableWidth * fraction
-    let trackRect = NSRect(
-      x: knobDiameter / 2,
-      y: bounds.midY - trackHeight / 2,
-      width: usableWidth,
-      height: trackHeight
-    )
-    let progressRect = NSRect(
-      x: trackRect.minX,
-      y: trackRect.minY,
-      width: knobX,
-      height: trackHeight
-    )
-    let knobRect = NSRect(
-      x: knobX,
-      y: bounds.midY - knobDiameter / 2,
-      width: knobDiameter,
-      height: knobDiameter
-    )
-
-    trackColor.setFill()
-    NSBezierPath(
-      roundedRect: trackRect,
-      xRadius: trackHeight / 2,
-      yRadius: trackHeight / 2
-    ).fill()
-
-    accentColor.setFill()
-    NSBezierPath(
-      roundedRect: progressRect,
-      xRadius: trackHeight / 2,
-      yRadius: trackHeight / 2
-    ).fill()
-
-    NSGraphicsContext.saveGraphicsState()
-    let shadow = NSShadow()
-    shadow.shadowColor = NSColor.black.withAlphaComponent(0.16)
-    shadow.shadowBlurRadius = 1.5
-    shadow.shadowOffset = NSSize(width: 0, height: -0.5)
-    shadow.set()
-    knobColor.setFill()
-    NSBezierPath(ovalIn: knobRect).fill()
-    NSGraphicsContext.restoreGraphicsState()
-
-    knobBorderColor.setStroke()
-    let border = NSBezierPath(ovalIn: knobRect.insetBy(dx: 0.25, dy: 0.25))
-    border.lineWidth = 0.5
-    border.stroke()
-  }
-
-  private func updateValue(with event: NSEvent) {
-    let location = convert(event.locationInWindow, from: nil)
-    let usableWidth = max(bounds.width - knobDiameter, 1)
-    let fraction = (location.x - knobDiameter / 2) / usableWidth
-    let proposed = PreferencesSliderMath.value(atFraction: fraction, in: range)
-    if let step, step > 0 {
-      let steps = ((proposed - range.lowerBound) / step).rounded()
-      value = min(max(range.lowerBound + steps * step, range.lowerBound), range.upperBound)
-    } else {
-      value = proposed
-    }
-    needsDisplay = true
-    sendAction(action, to: target)
-  }
-}
 
 public struct PreferencesPopupOption<Value: Hashable>: Identifiable {
   public let value: Value

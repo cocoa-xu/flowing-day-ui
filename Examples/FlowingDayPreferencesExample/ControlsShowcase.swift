@@ -6,6 +6,8 @@ struct ControlsShowcase: View {
   @State private var leadingCheckbox = true
   @State private var centeredCheckbox = true
   @State private var trailingCheckbox = true
+  @State private var switchValue = true
+  @State private var sliderValue = 0.62
   @State private var alphaSelected = true
   @State private var betaSelected = false
   @State private var lockedSelected = false
@@ -18,6 +20,8 @@ struct ControlsShowcase: View {
 
   private let controlTags = [
     ExampleLabel("FlowingCheckbox"),
+    ExampleLabel("FlowingSwitch"),
+    ExampleLabel("FlowingSlider"),
     ExampleLabel("FlowingMultiSelect"),
     ExampleLabel("FlowingConnectedSegmentedControl"),
     ExampleLabel("FlowingChip"),
@@ -30,6 +34,7 @@ struct ControlsShowcase: View {
 
   var body: some View {
     PreferencesPaneStack {
+      switchAndSliderComponents
       checkboxComponents
       multiSelectComponents
       iconCheckboxComponents
@@ -37,6 +42,25 @@ struct ControlsShowcase: View {
       pillComponents
       layoutComponents
       buttonStyleComponents
+    }
+  }
+
+  private var switchAndSliderComponents: some View {
+    PreferencesSection(
+      "Switch & Slider",
+      footer: "Both controls can be composed without a Preferences row."
+    ) {
+      VStack(alignment: .leading, spacing: 16) {
+        FlowingSwitch("Quiet animations", isOn: $switchValue)
+        HStack(spacing: 12) {
+          FlowingSlider(value: $sliderValue, in: 0...1, step: 0.01)
+          Text(sliderValue, format: .percent.precision(.fractionLength(0)))
+            .font(typography.value.font)
+            .foregroundStyle(.secondary)
+            .frame(width: 36, alignment: .trailing)
+        }
+      }
+      .padding(13)
     }
   }
 

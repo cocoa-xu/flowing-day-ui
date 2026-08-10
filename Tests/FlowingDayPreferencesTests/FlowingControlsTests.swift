@@ -4,6 +4,28 @@ import XCTest
 @testable import FlowingDayPreferences
 
 final class FlowingControlsTests: XCTestCase {
+  func testSliderMathClampsValuesAndFractions() {
+    let range = 10.0...20.0
+
+    XCTAssertEqual(FlowingSliderMath.fraction(of: 5, in: range), 0)
+    XCTAssertEqual(FlowingSliderMath.fraction(of: 15, in: range), 0.5)
+    XCTAssertEqual(FlowingSliderMath.fraction(of: 25, in: range), 1)
+    XCTAssertEqual(FlowingSliderMath.value(atFraction: -1, in: range), 10)
+    XCTAssertEqual(FlowingSliderMath.value(atFraction: 0.25, in: range), 12.5)
+    XCTAssertEqual(FlowingSliderMath.value(atFraction: 2, in: range), 20)
+  }
+
+  @MainActor
+  func testSwitchAndSliderComposeOutsidePreferencesRows() {
+    let content = VStack {
+      FlowingSwitch("Updates", isOn: .constant(true))
+      FlowingSlider(value: .constant(0.5), in: 0...1)
+    }
+    .frame(width: 240)
+
+    XCTAssertGreaterThan(fittingHeight(content), 30)
+  }
+
   func testConnectedSegmentedControlUsesAHairlineSelectionBorder() {
     XCTAssertEqual(FlowingConnectedSegmentedControlMetrics.selectedBorderWidth, 1)
   }

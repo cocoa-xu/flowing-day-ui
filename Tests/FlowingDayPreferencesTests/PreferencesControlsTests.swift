@@ -82,17 +82,6 @@ final class PreferencesControlsTests: XCTestCase {
     XCTAssertEqual(surfaces.field, .purple)
   }
 
-  func testSliderMathClampsFractions() {
-    let range = 10.0...20.0
-
-    XCTAssertEqual(PreferencesSliderMath.fraction(of: 5, in: range), 0)
-    XCTAssertEqual(PreferencesSliderMath.fraction(of: 15, in: range), 0.5)
-    XCTAssertEqual(PreferencesSliderMath.fraction(of: 25, in: range), 1)
-    XCTAssertEqual(PreferencesSliderMath.value(atFraction: -1, in: range), 10)
-    XCTAssertEqual(PreferencesSliderMath.value(atFraction: 0.25, in: range), 12.5)
-    XCTAssertEqual(PreferencesSliderMath.value(atFraction: 2, in: range), 20)
-  }
-
   func testCheckboxAlignmentUsesSemanticGuides() {
     XCTAssertEqual(FlowingCheckboxContentAlignment.leading.frameAlignment, .leading)
     XCTAssertEqual(FlowingCheckboxContentAlignment.center.frameAlignment, .center)
