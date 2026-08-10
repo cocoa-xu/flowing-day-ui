@@ -7,7 +7,8 @@ enum ExamplePage: String, CaseIterable {
   case typography
   case motion
   case icons
-  case components
+  case controls
+  case preferences
   case about
 }
 
@@ -87,7 +88,7 @@ struct ExamplePreferencesView: View {
       PreferencesPageGroup(
         id: "reference",
         title: "Reference",
-        pages: [componentsPage, aboutPage]
+        pages: [controlsPage, preferencesComponentsPage, aboutPage]
       ),
     ]
   }
@@ -158,14 +159,25 @@ struct ExamplePreferencesView: View {
     }
   }
 
-  private var componentsPage: PreferencesPage<ExamplePage> {
+  private var controlsPage: PreferencesPage<ExamplePage> {
     PreferencesPage(
-      id: .components,
-      title: "Components",
-      subtitle: "Every control type, live",
-      icon: .system("list.bullet")
+      id: .controls,
+      title: "Controls",
+      subtitle: "Reusable controls for any SwiftUI view",
+      icon: .system("checkmark.square")
     ) {
-      ComponentsShowcase(accent: $accent)
+      ControlsShowcase()
+    }
+  }
+
+  private var preferencesComponentsPage: PreferencesPage<ExamplePage> {
+    PreferencesPage(
+      id: .preferences,
+      title: "Preferences",
+      subtitle: "Rows, sections, and window composition",
+      icon: .system("slider.horizontal.3")
+    ) {
+      PreferencesComponentsShowcase(accent: $accent)
     }
   }
 

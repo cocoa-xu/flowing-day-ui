@@ -326,8 +326,7 @@ struct IconsShowcase: View {
   }
 }
 
-struct ComponentsShowcase: View {
-  @Environment(\.preferencesTypography) private var typography
+struct PreferencesComponentsShowcase: View {
   @Binding var accent: ExampleAccent
   @State private var switchValue = true
   @State private var popupValue = ExampleSelection.second
@@ -339,12 +338,6 @@ struct ComponentsShowcase: View {
   @State private var alphaSelected = true
   @State private var betaSelected = false
   @State private var lockedSelected = false
-  @State private var leadingCheckbox = true
-  @State private var centeredCheckbox = true
-  @State private var trailingCheckbox = true
-  @State private var eyeSelected = true
-  @State private var boltSelected = false
-  @State private var hareSelected = true
   @State private var expanded = false
   @State private var selectedTag = "fill"
   @State private var pressCount = 0
@@ -374,121 +367,10 @@ struct ComponentsShowcase: View {
       rowComponents
       disclosureComponents
       searchComponent
-      checkboxComponents
-      multiSelectComponents
-      iconSelectionComponents
       selectionComponents
       pillComponents
       gridComponents
     }
-  }
-
-  private var checkboxComponents: some View {
-    PreferencesSection(
-      "Checkbox",
-      footer: "Checkboxes can share available width or fit their content up to a configurable limit."
-    ) {
-      VStack(alignment: .leading, spacing: 14) {
-        componentMode("Equal width") {
-          HStack(spacing: 8) {
-            FlowingCheckbox(
-              "Leading",
-              isOn: $leadingCheckbox,
-              contentAlignment: .leading
-            )
-            FlowingCheckbox(
-              "Center",
-              isOn: $centeredCheckbox,
-              contentAlignment: .center
-            )
-            FlowingCheckbox(
-              "Trailing",
-              isOn: $trailingCheckbox,
-              contentAlignment: .trailing
-            )
-          }
-        }
-
-        componentMode("Fit content · Middle truncation") {
-          HStack(spacing: 8) {
-            FlowingCheckbox(
-              "Auto",
-              isOn: $leadingCheckbox,
-              widthPolicy: .fitContent()
-            )
-            FlowingCheckbox(
-              "Quiet",
-              isOn: $centeredCheckbox,
-              widthPolicy: .fitContent()
-            )
-            FlowingCheckbox(
-              "A very long option",
-              isOn: $trailingCheckbox,
-              widthPolicy: .fitContent(maximumWidth: 116),
-              truncationMode: .middle
-            )
-          }
-        }
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(13)
-    }
-  }
-
-  private var multiSelectComponents: some View {
-    PreferencesSection(
-      "Multi-select",
-      footer: "The standalone component supports horizontal or vertical layout with equal or content-sized items."
-    ) {
-      VStack(alignment: .leading, spacing: 14) {
-        componentMode("Horizontal · Equal width") {
-          FlowingMultiSelect(
-            options: multiSelectOptions
-          )
-        }
-
-        componentMode("Horizontal · Fit content") {
-          FlowingMultiSelect(
-            itemWidthPolicy: .fitContent(maximumWidth: 112),
-            truncationMode: .middle,
-            options: multiSelectOptions
-          )
-        }
-
-        componentMode("Vertical · Equal width") {
-          FlowingMultiSelect(
-            axis: .vertical,
-            contentAlignment: .leading,
-            options: multiSelectOptions
-          )
-        }
-
-        componentMode("Vertical · Fit content") {
-          FlowingMultiSelect(
-            axis: .vertical,
-            itemWidthPolicy: .fitContent(maximumWidth: 112),
-            contentAlignment: .leading,
-            truncationMode: .middle,
-            options: multiSelectOptions
-          )
-        }
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(13)
-    }
-  }
-
-  private func componentMode<Content: View>(
-    _ title: String,
-    @ViewBuilder content: () -> Content
-  ) -> some View {
-    VStack(alignment: .leading, spacing: 6) {
-      Text(title.uppercased())
-        .font(typography.sectionHeader.font)
-        .foregroundStyle(.secondary)
-      content()
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   private var rowComponents: some View {
@@ -633,35 +515,6 @@ struct ComponentsShowcase: View {
         isEnabled: false
       ),
     ]
-  }
-
-  private var iconSelectionComponents: some View {
-    PreferencesSection(
-      "Icon Selection",
-      footer: "PreferencesIconSelectionButton combines an icon, label, and check indicator."
-    ) {
-      HStack(spacing: 8) {
-        PreferencesIconSelectionButton(
-          symbol: "eye",
-          title: "Eye",
-          tint: ExampleAccent.celadon.color,
-          isSelected: $eyeSelected
-        )
-        PreferencesIconSelectionButton(
-          symbol: "bolt",
-          title: "Bolt",
-          tint: ExampleAccent.plum.color,
-          isSelected: $boltSelected
-        )
-        PreferencesIconSelectionButton(
-          symbol: "hare",
-          title: "Hare",
-          tint: ExampleAccent.sage.color,
-          isSelected: $hareSelected
-        )
-      }
-      .padding(13)
-    }
   }
 
   private var pillComponents: some View {

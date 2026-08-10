@@ -18,7 +18,7 @@ final class PreferencesExampleTests: XCTestCase {
     )
   }
 
-  func testExampleNavigationIsAComponentShowcase() {
+  func testExampleSeparatesReusableControlsFromPreferencesComponents() {
     XCTAssertEqual(
       ExamplePage.allCases.map(\.rawValue),
       [
@@ -27,7 +27,8 @@ final class PreferencesExampleTests: XCTestCase {
         "typography",
         "motion",
         "icons",
-        "components",
+        "controls",
+        "preferences",
         "about",
       ]
     )
