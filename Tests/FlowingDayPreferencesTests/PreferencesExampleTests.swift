@@ -34,6 +34,17 @@ final class PreferencesExampleTests: XCTestCase {
     )
   }
 
+  func testMultiSelectShowcasesCanKeepIndependentState() {
+    var first = ExampleMultiSelectSelection()
+    let second = ExampleMultiSelectSelection()
+
+    first.alpha = false
+    first.beta = true
+
+    XCTAssertEqual(first, ExampleMultiSelectSelection(alpha: false, beta: true))
+    XCTAssertEqual(second, ExampleMultiSelectSelection())
+  }
+
   func testLayoutPresetsMatchTheLandingPage() {
     XCTAssertEqual(ExampleContentWidth.narrow.value, 560)
     XCTAssertEqual(ExampleContentWidth.standard.value, 720)

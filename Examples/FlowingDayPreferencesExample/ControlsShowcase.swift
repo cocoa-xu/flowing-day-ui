@@ -11,15 +11,20 @@ struct ControlsShowcase: View {
   @State private var selectValue = ExampleSelection.second
   @State private var searchValue = "Dublin"
   @State private var disclosureExpanded = true
-  @State private var alphaSelected = true
-  @State private var betaSelected = false
-  @State private var lockedSelected = false
+  @State private var horizontalEqualSelection = ExampleMultiSelectSelection()
+  @State private var horizontalFitSelection = ExampleMultiSelectSelection()
+  @State private var verticalEqualSelection = ExampleMultiSelectSelection()
+  @State private var verticalFitSelection = ExampleMultiSelectSelection()
   @State private var eyeSelected = true
   @State private var boltSelected = false
   @State private var hareSelected = true
-  @State private var segmentSelection = ExampleSelection.second
+  @State private var textSegmentSelection = ExampleSelection.second
+  @State private var symbolSegmentSelection = ExampleSelection.second
+  @State private var connectedSegmentSelection = ExampleSelection.second
   @State private var selectedTag = "foreground"
   @State private var buttonPressCount = 0
+  @State private var textFieldValue = "Flowing Day"
+  @State private var colorValue = Color.pink
 
   private let controlTags = [
     ExampleLabel("FlowingCheckbox"),
@@ -27,6 +32,10 @@ struct ControlsShowcase: View {
     ExampleLabel("FlowingSlider"),
     ExampleLabel("FlowingSelect"),
     ExampleLabel("FlowingSearchPicker"),
+    ExampleLabel("FlowingTextField"),
+    ExampleLabel("FlowingColorPicker"),
+    ExampleLabel("FlowingValueText"),
+    ExampleLabel("FlowingEmptyState"),
     ExampleLabel("FlowingDisclosure"),
     ExampleLabel("FlowingMultiSelect"),
     ExampleLabel("FlowingSegmentedControl"),
@@ -43,6 +52,8 @@ struct ControlsShowcase: View {
     PreferencesPaneStack {
       switchAndSliderComponents
       selectComponents
+      fieldAndValueComponents
+      emptyStateComponents
       disclosureComponents
       checkboxComponents
       multiSelectComponents
@@ -51,6 +62,63 @@ struct ControlsShowcase: View {
       pillComponents
       layoutComponents
       buttonStyleComponents
+    }
+  }
+
+  private var fieldAndValueComponents: some View {
+    PreferencesSection(
+      "Fields & Values",
+      footer: "Fields, color selection, and read-only values compose without Preferences row assumptions."
+    ) {
+      VStack(alignment: .leading, spacing: 14) {
+        componentMode("Standard") {
+          FlowingTextField(
+            "Project name",
+            text: $textFieldValue,
+            systemImage: "text.cursor"
+          )
+        }
+        componentMode("Accented") {
+          FlowingTextField(
+            "Search",
+            text: $textFieldValue,
+            systemImage: "magnifyingglass",
+            emphasis: .accented
+          )
+        }
+        HStack(spacing: 16) {
+          FlowingColorPicker("Color", selection: $colorValue)
+          Spacer(minLength: 12)
+          FlowingValueText("cocoa@flowing.day")
+        }
+      }
+      .padding(13)
+    }
+  }
+
+  private var emptyStateComponents: some View {
+    PreferencesSection(
+      "Empty State",
+      footer: "Use the inline layout inside rows and the stacked layout for an empty surface."
+    ) {
+      VStack(alignment: .leading, spacing: 18) {
+        componentMode("Inline") {
+          FlowingEmptyState(
+            "No recent items",
+            systemImage: "tray",
+            layout: .inline
+          )
+        }
+        componentMode("Stacked") {
+          FlowingEmptyState(
+            "No matching results",
+            systemImage: "magnifyingglass",
+            layout: .stacked
+          )
+          .padding(.vertical, 8)
+        }
+      }
+      .padding(13)
     }
   }
 
@@ -184,14 +252,16 @@ struct ControlsShowcase: View {
     ) {
       VStack(alignment: .leading, spacing: 14) {
         componentMode("Horizontal · Equal width") {
-          FlowingMultiSelect(options: multiSelectOptions)
+          FlowingMultiSelect(
+            options: multiSelectOptions(selection: $horizontalEqualSelection)
+          )
         }
 
         componentMode("Horizontal · Fit content") {
           FlowingMultiSelect(
             itemWidthPolicy: .fitContent(maximumWidth: 112),
             truncationMode: .middle,
-            options: multiSelectOptions
+            options: multiSelectOptions(selection: $horizontalFitSelection)
           )
         }
 
@@ -199,7 +269,7 @@ struct ControlsShowcase: View {
           FlowingMultiSelect(
             axis: .vertical,
             contentAlignment: .leading,
-            options: multiSelectOptions
+            options: multiSelectOptions(selection: $verticalEqualSelection)
           )
         }
 
@@ -209,7 +279,7 @@ struct ControlsShowcase: View {
             itemWidthPolicy: .fitContent(maximumWidth: 112),
             contentAlignment: .leading,
             truncationMode: .middle,
-            options: multiSelectOptions
+            options: multiSelectOptions(selection: $verticalFitSelection)
           )
         }
       }
@@ -251,13 +321,15 @@ struct ControlsShowcase: View {
     }
   }
 
-  private var multiSelectOptions: [FlowingMultiSelectOption] {
+  private func multiSelectOptions(
+    selection: Binding<ExampleMultiSelectSelection>
+  ) -> [FlowingMultiSelectOption] {
     [
-      FlowingMultiSelectOption("Alpha", isOn: $alphaSelected),
-      FlowingMultiSelectOption("Beta", isOn: $betaSelected),
+      FlowingMultiSelectOption("Alpha", isOn: selection.alpha),
+      FlowingMultiSelectOption("Beta", isOn: selection.beta),
       FlowingMultiSelectOption(
         "Locked",
-        isOn: $lockedSelected,
+        isOn: selection.locked,
         isEnabled: false
       ),
     ]
@@ -271,7 +343,7 @@ struct ControlsShowcase: View {
       VStack(spacing: 12) {
         FlowingSegmentedControl(
           label: "Preview size",
-          selection: $segmentSelection,
+          selection: $textSegmentSelection,
           options: [
             FlowingSegmentOption(.first, label: "Small"),
             FlowingSegmentOption(.second, label: "Medium"),
@@ -280,7 +352,7 @@ struct ControlsShowcase: View {
         )
         FlowingSegmentedControl(
           label: "Preview mode",
-          selection: $segmentSelection,
+          selection: $symbolSegmentSelection,
           options: [
             FlowingSegmentOption(.first, label: "List", systemImage: "list.bullet"),
             FlowingSegmentOption(.second, label: "Grid", systemImage: "square.grid.2x2"),
@@ -289,7 +361,7 @@ struct ControlsShowcase: View {
         )
         FlowingConnectedSegmentedControl(
           label: "Preview size",
-          selection: $segmentSelection,
+          selection: $connectedSegmentSelection,
           options: [
             FlowingSegmentOption(.first, label: "Small"),
             FlowingSegmentOption(.second, label: "Medium"),
@@ -381,4 +453,10 @@ struct ControlsShowcase: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
   }
+}
+
+struct ExampleMultiSelectSelection: Equatable {
+  var alpha = true
+  var beta = false
+  var locked = false
 }
