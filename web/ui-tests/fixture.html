@@ -17,6 +17,35 @@
         </fd-popup>
       </section>
       <fd-graph-canvas id="graph"></fd-graph-canvas>
+      <section class="primitives">
+        <fd-text-field
+          id="text-field"
+          label="Project name"
+          placeholder="Name"
+          symbol="pencil"
+        ></fd-text-field>
+        <fd-secure-field
+          id="secure-field"
+          label="Access key"
+          placeholder="Access key"
+          symbol="lock"
+          emphasis="accented"
+        ></fd-secure-field>
+        <fd-icon-button
+          id="pin-button"
+          label="Pin"
+          symbol="pin"
+          emphasis="standard"
+          toggle
+        ></fd-icon-button>
+        <fd-progress id="progress" label="Indexing" value="0.64"></fd-progress>
+        <fd-text-area
+          id="text-area"
+          label="Notes"
+          placeholder="Add notes"
+          minimum-height="84"
+        ></fd-text-area>
+      </section>
     </main>
   </body>
 </html>

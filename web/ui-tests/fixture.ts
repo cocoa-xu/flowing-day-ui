@@ -1,4 +1,4 @@
-import '../packages/core/src/index.js'
+import { FdIcons } from '../packages/core/src/index.js'
 import '../packages/canvas/src/index.js'
 import type { FdGraphCanvas } from '../packages/canvas/src/components/graph-canvas/fd-graph-canvas.js'
 import type { FdGraphConnectionCompleteDetail } from '../packages/canvas/src/graph/events.js'
@@ -32,6 +32,17 @@ style.textContent = `
     width: 260px;
   }
 
+  .primitives {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) 30px 220px;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .primitives fd-text-area {
+    grid-column: 1 / span 2;
+  }
+
   fd-graph-canvas {
     width: 1000px;
     height: 700px;
@@ -41,6 +52,13 @@ style.textContent = `
   }
 `
 document.head.append(style)
+
+FdIcons.register({
+  pencil:
+    '<svg viewBox="0 0 16 16"><path d="M3 11.8 11.8 3l1.2 1.2L4.2 13H3z" fill="currentColor"/></svg>',
+  lock: '<svg viewBox="0 0 16 16"><path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2h1v7h-9V7zm1.5 0h4V5a2 2 0 1 0-4 0z" fill="currentColor"/></svg>',
+  pin: '<svg viewBox="0 0 16 16"><path d="m5 2 6 6-1.5 1.5-1-1L6 11l-1-1 2.5-2.5-1-1zM4 10l2 2-3 2z" fill="currentColor"/></svg>',
+})
 
 const graph = document.querySelector<FdGraphCanvas>('#graph')
 if (!graph) throw new Error('missing graph fixture')

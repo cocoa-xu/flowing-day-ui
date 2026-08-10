@@ -7,8 +7,13 @@ import {
   graphNodeReference,
   graphPortReference,
 } from '../packages/canvas/src/graph/model.js'
+import type { FdIconButton } from '../packages/core/src/components/icon-button/fd-icon-button.js'
 import type { FdPopup } from '../packages/core/src/components/popup/fd-popup.js'
+import type { FdProgress } from '../packages/core/src/components/progress/fd-progress.js'
+import type { FdSecureField } from '../packages/core/src/components/secure-field/fd-secure-field.js'
 import type { FdSlider } from '../packages/core/src/components/slider/fd-slider.js'
+import type { FdTextArea } from '../packages/core/src/components/text-area/fd-text-area.js'
+import type { FdTextField } from '../packages/core/src/components/text-field/fd-text-field.js'
 
 declare global {
   interface Window {
@@ -47,6 +52,38 @@ test('slider follows a trusted pointer drag and popup uses top-layer interaction
   await popup.locator('.option', { hasText: 'Compact' }).click()
   await expect.poll(() => popup.evaluate((element) => (element as FdPopup).value)).toBe('compact')
   await expect.poll(() => popup.evaluate((element) => (element as FdPopup).open)).toBe(false)
+})
+
+test('field, icon button, and progress primitives retain native interaction', async ({ page }) => {
+  const textField = page.locator('#text-field')
+  await textField.locator('input').fill('Flowing Day')
+  await expect
+    .poll(() => textField.evaluate((element) => (element as FdTextField).value))
+    .toBe('Flowing Day')
+
+  const secureField = page.locator('#secure-field')
+  await expect(secureField.locator('input')).toHaveAttribute('type', 'password')
+  await secureField.locator('input').fill('private')
+  await expect
+    .poll(() => secureField.evaluate((element) => (element as FdSecureField).value))
+    .toBe('private')
+
+  const textArea = page.locator('#text-area')
+  await textArea.locator('textarea').fill('First\nSecond')
+  await expect
+    .poll(() => textArea.evaluate((element) => (element as FdTextArea).value))
+    .toBe('First\nSecond')
+
+  const pinButton = page.locator('#pin-button')
+  await pinButton.locator('button').click()
+  await expect
+    .poll(() => pinButton.evaluate((element) => (element as FdIconButton).selected))
+    .toBe(true)
+  await expect(pinButton.locator('button')).toHaveAttribute('aria-pressed', 'true')
+
+  const progress = page.locator('#progress')
+  await expect(progress).toHaveAttribute('role', 'progressbar')
+  await expect.poll(() => progress.evaluate((element) => (element as FdProgress).value)).toBe(0.64)
 })
 
 test('marquee selection updates before pointer release', async ({ page }) => {
@@ -218,12 +255,27 @@ test('wheel navigation, connection editing, minimap, and accessibility stay oper
   )
 
   const miniMap = page.locator('fd-graph-minimap')
+  await graph.evaluate(async (element) => {
+    const canvas = element as FdGraphCanvas
+    canvas.request = {
+      id: 'minimap-test-zoom',
+      action: {
+        kind: 'anchor',
+        worldPoint: { x: 500, y: 250 },
+        viewportPoint: { x: 500, y: 350 },
+        zoom: 2,
+      },
+      animated: false,
+    }
+    await canvas.updateComplete
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+  })
   const offsetBeforeMiniMap = await graph.evaluate(
     (element) => (element as FdGraphCanvas).viewport.transform.offset,
   )
   const miniMapBounds = await miniMap.boundingBox()
   if (!miniMapBounds) throw new Error('missing minimap bounds')
-  await page.mouse.click(miniMapBounds.x + miniMapBounds.width - 16, miniMapBounds.y + 16)
+  await page.mouse.click(miniMapBounds.x + 16, miniMapBounds.y + 16)
   await expect
     .poll(() => graph.evaluate((element) => (element as FdGraphCanvas).viewport.transform.offset))
     .not.toEqual(offsetBeforeMiniMap)
