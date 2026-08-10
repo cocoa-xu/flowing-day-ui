@@ -17,17 +17,20 @@ public enum FlowingMultiSelectItemWidthPolicy: Equatable, Sendable {
 public struct FlowingMultiSelectOption: Identifiable {
   public let id: String
   public let label: String
+  public let systemImage: String?
   public let isEnabled: Bool
   let isOn: Binding<Bool>
 
   public init(
     _ label: String,
+    systemImage: String? = nil,
     id: String? = nil,
     isOn: Binding<Bool>,
     isEnabled: Bool = true
   ) {
     self.id = id ?? label
     self.label = label
+    self.systemImage = systemImage
     self.isOn = isOn
     self.isEnabled = isEnabled
   }
@@ -46,6 +49,7 @@ public struct FlowingMultiSelect: View {
   let axis: Axis
   let itemWidthPolicy: FlowingMultiSelectItemWidthPolicy
   let contentAlignment: FlowingCheckboxContentAlignment
+  let indicatorPlacement: FlowingCheckboxIndicatorPlacement
   let spacing: CGFloat
   let truncationMode: Text.TruncationMode
   private let options: [FlowingMultiSelectOption]
@@ -54,6 +58,7 @@ public struct FlowingMultiSelect: View {
     axis: Axis = .horizontal,
     itemWidthPolicy: FlowingMultiSelectItemWidthPolicy = .equal,
     contentAlignment: FlowingCheckboxContentAlignment = .center,
+    indicatorPlacement: FlowingCheckboxIndicatorPlacement = .leading,
     spacing: CGFloat = 6,
     truncationMode: Text.TruncationMode = .tail,
     options: [FlowingMultiSelectOption]
@@ -61,6 +66,7 @@ public struct FlowingMultiSelect: View {
     self.axis = axis
     self.itemWidthPolicy = itemWidthPolicy
     self.contentAlignment = contentAlignment
+    self.indicatorPlacement = indicatorPlacement
     self.spacing = spacing
     self.truncationMode = truncationMode
     self.options = options
@@ -69,17 +75,36 @@ public struct FlowingMultiSelect: View {
   public var body: some View {
     layout {
       ForEach(options) { option in
-        FlowingCheckbox(
-          option.label,
-          isOn: option.isOn,
-          contentAlignment: contentAlignment,
-          widthPolicy: itemWidthPolicy.checkboxWidthPolicy,
-          truncationMode: truncationMode
-        )
-        .disabled(!option.isEnabled)
+        checkbox(for: option)
       }
     }
     .accessibilityElement(children: .contain)
+  }
+
+  @ViewBuilder
+  private func checkbox(for option: FlowingMultiSelectOption) -> some View {
+    if let systemImage = option.systemImage {
+      FlowingCheckbox(
+        option.label,
+        systemImage: systemImage,
+        isOn: option.isOn,
+        contentAlignment: contentAlignment,
+        indicatorPlacement: indicatorPlacement,
+        widthPolicy: itemWidthPolicy.checkboxWidthPolicy,
+        truncationMode: truncationMode
+      )
+      .disabled(!option.isEnabled)
+    } else {
+      FlowingCheckbox(
+        option.label,
+        isOn: option.isOn,
+        contentAlignment: contentAlignment,
+        indicatorPlacement: indicatorPlacement,
+        widthPolicy: itemWidthPolicy.checkboxWidthPolicy,
+        truncationMode: truncationMode
+      )
+      .disabled(!option.isEnabled)
+    }
   }
 
   private var layout: AnyLayout {

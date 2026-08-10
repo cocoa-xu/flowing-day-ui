@@ -278,113 +278,6 @@ public struct PreferencesSwitch: View {
   }
 }
 
-enum PreferencesIconSelectionButtonMetrics {
-  static let height: CGFloat = 31
-  static let horizontalInset: CGFloat = 10
-  static let contentSpacing: CGFloat = 9
-  static let cornerRadius: CGFloat = 9
-  static let iconWidth: CGFloat = 14
-  static let indicatorSize: CGFloat = 15
-}
-
-public struct PreferencesIconSelectionButton<Leading: View>: View {
-  private let title: String
-  private let tint: Color
-  private let help: String?
-  private let leading: Leading
-  @Binding private var isSelected: Bool
-
-  public init(
-    title: String,
-    tint: Color,
-    isSelected: Binding<Bool>,
-    help: String? = nil,
-    @ViewBuilder leading: () -> Leading
-  ) {
-    self.title = title
-    self.tint = tint
-    self.help = help
-    self.leading = leading()
-    _isSelected = isSelected
-  }
-
-  public var body: some View {
-    Button(action: toggle) {
-      HStack(spacing: PreferencesIconSelectionButtonMetrics.contentSpacing) {
-        leading
-          .font(.system(size: 9, weight: .medium))
-          .foregroundStyle(tint.opacity(isSelected ? 1 : 0.3))
-          .frame(width: PreferencesIconSelectionButtonMetrics.iconWidth)
-        Text(title)
-          .font(.system(size: 11, weight: .medium))
-        Spacer()
-        PreferencesSelectionIndicator(isSelected: isSelected, tint: tint)
-      }
-      .foregroundStyle(isSelected ? PreferencesPalette.ink : PreferencesPalette.faint)
-      .padding(.horizontal, PreferencesIconSelectionButtonMetrics.horizontalInset)
-      .frame(height: PreferencesIconSelectionButtonMetrics.height)
-      .contentShape(Rectangle())
-      .background(
-        tint.opacity(isSelected ? 0.065 : 0),
-        in: RoundedRectangle(cornerRadius: PreferencesIconSelectionButtonMetrics.cornerRadius)
-      )
-      .overlay {
-        RoundedRectangle(cornerRadius: PreferencesIconSelectionButtonMetrics.cornerRadius)
-          .stroke(isSelected ? tint.opacity(0.15) : Color.clear)
-      }
-    }
-    .buttonStyle(.plain)
-    .accessibilityLabel(title)
-    .accessibilityValue(isSelected ? "Selected" : "Not selected")
-    .help(help ?? (isSelected ? "Hide \(title)" : "Show \(title)"))
-  }
-
-  func toggle() {
-    isSelected.toggle()
-  }
-}
-
-extension PreferencesIconSelectionButton where Leading == Image {
-  public init(
-    symbol: String,
-    title: String,
-    tint: Color,
-    isSelected: Binding<Bool>,
-    help: String? = nil
-  ) {
-    self.init(
-      title: title,
-      tint: tint,
-      isSelected: isSelected,
-      help: help
-    ) {
-      Image(systemName: symbol)
-    }
-  }
-}
-
-private struct PreferencesSelectionIndicator: View {
-  let isSelected: Bool
-  let tint: Color
-
-  var body: some View {
-    ZStack {
-      Circle()
-        .fill(isSelected ? tint : Color.clear)
-      Circle()
-        .stroke(isSelected ? tint : PreferencesPalette.edge)
-      Image(systemName: "checkmark")
-        .font(.system(size: 7, weight: .bold))
-        .foregroundStyle(.white)
-        .opacity(isSelected ? 1 : 0)
-    }
-    .frame(
-      width: PreferencesIconSelectionButtonMetrics.indicatorSize,
-      height: PreferencesIconSelectionButtonMetrics.indicatorSize
-    )
-  }
-}
-
 enum PreferencesDependentRowsMotion {
   static let standardDuration = PreferencesMotion.disclosure
   static let reducedMotionDuration = PreferencesMotion.reducedDisclosure
@@ -1364,6 +1257,7 @@ public struct PreferencesMultiSelectRow: View {
   private let axis: Axis
   private let itemWidthPolicy: FlowingMultiSelectItemWidthPolicy
   private let contentAlignment: FlowingCheckboxContentAlignment
+  private let indicatorPlacement: FlowingCheckboxIndicatorPlacement
   private let spacing: CGFloat
   private let truncationMode: Text.TruncationMode
   private let options: [FlowingMultiSelectOption]
@@ -1376,6 +1270,7 @@ public struct PreferencesMultiSelectRow: View {
     axis: Axis = .horizontal,
     itemWidthPolicy: FlowingMultiSelectItemWidthPolicy = .equal,
     contentAlignment: FlowingCheckboxContentAlignment = .center,
+    indicatorPlacement: FlowingCheckboxIndicatorPlacement = .leading,
     spacing: CGFloat = 6,
     truncationMode: Text.TruncationMode = .tail,
     options: [FlowingMultiSelectOption]
@@ -1387,6 +1282,7 @@ public struct PreferencesMultiSelectRow: View {
     self.axis = axis
     self.itemWidthPolicy = itemWidthPolicy
     self.contentAlignment = contentAlignment
+    self.indicatorPlacement = indicatorPlacement
     self.spacing = spacing
     self.truncationMode = truncationMode
     self.options = options
@@ -1398,6 +1294,7 @@ public struct PreferencesMultiSelectRow: View {
         axis: axis,
         itemWidthPolicy: itemWidthPolicy,
         contentAlignment: contentAlignment,
+        indicatorPlacement: indicatorPlacement,
         spacing: spacing,
         truncationMode: truncationMode,
         options: options
@@ -1410,6 +1307,7 @@ public struct PreferencesMultiSelectRow: View {
 public struct PreferencesCheckToggle: View {
   private let title: String
   let contentAlignment: FlowingCheckboxContentAlignment
+  let indicatorPlacement: FlowingCheckboxIndicatorPlacement
   let widthPolicy: FlowingCheckboxWidthPolicy
   let truncationMode: Text.TruncationMode
   @Binding private var isOn: Bool
@@ -1418,12 +1316,14 @@ public struct PreferencesCheckToggle: View {
     _ title: String,
     isOn: Binding<Bool>,
     contentAlignment: FlowingCheckboxContentAlignment = .center,
+    indicatorPlacement: FlowingCheckboxIndicatorPlacement = .leading,
     widthPolicy: FlowingCheckboxWidthPolicy = .fill,
     truncationMode: Text.TruncationMode = .tail
   ) {
     self.title = title
     _isOn = isOn
     self.contentAlignment = contentAlignment
+    self.indicatorPlacement = indicatorPlacement
     self.widthPolicy = widthPolicy
     self.truncationMode = truncationMode
   }
@@ -1433,6 +1333,7 @@ public struct PreferencesCheckToggle: View {
       title,
       isOn: $isOn,
       contentAlignment: contentAlignment,
+      indicatorPlacement: indicatorPlacement,
       widthPolicy: widthPolicy,
       truncationMode: truncationMode
     )

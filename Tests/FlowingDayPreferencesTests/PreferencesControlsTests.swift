@@ -110,8 +110,10 @@ final class PreferencesControlsTests: XCTestCase {
     )
 
     XCTAssertEqual(primitive.contentAlignment, .leading)
+    XCTAssertEqual(primitive.indicatorPlacement, .leading)
     XCTAssertEqual(primitive.widthPolicy, .fill)
     XCTAssertEqual(preferences.contentAlignment, .center)
+    XCTAssertEqual(preferences.indicatorPlacement, .leading)
     XCTAssertEqual(preferences.widthPolicy, .fill)
     XCTAssertEqual(trailing.contentAlignment, .trailing)
   }
@@ -177,6 +179,7 @@ final class PreferencesControlsTests: XCTestCase {
     XCTAssertEqual(multiSelect.axis, .horizontal)
     XCTAssertEqual(multiSelect.itemWidthPolicy, .equal)
     XCTAssertEqual(multiSelect.contentAlignment, .center)
+    XCTAssertEqual(multiSelect.indicatorPlacement, .leading)
     XCTAssertEqual(multiSelect.spacing, 6)
   }
 
@@ -186,6 +189,7 @@ final class PreferencesControlsTests: XCTestCase {
       axis: .vertical,
       itemWidthPolicy: .fitContent(maximumWidth: 96),
       contentAlignment: .trailing,
+      indicatorPlacement: .trailing,
       spacing: 8,
       truncationMode: .middle,
       options: []
@@ -197,6 +201,7 @@ final class PreferencesControlsTests: XCTestCase {
       .fitContent(maximumWidth: 96)
     )
     XCTAssertEqual(multiSelect.contentAlignment, .trailing)
+    XCTAssertEqual(multiSelect.indicatorPlacement, .trailing)
     XCTAssertEqual(multiSelect.spacing, 8)
   }
 
@@ -277,6 +282,7 @@ final class PreferencesControlsTests: XCTestCase {
     let state = BooleanState(false)
     let option = FlowingMultiSelectOption(
       "Activity",
+      systemImage: "waveform.path.ecg",
       isOn: Binding(
         get: { state.value },
         set: { state.value = $0 }
@@ -284,6 +290,7 @@ final class PreferencesControlsTests: XCTestCase {
     )
 
     XCTAssertEqual(option.id, "Activity")
+    XCTAssertEqual(option.systemImage, "waveform.path.ecg")
     XCTAssertFalse(option.isSelected)
 
     option.toggle()
@@ -332,35 +339,43 @@ final class PreferencesControlsTests: XCTestCase {
   }
 
   @MainActor
-  func testSelectionButtonTogglesItsBinding() {
+  func testIconCheckboxTogglesItsBinding() {
     let state = BooleanState(false)
-    let button = PreferencesIconSelectionButton(
-      symbol: "network",
-      title: "Network",
-      tint: .blue,
-      isSelected: Binding(
+    let checkbox = FlowingCheckbox(
+      "Network",
+      systemImage: "network",
+      isOn: Binding(
         get: { state.value },
         set: { state.value = $0 }
-      )
+      ),
+      indicatorPlacement: .trailing
     )
 
-    button.toggle()
+    checkbox.toggle()
 
     XCTAssertTrue(state.value)
   }
 
   @MainActor
-  func testSelectionButtonUsesCompactRowHeight() {
-    let height = fittingHeight(
-      PreferencesIconSelectionButton(
-        symbol: "display",
-        title: "Displays",
-        tint: .orange,
-        isSelected: .constant(true)
+  func testIconCheckboxUsesTheStandardCheckboxHeight() {
+    let standardHeight = fittingHeight(
+      FlowingCheckbox(
+        "Displays",
+        isOn: .constant(true),
+        widthPolicy: .fitContent()
+      )
+    )
+    let iconHeight = fittingHeight(
+      FlowingCheckbox(
+        "Displays",
+        systemImage: "display",
+        isOn: .constant(true),
+        indicatorPlacement: .trailing,
+        widthPolicy: .fitContent()
       )
     )
 
-    XCTAssertEqual(height, PreferencesIconSelectionButtonMetrics.height)
+    XCTAssertEqual(iconHeight, standardHeight)
   }
 
   @MainActor

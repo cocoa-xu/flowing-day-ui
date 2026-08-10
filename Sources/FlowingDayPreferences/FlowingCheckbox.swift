@@ -22,6 +22,11 @@ public enum FlowingCheckboxContentAlignment: String, CaseIterable, Sendable {
   }
 }
 
+public enum FlowingCheckboxIndicatorPlacement: String, CaseIterable, Sendable {
+  case leading
+  case trailing
+}
+
 public enum FlowingCheckboxWidthPolicy: Equatable, Sendable {
   case fill
   case fitContent(maximumWidth: CGFloat? = nil)
@@ -41,6 +46,7 @@ public enum FlowingCheckboxWidthPolicy: Equatable, Sendable {
 public struct FlowingCheckbox<Label: View>: View {
   @Binding private var isOn: Bool
   let contentAlignment: FlowingCheckboxContentAlignment
+  let indicatorPlacement: FlowingCheckboxIndicatorPlacement
   let widthPolicy: FlowingCheckboxWidthPolicy
   let truncationMode: Text.TruncationMode
   private let label: Label
@@ -48,12 +54,14 @@ public struct FlowingCheckbox<Label: View>: View {
   public init(
     isOn: Binding<Bool>,
     contentAlignment: FlowingCheckboxContentAlignment = .leading,
+    indicatorPlacement: FlowingCheckboxIndicatorPlacement = .leading,
     widthPolicy: FlowingCheckboxWidthPolicy = .fill,
     truncationMode: Text.TruncationMode = .tail,
     @ViewBuilder label: () -> Label
   ) {
     _isOn = isOn
     self.contentAlignment = contentAlignment
+    self.indicatorPlacement = indicatorPlacement
     self.widthPolicy = widthPolicy
     self.truncationMode = truncationMode
     self.label = label()
@@ -66,6 +74,7 @@ public struct FlowingCheckbox<Label: View>: View {
     .toggleStyle(
       FlowingCheckboxToggleStyle(
         contentAlignment: contentAlignment,
+        indicatorPlacement: indicatorPlacement,
         widthPolicy: widthPolicy,
         truncationMode: truncationMode
       )
@@ -85,6 +94,7 @@ private struct FlowingCheckboxToggleStyle: ToggleStyle {
   @Environment(\.preferencesSurfaces) private var surfaces
 
   let contentAlignment: FlowingCheckboxContentAlignment
+  let indicatorPlacement: FlowingCheckboxIndicatorPlacement
   let widthPolicy: FlowingCheckboxWidthPolicy
   let truncationMode: Text.TruncationMode
 
@@ -93,18 +103,18 @@ private struct FlowingCheckboxToggleStyle: ToggleStyle {
       configuration.isOn.toggle()
     } label: {
       sizedContent(configuration)
-      .background(
-        configuration.isOn ? accent.wash : surfaces.control,
-        in: RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
-      )
-      .overlay {
-        RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
-          .strokeBorder(
-            configuration.isOn
-              ? accent.foreground.opacity(0.22)
-              : PreferencesPalette.hairline
-          )
-      }
+        .background(
+          configuration.isOn ? accent.wash : surfaces.control,
+          in: RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
+        )
+        .overlay {
+          RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
+            .strokeBorder(
+              configuration.isOn
+                ? accent.foreground.opacity(0.22)
+                : PreferencesPalette.hairline
+            )
+        }
     }
     .buttonStyle(.plain)
     .animation(.default, value: configuration.isOn)
@@ -114,12 +124,13 @@ private struct FlowingCheckboxToggleStyle: ToggleStyle {
   @ViewBuilder
   private func sizedContent(_ configuration: Configuration) -> some View {
     let content = HStack(spacing: 6) {
-      Image(systemName: configuration.isOn ? "checkmark.circle.fill" : "circle")
-        .font(.system(size: 11, weight: .semibold))
-      configuration.label
-        .font(typography.selectionLabel.font)
-        .lineLimit(1)
-        .truncationMode(truncationMode)
+      if indicatorPlacement == .leading {
+        indicator(isOn: configuration.isOn)
+      }
+      checkboxLabel(configuration)
+      if indicatorPlacement == .trailing {
+        indicator(isOn: configuration.isOn)
+      }
     }
     .foregroundStyle(configuration.isOn ? accent.foreground : PreferencesPalette.muted)
     .padding(.horizontal, 9)
@@ -133,6 +144,25 @@ private struct FlowingCheckboxToggleStyle: ToggleStyle {
         content
       }
     }
+  }
+
+  @ViewBuilder
+  private func checkboxLabel(_ configuration: Configuration) -> some View {
+    let label = configuration.label
+      .font(typography.selectionLabel.font)
+      .lineLimit(1)
+      .truncationMode(truncationMode)
+
+    if indicatorPlacement == .trailing && widthPolicy == .fill {
+      label.frame(maxWidth: .infinity, alignment: contentAlignment.frameAlignment)
+    } else {
+      label
+    }
+  }
+
+  private func indicator(isOn: Bool) -> some View {
+    Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+      .font(.system(size: 11, weight: .semibold))
   }
 }
 
@@ -180,16 +210,59 @@ extension FlowingCheckbox where Label == Text {
     _ title: String,
     isOn: Binding<Bool>,
     contentAlignment: FlowingCheckboxContentAlignment = .leading,
+    indicatorPlacement: FlowingCheckboxIndicatorPlacement = .leading,
     widthPolicy: FlowingCheckboxWidthPolicy = .fill,
     truncationMode: Text.TruncationMode = .tail
   ) {
     self.init(
       isOn: isOn,
       contentAlignment: contentAlignment,
+      indicatorPlacement: indicatorPlacement,
       widthPolicy: widthPolicy,
       truncationMode: truncationMode
     ) {
       Text(title)
+    }
+  }
+}
+
+public struct FlowingCheckboxIconLabel: View {
+  private let title: String
+  private let systemImage: String
+
+  public init(_ title: String, systemImage: String) {
+    self.title = title
+    self.systemImage = systemImage
+  }
+
+  public var body: some View {
+    HStack(spacing: 6) {
+      Image(systemName: systemImage)
+        .font(.system(size: 11, weight: .medium))
+        .frame(width: 14)
+      Text(title)
+    }
+  }
+}
+
+extension FlowingCheckbox where Label == FlowingCheckboxIconLabel {
+  public init(
+    _ title: String,
+    systemImage: String,
+    isOn: Binding<Bool>,
+    contentAlignment: FlowingCheckboxContentAlignment = .leading,
+    indicatorPlacement: FlowingCheckboxIndicatorPlacement = .leading,
+    widthPolicy: FlowingCheckboxWidthPolicy = .fill,
+    truncationMode: Text.TruncationMode = .tail
+  ) {
+    self.init(
+      isOn: isOn,
+      contentAlignment: contentAlignment,
+      indicatorPlacement: indicatorPlacement,
+      widthPolicy: widthPolicy,
+      truncationMode: truncationMode
+    ) {
+      FlowingCheckboxIconLabel(title, systemImage: systemImage)
     }
   }
 }
