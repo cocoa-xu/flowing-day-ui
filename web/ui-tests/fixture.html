@@ -46,6 +46,28 @@
           minimum-height="84"
         ></fd-text-area>
       </section>
+      <section class="selection-primitives">
+        <fd-checkbox id="checkbox" label="Show guides"></fd-checkbox>
+        <fd-multi-select id="multi-select" label="Visible devices">
+          <fd-option value="usb" selected>USB</fd-option>
+          <fd-option value="display">Display</fd-option>
+          <fd-option value="network">Network</fd-option>
+        </fd-multi-select>
+        <fd-connected-segmented-control id="segmented" label="Canvas tool" value="select">
+          <fd-option value="select">Select</fd-option>
+          <fd-option value="pan">Pan</fd-option>
+          <fd-option value="connect">Connect</fd-option>
+        </fd-connected-segmented-control>
+        <fd-disclosure id="disclosure" label="Advanced">
+          <p>Additional controls</p>
+        </fd-disclosure>
+        <fd-search-picker id="search-picker" label="City" value="berlin">
+          <fd-option value="amsterdam">Amsterdam</fd-option>
+          <fd-option value="berlin">Berlin</fd-option>
+          <fd-option value="copenhagen">Copenhagen</fd-option>
+          <fd-option value="dublin">Dublin</fd-option>
+        </fd-search-picker>
+      </section>
     </main>
   </body>
 </html>

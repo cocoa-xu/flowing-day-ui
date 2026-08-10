@@ -43,6 +43,17 @@ style.textContent = `
     grid-column: 1 / span 2;
   }
 
+  .selection-primitives {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+    align-items: start;
+    gap: 16px;
+  }
+
+  #search-picker {
+    min-height: 170px;
+  }
+
   fd-graph-canvas {
     width: 1000px;
     height: 700px;
@@ -58,6 +69,8 @@ FdIcons.register({
     '<svg viewBox="0 0 16 16"><path d="M3 11.8 11.8 3l1.2 1.2L4.2 13H3z" fill="currentColor"/></svg>',
   lock: '<svg viewBox="0 0 16 16"><path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2h1v7h-9V7zm1.5 0h4V5a2 2 0 1 0-4 0z" fill="currentColor"/></svg>',
   pin: '<svg viewBox="0 0 16 16"><path d="m5 2 6 6-1.5 1.5-1-1L6 11l-1-1 2.5-2.5-1-1zM4 10l2 2-3 2z" fill="currentColor"/></svg>',
+  magnifyingglass:
+    '<svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor"/><path d="m10.5 10.5 3 3" stroke="currentColor" stroke-linecap="round"/></svg>',
 })
 
 const graph = document.querySelector<FdGraphCanvas>('#graph')

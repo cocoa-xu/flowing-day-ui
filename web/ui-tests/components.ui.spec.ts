@@ -7,9 +7,14 @@ import {
   graphNodeReference,
   graphPortReference,
 } from '../packages/canvas/src/graph/model.js'
+import type { FdCheckbox } from '../packages/core/src/components/checkbox/fd-checkbox.js'
+import type { FdConnectedSegmentedControl } from '../packages/core/src/components/connected-segmented-control/fd-connected-segmented-control.js'
+import type { FdDisclosure } from '../packages/core/src/components/disclosure/fd-disclosure.js'
 import type { FdIconButton } from '../packages/core/src/components/icon-button/fd-icon-button.js'
+import type { FdMultiSelect } from '../packages/core/src/components/multi-select/fd-multi-select.js'
 import type { FdPopup } from '../packages/core/src/components/popup/fd-popup.js'
 import type { FdProgress } from '../packages/core/src/components/progress/fd-progress.js'
+import type { FdSearchPicker } from '../packages/core/src/components/search-picker/fd-search-picker.js'
 import type { FdSecureField } from '../packages/core/src/components/secure-field/fd-secure-field.js'
 import type { FdSlider } from '../packages/core/src/components/slider/fd-slider.js'
 import type { FdTextArea } from '../packages/core/src/components/text-area/fd-text-area.js'
@@ -84,6 +89,41 @@ test('field, icon button, and progress primitives retain native interaction', as
   const progress = page.locator('#progress')
   await expect(progress).toHaveAttribute('role', 'progressbar')
   await expect.poll(() => progress.evaluate((element) => (element as FdProgress).value)).toBe(0.64)
+})
+
+test('selection, disclosure, and search primitives retain native interaction', async ({ page }) => {
+  const checkbox = page.locator('#checkbox')
+  await checkbox.locator('button').click()
+  await expect
+    .poll(() => checkbox.evaluate((element) => (element as FdCheckbox).checked))
+    .toBe(true)
+
+  const multiSelect = page.locator('#multi-select')
+  await multiSelect.getByRole('checkbox', { name: 'Display' }).click()
+  await expect
+    .poll(() => multiSelect.evaluate((element) => (element as FdMultiSelect).values))
+    .toEqual(['usb', 'display'])
+
+  const segmented = page.locator('#segmented')
+  await segmented.getByRole('radio', { name: 'Select' }).focus()
+  await page.keyboard.press('ArrowRight')
+  await expect
+    .poll(() => segmented.evaluate((element) => (element as FdConnectedSegmentedControl).value))
+    .toBe('pan')
+
+  const disclosure = page.locator('#disclosure')
+  await disclosure.locator('button').click()
+  await expect
+    .poll(() => disclosure.evaluate((element) => (element as FdDisclosure).expanded))
+    .toBe(true)
+  await expect(disclosure.locator('p')).toBeVisible()
+
+  const searchPicker = page.locator('#search-picker')
+  await searchPicker.locator('input').fill('dub')
+  await searchPicker.getByRole('option', { name: 'Dublin' }).click()
+  await expect
+    .poll(() => searchPicker.evaluate((element) => (element as FdSearchPicker).value))
+    .toBe('dublin')
 })
 
 test('marquee selection updates before pointer release', async ({ page }) => {
