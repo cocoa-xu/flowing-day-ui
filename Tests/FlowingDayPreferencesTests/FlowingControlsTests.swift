@@ -572,6 +572,12 @@ final class FlowingControlsTests: XCTestCase {
     )
   }
 
+  func testTabAlignmentsUseSemanticFrameGuides() {
+    XCTAssertEqual(FlowingTabsAlignment.leading.frameAlignment, .leading)
+    XCTAssertEqual(FlowingTabsAlignment.center.frameAlignment, .center)
+    XCTAssertEqual(FlowingTabsAlignment.trailing.frameAlignment, .trailing)
+  }
+
   @MainActor
   func testTabsComposeAcrossEveryPublicPresentationAxis() {
     let options = [
@@ -584,20 +590,26 @@ final class FlowingControlsTests: XCTestCase {
       for sizing in FlowingTabsSizing.allCases {
         for overflow in FlowingTabsOverflowBehavior.allCases {
           for labelContent in FlowingTabLabelContent.allCases {
-            let height = fittingHeight(
-              FlowingTabs(
-                label: "Library areas",
-                selection: .constant("overview"),
-                options: options,
-                style: style,
-                sizing: sizing,
-                overflowBehavior: overflow,
-                labelContent: labelContent
-              )
-              .frame(width: 320)
-            )
-            XCTAssertGreaterThan(height, 20)
-            XCTAssertLessThan(height, 60)
+            for stripAlignment in FlowingTabsAlignment.allCases {
+              for itemAlignment in FlowingTabsAlignment.allCases {
+                let height = fittingHeight(
+                  FlowingTabs(
+                    label: "Library areas",
+                    selection: .constant("overview"),
+                    options: options,
+                    style: style,
+                    sizing: sizing,
+                    overflowBehavior: overflow,
+                    labelContent: labelContent,
+                    stripAlignment: stripAlignment,
+                    itemAlignment: itemAlignment
+                  )
+                  .frame(width: 320)
+                )
+                XCTAssertGreaterThan(height, 20)
+                XCTAssertLessThan(height, 60)
+              }
+            }
           }
         }
       }

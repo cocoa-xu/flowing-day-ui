@@ -52,6 +52,7 @@ final class PreferencesExampleTests: XCTestCase {
     XCTAssertEqual(FlowingTabsSizing.allCases, [.equal, .fitContent])
     XCTAssertEqual(FlowingTabsOverflowBehavior.allCases, [.compress, .scroll])
     XCTAssertEqual(FlowingTabLabelContent.allCases, [.text, .icon, .iconAndText])
+    XCTAssertEqual(FlowingTabsAlignment.allCases, [.leading, .center, .trailing])
     XCTAssertEqual(
       ExampleControlAxis.allCases,
       [.horizontal, .vertical]
