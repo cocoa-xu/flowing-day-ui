@@ -99,6 +99,7 @@ final class PreferencesControlsTests: XCTestCase {
     XCTAssertEqual(FlowingCheckboxContentAlignment.trailing.frameAlignment, .trailing)
   }
 
+  @MainActor
   func testCheckboxDefaultsMatchPrimitiveAndPreferencesContexts() {
     let primitive = FlowingCheckbox("Primitive", isOn: .constant(false))
     let preferences = PreferencesCheckToggle("Preferences", isOn: .constant(false))
@@ -109,8 +110,86 @@ final class PreferencesControlsTests: XCTestCase {
     )
 
     XCTAssertEqual(primitive.contentAlignment, .leading)
+    XCTAssertEqual(primitive.widthPolicy, .fill)
     XCTAssertEqual(preferences.contentAlignment, .center)
+    XCTAssertEqual(preferences.widthPolicy, .fill)
     XCTAssertEqual(trailing.contentAlignment, .trailing)
+  }
+
+  func testCheckboxWidthPolicyValidatesItsMaximumWidth() {
+    XCTAssertNil(FlowingCheckboxWidthPolicy.fitContent().maximumWidth)
+    XCTAssertNil(
+      FlowingCheckboxWidthPolicy.fitContent(maximumWidth: -.infinity).maximumWidth
+    )
+    XCTAssertNil(FlowingCheckboxWidthPolicy.fitContent(maximumWidth: 0).maximumWidth)
+    XCTAssertEqual(
+      FlowingCheckboxWidthPolicy.fitContent(maximumWidth: 120).maximumWidth,
+      120
+    )
+  }
+
+  @MainActor
+  func testContentSizedCheckboxHonorsItsMaximumWidth() {
+    let intrinsicWidth = fittingWidth(
+      FlowingCheckbox(
+        "Short",
+        isOn: .constant(false),
+        widthPolicy: .fitContent()
+      )
+    )
+    let constrainedWidth = fittingWidth(
+      FlowingCheckbox(
+        "A deliberately long checkbox label",
+        isOn: .constant(false),
+        widthPolicy: .fitContent(maximumWidth: 108),
+        truncationMode: .middle
+      )
+    )
+
+    XCTAssertLessThan(intrinsicWidth, 108)
+    XCTAssertEqual(constrainedWidth, 108, accuracy: 0.5)
+  }
+
+  func testMultiSelectItemWidthMapsToCheckboxWidth() {
+    XCTAssertEqual(
+      FlowingMultiSelectItemWidthPolicy.equal.checkboxWidthPolicy,
+      .fill
+    )
+    XCTAssertEqual(
+      FlowingMultiSelectItemWidthPolicy.fitContent(maximumWidth: 104)
+        .checkboxWidthPolicy,
+      .fitContent(maximumWidth: 104)
+    )
+  }
+
+  @MainActor
+  func testMultiSelectDefaultsToHorizontalEqualWidthItems() {
+    let multiSelect = FlowingMultiSelect(options: [])
+
+    XCTAssertEqual(multiSelect.axis, .horizontal)
+    XCTAssertEqual(multiSelect.itemWidthPolicy, .equal)
+    XCTAssertEqual(multiSelect.contentAlignment, .center)
+    XCTAssertEqual(multiSelect.spacing, 6)
+  }
+
+  @MainActor
+  func testMultiSelectSupportsVerticalContentSizedItems() {
+    let multiSelect = FlowingMultiSelect(
+      axis: .vertical,
+      itemWidthPolicy: .fitContent(maximumWidth: 96),
+      contentAlignment: .trailing,
+      spacing: 8,
+      truncationMode: .middle,
+      options: []
+    )
+
+    XCTAssertEqual(multiSelect.axis, .vertical)
+    XCTAssertEqual(
+      multiSelect.itemWidthPolicy,
+      .fitContent(maximumWidth: 96)
+    )
+    XCTAssertEqual(multiSelect.contentAlignment, .trailing)
+    XCTAssertEqual(multiSelect.spacing, 8)
   }
 
   @MainActor
@@ -188,7 +267,7 @@ final class PreferencesControlsTests: XCTestCase {
   @MainActor
   func testMultiSelectOptionTogglesItsBinding() {
     let state = BooleanState(false)
-    let option = PreferencesMultiSelectOption(
+    let option = FlowingMultiSelectOption(
       "Activity",
       isOn: Binding(
         get: { state.value },
@@ -208,7 +287,7 @@ final class PreferencesControlsTests: XCTestCase {
   @MainActor
   func testDisabledMultiSelectOptionDoesNotToggle() {
     let state = BooleanState(true)
-    let option = PreferencesMultiSelectOption(
+    let option = FlowingMultiSelectOption(
       "Chart",
       id: "network-chart",
       isOn: Binding(
@@ -336,6 +415,13 @@ final class PreferencesControlsTests: XCTestCase {
     let hostingView = NSHostingView(rootView: content.frame(width: 600))
     hostingView.layoutSubtreeIfNeeded()
     return hostingView.fittingSize.height
+  }
+
+  @MainActor
+  private func fittingWidth<Content: View>(_ content: Content) -> CGFloat {
+    let hostingView = NSHostingView(rootView: content)
+    hostingView.layoutSubtreeIfNeeded()
+    return hostingView.fittingSize.width
   }
 }
 

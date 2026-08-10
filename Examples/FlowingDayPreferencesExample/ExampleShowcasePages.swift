@@ -262,9 +262,9 @@ struct MotionShowcase: View {
             title: "Transition",
             controlWidth: 300,
             options: [
-              PreferencesMultiSelectOption("Fade", isOn: $fades),
-              PreferencesMultiSelectOption("Offset", isOn: $offsets),
-              PreferencesMultiSelectOption("Clip", isOn: $clips),
+              FlowingMultiSelectOption("Fade", isOn: $fades),
+              FlowingMultiSelectOption("Offset", isOn: $offsets),
+              FlowingMultiSelectOption("Clip", isOn: $clips),
             ]
           )
         }
@@ -374,6 +374,7 @@ struct ComponentsShowcase: View {
       disclosureComponents
       searchComponent
       checkboxComponents
+      multiSelectComponents
       selectionComponents
       iconSelectionComponents
       pillComponents
@@ -384,26 +385,75 @@ struct ComponentsShowcase: View {
   private var checkboxComponents: some View {
     PreferencesSection(
       "Checkbox",
-      footer: "FlowingCheckbox defaults to leading content. PreferencesCheckToggle composes it with centered content."
+      footer: "Checkboxes can share available width or fit their content up to a configurable limit."
     ) {
-      VStack(spacing: 8) {
-        FlowingCheckbox(
-          "Leading",
-          isOn: $leadingCheckbox,
-          contentAlignment: .leading
+      VStack(alignment: .leading, spacing: 10) {
+        HStack(spacing: 8) {
+          FlowingCheckbox(
+            "Leading",
+            isOn: $leadingCheckbox,
+            contentAlignment: .leading
+          )
+          FlowingCheckbox(
+            "Center",
+            isOn: $centeredCheckbox,
+            contentAlignment: .center
+          )
+          FlowingCheckbox(
+            "Trailing",
+            isOn: $trailingCheckbox,
+            contentAlignment: .trailing
+          )
+        }
+
+        HStack(spacing: 8) {
+          FlowingCheckbox(
+            "Auto",
+            isOn: $leadingCheckbox,
+            widthPolicy: .fitContent()
+          )
+          FlowingCheckbox(
+            "Quiet",
+            isOn: $centeredCheckbox,
+            widthPolicy: .fitContent()
+          )
+          FlowingCheckbox(
+            "A very long option",
+            isOn: $trailingCheckbox,
+            widthPolicy: .fitContent(maximumWidth: 116),
+            truncationMode: .middle
+          )
+        }
+      }
+      .frame(width: 340)
+      .padding(13)
+    }
+  }
+
+  private var multiSelectComponents: some View {
+    PreferencesSection(
+      "Multi-select",
+      footer: "The standalone component supports horizontal or vertical layout with equal or content-sized items."
+    ) {
+      VStack(alignment: .leading, spacing: 10) {
+        FlowingMultiSelect(
+          options: multiSelectOptions
         )
-        FlowingCheckbox(
-          "Center",
-          isOn: $centeredCheckbox,
-          contentAlignment: .center
+
+        FlowingMultiSelect(
+          itemWidthPolicy: .fitContent(maximumWidth: 112),
+          truncationMode: .middle,
+          options: multiSelectOptions
         )
-        FlowingCheckbox(
-          "Trailing",
-          isOn: $trailingCheckbox,
-          contentAlignment: .trailing
+
+        FlowingMultiSelect(
+          axis: .vertical,
+          itemWidthPolicy: .fitContent(maximumWidth: 112),
+          contentAlignment: .leading,
+          options: multiSelectOptions
         )
       }
-      .frame(width: 300)
+      .frame(width: 340)
       .padding(13)
     }
   }
@@ -535,13 +585,21 @@ struct ComponentsShowcase: View {
       PreferencesMultiSelectRow(
         title: "PreferencesMultiSelectRow",
         controlWidth: 300,
-        options: [
-          PreferencesMultiSelectOption("Alpha", isOn: $alphaSelected),
-          PreferencesMultiSelectOption("Beta", isOn: $betaSelected),
-          PreferencesMultiSelectOption("Locked", isOn: $lockedSelected, isEnabled: false),
-        ]
+        options: multiSelectOptions
       )
     }
+  }
+
+  private var multiSelectOptions: [FlowingMultiSelectOption] {
+    [
+      FlowingMultiSelectOption("Alpha", isOn: $alphaSelected),
+      FlowingMultiSelectOption("Beta", isOn: $betaSelected),
+      FlowingMultiSelectOption(
+        "Locked",
+        isOn: $lockedSelected,
+        isEnabled: false
+      ),
+    ]
   }
 
   private var iconSelectionComponents: some View {

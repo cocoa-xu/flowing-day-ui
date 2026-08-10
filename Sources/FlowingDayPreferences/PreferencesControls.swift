@@ -1356,69 +1356,53 @@ public struct PreferencesSymbolSegmentedRow<Value: Hashable>: View {
   }
 }
 
-public struct PreferencesMultiSelectOption: Identifiable {
-  public let id: String
-  public let label: String
-  public let isEnabled: Bool
-  let isOn: Binding<Bool>
-
-  public init(
-    _ label: String,
-    id: String? = nil,
-    isOn: Binding<Bool>,
-    isEnabled: Bool = true
-  ) {
-    self.id = id ?? label
-    self.label = label
-    self.isOn = isOn
-    self.isEnabled = isEnabled
-  }
-
-  var isSelected: Bool {
-    isOn.wrappedValue
-  }
-
-  func toggle() {
-    guard isEnabled else { return }
-    isOn.wrappedValue.toggle()
-  }
-}
-
 public struct PreferencesMultiSelectRow: View {
   private let symbol: String?
   private let title: String
   private let caption: String?
   private let controlWidth: CGFloat
-  private let options: [PreferencesMultiSelectOption]
+  private let axis: Axis
+  private let itemWidthPolicy: FlowingMultiSelectItemWidthPolicy
+  private let contentAlignment: FlowingCheckboxContentAlignment
+  private let spacing: CGFloat
+  private let truncationMode: Text.TruncationMode
+  private let options: [FlowingMultiSelectOption]
 
   public init(
     symbol: String? = nil,
     title: String,
     caption: String? = nil,
     controlWidth: CGFloat = 300,
-    options: [PreferencesMultiSelectOption]
+    axis: Axis = .horizontal,
+    itemWidthPolicy: FlowingMultiSelectItemWidthPolicy = .equal,
+    contentAlignment: FlowingCheckboxContentAlignment = .center,
+    spacing: CGFloat = 6,
+    truncationMode: Text.TruncationMode = .tail,
+    options: [FlowingMultiSelectOption]
   ) {
     self.symbol = symbol
     self.title = title
     self.caption = caption
     self.controlWidth = controlWidth
+    self.axis = axis
+    self.itemWidthPolicy = itemWidthPolicy
+    self.contentAlignment = contentAlignment
+    self.spacing = spacing
+    self.truncationMode = truncationMode
     self.options = options
   }
 
   public var body: some View {
     PreferencesRow(symbol: symbol, title: title, caption: caption) {
-      HStack(spacing: 6) {
-        ForEach(options) { option in
-          FlowingCheckbox(
-            option.label,
-            isOn: option.isOn,
-            contentAlignment: .center
-          )
-          .disabled(!option.isEnabled)
-        }
-      }
+      FlowingMultiSelect(
+        axis: axis,
+        itemWidthPolicy: itemWidthPolicy,
+        contentAlignment: contentAlignment,
+        spacing: spacing,
+        truncationMode: truncationMode,
+        options: options
+      )
       .frame(width: controlWidth)
-      .accessibilityElement(children: .contain)
     }
   }
 }
@@ -1426,23 +1410,31 @@ public struct PreferencesMultiSelectRow: View {
 public struct PreferencesCheckToggle: View {
   private let title: String
   let contentAlignment: FlowingCheckboxContentAlignment
+  let widthPolicy: FlowingCheckboxWidthPolicy
+  let truncationMode: Text.TruncationMode
   @Binding private var isOn: Bool
 
   public init(
     _ title: String,
     isOn: Binding<Bool>,
-    contentAlignment: FlowingCheckboxContentAlignment = .center
+    contentAlignment: FlowingCheckboxContentAlignment = .center,
+    widthPolicy: FlowingCheckboxWidthPolicy = .fill,
+    truncationMode: Text.TruncationMode = .tail
   ) {
     self.title = title
     _isOn = isOn
     self.contentAlignment = contentAlignment
+    self.widthPolicy = widthPolicy
+    self.truncationMode = truncationMode
   }
 
   public var body: some View {
     FlowingCheckbox(
       title,
       isOn: $isOn,
-      contentAlignment: contentAlignment
+      contentAlignment: contentAlignment,
+      widthPolicy: widthPolicy,
+      truncationMode: truncationMode
     )
   }
 }

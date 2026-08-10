@@ -12,20 +12,50 @@ public enum FlowingCheckboxContentAlignment: String, CaseIterable, Sendable {
     case .trailing: .trailing
     }
   }
+
+  var horizontalAlignment: HorizontalAlignment {
+    switch self {
+    case .leading: .leading
+    case .center: .center
+    case .trailing: .trailing
+    }
+  }
+}
+
+public enum FlowingCheckboxWidthPolicy: Equatable, Sendable {
+  case fill
+  case fitContent(maximumWidth: CGFloat? = nil)
+
+  var maximumWidth: CGFloat? {
+    guard case .fitContent(let maximumWidth) = self,
+      let maximumWidth,
+      maximumWidth.isFinite,
+      maximumWidth > 0
+    else {
+      return nil
+    }
+    return maximumWidth
+  }
 }
 
 public struct FlowingCheckbox<Label: View>: View {
   @Binding private var isOn: Bool
   let contentAlignment: FlowingCheckboxContentAlignment
+  let widthPolicy: FlowingCheckboxWidthPolicy
+  let truncationMode: Text.TruncationMode
   private let label: Label
 
   public init(
     isOn: Binding<Bool>,
     contentAlignment: FlowingCheckboxContentAlignment = .leading,
+    widthPolicy: FlowingCheckboxWidthPolicy = .fill,
+    truncationMode: Text.TruncationMode = .tail,
     @ViewBuilder label: () -> Label
   ) {
     _isOn = isOn
     self.contentAlignment = contentAlignment
+    self.widthPolicy = widthPolicy
+    self.truncationMode = truncationMode
     self.label = label()
   }
 
@@ -34,7 +64,11 @@ public struct FlowingCheckbox<Label: View>: View {
       label
     }
     .toggleStyle(
-      FlowingCheckboxToggleStyle(contentAlignment: contentAlignment)
+      FlowingCheckboxToggleStyle(
+        contentAlignment: contentAlignment,
+        widthPolicy: widthPolicy,
+        truncationMode: truncationMode
+      )
     )
   }
 
@@ -51,22 +85,14 @@ private struct FlowingCheckboxToggleStyle: ToggleStyle {
   @Environment(\.preferencesSurfaces) private var surfaces
 
   let contentAlignment: FlowingCheckboxContentAlignment
+  let widthPolicy: FlowingCheckboxWidthPolicy
+  let truncationMode: Text.TruncationMode
 
   func makeBody(configuration: Configuration) -> some View {
     Button {
       configuration.isOn.toggle()
     } label: {
-      HStack(spacing: 6) {
-        Image(systemName: configuration.isOn ? "checkmark.circle.fill" : "circle")
-          .font(.system(size: 11, weight: .semibold))
-        configuration.label
-          .font(typography.selectionLabel.font)
-          .lineLimit(1)
-      }
-      .foregroundStyle(configuration.isOn ? accent.foreground : PreferencesPalette.muted)
-      .frame(maxWidth: .infinity, alignment: contentAlignment.frameAlignment)
-      .padding(.horizontal, 9)
-      .padding(.vertical, 7)
+      sizedContent(configuration)
       .background(
         configuration.isOn ? accent.wash : surfaces.control,
         in: RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
@@ -84,15 +110,46 @@ private struct FlowingCheckboxToggleStyle: ToggleStyle {
     .animation(.default, value: configuration.isOn)
     .accessibilityValue(configuration.isOn ? strings.selected : strings.notSelected)
   }
+
+  @ViewBuilder
+  private func sizedContent(_ configuration: Configuration) -> some View {
+    let content = HStack(spacing: 6) {
+      Image(systemName: configuration.isOn ? "checkmark.circle.fill" : "circle")
+        .font(.system(size: 11, weight: .semibold))
+      configuration.label
+        .font(typography.selectionLabel.font)
+        .lineLimit(1)
+        .truncationMode(truncationMode)
+    }
+    .foregroundStyle(configuration.isOn ? accent.foreground : PreferencesPalette.muted)
+    .padding(.horizontal, 9)
+    .padding(.vertical, 7)
+
+    switch widthPolicy {
+    case .fill:
+      content.frame(maxWidth: .infinity, alignment: contentAlignment.frameAlignment)
+    case .fitContent:
+      content
+        .frame(maxWidth: widthPolicy.maximumWidth, alignment: contentAlignment.frameAlignment)
+        .fixedSize(horizontal: widthPolicy.maximumWidth == nil, vertical: false)
+    }
+  }
 }
 
 extension FlowingCheckbox where Label == Text {
   public init(
     _ title: String,
     isOn: Binding<Bool>,
-    contentAlignment: FlowingCheckboxContentAlignment = .leading
+    contentAlignment: FlowingCheckboxContentAlignment = .leading,
+    widthPolicy: FlowingCheckboxWidthPolicy = .fill,
+    truncationMode: Text.TruncationMode = .tail
   ) {
-    self.init(isOn: isOn, contentAlignment: contentAlignment) {
+    self.init(
+      isOn: isOn,
+      contentAlignment: contentAlignment,
+      widthPolicy: widthPolicy,
+      truncationMode: truncationMode
+    ) {
       Text(title)
     }
   }

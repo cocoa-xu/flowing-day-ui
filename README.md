@@ -290,8 +290,8 @@ PreferencesMultiSelectRow(
     caption: "Choose which network content appears.",
     controlWidth: 260,
     options: [
-        PreferencesMultiSelectOption("Activity", isOn: $showNetwork),
-        PreferencesMultiSelectOption(
+        FlowingMultiSelectOption("Activity", isOn: $showNetwork),
+        FlowingMultiSelectOption(
             "Chart",
             isOn: $showNetworkChart,
             isEnabled: showNetwork
