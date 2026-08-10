@@ -72,8 +72,6 @@ public struct PreferencesSectionHeader: View {
 }
 
 public struct PreferencesCard<Content: View>: View {
-  @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesSurfaces) private var surfaces
   private let content: Content
 
   public init(@ViewBuilder content: () -> Content) {
@@ -81,14 +79,8 @@ public struct PreferencesCard<Content: View>: View {
   }
 
   public var body: some View {
-    VStack(spacing: 0) {
+    FlowingCard {
       content
-    }
-    .background(surfaces.card)
-    .clipShape(RoundedRectangle(cornerRadius: metrics.cardRadius, style: .continuous))
-    .overlay {
-      RoundedRectangle(cornerRadius: metrics.cardRadius, style: .continuous)
-        .strokeBorder(PreferencesPalette.edge)
     }
   }
 }
@@ -133,8 +125,6 @@ public struct PreferencesPaneStack<Content: View>: View {
 }
 
 public struct PreferencesSection<Content: View>: View {
-  @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesTypography) private var typography
   @State private var rowIconPresence: Set<Bool> = []
   private let title: String
   private let footer: String?
@@ -154,23 +144,13 @@ public struct PreferencesSection<Content: View>: View {
   }
 
   public var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      PreferencesSectionHeader(title)
-      PreferencesCard { content }
+    FlowingSection(title, footer: footer) {
+      content
         .environment(\.preferencesRowSeparatorLeadingEdge, separatorLeadingEdge)
         .onPreferenceChange(PreferencesRowIconPresenceKey.self) {
           rowIconPresence = $0
         }
-      if let footer {
-        Text(footer)
-          .font(typography.rowCaption.font)
-          .foregroundStyle(PreferencesPalette.faint)
-          .fixedSize(horizontal: false, vertical: true)
-          .padding(.horizontal, metrics.rowInset)
-          .padding(.top, 7)
-      }
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   private var separatorLeadingEdge: PreferencesRowSeparatorLeadingEdge {
