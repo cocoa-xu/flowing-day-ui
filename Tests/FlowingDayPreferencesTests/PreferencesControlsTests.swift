@@ -300,7 +300,7 @@ final class PreferencesControlsTests: XCTestCase {
   }
 
   @MainActor
-  func testIconCheckboxUsesTheStandardCheckboxHeight() {
+  func testIconCheckboxUsesDedicatedVisualMetrics() {
     let standardHeight = fittingHeight(
       FlowingCheckbox(
         "Displays",
@@ -318,7 +318,13 @@ final class PreferencesControlsTests: XCTestCase {
       )
     )
 
-    XCTAssertEqual(iconHeight, standardHeight)
+    XCTAssertEqual(iconHeight, FlowingCheckboxIconMetrics.height)
+    XCTAssertGreaterThan(iconHeight, standardHeight)
+    XCTAssertEqual(FlowingCheckboxIconMetrics.horizontalInset, 10)
+    XCTAssertEqual(FlowingCheckboxIconMetrics.contentSpacing, 9)
+    XCTAssertEqual(FlowingCheckboxIconMetrics.iconSize, 9)
+    XCTAssertEqual(FlowingCheckboxIconMetrics.iconWidth, 14)
+    XCTAssertEqual(FlowingCheckboxIconMetrics.indicatorSize, 15)
   }
 
   @MainActor

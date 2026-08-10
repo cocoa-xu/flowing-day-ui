@@ -43,6 +43,36 @@ public enum FlowingCheckboxWidthPolicy: Equatable, Sendable {
   }
 }
 
+enum FlowingCheckboxIconMetrics {
+  static let height: CGFloat = 31
+  static let horizontalInset: CGFloat = 10
+  static let contentSpacing: CGFloat = 9
+  static let iconSize: CGFloat = 9
+  static let iconWidth: CGFloat = 14
+  static let indicatorSize: CGFloat = 15
+}
+
+private enum FlowingCheckboxVisualStyle {
+  case standard
+  case icon
+}
+
+private struct FlowingCheckboxIconState {
+  let accent: PreferencesAccent
+  let isOn: Bool
+}
+
+private struct FlowingCheckboxIconStateKey: EnvironmentKey {
+  static let defaultValue: FlowingCheckboxIconState? = nil
+}
+
+private extension EnvironmentValues {
+  var flowingCheckboxIconState: FlowingCheckboxIconState? {
+    get { self[FlowingCheckboxIconStateKey.self] }
+    set { self[FlowingCheckboxIconStateKey.self] = newValue }
+  }
+}
+
 public struct FlowingCheckbox<Label: View>: View {
   @Binding private var isOn: Bool
   let accent: PreferencesAccent?
@@ -51,6 +81,7 @@ public struct FlowingCheckbox<Label: View>: View {
   let widthPolicy: FlowingCheckboxWidthPolicy
   let truncationMode: Text.TruncationMode
   private let label: Label
+  private let visualStyle: FlowingCheckboxVisualStyle
 
   public init(
     isOn: Binding<Bool>,
@@ -68,6 +99,27 @@ public struct FlowingCheckbox<Label: View>: View {
     self.widthPolicy = widthPolicy
     self.truncationMode = truncationMode
     self.label = label()
+    visualStyle = .standard
+  }
+
+  private init(
+    isOn: Binding<Bool>,
+    accent: PreferencesAccent?,
+    contentAlignment: FlowingCheckboxContentAlignment,
+    indicatorPlacement: FlowingCheckboxIndicatorPlacement,
+    widthPolicy: FlowingCheckboxWidthPolicy,
+    truncationMode: Text.TruncationMode,
+    visualStyle: FlowingCheckboxVisualStyle,
+    label: Label
+  ) {
+    _isOn = isOn
+    self.accent = accent
+    self.contentAlignment = contentAlignment
+    self.indicatorPlacement = indicatorPlacement
+    self.widthPolicy = widthPolicy
+    self.truncationMode = truncationMode
+    self.visualStyle = visualStyle
+    self.label = label
   }
 
   public var body: some View {
@@ -80,7 +132,8 @@ public struct FlowingCheckbox<Label: View>: View {
         contentAlignment: contentAlignment,
         indicatorPlacement: indicatorPlacement,
         widthPolicy: widthPolicy,
-        truncationMode: truncationMode
+        truncationMode: truncationMode,
+        visualStyle: visualStyle
       )
     )
   }
@@ -102,6 +155,7 @@ private struct FlowingCheckboxToggleStyle: ToggleStyle {
   let indicatorPlacement: FlowingCheckboxIndicatorPlacement
   let widthPolicy: FlowingCheckboxWidthPolicy
   let truncationMode: Text.TruncationMode
+  let visualStyle: FlowingCheckboxVisualStyle
 
   private var accent: PreferencesAccent {
     accentOverride ?? inheritedAccent
@@ -113,16 +167,11 @@ private struct FlowingCheckboxToggleStyle: ToggleStyle {
     } label: {
       sizedContent(configuration)
         .background(
-          configuration.isOn ? accent.wash : surfaces.control,
-          in: RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
+          selectedBackground(isOn: configuration.isOn),
+          in: controlShape
         )
         .overlay {
-          RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
-            .strokeBorder(
-              configuration.isOn
-                ? accent.foreground.opacity(0.22)
-                : PreferencesPalette.hairline
-            )
+          controlShape.strokeBorder(borderColor(isOn: configuration.isOn))
         }
     }
     .buttonStyle(.plain)
@@ -132,7 +181,7 @@ private struct FlowingCheckboxToggleStyle: ToggleStyle {
 
   @ViewBuilder
   private func sizedContent(_ configuration: Configuration) -> some View {
-    let content = HStack(spacing: 6) {
+    let content = HStack(spacing: contentSpacing) {
       if indicatorPlacement == .leading {
         indicator(isOn: configuration.isOn)
       }
@@ -141,9 +190,9 @@ private struct FlowingCheckboxToggleStyle: ToggleStyle {
         indicator(isOn: configuration.isOn)
       }
     }
-    .foregroundStyle(configuration.isOn ? accent.foreground : PreferencesPalette.muted)
-    .padding(.horizontal, 9)
-    .padding(.vertical, 7)
+    .foregroundStyle(standardForeground(isOn: configuration.isOn))
+    .padding(.horizontal, horizontalInset)
+    .modifier(FlowingCheckboxHeightModifier(visualStyle: visualStyle))
 
     switch widthPolicy {
     case .fill:
@@ -162,16 +211,82 @@ private struct FlowingCheckboxToggleStyle: ToggleStyle {
       .lineLimit(1)
       .truncationMode(truncationMode)
 
+    let styledLabel = label.environment(
+      \.flowingCheckboxIconState,
+      visualStyle == .icon
+        ? FlowingCheckboxIconState(accent: accent, isOn: configuration.isOn)
+        : nil
+    )
+
     if indicatorPlacement == .trailing && widthPolicy == .fill {
-      label.frame(maxWidth: .infinity, alignment: contentAlignment.frameAlignment)
+      styledLabel.frame(maxWidth: .infinity, alignment: contentAlignment.frameAlignment)
     } else {
-      label
+      styledLabel
     }
   }
 
+  @ViewBuilder
   private func indicator(isOn: Bool) -> some View {
-    Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
-      .font(.system(size: 11, weight: .semibold))
+    if visualStyle == .icon {
+      ZStack {
+        Circle()
+          .fill(isOn ? accent.fill : Color.clear)
+        Circle()
+          .stroke(isOn ? accent.fill : PreferencesPalette.edge)
+        Image(systemName: "checkmark")
+          .font(.system(size: 7, weight: .bold))
+          .foregroundStyle(.white)
+          .opacity(isOn ? 1 : 0)
+      }
+      .frame(
+        width: FlowingCheckboxIconMetrics.indicatorSize,
+        height: FlowingCheckboxIconMetrics.indicatorSize
+      )
+    } else {
+      Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+        .font(.system(size: 11, weight: .semibold))
+    }
+  }
+
+  private var contentSpacing: CGFloat {
+    visualStyle == .icon ? FlowingCheckboxIconMetrics.contentSpacing : 6
+  }
+
+  private var horizontalInset: CGFloat {
+    visualStyle == .icon ? FlowingCheckboxIconMetrics.horizontalInset : 9
+  }
+
+  private var controlShape: RoundedRectangle {
+    RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
+  }
+
+  private func selectedBackground(isOn: Bool) -> Color {
+    guard isOn else { return surfaces.control }
+    return visualStyle == .icon ? accent.fill.opacity(0.065) : accent.wash
+  }
+
+  private func borderColor(isOn: Bool) -> Color {
+    guard isOn else { return PreferencesPalette.hairline }
+    return visualStyle == .icon
+      ? accent.fill.opacity(0.15)
+      : accent.foreground.opacity(0.22)
+  }
+
+  private func standardForeground(isOn: Bool) -> Color {
+    guard visualStyle == .standard else { return PreferencesPalette.ink }
+    return isOn ? accent.foreground : PreferencesPalette.muted
+  }
+}
+
+private struct FlowingCheckboxHeightModifier: ViewModifier {
+  let visualStyle: FlowingCheckboxVisualStyle
+
+  func body(content: Content) -> some View {
+    if visualStyle == .icon {
+      content.frame(height: FlowingCheckboxIconMetrics.height)
+    } else {
+      content.padding(.vertical, 7)
+    }
   }
 }
 
@@ -238,6 +353,7 @@ extension FlowingCheckbox where Label == Text {
 }
 
 public struct FlowingCheckboxIconLabel: View {
+  @Environment(\.flowingCheckboxIconState) private var state
   private let title: String
   private let systemImage: String
 
@@ -247,12 +363,20 @@ public struct FlowingCheckboxIconLabel: View {
   }
 
   public var body: some View {
-    HStack(spacing: 6) {
+    HStack(spacing: FlowingCheckboxIconMetrics.contentSpacing) {
       Image(systemName: systemImage)
-        .font(.system(size: 11, weight: .medium))
-        .frame(width: 14)
+        .font(.system(size: FlowingCheckboxIconMetrics.iconSize, weight: .medium))
+        .foregroundStyle(iconColor)
+        .frame(width: FlowingCheckboxIconMetrics.iconWidth)
       Text(title)
+        .foregroundStyle(state?.isOn == false ? PreferencesPalette.faint : PreferencesPalette.ink)
     }
+    .font(.system(size: 11, weight: .medium))
+  }
+
+  private var iconColor: Color {
+    guard let state else { return PreferencesPalette.muted }
+    return state.accent.fill.opacity(state.isOn ? 1 : 0.3)
   }
 }
 
@@ -273,9 +397,9 @@ extension FlowingCheckbox where Label == FlowingCheckboxIconLabel {
       contentAlignment: contentAlignment,
       indicatorPlacement: indicatorPlacement,
       widthPolicy: widthPolicy,
-      truncationMode: truncationMode
-    ) {
-      FlowingCheckboxIconLabel(title, systemImage: systemImage)
-    }
+      truncationMode: truncationMode,
+      visualStyle: .icon,
+      label: FlowingCheckboxIconLabel(title, systemImage: systemImage)
+    )
   }
 }
