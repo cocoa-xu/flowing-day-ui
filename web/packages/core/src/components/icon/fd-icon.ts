@@ -56,9 +56,12 @@ export class FdIcon extends FdElement {
     const markup = FdIcons.resolve(this.name)
 
     if (this.label) {
+      this.removeAttribute('aria-hidden')
       this.setAttribute('role', 'img')
       this.setAttribute('aria-label', this.label)
     } else {
+      this.removeAttribute('role')
+      this.removeAttribute('aria-label')
       this.setAttribute('aria-hidden', 'true')
     }
 

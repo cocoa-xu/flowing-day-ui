@@ -1,13 +1,9 @@
 import { type CSSResultGroup, css, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
-import {
-  DEFAULT_TAIL_LENGTH,
-  middleTruncated,
-  middleTruncateStyles,
-} from '../../internal/middle-truncate.js'
-import { textRole } from '../../internal/typography.js'
 import '../row/fd-row.js'
+import { DEFAULT_TAIL_LENGTH } from '../../internal/middle-truncate.js'
+import '../value-text/fd-value-text.js'
 
 /**
  * Mirrors `PreferencesValueRow`: a read-only value at the trailing edge, selectable and
@@ -21,7 +17,6 @@ import '../row/fd-row.js'
 export class FdValueRow extends FdElement {
   static override styles: CSSResultGroup = [
     baseStyles,
-    middleTruncateStyles,
     css`
       /* The value is a lineLimit(1) label, so it compresses instead of overflowing. */
       fd-row {
@@ -35,11 +30,8 @@ export class FdValueRow extends FdElement {
         min-width: 0;
       }
 
-      .value {
-        ${textRole('value')}
-        color: var(--_fd-palette-muted);
-        user-select: text;
-        -webkit-user-select: text;
+      fd-value-text {
+        flex: 0 1 auto;
       }
     `,
   ]
@@ -58,9 +50,11 @@ export class FdValueRow extends FdElement {
     return html`
       <fd-row symbol=${this.symbol ?? ''} label=${this.label}>
         <span class="value-group" slot="trailing">
-          <span class="value truncate" part="value"
-            >${middleTruncated(this.value, this.tailLength)}</span
-          >
+          <fd-value-text
+            exportparts="value"
+            .value=${this.value}
+            .tailLength=${this.tailLength}
+          ></fd-value-text>
           <slot name="trailing"></slot>
         </span>
       </fd-row>

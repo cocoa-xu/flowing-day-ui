@@ -1,8 +1,7 @@
-import { type CSSResultGroup, css, html, nothing } from 'lit'
+import { type CSSResultGroup, css, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
-import { textRole } from '../../internal/typography.js'
-import '../icon/fd-icon.js'
+import '../empty-state/fd-empty-state.js'
 
 /**
  * Mirrors `PreferencesEmptyRow`: the empty state for a section, faint and leading-aligned
@@ -16,14 +15,8 @@ export class FdEmptyRow extends FdElement {
     baseStyles,
     css`
       .empty {
-        ${textRole('value')}
-        display: flex;
-        /* HStack(alignment: .firstTextBaseline) */
-        align-items: baseline;
-        gap: 8px;
         padding-inline: var(--_fd-metric-row-inset);
         padding-block: 14px;
-        color: var(--_fd-palette-faint);
       }
     `,
   ]
@@ -35,10 +28,13 @@ export class FdEmptyRow extends FdElement {
 
   override render() {
     return html`
-      <div class="empty">
-        ${this.symbol ? html`<fd-icon name=${this.symbol}></fd-icon>` : nothing}
-        <span part="message">${this.message ?? html`<slot></slot>`}</span>
-      </div>
+      <fd-empty-state
+        class="empty"
+        exportparts="icon, message"
+        layout="inline"
+        .message=${this.message ?? this.textContent?.trim() ?? ''}
+        .symbol=${this.symbol}
+      ></fd-empty-state>
     `
   }
 }

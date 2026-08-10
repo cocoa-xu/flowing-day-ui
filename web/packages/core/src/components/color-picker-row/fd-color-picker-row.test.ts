@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import type { FdColorPicker } from '../color-picker/fd-color-picker.js'
 import type { FdColorPickerRow } from './fd-color-picker-row.js'
 import './fd-color-picker-row.js'
 
@@ -11,8 +12,11 @@ async function mount(html: string): Promise<FdColorPickerRow> {
   return element
 }
 
+const pickerOf = (element: FdColorPickerRow) =>
+  element.shadowRoot?.querySelector('fd-color-picker') as FdColorPicker
+
 const swatchOf = (element: FdColorPickerRow) =>
-  element.shadowRoot?.querySelector('.swatch') as HTMLInputElement
+  pickerOf(element).shadowRoot?.querySelector('.swatch') as HTMLInputElement
 
 afterEach(() => {
   document.body.replaceChildren()
@@ -89,6 +93,17 @@ describe('fd-color-picker-row', () => {
     form.reset()
     await element.updateComplete
     expect(element.value).toBe('#6d9ea5')
+  })
+
+  it('does not submit while disabled', async () => {
+    const form = document.createElement('form')
+    form.innerHTML =
+      '<fd-color-picker-row name="tint" label="Tint" value="#6d9ea5" disabled></fd-color-picker-row>'
+    document.body.append(form)
+    const element = form.firstElementChild as FdColorPickerRow
+    await element.updateComplete
+
+    expect(new FormData(form).has('tint')).toBe(false)
   })
 
   it('carries the row caption through', async () => {

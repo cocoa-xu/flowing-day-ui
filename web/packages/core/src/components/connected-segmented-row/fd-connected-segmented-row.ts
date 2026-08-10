@@ -2,6 +2,7 @@ import { html, type TemplateResult } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import type { CollectedOption } from '../../internal/options.js'
 import { FdSegmentedRowBase } from '../../internal/segmented-row-base.js'
+import '../icon/fd-icon.js'
 
 /**
  * A connected counterpart to `fd-segmented-row`: equal-width text segments share one
@@ -15,12 +16,10 @@ export class FdConnectedSegmentedRow extends FdSegmentedRowBase {
     return true
   }
 
-  protected override get segmentModifier(): 'compact' {
-    return 'compact'
-  }
-
   protected override renderSegmentContent(option: CollectedOption): TemplateResult {
-    return html`<span class="segment-label">${option.label}</span>`
+    return option.symbol
+      ? html`<fd-icon class="segment-icon" name=${option.symbol}></fd-icon>`
+      : html`<span class="segment-label">${option.label}</span>`
   }
 }
 

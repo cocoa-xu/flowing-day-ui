@@ -42,6 +42,7 @@ export class FdPopupRow extends FdElement {
           name=${this.name}
           min-width=${this.minWidth}
           .options=${this.options}
+          .label=${this.label}
           .value=${this.value}
           ?disabled=${this.disabled}
           @fd-change=${this.#onPopupChange}

@@ -1,14 +1,21 @@
 import { type CSSResultGroup, css, html, type PropertyValues } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
-import { checkCircleFill, circleOutline, selectionStyles } from '../../internal/selection.js'
+import { DEFAULT_TAIL_LENGTH } from '../../internal/middle-truncate.js'
+import type {
+  FdCheckboxContentAlignment,
+  FdCheckboxIndicatorPlacement,
+  FdCheckboxTruncation,
+  FdCheckboxWidthPolicy,
+} from '../checkbox/fd-checkbox.js'
+import '../checkbox/fd-checkbox.js'
 
 /**
- * Mirrors `PreferencesCheckToggle`: one checkmark-circle pill on its own, for use outside a
- * multi-select strip.
+ * The Preferences wrapper around `fd-checkbox`.
  *
  * @fires fd-change - `{ checked: boolean }` when toggled.
- * @csspart segment - The pill.
+ * @csspart segment - The checkbox surface.
+ * @csspart indicator - The selection indicator.
  */
 @customElement('fd-check-toggle')
 export class FdCheckToggle extends FdElement {
@@ -16,14 +23,20 @@ export class FdCheckToggle extends FdElement {
 
   static override styles: CSSResultGroup = [
     baseStyles,
-    selectionStyles,
     css`
       :host {
-        display: inline-flex;
+        display: flex;
+        width: 100%;
       }
 
-      .segment {
-        flex: 0 0 auto;
+      fd-checkbox {
+        width: 100%;
+      }
+
+      :host([width-policy='fit-content']) {
+        display: inline-flex;
+        width: auto;
+        max-width: var(--_maximum-width, 100%);
       }
     `,
   ]
@@ -34,6 +47,21 @@ export class FdCheckToggle extends FdElement {
   @property({ type: Boolean, reflect: true }) checked = false
 
   @property({ type: Boolean, reflect: true }) disabled = false
+
+  @property({ reflect: true, attribute: 'content-alignment' })
+  contentAlignment: FdCheckboxContentAlignment = 'center'
+
+  @property({ reflect: true, attribute: 'indicator-placement' })
+  indicatorPlacement: FdCheckboxIndicatorPlacement = 'leading'
+
+  @property({ reflect: true, attribute: 'width-policy' }) widthPolicy: FdCheckboxWidthPolicy =
+    'fill'
+
+  @property({ type: Number, attribute: 'maximum-width' }) maximumWidth: number | null = null
+
+  @property({ reflect: true }) truncation: FdCheckboxTruncation = 'end'
+
+  @property({ type: Number, attribute: 'tail-length' }) tailLength = DEFAULT_TAIL_LENGTH
 
   @property({ reflect: true }) name = ''
 
@@ -52,6 +80,10 @@ export class FdCheckToggle extends FdElement {
     return this.#internals.form
   }
 
+  get labels(): NodeList {
+    return this.#internals.labels
+  }
+
   override connectedCallback(): void {
     super.connectedCallback()
     this.#defaultChecked = this.checked
@@ -59,7 +91,13 @@ export class FdCheckToggle extends FdElement {
 
   override updated(changed: PropertyValues<this>): void {
     super.updated(changed)
-    this.#internals.setFormValue(this.checked ? this.value : null)
+    const maximum = this.maximumWidth
+    if (maximum !== null && Number.isFinite(maximum) && maximum > 0) {
+      this.style.setProperty('--_maximum-width', `${maximum}px`)
+    } else {
+      this.style.removeProperty('--_maximum-width')
+    }
+    this.#internals.setFormValue(this.checked && !this.disabled ? this.value : null)
   }
 
   formResetCallback(): void {
@@ -70,9 +108,9 @@ export class FdCheckToggle extends FdElement {
     this.checked = state !== null
   }
 
-  #toggle(): void {
-    if (this.disabled) return
-    this.checked = !this.checked
+  #onChange = (event: CustomEvent): void => {
+    event.stopPropagation()
+    this.checked = event.detail.checked === true
     this.dispatchEvent(
       new CustomEvent('fd-change', {
         detail: { checked: this.checked },
@@ -86,18 +124,19 @@ export class FdCheckToggle extends FdElement {
     const label = this.label ?? this.textContent?.trim() ?? ''
 
     return html`
-      <button
-        class="segment"
-        part="segment"
-        type="button"
-        aria-pressed=${this.checked}
-        ?data-selected=${this.checked}
-        ?disabled=${this.disabled}
-        @click=${() => this.#toggle()}
-      >
-        ${this.checked ? checkCircleFill : circleOutline}
-        <span class="segment-label">${label}</span>
-      </button>
+      <fd-checkbox
+        exportparts="button: segment, indicator"
+        .label=${label}
+        .checked=${this.checked}
+        .disabled=${this.disabled}
+        .contentAlignment=${this.contentAlignment}
+        .indicatorPlacement=${this.indicatorPlacement}
+        .widthPolicy=${this.widthPolicy}
+        .maximumWidth=${this.maximumWidth}
+        .truncation=${this.truncation}
+        .tailLength=${this.tailLength}
+        @fd-change=${this.#onChange}
+      ></fd-checkbox>
     `
   }
 }

@@ -2,19 +2,25 @@ import { type CSSResultGroup, css, html, type PropertyValues } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { type CollectedOption, collectOptions } from '../../internal/options.js'
-import { checkCircleFill, circleOutline, selectionStyles } from '../../internal/selection.js'
+import type {
+  FdCheckboxContentAlignment,
+  FdCheckboxIndicatorPlacement,
+  FdCheckboxTruncation,
+} from '../checkbox/fd-checkbox.js'
+import type {
+  FdMultiSelectAxis,
+  FdMultiSelectItemWidthPolicy,
+} from '../multi-select/fd-multi-select.js'
+import '../multi-select/fd-multi-select.js'
 import '../option/fd-option.js'
 import '../row/fd-row.js'
 
 /**
- * Mirrors `PreferencesMultiSelectRow`: one row holding several independent toggles, each
- * keeping its own on/off state and enablement, drawn as checkmark-circle pills.
- *
- * Each `fd-option` child owns its state through its `selected` attribute, which is the
- * web counterpart of the per-option `Binding<Bool>` the SwiftUI original takes.
+ * The Preferences row wrapper around `fd-multi-select`.
  *
  * @fires fd-change - `{ value, selected, values }` when one option is toggled.
- * @csspart segment - One pill in the strip.
+ * @csspart group - The option container.
+ * @csspart option - Each checkbox surface.
  */
 @customElement('fd-multi-select-row')
 export class FdMultiSelectRow extends FdElement {
@@ -22,10 +28,13 @@ export class FdMultiSelectRow extends FdElement {
 
   static override styles: CSSResultGroup = [
     baseStyles,
-    selectionStyles,
     css`
       :host {
         --_control-width: var(--fd-control-width, 300px);
+      }
+
+      fd-multi-select {
+        width: var(--_control-width);
       }
     `,
   ]
@@ -36,8 +45,25 @@ export class FdMultiSelectRow extends FdElement {
 
   @property({ reflect: true }) caption: string | null = null
 
-  /** Mirrors `controlWidth`, which defaults to 300. */
   @property({ type: Number, attribute: 'control-width' }) controlWidth = 300
+
+  @property({ reflect: true }) axis: FdMultiSelectAxis = 'horizontal'
+
+  @property({ reflect: true, attribute: 'item-width-policy' })
+  itemWidthPolicy: FdMultiSelectItemWidthPolicy = 'equal'
+
+  @property({ reflect: true, attribute: 'content-alignment' })
+  contentAlignment: FdCheckboxContentAlignment = 'center'
+
+  @property({ reflect: true, attribute: 'indicator-placement' })
+  indicatorPlacement: FdCheckboxIndicatorPlacement = 'leading'
+
+  @property({ type: Number }) spacing = 6
+
+  @property({ type: Number, attribute: 'maximum-item-width' }) maximumItemWidth: number | null =
+    null
+
+  @property({ reflect: true }) truncation: FdCheckboxTruncation = 'end'
 
   @property({ type: Boolean, reflect: true }) disabled = false
 
@@ -58,17 +84,27 @@ export class FdMultiSelectRow extends FdElement {
     return this.#internals.form
   }
 
-  /** The values of every option currently switched on. */
+  get labels(): NodeList {
+    return this.#internals.labels
+  }
+
   get values(): string[] {
     return this.options.filter((option) => option.selected).map((option) => option.value)
   }
 
   override updated(changed: PropertyValues<this>): void {
     super.updated(changed)
-    this.style.setProperty('--_control-width', `${this.controlWidth}px`)
+    const width =
+      Number.isFinite(this.controlWidth) && this.controlWidth > 0 ? this.controlWidth : 300
+    this.style.setProperty('--_control-width', `${width}px`)
+    this.#syncFormValue()
+  }
 
+  #syncFormValue(values = this.values): void {
     const data = new FormData()
-    if (this.name) for (const value of this.values) data.append(this.name, value)
+    if (this.name && !this.disabled) {
+      for (const value of values) data.append(this.name, value)
+    }
     this.#internals.setFormValue(data)
   }
 
@@ -77,21 +113,13 @@ export class FdMultiSelectRow extends FdElement {
     this.options = collectOptions(this.#slot)
   }
 
-  /** Mirrors `PreferencesMultiSelectOption.toggle()`, which guards on `isEnabled`. */
-  #toggle(index: number): void {
-    const option = this.options[index]
-    if (!option || this.disabled || option.disabled) return
-
-    option.element.selected = !option.element.selected
+  #onChange = (event: CustomEvent): void => {
+    event.stopPropagation()
     if (this.#slot) this.options = collectOptions(this.#slot)
-
+    this.#syncFormValue(event.detail.values ?? this.values)
     this.dispatchEvent(
       new CustomEvent('fd-change', {
-        detail: {
-          value: option.value,
-          selected: option.element.selected,
-          values: this.values,
-        },
+        detail: event.detail,
         bubbles: true,
         composed: true,
       }),
@@ -101,26 +129,23 @@ export class FdMultiSelectRow extends FdElement {
   override render() {
     return html`
       <fd-row symbol=${this.symbol ?? ''} label=${this.label} caption=${this.caption ?? ''}>
-        <div class="strip" slot="trailing" role="group" aria-label=${this.label}>
-          ${this.options.map(
-            (option, index) => html`
-              <button
-                class="segment"
-                part="segment"
-                type="button"
-                aria-pressed=${option.selected}
-                ?data-selected=${option.selected}
-                ?disabled=${this.disabled || option.disabled}
-                @click=${() => this.#toggle(index)}
-              >
-                ${option.selected ? checkCircleFill : circleOutline}
-                <span class="segment-label">${option.label}</span>
-              </button>
-            `,
-          )}
-        </div>
+        <fd-multi-select
+          exportparts="group, option, indicator"
+          slot="trailing"
+          .label=${this.label}
+          .axis=${this.axis}
+          .itemWidthPolicy=${this.itemWidthPolicy}
+          .contentAlignment=${this.contentAlignment}
+          .indicatorPlacement=${this.indicatorPlacement}
+          .spacing=${this.spacing}
+          .maximumItemWidth=${this.maximumItemWidth}
+          .truncation=${this.truncation}
+          .disabled=${this.disabled}
+          @fd-change=${this.#onChange}
+        >
+          <slot @slotchange=${this.#onSlotChange}></slot>
+        </fd-multi-select>
       </fd-row>
-      <slot hidden @slotchange=${this.#onSlotChange}></slot>
     `
   }
 }

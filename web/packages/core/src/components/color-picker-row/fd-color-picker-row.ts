@@ -1,6 +1,8 @@
-import { type CSSResultGroup, css, html, type PropertyValues } from 'lit'
+import { html, type PropertyValues } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
-import { baseStyles, FdElement } from '../../internal/base-element.js'
+import { FdElement } from '../../internal/base-element.js'
+import type { FdColorPicker } from '../color-picker/fd-color-picker.js'
+import '../color-picker/fd-color-picker.js'
 import '../row/fd-row.js'
 
 /**
@@ -17,46 +19,6 @@ import '../row/fd-row.js'
 @customElement('fd-color-picker-row')
 export class FdColorPickerRow extends FdElement {
   static formAssociated = true
-
-  static override styles: CSSResultGroup = [
-    baseStyles,
-    css`
-      /* controlSize(.small), which AppKit draws as a 38×22 well. */
-      .swatch {
-        width: 38px;
-        height: 22px;
-        padding: 2px;
-        border: 0;
-        border-radius: 6px;
-        background: var(--_fd-surface-control);
-        box-shadow: inset 0 0 0 1px var(--_fd-palette-hairline);
-        cursor: pointer;
-        /* The UA well has its own inner chrome; only the swatch itself should show. */
-        appearance: none;
-        -webkit-appearance: none;
-      }
-
-      .swatch::-webkit-color-swatch-wrapper {
-        padding: 0;
-      }
-
-      .swatch::-webkit-color-swatch,
-      .swatch::-moz-color-swatch {
-        border: 0;
-        border-radius: 4px;
-      }
-
-      .swatch:focus-visible {
-        outline: 2px solid var(--_fd-accent-fill);
-        outline-offset: 2px;
-      }
-
-      :host([disabled]) .swatch {
-        cursor: default;
-        opacity: 0.4;
-      }
-    `,
-  ]
 
   @property({ reflect: true }) symbol: string | null = null
 
@@ -87,6 +49,10 @@ export class FdColorPickerRow extends FdElement {
     return this.#internals.form
   }
 
+  get labels(): NodeList {
+    return this.#internals.labels
+  }
+
   override connectedCallback(): void {
     super.connectedCallback()
     this.#defaultValue = this.value
@@ -94,7 +60,7 @@ export class FdColorPickerRow extends FdElement {
 
   override updated(changed: PropertyValues<this>): void {
     super.updated(changed)
-    this.#internals.setFormValue(this.value)
+    this.#internals.setFormValue(this.disabled ? null : this.value)
   }
 
   formResetCallback(): void {
@@ -105,8 +71,9 @@ export class FdColorPickerRow extends FdElement {
     if (state !== null) this.value = state
   }
 
-  #onInput = (event: Event): void => {
-    this.value = (event.target as HTMLInputElement).value
+  #onChange = (event: CustomEvent): void => {
+    event.stopPropagation()
+    this.value = (event.currentTarget as FdColorPicker).value
     this.dispatchEvent(
       new CustomEvent('fd-change', {
         detail: { value: this.value },
@@ -119,17 +86,16 @@ export class FdColorPickerRow extends FdElement {
   override render() {
     return html`
       <fd-row symbol=${this.symbol ?? ''} label=${this.label} caption=${this.caption ?? ''}>
-        <input
-          class="swatch"
-          part="swatch"
+        <fd-color-picker
+          exportparts="swatch"
           slot="trailing"
-          type="color"
-          aria-label=${this.label}
-          ?alpha=${this.supportsOpacity}
-          ?disabled=${this.disabled}
+          .label=${this.label}
           .value=${this.value}
-          @input=${this.#onInput}
-        />
+          .supportsOpacity=${this.supportsOpacity}
+          .disabled=${this.disabled}
+          .hideLabel=${true}
+          @fd-change=${this.#onChange}
+        ></fd-color-picker>
       </fd-row>
     `
   }

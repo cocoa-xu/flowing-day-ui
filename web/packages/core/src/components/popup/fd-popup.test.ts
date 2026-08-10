@@ -303,10 +303,13 @@ describe('fd-popup selection', () => {
   })
 
   it('exposes combobox semantics', async () => {
-    const element = await mount(`<fd-popup value="hide">${OPTIONS}</fd-popup>`)
+    const element = await mount(
+      `<fd-popup label="Closing behavior" value="hide">${OPTIONS}</fd-popup>`,
+    )
     const control = button(element)
 
     expect(control.getAttribute('role')).toBe('combobox')
+    expect(control.getAttribute('aria-label')).toBe('Closing behavior')
     expect(control.getAttribute('aria-haspopup')).toBe('listbox')
     expect(control.getAttribute('aria-expanded')).toBe('false')
 
@@ -314,5 +317,15 @@ describe('fd-popup selection', () => {
     await element.updateComplete
     expect(control.getAttribute('aria-expanded')).toBe('true')
     expect(menu(element).getAttribute('role')).toBe('listbox')
+  })
+
+  it('does not submit while disabled', async () => {
+    const form = document.createElement('form')
+    form.innerHTML = `<fd-popup name="closing" value="quit" disabled>${OPTIONS}</fd-popup>`
+    document.body.append(form)
+    const element = form.querySelector('fd-popup') as FdPopup
+    await element.updateComplete
+
+    expect(new FormData(form).has('closing')).toBe(false)
   })
 })

@@ -259,6 +259,8 @@ export class FdPopup extends FdElement {
   /** Menu contents. Falls back to `fd-option` children when left empty. */
   @property({ attribute: false }) options: FdPopupOption[] = []
 
+  @property({ reflect: true }) label = ''
+
   @property({ reflect: true }) value: string | null = null
 
   /** `PreferencesPopupRow.minimumControlWidth`. */
@@ -298,6 +300,10 @@ export class FdPopup extends FdElement {
 
   get form(): HTMLFormElement | null {
     return this.#internals.form
+  }
+
+  get labels(): NodeList {
+    return this.#internals.labels
   }
 
   /** Resolved menu contents, whichever way they were supplied. */
@@ -344,7 +350,7 @@ export class FdPopup extends FdElement {
 
   override updated(changed: PropertyValues<this>): void {
     super.updated(changed)
-    this.#internals.setFormValue(this.value)
+    this.#internals.setFormValue(this.disabled ? null : this.value)
     this.#applyWidths()
     // `configure` dismisses an open menu whenever the option list changes underneath it.
     if (changed.has('options')) {
@@ -521,6 +527,7 @@ export class FdPopup extends FdElement {
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded=${this.open}
+        aria-label=${this.label}
         aria-controls=${menuId}
         aria-activedescendant=${
           this.open && this.highlighted !== null ? `option-${this.highlighted}` : nothing

@@ -88,7 +88,7 @@ set, since scoped packages default to restricted.
 
 ## Status
 
-Every view in `Sources/FlowingDayPreferences` is ported — 34 elements, listed by group in
+Every reusable view in `Sources/FlowingDayPreferences` is ported — 51 elements, listed by group in
 [the package README](packages/core/README.md#components).
 
 Two are deliberately left out. `PreferencesWindowPresenter` has no web counterpart: `NSPanel`

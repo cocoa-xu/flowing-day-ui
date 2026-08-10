@@ -2,12 +2,13 @@ import { html, type TemplateResult } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import type { CollectedOption } from '../../internal/options.js'
 import { FdSegmentedRowBase } from '../../internal/segmented-row-base.js'
+import '../icon/fd-icon.js'
 import '../option/fd-option.js'
 import '../row/fd-row.js'
 
 /**
- * Mirrors `PreferencesSegmentedRow`: a fixed-width strip of single-select pills whose
- * labels are compact, so they take the 6pt horizontal padding rather than 9pt.
+ * Mirrors `PreferencesSegmentedRow`: a fixed-width strip of single-select pills using
+ * the same label and symbol treatments as `FlowingSegmentedControl`.
  *
  * `minimumScaleFactor(0.72)` has no CSS equivalent; an over-long label truncates here
  * instead of shrinking to fit.
@@ -17,12 +18,10 @@ import '../row/fd-row.js'
  */
 @customElement('fd-segmented-row')
 export class FdSegmentedRow extends FdSegmentedRowBase {
-  protected override get segmentModifier(): 'compact' {
-    return 'compact'
-  }
-
   protected override renderSegmentContent(option: CollectedOption): TemplateResult {
-    return html`<span class="segment-label">${option.label}</span>`
+    return option.symbol
+      ? html`<fd-icon class="segment-icon" name=${option.symbol}></fd-icon>`
+      : html`<span class="segment-label">${option.label}</span>`
   }
 }
 

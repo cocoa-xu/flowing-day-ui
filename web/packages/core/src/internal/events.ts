@@ -8,13 +8,13 @@
  * documentation says which that is.
  */
 export interface FdChangeDetail {
-  /** `fd-switch`, `fd-switch-group`, `fd-check-toggle`. */
+  /** `fd-switch`, `fd-switch-group`, `fd-checkbox`, `fd-check-toggle`, `fd-disclosure`. */
   checked?: boolean
-  /** `fd-popup`, `fd-popup-row`, the segmented rows, and `fd-multi-select-row`. */
+  /** Popup, search picker, segmented, text input, colour picker and multi-select controls. */
   value?: string
-  /** `fd-multi-select-row`: the new state of the option that was toggled. */
+  /** `fd-multi-select` and `fd-multi-select-row`: the toggled option's new state. */
   selected?: boolean
-  /** `fd-multi-select-row`: every value currently switched on. */
+  /** `fd-multi-select` and `fd-multi-select-row`: every value currently switched on. */
   values?: string[]
   /** `fd-slider`, `fd-slider-row`. Named as `HTMLInputElement.valueAsNumber` is. */
   valueAsNumber?: number
@@ -36,6 +36,7 @@ declare global {
     'fd-change': CustomEvent<FdChangeDetail>
     'fd-activate': CustomEvent<FdActivateDetail>
     'fd-submit': CustomEvent<undefined>
+    'fd-query-change': CustomEvent<{ query: string }>
     'fd-page-change': CustomEvent<{ page: string }>
     'fd-close': CustomEvent<undefined>
   }

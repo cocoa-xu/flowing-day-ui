@@ -1,7 +1,7 @@
-import { type CSSResultGroup, html } from 'lit'
+import { html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
-import { baseStyles, FdElement } from '../../internal/base-element.js'
-import { softButtonStyles } from '../../internal/soft-button.js'
+import { FdElement } from '../../internal/base-element.js'
+import '../button/fd-button.js'
 import '../row/fd-row.js'
 
 /**
@@ -12,8 +12,6 @@ import '../row/fd-row.js'
  */
 @customElement('fd-button-row')
 export class FdButtonRow extends FdElement {
-  static override styles: CSSResultGroup = [baseStyles, softButtonStyles]
-
   @property({ reflect: true }) symbol: string | null = null
 
   @property({ reflect: true }) label = ''
@@ -28,7 +26,8 @@ export class FdButtonRow extends FdElement {
 
   @property({ type: Boolean, reflect: true }) disabled = false
 
-  #onClick = (): void => {
+  #onClick = (event: Event): void => {
+    event.stopPropagation()
     if (this.disabled) return
     this.dispatchEvent(
       new CustomEvent('fd-activate', { detail: {}, bubbles: true, composed: true }),
@@ -38,17 +37,15 @@ export class FdButtonRow extends FdElement {
   override render() {
     return html`
       <fd-row symbol=${this.symbol ?? ''} label=${this.label} caption=${this.caption ?? ''}>
-        <button
-          class="soft-button"
-          part="button"
-          type="button"
+        <fd-button
+          exportparts="button"
           slot="trailing"
-          ?data-prominent=${this.prominent}
-          ?disabled=${this.disabled}
-          @click=${this.#onClick}
+          .label=${this.buttonLabel}
+          .prominent=${this.prominent}
+          .disabled=${this.disabled}
+          @fd-activate=${this.#onClick}
         >
-          ${this.buttonLabel}
-        </button>
+        </fd-button>
       </fd-row>
     `
   }

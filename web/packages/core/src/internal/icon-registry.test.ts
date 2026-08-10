@@ -77,6 +77,12 @@ describe('fd-icon', () => {
     const labelled = await mount('<fd-icon name="gearshape" label="Preferences"></fd-icon>')
     expect(labelled.getAttribute('role')).toBe('img')
     expect(labelled.getAttribute('aria-label')).toBe('Preferences')
+
+    labelled.label = null
+    await labelled.updateComplete
+    expect(labelled.getAttribute('aria-hidden')).toBe('true')
+    expect(labelled.hasAttribute('role')).toBe(false)
+    expect(labelled.hasAttribute('aria-label')).toBe(false)
   })
 
   it('sizes from font-size so it behaves like an SF Symbol in text', async () => {

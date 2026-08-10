@@ -107,17 +107,21 @@ Icons already on the page pick up a later registration.
 ## Components
 
 **Structure** — `fd-preferences-window`, `fd-page`, `fd-page-group`, `fd-pane-stack`,
-`fd-section`, `fd-card`, `fd-separator`, `fd-dependent-rows`.
+`fd-section`, `fd-card`, `fd-separator`, `fd-dependent-rows`, `fd-disclosure`.
 
 **Rows** — `fd-row`, `fd-switch-row`, `fd-popup-row`, `fd-slider-row`, `fd-value-row`,
 `fd-button-row`, `fd-link-row`, `fd-expandable-row`, `fd-color-picker-row`,
 `fd-search-picker-row`, `fd-empty-row`.
 
-**Selection** — `fd-segmented-row`, `fd-symbol-segmented-row`, `fd-multi-select-row`,
-`fd-switch-group`, `fd-check-toggle`, `fd-icon-selection-button`, `fd-option`.
+**Selection** — `fd-checkbox`, `fd-multi-select`, `fd-segmented-control`,
+`fd-connected-segmented-control`, `fd-segmented-row`, `fd-connected-segmented-row`,
+`fd-symbol-segmented-row`, `fd-multi-select-row`, `fd-switch-group`, `fd-check-toggle`,
+`fd-icon-selection-button`, `fd-option`.
 
-**Controls** — `fd-switch`, `fd-slider`, `fd-popup`, `fd-text-field`, `fd-secure-field`,
-`fd-text-area`, `fd-icon-button`, `fd-progress`.
+**Controls** — `fd-button`, `fd-switch`, `fd-slider`, `fd-popup`, `fd-text-field`, `fd-secure-field`,
+`fd-text-area`, `fd-search-picker`, `fd-color-picker`, `fd-icon-button`, `fd-progress`.
+
+**Display** — `fd-empty-state`, `fd-value-text`.
 
 **Pills and layout** — `fd-chip`, `fd-tag`, `fd-selectable-tag`, `fd-flow-grid`, `fd-grid`.
 
@@ -138,7 +142,7 @@ Editors pick up attribute and event completions from the bundled
 | `truncationMode(.middle)` | split head and tail | No CSS keyword truncates a middle, so the tail is held back and the head ellipsises into it |
 | `PreferencesWrappingLayout` | `flex-wrap` | The custom `Layout` places each item at its ideal size on the row's top edge, which is a wrapping flex line |
 | `action:` closure | `fd-activate` event | A `click` on the host also fires for the row label, which never ran the closure |
-| `accessibilityValue(_:)` for state | `aria-pressed` / `aria-expanded` / `aria-selected` | The state is native to the platform, and a screen reader speaks it in its own language rather than the page's |
+| `accessibilityValue(_:)` for state | `aria-checked` / `aria-pressed` / `aria-expanded` / `aria-selected` | The state is native to the platform, and a screen reader speaks it in its own language rather than the page's |
 
 Everything else — metrics, colours, type scale, motion durations — is taken from the Swift
 sources rather than eyeballed, and the tests pin the literals.
@@ -149,9 +153,9 @@ This package versions independently of the Swift package. They measure different
 the Swift package has a release history, this one is still filling in components, and a
 breaking change on either side should not force a release on the other.
 
-**0.1.0 mirrors FlowingDayPreferences 1.6.0.** Each release records which Swift version it
-was ported from. The two version lines will merge once the web port reaches parity and
-this package reaches 1.0.
+Each release records which Swift revision it was ported from. The current source tree is
+kept in parity with the Swift package; published versions remain independent until the web
+package reaches 1.0.
 
 ## Browser support
 

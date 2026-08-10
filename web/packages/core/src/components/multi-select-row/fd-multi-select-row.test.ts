@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import type { FdCheckToggle } from '../check-toggle/fd-check-toggle.js'
 import '../check-toggle/fd-check-toggle.js'
+import type { FdCheckbox } from '../checkbox/fd-checkbox.js'
+import type { FdMultiSelect } from '../multi-select/fd-multi-select.js'
 import type { FdOption } from '../option/fd-option.js'
 import type { FdMultiSelectRow } from './fd-multi-select-row.js'
 import './fd-multi-select-row.js'
@@ -19,11 +21,30 @@ async function mount<T extends HTMLElement>(markup: string): Promise<T> {
   const element = host.firstElementChild as T & { updateComplete: Promise<unknown> }
   await element.updateComplete
   await element.updateComplete
+  if (element.localName === 'fd-multi-select-row') {
+    await settleMultiSelect(element)
+  }
   return element
 }
 
+const multiSelectOf = (element: HTMLElement) =>
+  element.shadowRoot?.querySelector('fd-multi-select') as FdMultiSelect
+
+const checkboxes = (element: HTMLElement) =>
+  [...(multiSelectOf(element).shadowRoot?.querySelectorAll('fd-checkbox') ?? [])] as FdCheckbox[]
+
 const segments = (element: HTMLElement) =>
-  [...(element.shadowRoot?.querySelectorAll('.segment') ?? [])] as HTMLButtonElement[]
+  checkboxes(element).map(
+    (checkbox) => checkbox.shadowRoot?.querySelector('.button') as HTMLButtonElement,
+  )
+
+async function settleMultiSelect(element: HTMLElement): Promise<void> {
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+  const primitive = multiSelectOf(element)
+  await primitive.updateComplete
+  await primitive.updateComplete
+  await Promise.all(checkboxes(element).map((checkbox) => checkbox.updateComplete))
+}
 
 afterEach(() => {
   document.body.replaceChildren()
@@ -34,7 +55,7 @@ describe('fd-multi-select-row', () => {
     const element = await mount<FdMultiSelectRow>(
       `<fd-multi-select-row label="Network">${OPTIONS}</fd-multi-select-row>`,
     )
-    expect(segments(element).map((segment) => segment.getAttribute('aria-pressed'))).toEqual([
+    expect(segments(element).map((segment) => segment.getAttribute('aria-checked'))).toEqual([
       'true',
       'false',
       'false',
@@ -103,13 +124,14 @@ describe('fd-multi-select-row', () => {
     const element = await mount<FdMultiSelectRow>(
       `<fd-multi-select-row label="Network">${OPTIONS}</fd-multi-select-row>`,
     )
-    const strip = element.shadowRoot?.querySelector('.strip') as HTMLElement
+    const strip = multiSelectOf(element).shadowRoot?.querySelector('.group') as HTMLElement
 
     expect(strip.getAttribute('role')).toBe('group')
-    // aria-pressed carries each option's state; the name comes from the visible label.
-    expect(segments(element)[0]?.hasAttribute('aria-label')).toBe(false)
-    expect(page.getByRole('button', { name: 'Activity', pressed: true }).elements()).toHaveLength(1)
-    expect(page.getByRole('button', { name: 'Chart', pressed: false }).elements()).toHaveLength(1)
+    expect(segments(element)[0]?.getAttribute('aria-label')).toBe('Activity')
+    expect(page.getByRole('checkbox', { name: 'Activity', checked: true }).elements()).toHaveLength(
+      1,
+    )
+    expect(page.getByRole('checkbox', { name: 'Chart', checked: false }).elements()).toHaveLength(1)
   })
 
   it('submits every selected value under one name', async () => {
@@ -119,6 +141,7 @@ describe('fd-multi-select-row', () => {
     const element = form.firstElementChild as FdMultiSelectRow
     await element.updateComplete
     await element.updateComplete
+    await settleMultiSelect(element)
 
     segments(element)[1]?.click()
     await element.updateComplete
@@ -133,9 +156,10 @@ describe('fd-check-toggle', () => {
     const onChange = vi.fn()
     element.addEventListener('fd-change', onChange)
 
-    expect(element.shadowRoot?.querySelector('.segment-label')?.textContent).toBe('Peaks')
+    const checkbox = element.shadowRoot?.querySelector('fd-checkbox') as FdCheckbox
+    expect(checkbox.label).toBe('Peaks')
 
-    element.shadowRoot?.querySelector<HTMLButtonElement>('.segment')?.click()
+    checkbox.shadowRoot?.querySelector<HTMLButtonElement>('.button')?.click()
     await element.updateComplete
 
     expect(element.checked).toBe(true)
@@ -157,5 +181,16 @@ describe('fd-check-toggle', () => {
     await element.updateComplete
 
     expect(element.checked).toBe(true)
+  })
+
+  it('supports trailing indicators and compact width', async () => {
+    const element = await mount<FdCheckToggle>(
+      '<fd-check-toggle indicator-placement="trailing" width-policy="fit-content" maximum-width="120">Peaks</fd-check-toggle>',
+    )
+    const checkbox = element.shadowRoot?.querySelector('fd-checkbox') as FdCheckbox
+    const button = checkbox.shadowRoot?.querySelector('.button') as HTMLButtonElement
+
+    expect(button.lastElementChild?.getAttribute('part')).toBe('indicator')
+    expect(element.getBoundingClientRect().width).toBeLessThanOrEqual(120)
   })
 })

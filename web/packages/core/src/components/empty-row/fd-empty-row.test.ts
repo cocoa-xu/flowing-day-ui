@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import type { FdEmptyState } from '../empty-state/fd-empty-state.js'
 import type { FdEmptyRow } from './fd-empty-row.js'
 import './fd-empty-row.js'
 
@@ -12,6 +13,9 @@ async function mount(html: string): Promise<FdEmptyRow> {
 }
 
 const boxOf = (element: FdEmptyRow) => element.shadowRoot?.querySelector('.empty') as HTMLElement
+
+const stateOf = (element: FdEmptyRow) =>
+  (boxOf(element) as FdEmptyState).shadowRoot?.querySelector('.state') as HTMLElement
 
 afterEach(() => {
   document.body.replaceChildren()
@@ -36,20 +40,20 @@ describe('fd-empty-row', () => {
     expect(style.color).toBe('rgb(145, 145, 138)')
   })
 
-  it('aligns a symbol on the first text baseline, 8px away', async () => {
+  it('aligns a symbol on the first text baseline, 10px away', async () => {
     const element = await mount(
       '<fd-empty-row message="Nothing here" symbol="tray"></fd-empty-row>',
     )
-    const style = getComputedStyle(boxOf(element))
+    const style = getComputedStyle(stateOf(element))
 
     expect(style.alignItems).toBe('baseline')
-    expect(style.columnGap).toBe('8px')
-    expect(element.shadowRoot?.querySelector('fd-icon')).not.toBeNull()
+    expect(style.columnGap).toBe('10px')
+    expect((boxOf(element) as FdEmptyState).shadowRoot?.querySelector('fd-icon')).not.toBeNull()
   })
 
   it('omits the symbol entirely when none is given', async () => {
     const element = await mount('<fd-empty-row message="Nothing here"></fd-empty-row>')
-    expect(element.shadowRoot?.querySelector('fd-icon')).toBeNull()
+    expect((boxOf(element) as FdEmptyState).shadowRoot?.querySelector('fd-icon')).toBeNull()
   })
 
   it('leads the row rather than centring it', async () => {
@@ -58,12 +62,12 @@ describe('fd-empty-row', () => {
     const host = element.getBoundingClientRect()
 
     expect(Math.round(box.width)).toBe(Math.round(host.width))
-    expect(getComputedStyle(boxOf(element)).justifyContent).toBe('normal')
+    expect(getComputedStyle(stateOf(element)).justifyContent).toBe('flex-start')
   })
 
   it('falls back to its text content', async () => {
     const element = await mount('<fd-empty-row>Nothing to see.</fd-empty-row>')
     expect(element.textContent?.trim()).toBe('Nothing to see.')
-    expect(element.shadowRoot?.querySelector('slot')).not.toBeNull()
+    expect((boxOf(element) as FdEmptyState).message).toBe('Nothing to see.')
   })
 })

@@ -55,6 +55,10 @@ export abstract class FdSegmentedRowBase extends FdElement {
     return this.#internals.form
   }
 
+  get labels(): NodeList {
+    return this.#internals.labels
+  }
+
   get selectedIndex(): number {
     return this.options.findIndex((option) => option.value === this.value)
   }
@@ -66,8 +70,10 @@ export abstract class FdSegmentedRowBase extends FdElement {
 
   override updated(changed: PropertyValues<this>): void {
     super.updated(changed)
-    this.#internals.setFormValue(this.value)
-    this.style.setProperty('--_control-width', `${this.controlWidth}px`)
+    this.#internals.setFormValue(this.disabled ? null : this.value)
+    const width =
+      Number.isFinite(this.controlWidth) && this.controlWidth > 0 ? this.controlWidth : 300
+    this.style.setProperty('--_control-width', `${width}px`)
   }
 
   formResetCallback(): void {
@@ -104,7 +110,7 @@ export abstract class FdSegmentedRowBase extends FdElement {
 
   #select(index: number): void {
     const option = this.options[index]
-    if (!option || this.disabled || option.value === this.value) return
+    if (!option || this.disabled || option.disabled || option.value === this.value) return
     this.value = option.value
     this.dispatchEvent(
       new CustomEvent('fd-change', {
@@ -119,12 +125,21 @@ export abstract class FdSegmentedRowBase extends FdElement {
     const count = this.options.length
     if (count === 0 || this.disabled) return
 
+    const isRTL = getComputedStyle(this).direction === 'rtl'
     const offset =
-      event.key === 'ArrowRight' || event.key === 'ArrowDown'
+      event.key === 'ArrowDown'
         ? 1
-        : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+        : event.key === 'ArrowUp'
           ? -1
-          : 0
+          : event.key === 'ArrowRight'
+            ? isRTL
+              ? -1
+              : 1
+            : event.key === 'ArrowLeft'
+              ? isRTL
+                ? 1
+                : -1
+              : 0
     if (offset === 0) return
 
     event.preventDefault()

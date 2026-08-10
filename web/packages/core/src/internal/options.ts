@@ -5,6 +5,7 @@ export interface CollectedOption {
   value: string
   label: string
   symbol: string | null
+  accent: string | null
   selected: boolean
   disabled: boolean
   element: FdOption
@@ -19,6 +20,7 @@ export function collectOptions(slot: HTMLSlotElement): CollectedOption[] {
       value: element.value,
       label: element.optionLabel,
       symbol: element.symbol,
+      accent: element.accent,
       selected: element.selected,
       disabled: element.disabled,
       element,

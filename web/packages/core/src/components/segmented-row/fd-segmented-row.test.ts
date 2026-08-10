@@ -133,15 +133,25 @@ describe('fd-segmented-row', () => {
     expect(Math.round((rects[1]?.left ?? 0) - (rects[0]?.right ?? 0))).toBe(6)
   })
 
-  it('uses the compact 6px horizontal padding', async () => {
+  it('uses the reusable control 9px horizontal padding', async () => {
     const element = await mount<FdSegmentedRow>(
       `<fd-segmented-row label="Alignment" value="center">${OPTIONS}</fd-segmented-row>`,
     )
     const style = getComputedStyle(segments(element)[0] as Element)
 
-    expect(style.paddingLeft).toBe('6px')
+    expect(style.paddingLeft).toBe('9px')
     expect(style.paddingTop).toBe('7px')
     expect(style.borderRadius).toBe('9px')
+  })
+
+  it('renders a symbol option through the shared icon registry', async () => {
+    FdIcons.register({ left: '<svg></svg>' })
+    const element = await mount<FdSegmentedRow>(
+      '<fd-segmented-row label="Alignment" value="left"><fd-option value="left" symbol="left">Leading</fd-option><fd-option value="right">Trailing</fd-option></fd-segmented-row>',
+    )
+
+    expect(segments(element)[0]?.querySelector('fd-icon')).not.toBeNull()
+    expect(segments(element)[1]?.textContent?.trim()).toBe('Trailing')
   })
 
   it('participates in a form', async () => {

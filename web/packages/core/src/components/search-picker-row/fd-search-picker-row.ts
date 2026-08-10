@@ -242,6 +242,10 @@ export class FdSearchPickerRow extends FdElement {
     return this.#internals.form
   }
 
+  get labels(): NodeList {
+    return this.#internals.labels
+  }
+
   /** The options left after the query, as `filteredOptions` computes them. */
   get filteredOptions(): CollectedOption[] {
     return this.options.filter((option) => optionMatches(option.label, this.query))
@@ -259,7 +263,7 @@ export class FdSearchPickerRow extends FdElement {
 
   override updated(changed: PropertyValues<this>): void {
     super.updated(changed)
-    this.#internals.setFormValue(this.value)
+    this.#internals.setFormValue(this.disabled ? null : this.value)
     // onAppear { proxy.scrollTo(selection, anchor: .center) }
     if (changed.get('expanded') === false && this.expanded) this.#revealSelection()
   }

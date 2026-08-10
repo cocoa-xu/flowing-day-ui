@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import type { FdButton } from '../button/fd-button.js'
 import type { FdRow } from '../row/fd-row.js'
 import type { FdButtonRow } from './fd-button-row.js'
 import './fd-button-row.js'
@@ -9,11 +10,15 @@ async function mount(html: string): Promise<FdButtonRow> {
   document.body.append(host)
   const element = host.firstElementChild as FdButtonRow
   await element.updateComplete
+  const button = element.shadowRoot?.querySelector('fd-button') as FdButton
+  await button.updateComplete
   return element
 }
 
 const buttonOf = (element: FdButtonRow) =>
-  element.shadowRoot?.querySelector('.soft-button') as HTMLButtonElement
+  element.shadowRoot
+    ?.querySelector('fd-button')
+    ?.shadowRoot?.querySelector('.soft-button') as HTMLButtonElement
 
 afterEach(() => {
   document.body.replaceChildren()

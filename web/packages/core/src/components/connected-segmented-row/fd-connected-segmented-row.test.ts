@@ -89,4 +89,20 @@ describe('fd-connected-segmented-row', () => {
 
     expect(element.value).toBe('connect')
   })
+
+  it('does not select a disabled option by pointer', async () => {
+    const element = await mount(
+      'select',
+      `
+        <fd-option value="select">Select</fd-option>
+        <fd-option value="pan" disabled>Pan</fd-option>
+        <fd-option value="connect">Connect</fd-option>
+      `,
+    )
+
+    segments(element)[1]?.click()
+    await element.updateComplete
+
+    expect(element.value).toBe('select')
+  })
 })
