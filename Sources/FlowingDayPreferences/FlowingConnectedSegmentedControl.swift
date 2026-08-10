@@ -16,6 +16,7 @@ enum FlowingConnectedSegmentedControlMetrics {
   static let verticalInset: CGFloat = 6
   static let containerInset: CGFloat = 2
   static let dividerHeight: CGFloat = 14
+  static let selectedBorderWidth: CGFloat = 1
   static let disabledOpacity = 0.42
 }
 
@@ -65,7 +66,6 @@ public struct FlowingConnectedSegmentedControl<Value: Hashable>: View {
         FlowingConnectedSegmentButton(
           title: option.label,
           isSelected: selection == option.value,
-          isFocused: hasKeyboardFocus && selection == option.value,
           selectionNamespace: selectionNamespace
         ) {
           selection = option.value
@@ -89,6 +89,7 @@ public struct FlowingConnectedSegmentedControl<Value: Hashable>: View {
     }
     .opacity(isEnabled ? 1 : FlowingConnectedSegmentedControlMetrics.disabledOpacity)
     .focusable()
+    .modifier(FlowingFocusEffectDisabledModifier())
     .focused($hasKeyboardFocus)
     .onMoveCommand(perform: moveSelection)
     .accessibilityElement(children: .contain)
@@ -147,6 +148,17 @@ public struct FlowingConnectedSegmentedControl<Value: Hashable>: View {
   }
 }
 
+private struct FlowingFocusEffectDisabledModifier: ViewModifier {
+  @ViewBuilder
+  func body(content: Content) -> some View {
+    if #available(macOS 14, *) {
+      content.focusEffectDisabled()
+    } else {
+      content
+    }
+  }
+}
+
 private struct FlowingConnectedSegmentButton: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.isEnabled) private var isEnabled
@@ -157,7 +169,6 @@ private struct FlowingConnectedSegmentButton: View {
   @State private var isHovering = false
   let title: String
   let isSelected: Bool
-  let isFocused: Bool
   let selectionNamespace: Namespace.ID
   let action: () -> Void
 
@@ -168,7 +179,10 @@ private struct FlowingConnectedSegmentButton: View {
           selectionShape
             .fill(accent.wash)
             .overlay {
-              selectionShape.strokeBorder(accent.foreground.opacity(0.22))
+              selectionShape.strokeBorder(
+                accent.foreground.opacity(0.22),
+                lineWidth: FlowingConnectedSegmentedControlMetrics.selectedBorderWidth
+              )
             }
             .matchedGeometryEffect(id: "selection", in: selectionNamespace)
         } else if isHovering && isEnabled {
@@ -184,11 +198,6 @@ private struct FlowingConnectedSegmentButton: View {
           .frame(maxWidth: .infinity)
       }
       .contentShape(Rectangle())
-      .overlay {
-        if isFocused {
-          selectionShape.strokeBorder(accent.fill, lineWidth: 2)
-        }
-      }
     }
     .buttonStyle(.plain)
     .onHover { isHovering = $0 }

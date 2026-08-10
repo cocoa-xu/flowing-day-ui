@@ -4,6 +4,10 @@ import XCTest
 @testable import FlowingDayPreferences
 
 final class FlowingControlsTests: XCTestCase {
+  func testConnectedSegmentedControlUsesAHairlineSelectionBorder() {
+    XCTAssertEqual(FlowingConnectedSegmentedControlMetrics.selectedBorderWidth, 1)
+  }
+
   func testSegmentOptionUsesItsValueAsStableIdentity() {
     let option = FlowingSegmentOption("medium", label: "Medium")
 
