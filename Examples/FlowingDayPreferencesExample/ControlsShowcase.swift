@@ -46,6 +46,11 @@ struct ControlsShowcase: View {
   @State private var badgeEmphasis = FlowingBadgeEmphasis.subtle
   @State private var calloutPresentation = FlowingCalloutPresentation.card
   @State private var lastMenuAction = "None"
+  @State private var underlineTab = ExampleTab.overview
+  @State private var softSurfaceTab = ExampleTab.overview
+  @State private var tabsSizing = FlowingTabsSizing.equal
+  @State private var tabsOverflowBehavior = FlowingTabsOverflowBehavior.compress
+  @State private var tabLabelContent = FlowingTabLabelContent.iconAndText
 
   private let controlTags = [
     ExampleLabel("FlowingCheckbox"),
@@ -66,6 +71,7 @@ struct ControlsShowcase: View {
     ExampleLabel("FlowingMultiSelect"),
     ExampleLabel("FlowingSegmentedControl"),
     ExampleLabel("FlowingConnectedSegmentedControl"),
+    ExampleLabel("FlowingTabs"),
     ExampleLabel("FlowingChip"),
     ExampleLabel("FlowingTag"),
     ExampleLabel("FlowingSelectableTag"),
@@ -87,6 +93,7 @@ struct ControlsShowcase: View {
     PreferencesPaneStack {
       switchAndSliderComponents
       selectComponents
+      tabsComponents
       fieldAndValueComponents
       dateAndTimeComponents
       iconButtonComponents
@@ -104,6 +111,66 @@ struct ControlsShowcase: View {
       pillComponents
       layoutComponents
       buttonStyleComponents
+    }
+  }
+
+  private var tabsComponents: some View {
+    PreferencesSection(
+      "Tabs",
+      footer: "Visual style, sizing, label content, and overflow behavior remain independent."
+    ) {
+      VStack(alignment: .leading, spacing: 18) {
+        componentMode("Underline") {
+          ExampleTabsPreview(
+            selection: $underlineTab,
+            style: .underline,
+            sizing: tabsSizing,
+            overflowBehavior: tabsOverflowBehavior,
+            labelContent: tabLabelContent
+          )
+        }
+        componentMode("Soft Surface") {
+          ExampleTabsPreview(
+            selection: $softSurfaceTab,
+            style: .softSurface,
+            sizing: tabsSizing,
+            overflowBehavior: tabsOverflowBehavior,
+            labelContent: tabLabelContent
+          )
+        }
+        componentMode("Options") {
+          VStack(alignment: .leading, spacing: 10) {
+            playgroundOption("Sizing") {
+              FlowingConnectedSegmentedControl(
+                label: "Tab sizing",
+                selection: $tabsSizing,
+                options: FlowingTabsSizing.allCases.map {
+                  FlowingSegmentOption($0, label: $0.title)
+                }
+              )
+            }
+            playgroundOption("Labels") {
+              FlowingConnectedSegmentedControl(
+                label: "Tab label content",
+                selection: $tabLabelContent,
+                options: FlowingTabLabelContent.allCases.map {
+                  FlowingSegmentOption($0, label: $0.title)
+                }
+              )
+            }
+            playgroundOption("Overflow") {
+              FlowingConnectedSegmentedControl(
+                label: "Tab overflow behavior",
+                selection: $tabsOverflowBehavior,
+                options: FlowingTabsOverflowBehavior.allCases.map {
+                  FlowingSegmentOption($0, label: $0.title)
+                }
+              )
+            }
+          }
+        }
+      }
+      .padding(13)
     }
   }
 
@@ -1013,6 +1080,29 @@ extension FlowingDatePickerComponents {
     case .dateAndTime: "Both"
     }
   }
+}
+
+extension FlowingTabsSizing {
+  fileprivate var title: String {
+    switch self {
+    case .equal: "Equal"
+    case .fitContent: "Fit Content"
+    }
+  }
+}
+
+extension FlowingTabLabelContent {
+  fileprivate var title: String {
+    switch self {
+    case .text: "Text"
+    case .icon: "Icon"
+    case .iconAndText: "Both"
+    }
+  }
+}
+
+extension FlowingTabsOverflowBehavior {
+  fileprivate var title: String { rawValue.capitalized }
 }
 
 extension FlowingIconButtonEmphasis {
