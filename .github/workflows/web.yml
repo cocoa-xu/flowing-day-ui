@@ -59,8 +59,11 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Validate published entry points
+      - name: Validate UI published entry points
         run: pnpm --filter @flowing-day/ui check:exports
+
+      - name: Validate Canvas published entry points
+        run: pnpm --filter @flowing-day/canvas check:exports
 
       - name: Install browsers
         run: pnpm --filter @flowing-day/ui exec playwright install --with-deps chromium firefox webkit
