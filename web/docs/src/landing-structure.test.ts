@@ -107,7 +107,7 @@ describe('landing page structure', () => {
 
   it('links navigation to each experience', () => {
     expect(landing).toContain('<a href="#components">Components</a>')
-    expect(landing).toContain('<a href="#preferences" data-page="appearance">Preferences</a>')
+    expect(landing).toContain('<a href="#preferences" data-page="appearance">In Action</a>')
     expect(landing).toContain('<a href="#start">Start</a>')
     expect(landing).toContain('<a href="#canvas">Canvas</a>')
   })
@@ -119,5 +119,16 @@ describe('landing page structure', () => {
     expect(start).toContain('@flowing-day/ui')
     expect(start).toContain('Swift guide')
     expect(start).toContain('Web guide')
+  })
+
+  it('keeps the canvas embedded until the user explicitly expands it', () => {
+    const canvas = landing.slice(landing.indexOf('id="canvas"'))
+
+    expect(canvas).toContain('id="canvas-presentation"')
+    expect(canvas).toContain('aria-label="Expand Canvas"')
+    expect(canvas).toContain('aria-controls="canvas-demo"')
+    expect(canvas).toContain('aria-expanded="false"')
+    expect(canvas).toContain('class="canvas-expand-icon"')
+    expect(canvas).toContain('class="canvas-collapse-icon"')
   })
 })

@@ -83,7 +83,7 @@
 
       <nav class="site-nav" aria-label="Primary navigation">
         <a href="#components">Components</a>
-        <a href="#preferences" data-page="appearance">Preferences</a>
+        <a href="#preferences" data-page="appearance">In Action</a>
         <a href="#start">Start</a>
         <a href="#canvas">Canvas</a>
         <a
@@ -323,7 +323,7 @@
 
       <section class="preferences-showcase" id="preferences" aria-labelledby="preferences-title">
         <div class="preferences-showcase-copy">
-          <p class="hero-kicker">Composed</p>
+          <p class="hero-kicker">In Action</p>
           <h2 id="preferences-title">A whole experience, built from the same pieces.</h2>
           <p class="hero-summary">Open every page, change every setting, and see the system move as one.</p>
         </div>
@@ -947,6 +947,21 @@ FlowingSwitch(
               <output id="canvas-zoom-value" aria-live="polite">100%</output>
               <button id="canvas-zoom-in" type="button" aria-label="Zoom in">+</button>
               <button id="canvas-fit" type="button">Fit</button>
+              <button
+                id="canvas-presentation"
+                type="button"
+                aria-label="Expand Canvas"
+                aria-controls="canvas-demo"
+                aria-expanded="false"
+                title="Expand Canvas"
+              >
+                <svg class="canvas-expand-icon" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M6 2H2v4M10 2h4v4M14 10v4h-4M2 10v4h4" />
+                </svg>
+                <svg class="canvas-collapse-icon" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M6 2v4H2M10 2v4h4M14 10h-4v4M2 10h4v4" />
+                </svg>
+              </button>
             </div>
           </fd-canvas>
         </div>

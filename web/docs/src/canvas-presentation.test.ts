@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { canvasObserverThresholds, shouldActivateCanvas } from './canvas-takeover.js'
+import {
+  canvasObserverThresholds,
+  canvasPresentation,
+  shouldActivateCanvas,
+  toggledCanvasPresentationMode,
+} from './canvas-presentation.js'
 
 describe('shouldActivateCanvas', () => {
   it('activates once the canvas nearly fills the viewport', () => {
@@ -19,9 +24,27 @@ describe('shouldActivateCanvas', () => {
     expect(shouldActivateCanvas(true, 1_000, 0)).toBe(false)
   })
 
-  it('observes enough thresholds for a smooth viewport takeover', () => {
+  it('observes enough thresholds for precise interaction activation', () => {
     expect(canvasObserverThresholds).toHaveLength(101)
     expect(canvasObserverThresholds[0]).toBe(0)
     expect(canvasObserverThresholds.at(-1)).toBe(1)
+  })
+})
+
+describe('canvas presentation', () => {
+  it('describes the action that changes the current presentation', () => {
+    expect(canvasPresentation('embedded')).toEqual({
+      expanded: false,
+      actionLabel: 'Expand Canvas',
+    })
+    expect(canvasPresentation('expanded')).toEqual({
+      expanded: true,
+      actionLabel: 'Collapse Canvas',
+    })
+  })
+
+  it('toggles between embedded and expanded presentations', () => {
+    expect(toggledCanvasPresentationMode('embedded')).toBe('expanded')
+    expect(toggledCanvasPresentationMode('expanded')).toBe('embedded')
   })
 })
