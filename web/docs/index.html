@@ -84,6 +84,7 @@
       <nav class="site-nav" aria-label="Primary navigation">
         <a href="#components">Components</a>
         <a href="#preferences" data-page="appearance">Preferences</a>
+        <a href="#start">Start</a>
         <a href="#canvas">Canvas</a>
         <a
           class="github-link"
@@ -771,6 +772,44 @@
           </fd-page>
         </fd-page-group>
       </fd-preferences-window>
+      </section>
+
+      <section class="start-showcase" id="start" aria-labelledby="start-title">
+        <div class="start-showcase-copy">
+          <p class="hero-kicker">Start small</p>
+          <h2 id="start-title">One piece is enough.</h2>
+          <p class="hero-summary">Choose a platform and place the first control. The same visual language is ready when the interface grows.</p>
+        </div>
+
+        <div class="start-paths">
+          <article class="start-card">
+            <header>
+              <span>SwiftUI</span>
+              <code>FlowingDayControls</code>
+            </header>
+            <pre><code><span class="code-keyword">import</span> FlowingDayControls
+
+FlowingSwitch(
+    <span class="code-string">"Quiet mode"</span>,
+    isOn: $quietMode
+)</code></pre>
+            <a href="https://github.com/cocoa-xu/flowing-day-ui#controls-quick-start">Swift guide</a>
+          </article>
+
+          <article class="start-card">
+            <header>
+              <span>Web</span>
+              <code>@flowing-day/ui</code>
+            </header>
+            <pre><code><span class="code-keyword">import</span> <span class="code-string">'@flowing-day/ui'</span>
+
+&lt;fd-switch-row
+  label=<span class="code-string">"Quiet mode"</span>
+  checked
+&gt;&lt;/fd-switch-row&gt;</code></pre>
+            <a href="https://github.com/cocoa-xu/flowing-day-ui/tree/main/web/packages/core">Web guide</a>
+          </article>
+        </div>
       </section>
 
       <section class="canvas-showcase" id="canvas" aria-labelledby="canvas-title">

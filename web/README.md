@@ -17,10 +17,11 @@ web/
 └── docs/            the landing page, run with `pnpm dev`
 ```
 
-The landing page is a live, draggable preferences window rather than a component gallery.
-Its own Appearance page restyles the window it lives in — theme, accent, density, corner
-radius and type scale are all just tokens written onto the window element — so the page
-doubles as the proof that the theming contract works, and as its own regression test.
+The landing page begins with live reusable controls, composes them into a draggable
+Preferences window, provides direct SwiftUI and web starting points, and ends with the
+interactive infinite canvas. The Appearance page restyles the window it lives in, so the
+page also proves that theme, accent, density, corner radius, and type scale propagate
+through the complete component hierarchy.
 
 It resolves `@flowing-day/ui` to the core package's *sources*, so editing a component
 hot-reloads the page instead of waiting on a rebuild.
@@ -89,9 +90,10 @@ set, since scoped packages default to restricted.
 
 ## Status
 
-Every reusable view in `Sources/FlowingDayControls` and each Preferences composition is
-ported — 51 elements, listed by group in
-[the package README](packages/core/README.md#components).
+The public Custom Elements are listed by group in
+[the package README](packages/core/README.md#components). Shared design values come from
+the same token source as SwiftUI; browser-specific interaction and accessibility behavior
+is implemented with native web platform semantics.
 
 Two are deliberately left out. `PreferencesWindowPresenter` has no web counterpart: `NSPanel`
 is the presenter's job, not the view's, so how the window is presented is the page's call —

@@ -9,12 +9,14 @@ describe('landing page structure', () => {
     const components = landing.indexOf('id="components"')
     const moreComponents = landing.indexOf('id="more-components"')
     const preferences = landing.indexOf('id="preferences"')
+    const start = landing.indexOf('id="start"')
     const canvas = landing.indexOf('id="canvas"')
 
     expect(components).toBeGreaterThan(-1)
     expect(moreComponents).toBeGreaterThan(components)
     expect(preferences).toBeGreaterThan(moreComponents)
-    expect(canvas).toBeGreaterThan(preferences)
+    expect(start).toBeGreaterThan(preferences)
+    expect(canvas).toBeGreaterThan(start)
   })
 
   it('uses live controls in the first component composition', () => {
@@ -60,6 +62,16 @@ describe('landing page structure', () => {
   it('links navigation to each experience', () => {
     expect(landing).toContain('<a href="#components">Components</a>')
     expect(landing).toContain('<a href="#preferences" data-page="appearance">Preferences</a>')
+    expect(landing).toContain('<a href="#start">Start</a>')
     expect(landing).toContain('<a href="#canvas">Canvas</a>')
+  })
+
+  it('offers direct paths from the live experience to platform code', () => {
+    const start = landing.slice(landing.indexOf('id="start"'), landing.indexOf('id="canvas"'))
+
+    expect(start).toContain('FlowingDayControls')
+    expect(start).toContain('@flowing-day/ui')
+    expect(start).toContain('Swift guide')
+    expect(start).toContain('Web guide')
   })
 })
