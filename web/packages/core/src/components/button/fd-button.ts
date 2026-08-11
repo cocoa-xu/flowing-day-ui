@@ -1,4 +1,4 @@
-import { type CSSResultGroup, html } from 'lit'
+import { type CSSResultGroup, html, nothing } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { softButtonStyles } from '../../internal/soft-button.js'
@@ -27,6 +27,14 @@ export class FdButton extends FdElement {
     )
   }
 
+  #onSlotChange = (): void => this.requestUpdate()
+
+  get #hasCustomContent(): boolean {
+    return [...this.childNodes].some(
+      (node) => node.nodeType === Node.ELEMENT_NODE || (node.textContent?.trim().length ?? 0) > 0,
+    )
+  }
+
   override render() {
     return html`
       <button
@@ -37,7 +45,8 @@ export class FdButton extends FdElement {
         ?disabled=${this.disabled}
         @click=${this.#activate}
       >
-        <slot>${this.label}</slot>
+        <slot @slotchange=${this.#onSlotChange}></slot>
+        ${this.#hasCustomContent ? nothing : this.label}
       </button>
     `
   }
