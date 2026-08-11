@@ -20,7 +20,7 @@ public enum FlowingStatusTone: String, CaseIterable, Hashable, Sendable {
     }
   }
 
-  fileprivate var defaultSystemImage: String {
+  var defaultSystemImage: String {
     switch self {
     case .neutral: "info.circle"
     case .accent: "sparkles"
