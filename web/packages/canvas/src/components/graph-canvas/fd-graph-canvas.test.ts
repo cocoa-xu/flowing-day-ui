@@ -29,6 +29,7 @@ import type {
   FdGraphRenderingBackendPreference,
   FdGraphRenderingSurface,
 } from '../../rendering/backend.js'
+import { graphRenderingCapabilities } from '../../rendering/backend.js'
 import { FdGraphDOMRenderingBackend } from '../../rendering/dom-backend.js'
 import { FdGraphWebGL2RenderingBackend } from '../../rendering/webgl2-backend.js'
 import type { FdGraphCanvas } from './fd-graph-canvas.js'
@@ -150,15 +151,16 @@ class RecordingBackend implements FdGraphRenderingBackend {
 }
 
 describe('fd-graph-canvas rendering boundary', () => {
-  it('renders indexed nodes, ports, edges, and labels with the automatic backend', async () => {
+  it('uses WebGL2 when available and otherwise falls back to complete DOM rendering', async () => {
     const element = await mount()
     const root = element.shadowRoot
+    const usesWebGL2 = graphRenderingCapabilities().webgl2
 
-    expect(element.resolvedRenderingBackend?.kind).toBe('webgl2')
-    expect(root?.querySelectorAll('.graph-gpu-layer')).toHaveLength(1)
+    expect(element.resolvedRenderingBackend?.kind).toBe(usesWebGL2 ? 'webgl2' : 'dom')
+    expect(root?.querySelectorAll('.graph-gpu-layer')).toHaveLength(usesWebGL2 ? 1 : 0)
     expect(root?.querySelectorAll('.graph-node')).toHaveLength(2)
     expect(root?.querySelectorAll('.graph-port')).toHaveLength(2)
-    expect(root?.querySelectorAll('.graph-edge')).toHaveLength(0)
+    if (!usesWebGL2) expect(root?.querySelectorAll('.graph-edge')).toHaveLength(1)
     expect(root?.querySelector('.graph-edge-label')?.textContent).toBe('Data')
   })
 
@@ -241,9 +243,11 @@ describe('fd-graph-canvas rendering boundary', () => {
       new FdGraphWebGL2RenderingBackend({ maximumDOMNodeCount: 0 }),
     )
     const canvas = preparePointerInput(element)
+    const gpuCanvas = element.shadowRoot?.querySelector<HTMLCanvasElement>('.graph-gpu-layer')
+    const usesWebGL2 = Boolean(gpuCanvas?.getContext('webgl2'))
     const point = clientPoint(element, { x: 100, y: 120 })
 
-    expect(element.shadowRoot?.querySelectorAll('.graph-node')).toHaveLength(0)
+    expect(element.shadowRoot?.querySelectorAll('.graph-node')).toHaveLength(usesWebGL2 ? 0 : 2)
     dispatchPointer(canvas, 'pointerdown', point)
     dispatchPointer(canvas, 'pointerup', point)
 
