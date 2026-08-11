@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/ci.yml)
 
-FlowingDayUI is a personal SwiftUI design toolkit for macOS applications. `FlowingDayControls` provides reusable desktop controls, `FlowingDayPreferences` composes them into an integrated preferences window, and `FlowingDayCanvas` provides a composable, virtualized infinite viewport.
+FlowingDayUI is a desktop-grade interface toolkit for SwiftUI and the web. It provides reusable controls, a composed Preferences experience, and a high-performance infinite canvas without taking ownership of application state or product semantics.
 
 The package requires macOS 13 or later.
 
@@ -24,6 +24,47 @@ import FlowingDayControls
 import FlowingDayPreferences
 import FlowingDayCanvas
 ```
+
+Choose only the products the target uses:
+
+| Product | Purpose |
+| --- | --- |
+| `FlowingDayControls` | Reusable controls, fields, status views, overlays, layout, and shared theme semantics |
+| `FlowingDayPreferences` | Preferences pages, rows, navigation, and native window presentation |
+| `FlowingDayCanvas` | Precise infinite viewport transforms, gestures, overlays, and render coverage |
+| `FlowingDayGraphCanvas` | Virtualized graph presentation, editing, navigation, accessibility, and minimap |
+
+## Controls quick start
+
+Controls use ordinary SwiftUI bindings. Interactive controls require a meaningful label so keyboard and assistive behavior stays correct when they are composed outside Preferences rows:
+
+```swift
+import FlowingDayControls
+import SwiftUI
+
+struct ReadingControls: View {
+    @State private var quietMode = false
+    @State private var intensity = 0.6
+
+    var body: some View {
+        FlowingCard {
+            VStack(alignment: .leading, spacing: 14) {
+                FlowingSwitch("Quiet mode", isOn: $quietMode)
+                FlowingSlider(
+                    "Intensity",
+                    value: $intensity,
+                    in: 0...1,
+                    step: 0.05,
+                    formatValue: { "\(Int($0 * 100)) percent" }
+                )
+            }
+        }
+        .flowingAccent(.petal)
+    }
+}
+```
+
+Open the package documentation in Xcode for focused guides to controls, theming, accessibility, and Preferences composition.
 
 ## Local development
 
