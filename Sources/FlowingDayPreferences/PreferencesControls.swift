@@ -378,7 +378,6 @@ public struct PreferencesSliderRow: View {
   }
 }
 
-
 public struct PreferencesPopupRow<Value: Hashable>: View {
   private let symbol: String?
   private let title: String
@@ -906,8 +905,8 @@ public struct PreferencesFlowGrid<Item: Identifiable, Label: View>: View {
 
   public var body: some View {
     FlowingWrappingGrid(items: items, spacing: spacing, label: label)
-    .padding(.horizontal, metrics.rowInset)
-    .padding(.vertical, 13)
+      .padding(.horizontal, metrics.rowInset)
+      .padding(.vertical, 13)
   }
 }
 
@@ -929,7 +928,7 @@ public struct PreferencesGrid<Item: Identifiable, Label: View>: View {
 
   public var body: some View {
     FlowingAdaptiveGrid(items: items, minimumWidth: minimumWidth, label: label)
-    .padding(.horizontal, metrics.rowInset)
-    .padding(.vertical, 13)
+      .padding(.horizontal, metrics.rowInset)
+      .padding(.vertical, 13)
   }
 }

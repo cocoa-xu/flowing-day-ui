@@ -22,8 +22,8 @@ public enum FlowingConfirmationKind: String, CaseIterable, Hashable, Sendable {
   }
 }
 
-public extension View {
-  func flowingConfirmationDialog(
+extension View {
+  public func flowingConfirmationDialog(
     _ title: String,
     message: String? = nil,
     isPresented: Binding<Bool>,
@@ -49,7 +49,7 @@ public extension View {
     )
   }
 
-  func flowingDialog<DialogContent: View>(
+  public func flowingDialog<DialogContent: View>(
     isPresented: Binding<Bool>,
     onDismiss: (() -> Void)? = nil,
     @ViewBuilder content: @escaping () -> DialogContent

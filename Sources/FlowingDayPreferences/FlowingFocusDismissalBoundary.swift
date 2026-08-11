@@ -65,9 +65,10 @@ struct FlowingFocusDismissalBoundary: NSViewRepresentable {
 
     func shouldDismiss(for event: NSEvent) -> Bool {
       guard isFocused.wrappedValue,
-            let boundaryView,
-            let window = boundaryView.window,
-            event.window === window else {
+        let boundaryView,
+        let window = boundaryView.window,
+        event.window === window
+      else {
         return false
       }
       let point = boundaryView.convert(event.locationInWindow, from: nil)

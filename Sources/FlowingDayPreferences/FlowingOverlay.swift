@@ -55,8 +55,8 @@ extension FlowingTooltipContent where Content == Text {
   }
 }
 
-public extension View {
-  func flowingTooltip<Tooltip: View>(
+extension View {
+  public func flowingTooltip<Tooltip: View>(
     _ accessibilityText: String,
     delay: TimeInterval = FlowingTooltipDefaults.delay,
     arrowEdge: Edge = .top,

@@ -54,7 +54,8 @@ struct FlowingFieldContainer<Content: View>: View {
     VStack(alignment: .leading, spacing: 5) {
       content
       if let message = validation.message ?? supportingText {
-        let displayedValidation = validation.message == nil ? FlowingFieldValidation.none : validation
+        let displayedValidation =
+          validation.message == nil ? FlowingFieldValidation.none : validation
         HStack(alignment: .firstTextBaseline, spacing: 5) {
           if let systemImage = displayedValidation.systemImage {
             Image(systemName: systemImage)
