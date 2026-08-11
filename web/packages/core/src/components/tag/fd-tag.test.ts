@@ -50,7 +50,7 @@ describe('fd-tag', () => {
     const element = await mount('<fd-tag label="beta"></fd-tag>')
 
     expect(tagOf(element).tagName).toBe('SPAN')
-    expect(getComputedStyle(tagOf(element)).cursor).toBe('auto')
+    expect(getComputedStyle(tagOf(element)).cursor).toBe('default')
   })
 
   it('falls back to its text content', async () => {

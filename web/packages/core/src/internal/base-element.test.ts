@@ -36,6 +36,8 @@ describe('FdElement text selection', () => {
 
     expect(userSelect(element)).toBe('none')
     expect(userSelect(input)).toBe('text')
+    expect(getComputedStyle(element).cursor).toBe('default')
+    expect(getComputedStyle(input).cursor).toBe('text')
   })
 
   it('allows consumers to restore text selection explicitly', async () => {

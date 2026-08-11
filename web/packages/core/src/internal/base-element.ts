@@ -12,6 +12,7 @@ export const baseStyles: CSSResultGroup = [
       display: block;
       box-sizing: border-box;
       font-family: var(--_fd-font-standard);
+      cursor: default;
       -webkit-font-smoothing: antialiased;
       -webkit-user-select: var(--fd-user-select, none);
       user-select: var(--fd-user-select, none);
@@ -39,6 +40,7 @@ export const baseStyles: CSSResultGroup = [
     input,
     textarea,
     [contenteditable='true'] {
+      cursor: text;
       -webkit-user-select: text;
       user-select: text;
     }
