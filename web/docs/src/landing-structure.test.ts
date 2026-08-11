@@ -10,13 +10,11 @@ describe('landing page structure', () => {
     const moreComponents = landing.indexOf('id="more-components"')
     const preferences = landing.indexOf('id="preferences"')
     const start = landing.indexOf('id="start"')
-    const canvas = landing.indexOf('id="canvas"')
 
     expect(components).toBeGreaterThan(-1)
     expect(moreComponents).toBeGreaterThan(components)
     expect(preferences).toBeGreaterThan(moreComponents)
     expect(start).toBeGreaterThan(preferences)
-    expect(canvas).toBeGreaterThan(start)
   })
 
   it('uses live controls in the first component composition', () => {
@@ -96,11 +94,10 @@ describe('landing page structure', () => {
     expect(landing).toContain('<a href="#components">Components</a>')
     expect(landing).toContain('<a href="#preferences" data-page="appearance">In Action</a>')
     expect(landing).toContain('<a href="#start">Start</a>')
-    expect(landing).toContain('<a href="#canvas">Canvas</a>')
   })
 
   it('offers direct paths from the live experience to platform code', () => {
-    const start = landing.slice(landing.indexOf('id="start"'), landing.indexOf('id="canvas"'))
+    const start = landing.slice(landing.indexOf('id="start"'), landing.indexOf('</main>'))
 
     expect(start).toContain('FlowingDayControls')
     expect(start).toContain('@flowing-day/ui')
@@ -108,15 +105,10 @@ describe('landing page structure', () => {
     expect(start).toContain('Web guide')
   })
 
-  it('keeps the canvas embedded until the user explicitly expands it', () => {
-    const canvas = landing.slice(landing.indexOf('id="canvas"'))
-
-    expect(canvas).toContain('id="canvas-presentation"')
-    expect(canvas).toContain('aria-label="Expand Canvas"')
-    expect(canvas).toContain('aria-controls="canvas-demo"')
-    expect(canvas).toContain('aria-expanded="false"')
-    expect(canvas).toContain('class="canvas-expand-icon"')
-    expect(canvas).toContain('class="canvas-collapse-icon"')
+  it('does not advertise the canvas without a meaningful demonstration', () => {
+    expect(landing).not.toContain('href="#canvas"')
+    expect(landing).not.toContain('id="canvas-demo"')
+    expect(landingStyles).not.toContain('.canvas-showcase')
   })
 
   it('lets mixed-row sections align separators with the leading text edge', () => {

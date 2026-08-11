@@ -1,4 +1,3 @@
-import { type FdCanvas, FdCanvasGridLevels } from '@flowing-day/canvas'
 import type {
   FdColorPickerRow,
   FdDependentRows,
@@ -13,13 +12,6 @@ import type {
   NamedAccentName,
 } from '@flowing-day/ui'
 import { namedAccentFamilies, namedAccents } from '@flowing-day/ui'
-import {
-  type CanvasPresentationMode,
-  canvasObserverThresholds,
-  canvasPresentation,
-  shouldActivateCanvas,
-  toggledCanvasPresentationMode,
-} from './canvas-presentation.js'
 import { makeMovableByBackground } from './drag.js'
 import { resolveScheme } from './scheme.js'
 import { installTheme, registerIcons } from './shared.js'
@@ -27,161 +19,9 @@ import { installTheme, registerIcons } from './shared.js'
 installTheme()
 registerIcons()
 
-const canvasDemo = document.querySelector<FdCanvas>('#canvas-demo')
-const canvasShowcase = document.querySelector<HTMLElement>('.canvas-showcase')
-const canvasFrame = document.querySelector<HTMLElement>('.canvas-frame')
-const canvasGrid = document.querySelector<HTMLElement>('.canvas-grid')
-const canvasZoomValue = document.querySelector<HTMLOutputElement>('#canvas-zoom-value')
-const canvasPresentationButton = document.querySelector<HTMLButtonElement>('#canvas-presentation')
-const canvasContentRect = { x: 40, y: 40, width: 1040, height: 440 }
-let canvasPresentationMode: CanvasPresentationMode = 'embedded'
-let canvasFrameAnimation: Animation | undefined
-let canvasScrollPosition = { x: 0, y: 0 }
-let bodyOverflow = ''
-let bodyMinimumHeight = ''
-
-function canvasFrameSnapshot(): { rect: DOMRect; borderRadius: string } | undefined {
-  if (!canvasFrame) return undefined
-  return {
-    rect: canvasFrame.getBoundingClientRect(),
-    borderRadius: getComputedStyle(canvasFrame).borderRadius,
-  }
-}
-
-function animateCanvasFrame(from: { rect: DOMRect; borderRadius: string } | undefined): void {
-  if (!canvasFrame || !from || matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-  const to = canvasFrameSnapshot()
-  if (!to || to.rect.width <= 0 || to.rect.height <= 0) return
-
-  canvasFrameAnimation = canvasFrame.animate(
-    [
-      {
-        transform: `translate(${from.rect.x - to.rect.x}px, ${from.rect.y - to.rect.y}px) scale(${from.rect.width / to.rect.width}, ${from.rect.height / to.rect.height})`,
-        transformOrigin: 'top left',
-        borderRadius: from.borderRadius,
-      },
-      {
-        transform: 'none',
-        transformOrigin: 'top left',
-        borderRadius: to.borderRadius,
-      },
-    ],
-    { duration: 260, easing: 'cubic-bezier(0.2, 0.75, 0.25, 1)' },
-  )
-}
-
-function setCanvasPresentationMode(mode: CanvasPresentationMode): void {
-  if (!canvasShowcase || !canvasPresentationButton || mode === canvasPresentationMode) return
-
-  const frameBeforeChange = canvasFrameSnapshot()
-  canvasFrameAnimation?.cancel()
-  canvasPresentationMode = mode
-  const presentation = canvasPresentation(mode)
-
-  canvasPresentationButton.ariaExpanded = `${presentation.expanded}`
-  canvasPresentationButton.ariaLabel = presentation.actionLabel
-  canvasPresentationButton.title = presentation.actionLabel
-
-  if (presentation.expanded) {
-    canvasScrollPosition = { x: window.scrollX, y: window.scrollY }
-    bodyOverflow = document.body.style.overflow
-    bodyMinimumHeight = document.body.style.minHeight
-    document.body.style.minHeight = `${document.documentElement.scrollHeight}px`
-    document.body.style.overflow = 'hidden'
-    canvasShowcase.toggleAttribute('data-canvas-expanded', true)
-    canvasShowcase.toggleAttribute('data-canvas-active', true)
-    animateCanvasFrame(frameBeforeChange)
-    return
-  }
-
-  canvasShowcase.toggleAttribute('data-canvas-expanded', false)
-  document.body.style.minHeight = bodyMinimumHeight
-  document.body.style.overflow = bodyOverflow
-  const scrollBehavior = document.documentElement.style.scrollBehavior
-  document.documentElement.style.scrollBehavior = 'auto'
-  window.scrollTo(canvasScrollPosition.x, canvasScrollPosition.y)
-  document.documentElement.style.scrollBehavior = scrollBehavior
-  animateCanvasFrame(frameBeforeChange)
-}
-
-function updateCanvasPresentation(canvas: FdCanvas): void {
-  const { transform } = canvas.viewport
-  const levels = new FdCanvasGridLevels(24, transform.zoom, 18, 2)
-  canvasGrid?.style.setProperty('--grid-x', `${transform.offset.x}px`)
-  canvasGrid?.style.setProperty('--grid-y', `${transform.offset.y}px`)
-  canvasGrid?.style.setProperty('--grid-coarse-spacing', `${levels.coarse.spacing}px`)
-  canvasGrid?.style.setProperty('--grid-coarse-opacity', `${levels.coarse.opacity}`)
-  canvasGrid?.style.setProperty('--grid-fine-spacing', `${levels.fine.spacing}px`)
-  canvasGrid?.style.setProperty('--grid-fine-opacity', `${levels.fine.opacity}`)
-  if (canvasZoomValue) canvasZoomValue.value = `${Math.round(transform.zoom * 100)}%`
-}
-
-if (canvasDemo) {
-  canvasDemo.contentRect = canvasContentRect
-  canvasDemo.configuration = {
-    initialZoom: 0.8,
-    focusedZoom: 1.3,
-    minimumZoom: 0.25,
-    maximumZoom: 4,
-  }
-  canvasDemo.addEventListener('fd-viewport-change', () => updateCanvasPresentation(canvasDemo))
-  void canvasDemo.updateComplete.then(() => {
-    canvasDemo.fitRect(canvasContentRect, 72, 0.92, { animated: false })
-    updateCanvasPresentation(canvasDemo)
-  })
-}
-
-if (canvasShowcase) {
-  if ('IntersectionObserver' in window) {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        canvasShowcase.toggleAttribute(
-          'data-canvas-active',
-          entry
-            ? shouldActivateCanvas(
-                entry.isIntersecting,
-                entry.intersectionRect.height,
-                entry.rootBounds?.height ?? window.innerHeight,
-              )
-            : false,
-        )
-      },
-      { threshold: canvasObserverThresholds },
-    )
-    observer.observe(canvasShowcase)
-  } else {
-    canvasShowcase.toggleAttribute('data-canvas-active', true)
-  }
-}
-
-document.querySelector<HTMLButtonElement>('#canvas-zoom-out')?.addEventListener('click', () => {
-  if (canvasDemo) canvasDemo.setZoom(canvasDemo.viewport.transform.zoom / 1.2, { animated: true })
-})
-
-document.querySelector<HTMLButtonElement>('#canvas-zoom-in')?.addEventListener('click', () => {
-  if (canvasDemo) canvasDemo.setZoom(canvasDemo.viewport.transform.zoom * 1.2, { animated: true })
-})
-
-document.querySelector<HTMLButtonElement>('#canvas-fit')?.addEventListener('click', () => {
-  canvasDemo?.fitRect(canvasContentRect, 72, 0.92, { animated: true })
-})
-
-canvasPresentationButton?.addEventListener('click', () => {
-  setCanvasPresentationMode(toggledCanvasPresentationMode(canvasPresentationMode))
-})
-
-window.addEventListener('keydown', (event) => {
-  if (event.key !== 'Escape' || canvasPresentationMode !== 'expanded') return
-  event.preventDefault()
-  setCanvasPresentationMode('embedded')
-  canvasPresentationButton?.focus()
-})
-
 const preferencesWindow = document.querySelector<FdPreferencesWindow>('#window')
 const preferencesAppIcon = document.querySelector<HTMLImageElement>('#preferences-app-icon')
 const brandAppIcon = document.querySelector<HTMLImageElement>('#brand-app-icon')
-const canvasAppIcon = document.querySelector<HTMLImageElement>('#canvas-app-icon')
 const lightAppIcon = new URL('./app-icon.svg', import.meta.url).href
 const darkAppIcon = new URL('./app-icon-dark.svg', import.meta.url).href
 
@@ -302,7 +142,7 @@ function applyScheme(value: string): void {
     preferencesWindow.style.colorScheme = scheme
   }
   const icon = scheme === 'dark' ? darkAppIcon : lightAppIcon
-  for (const image of [preferencesAppIcon, brandAppIcon, canvasAppIcon]) {
+  for (const image of [preferencesAppIcon, brandAppIcon]) {
     if (image) image.src = icon
   }
 }

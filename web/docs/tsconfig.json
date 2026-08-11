@@ -5,7 +5,6 @@
     "types": ["node"],
     "noEmit": true,
     "paths": {
-      "@flowing-day/canvas": ["../packages/canvas/src/index.ts"],
       "@flowing-day/ui": ["../packages/core/src/index.ts"]
     }
   }

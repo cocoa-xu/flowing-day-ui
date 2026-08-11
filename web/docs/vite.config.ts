@@ -9,7 +9,6 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   resolve: {
     alias: {
-      '@flowing-day/canvas': resolve(import.meta.dirname, '../packages/canvas/src/index.ts'),
       '@flowing-day/ui': resolve(import.meta.dirname, '../packages/core/src/index.ts'),
     },
   },

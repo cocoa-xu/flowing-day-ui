@@ -22,7 +22,6 @@
         <a href="#components">Components</a>
         <a href="#preferences" data-page="appearance">In Action</a>
         <a href="#start">Start</a>
-        <a href="#canvas">Canvas</a>
         <a
           class="github-link"
           href="https://github.com/cocoa-xu/flowing-day-ui"
@@ -808,100 +807,6 @@ FlowingSwitch(
         </div>
       </section>
 
-      <section class="canvas-showcase" id="canvas" aria-labelledby="canvas-title">
-        <header class="canvas-showcase-header">
-          <p class="section-kicker">Canvas</p>
-          <h2 id="canvas-title">One design. Two platforms.</h2>
-          <p>The same Preferences and Canvas experience, shaped for SwiftUI and the web.</p>
-        </header>
-
-        <div class="canvas-frame">
-          <fd-canvas
-            id="canvas-demo"
-            interaction-mode="pan"
-            viewport-tab-index="-1"
-            aria-label="Interactive canvas demo"
-          >
-            <div class="canvas-grid" slot="background"></div>
-            <div class="canvas-world" slot="world">
-              <svg class="canvas-edges" viewBox="0 0 1080 520" aria-hidden="true">
-                <defs>
-                  <marker
-                    id="canvas-arrow"
-                    markerWidth="8"
-                    markerHeight="8"
-                    refX="7"
-                    refY="4"
-                    orient="auto"
-                    markerUnits="userSpaceOnUse"
-                  >
-                    <path d="M0 0 L8 4 L0 8 Z" />
-                  </marker>
-                </defs>
-                <path d="M320 260 C360 260 380 260 420 260" />
-                <path d="M680 260 C740 260 740 156 800 156" />
-                <path d="M680 260 C740 260 740 376 800 376" />
-              </svg>
-
-              <article
-                class="canvas-node canvas-node-source"
-                style="--node-x: 80px; --node-y: 214px"
-              >
-                <span class="canvas-node-mark">Aa</span>
-                <span><strong>Shared design</strong><small>Color, type, spacing, motion</small></span>
-              </article>
-              <article
-                class="canvas-node canvas-node-contract"
-                style="--node-x: 420px; --node-y: 214px"
-              >
-                <img id="canvas-app-icon" class="canvas-node-logo" src="./src/app-icon.svg" alt="" />
-                <span><strong>FlowingDayUI</strong><small>Preferences and Canvas</small></span>
-              </article>
-              <article
-                class="canvas-node canvas-node-platform"
-                style="--node-x: 800px; --node-y: 110px"
-              >
-                <span class="canvas-node-mark">S</span>
-                <span><strong>SwiftUI</strong><small>Built for Apple platforms</small></span>
-              </article>
-              <article
-                class="canvas-node canvas-node-platform"
-                style="--node-x: 800px; --node-y: 330px"
-              >
-                <span class="canvas-node-mark">W</span>
-                <span><strong>Web</strong><small>Desktop feel in the browser</small></span>
-              </article>
-            </div>
-
-            <div
-              class="canvas-toolbar"
-              slot="overlay"
-              role="toolbar"
-              aria-label="Canvas zoom controls"
-            >
-              <button id="canvas-zoom-out" type="button" aria-label="Zoom out">−</button>
-              <output id="canvas-zoom-value" aria-live="polite">100%</output>
-              <button id="canvas-zoom-in" type="button" aria-label="Zoom in">+</button>
-              <button id="canvas-fit" type="button">Fit</button>
-              <button
-                id="canvas-presentation"
-                type="button"
-                aria-label="Expand Canvas"
-                aria-controls="canvas-demo"
-                aria-expanded="false"
-                title="Expand Canvas"
-              >
-                <svg class="canvas-expand-icon" viewBox="0 0 16 16" aria-hidden="true">
-                  <path d="M6 2H2v4M10 2h4v4M14 10v4h-4M2 10v4h4" />
-                </svg>
-                <svg class="canvas-collapse-icon" viewBox="0 0 16 16" aria-hidden="true">
-                  <path d="M6 2v4H2M10 2v4h4M14 10h-4v4M2 10h4v4" />
-                </svg>
-              </button>
-            </div>
-          </fd-canvas>
-        </div>
-      </section>
     </main>
 
     <script type="module" src="./src/landing.ts"></script>
