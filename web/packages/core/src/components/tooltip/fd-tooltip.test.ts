@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FdTooltip } from './fd-tooltip.js'
 
 async function mount(markup: string): Promise<FdTooltip> {
@@ -48,11 +48,16 @@ describe('fd-tooltip timing', () => {
       </fd-tooltip>
     `)
 
-    element.dispatchEvent(new PointerEvent('pointerenter'))
-    element.dispatchEvent(new PointerEvent('pointerleave'))
-    await wait(30)
+    vi.useFakeTimers()
+    try {
+      element.dispatchEvent(new PointerEvent('pointerenter'))
+      element.dispatchEvent(new PointerEvent('pointerleave'))
+      await vi.advanceTimersByTimeAsync(20)
 
-    expect(element.open).toBe(false)
+      expect(element.open).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('uses focus as the keyboard equivalent of hover', async () => {
