@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-public enum FlowingSliderMath {
-  public static func fraction(
+enum FlowingSliderMath {
+  static func fraction(
     of value: Double,
     in range: ClosedRange<Double>
   ) -> Double {
@@ -11,7 +11,7 @@ public enum FlowingSliderMath {
     return min(max((value - range.lowerBound) / span, 0), 1)
   }
 
-  public static func value(
+  static func value(
     atFraction fraction: Double,
     in range: ClosedRange<Double>
   ) -> Double {
