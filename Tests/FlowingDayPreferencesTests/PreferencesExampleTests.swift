@@ -54,6 +54,11 @@ final class PreferencesExampleTests: XCTestCase {
     XCTAssertEqual(FlowingTabLabelContent.allCases, [.text, .icon, .iconAndText])
     XCTAssertEqual(FlowingTabsAlignment.allCases, [.leading, .center, .trailing])
     XCTAssertEqual(
+      FlowingConfirmationKind.allCases,
+      [.confirmation, .warning, .destructive]
+    )
+    XCTAssertEqual(FlowingDialogActionEmphasis.allCases, [.standard, .prominent])
+    XCTAssertEqual(
       ExampleControlAxis.allCases,
       [.horizontal, .vertical]
     )

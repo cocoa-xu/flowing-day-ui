@@ -578,6 +578,113 @@ final class FlowingControlsTests: XCTestCase {
     XCTAssertEqual(FlowingTabsAlignment.trailing.frameAlignment, .trailing)
   }
 
+  func testConfirmationKindsPreserveSystemSemantics() {
+    XCTAssertNil(FlowingConfirmationKind.confirmation.buttonRole)
+    XCTAssertEqual(FlowingConfirmationKind.confirmation.severity, .automatic)
+    XCTAssertNil(FlowingConfirmationKind.confirmation.systemImage)
+
+    XCTAssertNil(FlowingConfirmationKind.warning.buttonRole)
+    XCTAssertEqual(FlowingConfirmationKind.warning.severity, .critical)
+    XCTAssertEqual(FlowingConfirmationKind.warning.systemImage, "exclamationmark.triangle")
+
+    XCTAssertEqual(FlowingConfirmationKind.destructive.buttonRole, .destructive)
+    XCTAssertEqual(FlowingConfirmationKind.destructive.severity, .critical)
+    XCTAssertEqual(FlowingConfirmationKind.destructive.systemImage, "trash")
+  }
+
+  @MainActor
+  func testDialogComposesWithEveryToneAndActionEmphasis() {
+    let content = VStack {
+      ForEach(FlowingStatusTone.allCases, id: \.self) { tone in
+        FlowingDialog(
+          "Review Changes",
+          message: "Confirm the values before continuing.",
+          tone: tone
+        ) {
+          Text("Dialog content")
+            .frame(height: 32)
+        } actions: {
+          FlowingDialogAction("Cancel", role: .cancel) {}
+          ForEach(FlowingDialogActionEmphasis.allCases, id: \.self) { emphasis in
+            FlowingDialogAction(
+              emphasis.rawValue.capitalized,
+              role: tone == .critical ? .destructive : nil,
+              emphasis: emphasis
+            ) {}
+          }
+        }
+      }
+    }
+
+    XCTAssertGreaterThan(fittingHeight(content), 900)
+  }
+
+  @MainActor
+  func testDialogUsesAComfortableIntrinsicWidth() {
+    let width = fittingWidth(
+      FlowingDialog("Edit Details") {
+        Text("Content")
+      } actions: {
+        FlowingDialogAction("Done", emphasis: .prominent) {}
+      }
+    )
+
+    XCTAssertGreaterThanOrEqual(width, 380)
+    XCTAssertLessThanOrEqual(width, 560)
+  }
+
+  @MainActor
+  func testConfirmationModifierComposesWithoutReplacingItsHost() {
+    let height = fittingHeight(
+      Button("Remove") {}
+        .flowingConfirmationDialog(
+          "Remove this item?",
+          message: "This action cannot be undone.",
+          isPresented: .constant(false),
+          confirmationTitle: "Remove",
+          kind: .destructive
+        ) {}
+    )
+
+    XCTAssertGreaterThan(height, 0)
+  }
+
+  func testTooltipUsesADeliberateDefaultDelay() {
+    XCTAssertEqual(FlowingTooltipDefaults.delay, 0.65)
+  }
+
+  @MainActor
+  func testTooltipAndPopoverComposeAroundArbitraryContent() {
+    let tooltipHeight = fittingHeight(
+      FlowingTooltipContent(
+        "Keeps this item visible in the sidebar.",
+        title: "Pin",
+        systemImage: "pin"
+      )
+      .frame(width: 240)
+    )
+    let triggerHeight = fittingHeight(
+      FlowingPopover(
+        isPresented: .constant(false),
+        accessibilityLabel: "Show details"
+      ) {
+        Label("Details", systemImage: "info.circle")
+      } content: {
+        VStack(alignment: .leading) {
+          Text("Details")
+          FlowingSwitch("Enabled", isOn: .constant(true))
+        }
+      }
+      .buttonStyle(FlowingSoftButtonStyle())
+      .flowingTooltip("Shows more information") {
+        FlowingTooltipContent("Shows more information")
+      }
+    )
+
+    XCTAssertGreaterThan(tooltipHeight, 30)
+    XCTAssertGreaterThan(triggerHeight, 20)
+  }
+
   @MainActor
   func testTabsComposeAcrossEveryPublicPresentationAxis() {
     let options = [
