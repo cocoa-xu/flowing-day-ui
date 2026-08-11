@@ -53,6 +53,12 @@ struct ControlsShowcase: View {
   @State private var tabLabelContent = FlowingTabLabelContent.iconAndText
   @State private var tabsStripAlignment = FlowingTabsAlignment.leading
   @State private var tabsItemAlignment = FlowingTabsAlignment.center
+  @State private var confirmationKind = FlowingConfirmationKind.confirmation
+  @State private var isConfirmationPresented = false
+  @State private var isCustomDialogPresented = false
+  @State private var isPopoverPresented = false
+  @State private var popoverOptionEnabled = true
+  @State private var lastDialogAction = "None"
 
   private let controlTags = [
     ExampleLabel("FlowingCheckbox"),
@@ -87,6 +93,9 @@ struct ControlsShowcase: View {
     ExampleLabel("FlowingMenu"),
     ExampleLabel("FlowingCard"),
     ExampleLabel("FlowingSection"),
+    ExampleLabel("FlowingDialog"),
+    ExampleLabel("FlowingTooltipContent"),
+    ExampleLabel("FlowingPopover"),
   ]
 
   private let selectableTags = ["fill", "foreground", "wash", "veil", "hairline"]
@@ -96,6 +105,7 @@ struct ControlsShowcase: View {
       switchAndSliderComponents
       selectComponents
       tabsComponents
+      dialogAndOverlayComponents
       fieldAndValueComponents
       dateAndTimeComponents
       iconButtonComponents
@@ -113,6 +123,95 @@ struct ControlsShowcase: View {
       pillComponents
       layoutComponents
       buttonStyleComponents
+    }
+    .flowingConfirmationDialog(
+      confirmationKind.dialogTitle,
+      message: confirmationKind.dialogMessage,
+      isPresented: $isConfirmationPresented,
+      confirmationTitle: confirmationKind.actionTitle,
+      kind: confirmationKind,
+      confirmationIsDefault: confirmationKind != .destructive
+    ) {
+      lastDialogAction = confirmationKind.actionTitle
+    } onCancel: {
+      lastDialogAction = "Cancelled"
+    }
+    .flowingDialog(isPresented: $isCustomDialogPresented) {
+      ExampleCustomDialog()
+    }
+  }
+
+  private var dialogAndOverlayComponents: some View {
+    PreferencesSection(
+      "Dialogs & Overlays",
+      footer: "Confirmations retain system alert behavior; custom sheets and popovers share "
+        + "the library's visual hierarchy."
+    ) {
+      componentPlayground {
+        VStack(alignment: .leading, spacing: 12) {
+          HStack(spacing: 8) {
+            Button("Show Confirmation") {
+              isConfirmationPresented = true
+            }
+            .buttonStyle(FlowingSoftButtonStyle(isProminent: true))
+
+            Button("Edit in Sheet") {
+              isCustomDialogPresented = true
+            }
+            .buttonStyle(FlowingSoftButtonStyle())
+
+            FlowingPopover(
+              isPresented: $isPopoverPresented,
+              accessibilityLabel: "Show preview options",
+              arrowEdge: .top
+            ) {
+              Label("Preview Options", systemImage: "slider.horizontal.3")
+            } content: {
+              VStack(alignment: .leading, spacing: 11) {
+                Text("Preview Options")
+                  .font(typography.rowTitle.font)
+                FlowingSwitch("Live preview", isOn: $popoverOptionEnabled)
+                FlowingSeparator()
+                Text("Changes are applied immediately and preserved when the popover closes.")
+                  .font(typography.rowCaption.font)
+                  .foregroundStyle(.secondary)
+              }
+            }
+            .buttonStyle(FlowingSoftButtonStyle())
+
+            FlowingIconButton(
+              "About confirmation dialogs",
+              systemImage: "questionmark",
+              emphasis: .standard,
+              showsSystemHelp: false
+            ) {}
+            .flowingTooltip("Explains when confirmation is appropriate") {
+              FlowingTooltipContent(
+                "Use confirmation only when an action is important and difficult to reverse.",
+                title: "Confirmation",
+                systemImage: "checkmark.circle"
+              )
+            }
+          }
+
+          HStack(spacing: 8) {
+            Text("Last action")
+              .font(typography.rowCaption.font)
+              .foregroundStyle(.secondary)
+            FlowingBadge(lastDialogAction, tone: .accent)
+          }
+        }
+      } options: {
+        playgroundOption("Confirmation kind") {
+          FlowingConnectedSegmentedControl(
+            label: "Confirmation kind",
+            selection: $confirmationKind,
+            options: FlowingConfirmationKind.allCases.map {
+              FlowingSegmentOption($0, label: $0.title)
+            }
+          )
+        }
+      }
     }
   }
 
@@ -944,6 +1043,79 @@ struct ExampleMultiSelectSelection: Equatable {
   var alpha = true
   var beta = false
   var locked = false
+}
+
+private struct ExampleCustomDialog: View {
+  @Environment(\.dismiss) private var dismiss
+  @State private var name = "Morning Review"
+  @State private var includesSummary = true
+
+  var body: some View {
+    FlowingDialog(
+      "Edit Preview",
+      message: "Adjust the presentation without leaving the current window.",
+      systemImage: "rectangle.and.pencil.and.ellipsis",
+      tone: .accent
+    ) {
+      VStack(alignment: .leading, spacing: 13) {
+        FlowingTextField(
+          "Name",
+          text: $name,
+          systemImage: "text.cursor"
+        )
+        FlowingSwitch("Include summary", isOn: $includesSummary)
+        FlowingCallout(
+          "Closing the sheet with Cancel leaves the original values unchanged.",
+          tone: .informational,
+          presentation: .inline
+        )
+      }
+    } actions: {
+      FlowingDialogAction(
+        "Cancel",
+        role: .cancel,
+        keyboardShortcut: .cancelAction
+      ) {
+        dismiss()
+      }
+      FlowingDialogAction(
+        "Save",
+        systemImage: "checkmark",
+        emphasis: .prominent,
+        keyboardShortcut: .defaultAction
+      ) {
+        dismiss()
+      }
+    }
+  }
+}
+
+extension FlowingConfirmationKind {
+  fileprivate var title: String { rawValue.capitalized }
+
+  fileprivate var dialogTitle: String {
+    switch self {
+    case .confirmation: "Apply these changes?"
+    case .warning: "Continue with limited information?"
+    case .destructive: "Remove this preview?"
+    }
+  }
+
+  fileprivate var dialogMessage: String {
+    switch self {
+    case .confirmation: "The new values will replace the current preview settings."
+    case .warning: "Some details are unavailable, so the result may be incomplete."
+    case .destructive: "This preview will be removed permanently and cannot be restored."
+    }
+  }
+
+  fileprivate var actionTitle: String {
+    switch self {
+    case .confirmation: "Apply"
+    case .warning: "Continue"
+    case .destructive: "Remove"
+    }
+  }
 }
 
 enum ExampleInputKind: String, CaseIterable, Hashable {
