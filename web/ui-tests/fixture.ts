@@ -54,6 +54,19 @@ style.textContent = `
     min-height: 170px;
   }
 
+  .presentation-primitives {
+    display: grid;
+    grid-template-columns: minmax(460px, 1fr) auto;
+    align-items: start;
+    gap: 16px;
+  }
+
+  .overlay-triggers {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
   fd-graph-canvas {
     width: 1000px;
     height: 700px;
@@ -123,3 +136,8 @@ Object.assign(window, {
   graphFixture: graph,
   completedConnection: () => completedConnection,
 })
+
+const dialogTrigger = document.querySelector<HTMLButtonElement>('#dialog-trigger')
+const dialog = document.querySelector<HTMLElement & { showModal(): void }>('#dialog')
+if (!dialogTrigger || !dialog) throw new Error('missing dialog fixture')
+dialogTrigger.addEventListener('click', () => dialog.showModal())

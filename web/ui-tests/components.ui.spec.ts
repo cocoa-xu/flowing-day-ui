@@ -9,16 +9,20 @@ import {
 } from '../packages/canvas/src/graph/model.js'
 import type { FdCheckbox } from '../packages/core/src/components/checkbox/fd-checkbox.js'
 import type { FdConnectedSegmentedControl } from '../packages/core/src/components/connected-segmented-control/fd-connected-segmented-control.js'
+import type { FdDialog } from '../packages/core/src/components/dialog/fd-dialog.js'
 import type { FdDisclosure } from '../packages/core/src/components/disclosure/fd-disclosure.js'
 import type { FdIconButton } from '../packages/core/src/components/icon-button/fd-icon-button.js'
 import type { FdMultiSelect } from '../packages/core/src/components/multi-select/fd-multi-select.js'
+import type { FdPopover } from '../packages/core/src/components/popover/fd-popover.js'
 import type { FdPopup } from '../packages/core/src/components/popup/fd-popup.js'
 import type { FdProgress } from '../packages/core/src/components/progress/fd-progress.js'
 import type { FdSearchPicker } from '../packages/core/src/components/search-picker/fd-search-picker.js'
 import type { FdSecureField } from '../packages/core/src/components/secure-field/fd-secure-field.js'
 import type { FdSlider } from '../packages/core/src/components/slider/fd-slider.js'
+import type { FdTabs } from '../packages/core/src/components/tabs/fd-tabs.js'
 import type { FdTextArea } from '../packages/core/src/components/text-area/fd-text-area.js'
 import type { FdTextField } from '../packages/core/src/components/text-field/fd-text-field.js'
+import type { FdTooltip } from '../packages/core/src/components/tooltip/fd-tooltip.js'
 
 declare global {
   interface Window {
@@ -124,6 +128,72 @@ test('selection, disclosure, and search primitives retain native interaction', a
   await expect
     .poll(() => searchPicker.evaluate((element) => (element as FdSearchPicker).value))
     .toBe('dublin')
+})
+
+test('tabs provide native content navigation by pointer and keyboard', async ({ page }) => {
+  const tabs = page.locator('#tabs')
+  const overview = tabs.getByRole('tabpanel', { name: 'Overview' })
+  const details = tabs.getByRole('tabpanel', { name: 'Details' })
+
+  await expect(overview).toBeVisible()
+  await expect(details).toBeHidden()
+  await tabs.getByRole('tab', { name: 'Details' }).click()
+  await expect.poll(() => tabs.evaluate((element) => (element as FdTabs).value)).toBe('details')
+  await expect(overview).toBeHidden()
+  await expect(details).toBeVisible()
+
+  await tabs.getByRole('tab', { name: 'Details' }).focus()
+  await page.keyboard.press('Home')
+  await expect.poll(() => tabs.evaluate((element) => (element as FdTabs).value)).toBe('overview')
+  await expect(tabs.getByRole('tab', { name: 'Overview' })).toBeFocused()
+
+  await page.keyboard.press('ArrowLeft')
+  await expect.poll(() => tabs.evaluate((element) => (element as FdTabs).value)).toBe('details')
+  await expect(tabs.getByRole('tab', { name: 'Details' })).toBeFocused()
+})
+
+test('dialog uses native modal focus, cancellation, and focus restoration', async ({ page }) => {
+  const trigger = page.locator('#dialog-trigger')
+  const dialog = page.locator('#dialog')
+
+  await trigger.focus()
+  await page.keyboard.press('Enter')
+  await expect.poll(() => dialog.evaluate((element) => (element as FdDialog).open)).toBe(true)
+  await expect(dialog.getByRole('dialog')).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused()
+
+  await page.keyboard.press('Escape')
+  await expect.poll(() => dialog.evaluate((element) => (element as FdDialog).open)).toBe(false)
+  await expect(trigger).toBeFocused()
+})
+
+test('popover and tooltip preserve top-layer browser interaction', async ({ page }) => {
+  const popover = page.locator('#popover')
+  const popoverTrigger = page.locator('#popover-trigger')
+  await popoverTrigger.click()
+  await expect.poll(() => popover.evaluate((element) => (element as FdPopover).open)).toBe(true)
+  await expect(popover.getByRole('dialog')).toBeVisible()
+  await expect(popoverTrigger).toHaveAttribute('aria-expanded', 'true')
+
+  await page.keyboard.press('Escape')
+  await expect.poll(() => popover.evaluate((element) => (element as FdPopover).open)).toBe(false)
+  await expect(popoverTrigger).toHaveAttribute('aria-expanded', 'false')
+
+  await popoverTrigger.click()
+  await expect.poll(() => popover.evaluate((element) => (element as FdPopover).open)).toBe(true)
+  await page.mouse.click(1, 1)
+  await expect.poll(() => popover.evaluate((element) => (element as FdPopover).open)).toBe(false)
+
+  const tooltip = page.locator('#tooltip')
+  const tooltipTrigger = page.locator('#tooltip-trigger')
+  await tooltipTrigger.hover()
+  await expect.poll(() => tooltip.evaluate((element) => (element as FdTooltip).open)).toBe(true)
+  await expect(tooltip.getByRole('tooltip')).toBeVisible()
+  await expect(tooltip.getByRole('tooltip')).toHaveCSS('pointer-events', 'none')
+  await expect(tooltipTrigger).toHaveAttribute('aria-describedby', /fd-tooltip-/)
+
+  await page.keyboard.press('Escape')
+  await expect.poll(() => tooltip.evaluate((element) => (element as FdTooltip).open)).toBe(false)
 })
 
 test('marquee selection updates before pointer release', async ({ page }) => {

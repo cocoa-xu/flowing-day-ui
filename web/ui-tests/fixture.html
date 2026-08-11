@@ -68,6 +68,37 @@
           <fd-option value="dublin">Dublin</fd-option>
         </fd-search-picker>
       </section>
+      <section class="presentation-primitives">
+        <fd-tabs id="tabs" label="Reference section" value="overview" variant="soft-surface">
+          <fd-option value="overview">Overview</fd-option>
+          <fd-option value="details">Details</fd-option>
+          <fd-option value="history" disabled>History</fd-option>
+          <article slot="overview">Overview content</article>
+          <article slot="details">
+            <button id="details-action" type="button">Details action</button>
+          </article>
+          <article slot="history">History content</article>
+        </fd-tabs>
+        <div class="overlay-triggers">
+          <button id="dialog-trigger" type="button">Open Dialog</button>
+          <fd-popover id="popover" label="Canvas actions">
+            <button id="popover-trigger" slot="trigger" type="button">More</button>
+            <button id="popover-action" type="button">Duplicate</button>
+          </fd-popover>
+          <fd-tooltip id="tooltip" text="Pin this canvas" delay="40">
+            <button id="tooltip-trigger" slot="trigger" type="button">Pin</button>
+          </fd-tooltip>
+        </div>
+        <fd-dialog
+          id="dialog"
+          heading="Remove Canvas?"
+          message="This action cannot be undone."
+          confirmation-kind="destructive"
+          confirm-label="Remove"
+        >
+          The canvas and its local history will be removed.
+        </fd-dialog>
+      </section>
     </main>
   </body>
 </html>
