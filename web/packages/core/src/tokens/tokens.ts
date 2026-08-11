@@ -103,6 +103,7 @@ interface RawTextStyle {
   readonly weight?: FontWeightName
   readonly design?: FontDesignName
   readonly monospacedDigits?: boolean
+  readonly swift?: string
 }
 
 type Appearance = 'light' | 'dark'
@@ -183,7 +184,7 @@ export const namedAccentFamilies = Object.freeze(
   ),
 ) as Readonly<Record<NamedAccentFamilyName, readonly NamedAccentName[]>>
 
-/** Expands the 17 roles of `FlowingTypography` into their four token reads each. */
+/** Expands the shared Controls and Preferences typography roles into four token reads each. */
 function textStyleTokens(): Array<readonly [string, TokenValue]> {
   return Object.entries(raw.typography.roles as Readonly<Record<string, RawTextStyle>>).flatMap(
     ([role, style]) => [

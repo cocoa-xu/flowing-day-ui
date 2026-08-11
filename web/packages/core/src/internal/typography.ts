@@ -1,6 +1,6 @@
 import { type CSSResult, unsafeCSS } from 'lit'
 
-/** The 17 roles of `FlowingTypography`, kebab-cased. */
+/** The shared Controls and Preferences typography roles, kebab-cased. */
 export type TextRole =
   | 'brand-title'
   | 'brand-subtitle'

@@ -340,22 +340,28 @@ PreferencesDependentRows(isVisible: showNetwork) {
 
 ## Theming
 
-`FlowingDayControls` owns the shared typography, spacing, accent, and surface hierarchy. Applications can replace any semantic font or background without rebuilding the components:
+`FlowingDayControls` owns the shared typography, spacing, accent, and surface hierarchy.
+`FlowingDayPreferences` adds only the window-specific roles. Applications can customize both
+layers without rebuilding the components:
 
 ```swift
 let configuration = PreferencesViewConfiguration(
     applicationName: "Example",
     defaultAccent: accent,
-    typography: FlowingTypography(
-        rowTitle: FlowingTextStyle(
-            size: 14,
-            weight: .medium,
-            fontName: "Avenir Next Medium"
+    typography: PreferencesTypography(
+        controls: FlowingTypography(
+            rowTitle: FlowingTextStyle(
+                size: 14,
+                weight: .medium,
+                fontName: "Avenir Next Medium"
+            )
         )
     ),
-    surfaces: FlowingSurfaces(
-        card: Color(nsColor: .controlBackgroundColor),
-        field: Color(nsColor: .textBackgroundColor)
+    surfaces: PreferencesSurfaces(
+        controls: FlowingSurfaces(
+            card: Color(nsColor: .controlBackgroundColor),
+            field: Color(nsColor: .textBackgroundColor)
+        )
     )
 )
 ```

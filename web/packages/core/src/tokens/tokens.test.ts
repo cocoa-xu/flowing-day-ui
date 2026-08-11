@@ -225,12 +225,12 @@ describe('tokenGroups', () => {
     expect(dark('surface-card')).toBe(light('surface-card'))
   })
 
-  it('cross-maps surfaces onto the palette exactly as FlowingSurfaces.standard does', () => {
+  it('cross-maps the Controls and Preferences surfaces onto the palette', () => {
     expect(light('surface-sidebar')).toBe('var(--fd-palette-card)')
     expect(light('surface-card')).toBe('var(--fd-palette-control)')
   })
 
-  it('carries FlowingMetrics.standard', () => {
+  it('carries the Controls and Preferences metrics', () => {
     expect(light('metric-card-radius')).toBe('14px')
     expect(light('metric-control-radius')).toBe('9px')
     expect(light('metric-row-inset')).toBe('18px')
@@ -262,7 +262,7 @@ describe('tokenGroups', () => {
     }
   })
 
-  it('keeps the literal type scale from FlowingTypography.standard', () => {
+  it('keeps the shared Controls and Preferences type scale', () => {
     expect(light('text-row-title-size')).toBe('13px')
     expect(light('text-row-caption-size')).toBe('11px')
     expect(light('text-page-title-size')).toBe('25px')

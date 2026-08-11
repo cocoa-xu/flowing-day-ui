@@ -111,7 +111,7 @@ public struct PreferencesRowSeparator: View {
 }
 
 public struct PreferencesPaneStack<Content: View>: View {
-  @Environment(\.flowingMetrics) private var metrics
+  @Environment(\.preferencesMetrics) private var metrics
   private let content: Content
 
   public init(@ViewBuilder content: () -> Content) {
@@ -321,6 +321,7 @@ public struct PreferencesSwitchGroup<Content: View>: View {
 
 public struct PreferencesSliderRow: View {
   @Environment(\.flowingMetrics) private var metrics
+  @Environment(\.preferencesTypography) private var preferencesTypography
   @Environment(\.flowingTypography) private var typography
   private let symbol: String?
   private let title: String
@@ -362,7 +363,7 @@ public struct PreferencesSliderRow: View {
           .foregroundStyle(FlowingPalette.ink)
         Spacer(minLength: 10)
         Text(format(value))
-          .font(typography.sliderValue.font)
+          .font(preferencesTypography.sliderValue.font)
           .foregroundStyle(FlowingPalette.muted)
       }
       FlowingSlider(value: $value, in: range, step: step)

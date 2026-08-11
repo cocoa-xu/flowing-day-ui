@@ -28,6 +28,9 @@ final class PreferencesNavigationTests: XCTestCase {
     let configuration = PreferencesViewConfiguration(applicationName: "Example")
 
     XCTAssertEqual(configuration.contentWidthPolicy, .centered())
+    XCTAssertEqual(configuration.metrics.contentWidth, 720)
+    XCTAssertEqual(configuration.metrics.controls, .standard)
+    XCTAssertEqual(configuration.surfaces.controls, .standard)
   }
 
   func testContentWidthPolicyResolvesFluidAndCenteredLayouts() {

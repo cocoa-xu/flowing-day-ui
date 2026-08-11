@@ -49,18 +49,20 @@ struct ExamplePreferencesView: View {
     )
   }
 
-  private var metrics: FlowingMetrics {
-    var metrics = FlowingMetrics.standard
-    metrics.cardRadius = corners.cardRadius
-    metrics.controlRadius = corners.controlRadius
-    metrics.rowInset = density.rowInset
-    metrics.contentWidth = contentWidth.value
-    metrics.sectionSpacing = density.sectionSpacing
-    return metrics
+  private var metrics: PreferencesMetrics {
+    var controls = FlowingMetrics.standard
+    controls.cardRadius = corners.cardRadius
+    controls.controlRadius = corners.controlRadius
+    controls.rowInset = density.rowInset
+    return PreferencesMetrics(
+      controls: controls,
+      contentWidth: contentWidth.value,
+      sectionSpacing: density.sectionSpacing
+    )
   }
 
-  private var typography: FlowingTypography {
-    var typography = FlowingTypography.standard
+  private var typography: PreferencesTypography {
+    var typography = PreferencesTypography.standard
     typography.apply(scale: textScale.multiplier, headingFace: headingFace)
     return typography
   }

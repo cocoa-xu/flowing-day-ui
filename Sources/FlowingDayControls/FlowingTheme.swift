@@ -6,70 +6,32 @@ public struct FlowingMetrics: Equatable, Sendable {
   public var cardRadius: CGFloat
   public var controlRadius: CGFloat
   public var rowInset: CGFloat
-  public var contentWidth: CGFloat
-  public var sectionSpacing: CGFloat
 
   public init(
     cardRadius: CGFloat = 14,
     controlRadius: CGFloat = 9,
-    rowInset: CGFloat = 18,
-    contentWidth: CGFloat = 720,
-    sectionSpacing: CGFloat = 20
+    rowInset: CGFloat = 18
   ) {
     self.cardRadius = cardRadius
     self.controlRadius = controlRadius
     self.rowInset = rowInset
-    self.contentWidth = contentWidth
-    self.sectionSpacing = sectionSpacing
   }
 
   public static let standard = FlowingMetrics()
 }
 
 public struct FlowingTypography: Sendable {
-  public var brandTitle: FlowingTextStyle
-  public var brandSubtitle: FlowingTextStyle
-  public var sidebarGroup: FlowingTextStyle
-  public var sidebarItem: FlowingTextStyle
-  public var sidebarItemSelected: FlowingTextStyle
-  public var pageTitle: FlowingTextStyle
-  public var pageSubtitle: FlowingTextStyle
   public var contentTitle: FlowingTextStyle
   public var body: FlowingTextStyle
   public var sectionHeader: FlowingTextStyle
   public var rowTitle: FlowingTextStyle
   public var rowCaption: FlowingTextStyle
   public var value: FlowingTextStyle
-  public var sliderValue: FlowingTextStyle
   public var selectionLabel: FlowingTextStyle
   public var buttonLabel: FlowingTextStyle
   public var tag: FlowingTextStyle
 
   public init(
-    brandTitle: FlowingTextStyle = FlowingTextStyle(
-      size: 16,
-      weight: .bold,
-      design: .rounded
-    ),
-    brandSubtitle: FlowingTextStyle = FlowingTextStyle(
-      size: 10.5,
-      weight: .medium
-    ),
-    sidebarGroup: FlowingTextStyle = FlowingTextStyle(
-      size: 9,
-      weight: .semibold
-    ),
-    sidebarItem: FlowingTextStyle = FlowingTextStyle(size: 12.5),
-    sidebarItemSelected: FlowingTextStyle = FlowingTextStyle(
-      size: 12.5,
-      weight: .semibold
-    ),
-    pageTitle: FlowingTextStyle = FlowingTextStyle(
-      size: 25,
-      weight: .semibold,
-      design: .rounded
-    ),
-    pageSubtitle: FlowingTextStyle = FlowingTextStyle(size: 11.5),
     contentTitle: FlowingTextStyle = FlowingTextStyle(
       size: 21,
       weight: .semibold
@@ -82,10 +44,6 @@ public struct FlowingTypography: Sendable {
     rowTitle: FlowingTextStyle = FlowingTextStyle(size: 13),
     rowCaption: FlowingTextStyle = FlowingTextStyle(size: 11),
     value: FlowingTextStyle = FlowingTextStyle(size: 12.5),
-    sliderValue: FlowingTextStyle = FlowingTextStyle(
-      size: 11.5,
-      usesMonospacedDigits: true
-    ),
     selectionLabel: FlowingTextStyle = FlowingTextStyle(
       size: 11.5,
       weight: .medium
@@ -99,20 +57,12 @@ public struct FlowingTypography: Sendable {
       design: .monospaced
     )
   ) {
-    self.brandTitle = brandTitle
-    self.brandSubtitle = brandSubtitle
-    self.sidebarGroup = sidebarGroup
-    self.sidebarItem = sidebarItem
-    self.sidebarItemSelected = sidebarItemSelected
-    self.pageTitle = pageTitle
-    self.pageSubtitle = pageSubtitle
     self.contentTitle = contentTitle
     self.body = body
     self.sectionHeader = sectionHeader
     self.rowTitle = rowTitle
     self.rowCaption = rowCaption
     self.value = value
-    self.sliderValue = sliderValue
     self.selectionLabel = selectionLabel
     self.buttonLabel = buttonLabel
     self.tag = tag
@@ -123,20 +73,17 @@ public struct FlowingTypography: Sendable {
 
 public struct FlowingSurfaces: Equatable, Sendable {
   public var canvas: Color
-  public var sidebar: Color
   public var card: Color
   public var control: Color
   public var field: Color
 
   public init(
     canvas: Color = FlowingPalette.canvas,
-    sidebar: Color = FlowingPalette.card,
     card: Color = FlowingPalette.control,
     control: Color = FlowingPalette.control,
     field: Color = FlowingPalette.field
   ) {
     self.canvas = canvas
-    self.sidebar = sidebar
     self.card = card
     self.control = control
     self.field = field
@@ -193,7 +140,6 @@ extension FlowingPalette {
     dark: 0x000000,
     darkAlpha: 0.42
   )
-  public static let closeHover = FlowingPalette.dynamic(light: 0xFF5F57, dark: 0xFF6961)
 }
 
 public enum FlowingMotion {

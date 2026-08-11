@@ -381,8 +381,9 @@ enum ExampleAccentFamily: CaseIterable, Identifiable {
   }
 }
 
-extension FlowingTypography {
+extension PreferencesTypography {
   mutating func apply(scale: CGFloat, headingFace: FlowingFontDesign) {
+    controls.apply(scale: scale)
     brandTitle.size *= scale
     brandSubtitle.size *= scale
     sidebarGroup.size *= scale
@@ -390,17 +391,22 @@ extension FlowingTypography {
     sidebarItemSelected.size *= scale
     pageTitle.size *= scale
     pageSubtitle.size *= scale
+    sliderValue.size *= scale
+    brandTitle.design = headingFace
+    pageTitle.design = headingFace
+  }
+}
+
+extension FlowingTypography {
+  mutating func apply(scale: CGFloat) {
     contentTitle.size *= scale
     body.size *= scale
     sectionHeader.size *= scale
     rowTitle.size *= scale
     rowCaption.size *= scale
     value.size *= scale
-    sliderValue.size *= scale
     selectionLabel.size *= scale
     buttonLabel.size *= scale
     tag.size *= scale
-    brandTitle.design = headingFace
-    pageTitle.design = headingFace
   }
 }

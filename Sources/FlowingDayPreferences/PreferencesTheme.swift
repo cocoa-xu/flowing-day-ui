@@ -4,6 +4,95 @@ import AppKit
 import FlowingDayControls
 import SwiftUI
 
+public struct PreferencesMetrics: Equatable, Sendable {
+  public var controls: FlowingMetrics
+  public var contentWidth: CGFloat
+  public var sectionSpacing: CGFloat
+
+  public init(
+    controls: FlowingMetrics = .standard,
+    contentWidth: CGFloat = 720,
+    sectionSpacing: CGFloat = 20
+  ) {
+    self.controls = controls
+    self.contentWidth = contentWidth
+    self.sectionSpacing = sectionSpacing
+  }
+
+  public static let standard = PreferencesMetrics()
+}
+
+public struct PreferencesTypography: Sendable {
+  public var controls: FlowingTypography
+  public var brandTitle: FlowingTextStyle
+  public var brandSubtitle: FlowingTextStyle
+  public var sidebarGroup: FlowingTextStyle
+  public var sidebarItem: FlowingTextStyle
+  public var sidebarItemSelected: FlowingTextStyle
+  public var pageTitle: FlowingTextStyle
+  public var pageSubtitle: FlowingTextStyle
+  public var sliderValue: FlowingTextStyle
+
+  public init(
+    controls: FlowingTypography = .standard,
+    brandTitle: FlowingTextStyle = FlowingTextStyle(
+      size: 16,
+      weight: .bold,
+      design: .rounded
+    ),
+    brandSubtitle: FlowingTextStyle = FlowingTextStyle(
+      size: 10.5,
+      weight: .medium
+    ),
+    sidebarGroup: FlowingTextStyle = FlowingTextStyle(
+      size: 9,
+      weight: .semibold
+    ),
+    sidebarItem: FlowingTextStyle = FlowingTextStyle(size: 12.5),
+    sidebarItemSelected: FlowingTextStyle = FlowingTextStyle(
+      size: 12.5,
+      weight: .semibold
+    ),
+    pageTitle: FlowingTextStyle = FlowingTextStyle(
+      size: 25,
+      weight: .semibold,
+      design: .rounded
+    ),
+    pageSubtitle: FlowingTextStyle = FlowingTextStyle(size: 11.5),
+    sliderValue: FlowingTextStyle = FlowingTextStyle(
+      size: 11.5,
+      usesMonospacedDigits: true
+    )
+  ) {
+    self.controls = controls
+    self.brandTitle = brandTitle
+    self.brandSubtitle = brandSubtitle
+    self.sidebarGroup = sidebarGroup
+    self.sidebarItem = sidebarItem
+    self.sidebarItemSelected = sidebarItemSelected
+    self.pageTitle = pageTitle
+    self.pageSubtitle = pageSubtitle
+    self.sliderValue = sliderValue
+  }
+
+  public static let standard = PreferencesTypography()
+}
+
+public struct PreferencesSurfaces: Equatable, Sendable {
+  public var controls: FlowingSurfaces
+  public var sidebar: Color
+
+  public init(
+    controls: FlowingSurfaces = .standard,
+    sidebar: Color = FlowingPalette.card
+  ) {
+    self.controls = controls
+    self.sidebar = sidebar
+  }
+
+  public static let standard = PreferencesSurfaces()
+}
+
 public struct PreferencesStrings: Equatable, Sendable {
   public var closePreferences: String
   public var controls: FlowingStrings
@@ -14,6 +103,30 @@ public struct PreferencesStrings: Equatable, Sendable {
   ) {
     self.closePreferences = closePreferences
     self.controls = controls
+  }
+}
+
+enum PreferencesPalette {
+  static let closeHover = FlowingPalette.dynamic(light: 0xFF5F57, dark: 0xFF6961)
+}
+
+private struct PreferencesMetricsKey: EnvironmentKey {
+  static let defaultValue = PreferencesMetrics.standard
+}
+
+private struct PreferencesTypographyKey: EnvironmentKey {
+  static let defaultValue = PreferencesTypography.standard
+}
+
+extension EnvironmentValues {
+  var preferencesMetrics: PreferencesMetrics {
+    get { self[PreferencesMetricsKey.self] }
+    set { self[PreferencesMetricsKey.self] = newValue }
+  }
+
+  var preferencesTypography: PreferencesTypography {
+    get { self[PreferencesTypographyKey.self] }
+    set { self[PreferencesTypographyKey.self] = newValue }
   }
 }
 
@@ -40,9 +153,9 @@ public struct PreferencesViewConfiguration {
   public var sidebarFooter: String?
   public var defaultAccent: FlowingAccent
   public var strings: PreferencesStrings
-  public var metrics: FlowingMetrics
-  public var typography: FlowingTypography
-  public var surfaces: FlowingSurfaces
+  public var metrics: PreferencesMetrics
+  public var typography: PreferencesTypography
+  public var surfaces: PreferencesSurfaces
   public var contentWidthPolicy: PreferencesContentWidthPolicy
   public var sidebarWidth: CGFloat
   public var cornerRadius: CGFloat
@@ -54,9 +167,9 @@ public struct PreferencesViewConfiguration {
     sidebarFooter: String? = nil,
     defaultAccent: FlowingAccent = .celadon,
     strings: PreferencesStrings = PreferencesStrings(),
-    metrics: FlowingMetrics = .standard,
-    typography: FlowingTypography = .standard,
-    surfaces: FlowingSurfaces = .standard,
+    metrics: PreferencesMetrics = .standard,
+    typography: PreferencesTypography = .standard,
+    surfaces: PreferencesSurfaces = .standard,
     contentWidthPolicy: PreferencesContentWidthPolicy = .centered(),
     sidebarWidth: CGFloat = 224,
     cornerRadius: CGFloat = 18

@@ -42,35 +42,41 @@ final class PreferencesControlsTests: XCTestCase {
   }
 
   func testDefaultThemeMatchesPreferencesVisualHierarchy() {
-    let typography = FlowingTypography.standard
-    let surfaces = FlowingSurfaces.standard
+    let typography = PreferencesTypography.standard
+    let surfaces = PreferencesSurfaces.standard
 
     XCTAssertEqual(typography.pageTitle.size, 25)
     XCTAssertEqual(typography.pageTitle.weight, .semibold)
     XCTAssertEqual(typography.pageTitle.design, .rounded)
-    XCTAssertEqual(typography.contentTitle.size, 21)
-    XCTAssertEqual(typography.body.size, 12)
-    XCTAssertEqual(typography.rowTitle.size, 13)
-    XCTAssertEqual(typography.sectionHeader.size, 10.5)
+    XCTAssertEqual(typography.controls.contentTitle.size, 21)
+    XCTAssertEqual(typography.controls.body.size, 12)
+    XCTAssertEqual(typography.controls.rowTitle.size, 13)
+    XCTAssertEqual(typography.controls.sectionHeader.size, 10.5)
     XCTAssertEqual(surfaces.sidebar, FlowingPalette.card)
-    XCTAssertEqual(surfaces.card, FlowingPalette.control)
+    XCTAssertEqual(surfaces.controls.card, FlowingPalette.control)
   }
 
   func testThemeCanBeCustomizedPerApplication() {
-    let typography = FlowingTypography(
-      rowTitle: FlowingTextStyle(
-        size: 15,
-        weight: .medium,
-        fontName: "Helvetica Neue"
+    let typography = PreferencesTypography(
+      controls: FlowingTypography(
+        rowTitle: FlowingTextStyle(
+          size: 15,
+          weight: .medium,
+          fontName: "Helvetica Neue"
+        )
       )
     )
-    let surfaces = FlowingSurfaces(card: .orange, field: .purple)
+    let surfaces = PreferencesSurfaces(
+      controls: FlowingSurfaces(card: .orange, field: .purple),
+      sidebar: .blue
+    )
 
-    XCTAssertEqual(typography.rowTitle.size, 15)
-    XCTAssertEqual(typography.rowTitle.weight, .medium)
-    XCTAssertEqual(typography.rowTitle.fontName, "Helvetica Neue")
-    XCTAssertEqual(surfaces.card, .orange)
-    XCTAssertEqual(surfaces.field, .purple)
+    XCTAssertEqual(typography.controls.rowTitle.size, 15)
+    XCTAssertEqual(typography.controls.rowTitle.weight, .medium)
+    XCTAssertEqual(typography.controls.rowTitle.fontName, "Helvetica Neue")
+    XCTAssertEqual(surfaces.controls.card, .orange)
+    XCTAssertEqual(surfaces.controls.field, .purple)
+    XCTAssertEqual(surfaces.sidebar, .blue)
   }
 
   func testCheckboxAlignmentUsesSemanticGuides() {

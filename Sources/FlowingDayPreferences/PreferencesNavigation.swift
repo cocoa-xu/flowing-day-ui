@@ -118,7 +118,7 @@ public struct PreferencesView<ID: Hashable>: View {
         .frame(width: 1)
       content
     }
-    .background(configuration.surfaces.canvas)
+    .background(configuration.surfaces.controls.canvas)
     .clipShape(
       RoundedRectangle(cornerRadius: configuration.cornerRadius, style: .continuous)
     )
@@ -129,9 +129,11 @@ public struct PreferencesView<ID: Hashable>: View {
     .tint(accent.fill)
     .environment(\.flowingAccent, accent)
     .environment(\.flowingStrings, configuration.strings.controls)
-    .environment(\.flowingMetrics, configuration.metrics)
-    .environment(\.flowingTypography, configuration.typography)
-    .environment(\.flowingSurfaces, configuration.surfaces)
+    .environment(\.flowingMetrics, configuration.metrics.controls)
+    .environment(\.flowingTypography, configuration.typography.controls)
+    .environment(\.flowingSurfaces, configuration.surfaces.controls)
+    .environment(\.preferencesMetrics, configuration.metrics)
+    .environment(\.preferencesTypography, configuration.typography)
     .animation(reduceMotion ? nil : .easeInOut(duration: FlowingMotion.page), value: selection)
     .onAppear(perform: reconcileSelection)
     .onChange(of: pages.map(\.id)) { _ in reconcileSelection() }
@@ -209,7 +211,7 @@ public struct PreferencesView<ID: Hashable>: View {
     .modifier(
       PreferencesRoundedScrollIndicatorMargins(cornerRadius: configuration.cornerRadius)
     )
-    .background(configuration.surfaces.canvas)
+    .background(configuration.surfaces.controls.canvas)
   }
 
   private var contentMaximumWidth: CGFloat {
@@ -249,7 +251,7 @@ private struct PreferencesCloseButton: View {
   }
 
   private var closeColor: Color {
-    FlowingPalette.closeHover
+    PreferencesPalette.closeHover
   }
 }
 
@@ -257,7 +259,7 @@ private struct PreferencesSidebarGroup<ID: Hashable>: View {
   let group: PreferencesPageGroup<ID>
   @Binding var selection: ID
   let defaultAccent: FlowingAccent
-  @Environment(\.flowingTypography) private var typography
+  @Environment(\.preferencesTypography) private var typography
 
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
@@ -289,7 +291,7 @@ private struct PreferencesSidebarRow<ID: Hashable>: View {
   let accent: FlowingAccent
   let isIndented: Bool
   let action: () -> Void
-  @Environment(\.flowingTypography) private var typography
+  @Environment(\.preferencesTypography) private var typography
   @Environment(\.flowingSurfaces) private var surfaces
 
   var body: some View {
@@ -352,7 +354,7 @@ private struct PreferencesSidebarRow<ID: Hashable>: View {
 private struct PreferencesPageHeader<ID: Hashable>: View {
   let page: PreferencesPage<ID>
   let accent: FlowingAccent
-  @Environment(\.flowingTypography) private var typography
+  @Environment(\.preferencesTypography) private var typography
 
   var body: some View {
     HStack(spacing: 14) {
