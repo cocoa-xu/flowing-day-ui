@@ -19,6 +19,7 @@ public struct FlowingIconButton: View {
   private let action: () -> Void
   private let emphasis: FlowingIconButtonEmphasis
   private let isSelected: Bool?
+  private let showsSystemHelp: Bool
   private let systemImage: String
   private let title: String
 
@@ -26,6 +27,7 @@ public struct FlowingIconButton: View {
     _ title: String,
     systemImage: String,
     emphasis: FlowingIconButtonEmphasis = .quiet,
+    showsSystemHelp: Bool = true,
     action: @escaping () -> Void
   ) {
     self.init(
@@ -33,6 +35,7 @@ public struct FlowingIconButton: View {
       systemImage: systemImage,
       emphasis: emphasis,
       isSelected: nil,
+      showsSystemHelp: showsSystemHelp,
       action: action
     )
   }
@@ -42,6 +45,7 @@ public struct FlowingIconButton: View {
     systemImage: String,
     emphasis: FlowingIconButtonEmphasis = .quiet,
     isSelected: Bool,
+    showsSystemHelp: Bool = true,
     action: @escaping () -> Void
   ) {
     self.init(
@@ -49,6 +53,7 @@ public struct FlowingIconButton: View {
       systemImage: systemImage,
       emphasis: emphasis,
       isSelected: Optional(isSelected),
+      showsSystemHelp: showsSystemHelp,
       action: action
     )
   }
@@ -58,12 +63,14 @@ public struct FlowingIconButton: View {
     systemImage: String,
     emphasis: FlowingIconButtonEmphasis,
     isSelected: Bool?,
+    showsSystemHelp: Bool,
     action: @escaping () -> Void
   ) {
     self.title = title
     self.systemImage = systemImage
     self.emphasis = emphasis
     self.isSelected = isSelected
+    self.showsSystemHelp = showsSystemHelp
     self.action = action
   }
 
@@ -84,8 +91,9 @@ public struct FlowingIconButton: View {
     }
   }
 
+  @ViewBuilder
   private var button: some View {
-    Button(action: action) {
+    let control = Button(action: action) {
       Image(systemName: systemImage)
         .font(.system(size: FlowingIconButtonMetrics.symbolSize, weight: .semibold))
         .frame(
@@ -102,7 +110,12 @@ public struct FlowingIconButton: View {
       )
     )
     .accessibilityLabel(title)
-    .help(title)
+
+    if showsSystemHelp {
+      control.help(title)
+    } else {
+      control
+    }
   }
 
   private var hoverDuration: TimeInterval {
