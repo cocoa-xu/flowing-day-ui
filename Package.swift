@@ -120,7 +120,8 @@ let package = Package(
     ),
     .testTarget(
       name: "FlowingDayCanvasTests",
-      dependencies: ["FlowingDayCanvas"]
+      dependencies: ["FlowingDayCanvas"],
+      path: "Tests/Unit/FlowingDayCanvasTests"
     ),
     .testTarget(
       name: "FlowingDayCanvasExportTests",
@@ -129,7 +130,8 @@ let package = Package(
         "FlowingDayGraphComposition",
         "FlowingDayGraphCore",
         "FlowingDayGraphLayout",
-      ]
+      ],
+      path: "Tests/Unit/FlowingDayCanvasExportTests"
     ),
     .testTarget(
       name: "FlowingDayGraphAutomationTests",
@@ -138,7 +140,8 @@ let package = Package(
         "FlowingDayGraphCollaboration",
         "FlowingDayGraphComposition",
         "FlowingDayGraphCore",
-      ]
+      ],
+      path: "Tests/Unit/FlowingDayGraphAutomationTests"
     ),
     .testTarget(
       name: "FlowingDayGraphCanvasTests",
@@ -146,7 +149,8 @@ let package = Package(
         "FlowingDayCanvas",
         "FlowingDayGraphCanvas",
         "FlowingDayGraphCanvasExample",
-      ]
+      ],
+      path: "Tests/Unit/FlowingDayGraphCanvasTests"
     ),
     .testTarget(
       name: "FlowingDayGraphCanvasAutomationTests",
@@ -155,7 +159,8 @@ let package = Package(
         "FlowingDayGraphCanvas",
         "FlowingDayGraphComposition",
         "FlowingDayGraphCore",
-      ]
+      ],
+      path: "Tests/Unit/FlowingDayGraphCanvasAutomationTests"
     ),
     .testTarget(
       name: "FlowingDayGraphCollaborationTests",
@@ -163,15 +168,18 @@ let package = Package(
         "FlowingDayGraphCollaboration",
         "FlowingDayGraphComposition",
         "FlowingDayGraphCore",
-      ]
+      ],
+      path: "Tests/Unit/FlowingDayGraphCollaborationTests"
     ),
     .testTarget(
       name: "FlowingDayGraphCompositionTests",
-      dependencies: ["FlowingDayGraphComposition"]
+      dependencies: ["FlowingDayGraphComposition"],
+      path: "Tests/Unit/FlowingDayGraphCompositionTests"
     ),
     .testTarget(
       name: "FlowingDayGraphCoreTests",
-      dependencies: ["FlowingDayGraphCore"]
+      dependencies: ["FlowingDayGraphCore"],
+      path: "Tests/Unit/FlowingDayGraphCoreTests"
     ),
     .testTarget(
       name: "FlowingDayGraphHistoryTests",
@@ -180,15 +188,18 @@ let package = Package(
         "FlowingDayGraphComposition",
         "FlowingDayGraphCore",
         "FlowingDayGraphHistory",
-      ]
+      ],
+      path: "Tests/Unit/FlowingDayGraphHistoryTests"
     ),
     .testTarget(
       name: "FlowingDayGraphLayoutTests",
-      dependencies: ["FlowingDayGraphLayout"]
+      dependencies: ["FlowingDayGraphLayout"],
+      path: "Tests/Unit/FlowingDayGraphLayoutTests"
     ),
     .testTarget(
       name: "FlowingDayControlsTests",
       dependencies: ["FlowingDayControls"],
+      path: "Tests/Unit/FlowingDayControlsTests",
       resources: [.copy("VisualReferences")]
     ),
     .testTarget(
@@ -197,7 +208,8 @@ let package = Package(
         "FlowingDayControls",
         "FlowingDayPreferences",
         "FlowingDayPreferencesExample",
-      ]
+      ],
+      path: "Tests/Unit/FlowingDayPreferencesTests"
     ),
   ]
 )

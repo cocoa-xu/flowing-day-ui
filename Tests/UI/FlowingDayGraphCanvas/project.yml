@@ -11,19 +11,19 @@ settings:
 
 packages:
   FlowingDayUI:
-    path: .
+    path: ../../..
 
 targets:
   FlowingDayGraphCanvasTestHost:
     type: application
     platform: macOS
     sources:
-      - UITesting/TestHost
-      - Examples/FlowingDayGraphCanvasExample/GraphCanvasShowcaseView.swift
-      - Examples/FlowingDayGraphCanvasExample/GraphCanvasShowcaseComponents.swift
-      - Examples/FlowingDayGraphCanvasExample/GraphCanvasShowcaseModel.swift
-      - Examples/FlowingDayGraphCanvasExample/ShowcaseDocumentFactory.swift
-      - Examples/FlowingDayGraphCanvasExample/ShowcaseLayoutBuilder.swift
+      - TestHost
+      - ../../../Examples/FlowingDayGraphCanvasExample/GraphCanvasShowcaseView.swift
+      - ../../../Examples/FlowingDayGraphCanvasExample/GraphCanvasShowcaseComponents.swift
+      - ../../../Examples/FlowingDayGraphCanvasExample/GraphCanvasShowcaseModel.swift
+      - ../../../Examples/FlowingDayGraphCanvasExample/ShowcaseDocumentFactory.swift
+      - ../../../Examples/FlowingDayGraphCanvasExample/ShowcaseLayoutBuilder.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: moe.uwucocoa.flowingday.graphcanvastesthost
@@ -46,7 +46,7 @@ targets:
     type: bundle.ui-testing
     platform: macOS
     sources:
-      - UITesting/FlowingDayGraphCanvasUITests
+      - FlowingDayGraphCanvasUITests
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: moe.uwucocoa.flowingday.graphcanvasuitests

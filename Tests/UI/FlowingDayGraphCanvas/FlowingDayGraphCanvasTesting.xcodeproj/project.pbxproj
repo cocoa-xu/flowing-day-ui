@@ -7,19 +7,19 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		232A0A2E56F0D60605545385 /* GraphCanvasShowcaseComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C41E4D3C37AB43170F61700 /* GraphCanvasShowcaseComponents.swift */; };
-		35012D51AC46F03B89700374 /* GraphCanvasShowcaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E44D13E68CD3EBAE26BFD5 /* GraphCanvasShowcaseView.swift */; };
 		383AEC6C64BE8C3EF1C2F98C /* FlowingDayGraphLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 27582861B385FE911392A0CA /* FlowingDayGraphLayout */; };
+		4A21EA2619CA8D84C5C920B0 /* ShowcaseLayoutBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF1FF39FAE8A34683811A1D /* ShowcaseLayoutBuilder.swift */; };
 		4E70E13A414F0A1711A97B74 /* FlowingDayGraphCanvas in Frameworks */ = {isa = PBXBuildFile; productRef = FA3991FAF475505B0B348306 /* FlowingDayGraphCanvas */; };
+		538E4299F664CF4131D904AE /* FlowingDayGraphCanvasTestHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7A938D5D4213E55CD5962E0 /* FlowingDayGraphCanvasTestHostApp.swift */; };
 		604121C5EC3F6FC3BF2C0DBE /* FlowingDayGraphComposition in Frameworks */ = {isa = PBXBuildFile; productRef = A4BD71D5EDFB076C8CE849F5 /* FlowingDayGraphComposition */; };
-		685518E9A483F779232E0AB4 /* FlowingDayGraphCanvasUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7327FC087CFA5A87A05173 /* FlowingDayGraphCanvasUITests.swift */; };
+		6814D3403A5C876C086A26BE /* GraphCanvasShowcaseComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73403D01208A5BF91718AB88 /* GraphCanvasShowcaseComponents.swift */; };
 		6C8665FA2D984B31D6FFB23E /* FlowingDayCanvas in Frameworks */ = {isa = PBXBuildFile; productRef = E515DAEB98122A249FFDC0E4 /* FlowingDayCanvas */; };
+		8F56FE649638E564C3419010 /* GraphCanvasShowcaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E552767CF70C2828BE4CEE7 /* GraphCanvasShowcaseView.swift */; };
 		979D94228EA7CF5F04006138 /* FlowingDayGraphCore in Frameworks */ = {isa = PBXBuildFile; productRef = BCA4523F818193657DE0483A /* FlowingDayGraphCore */; };
-		98F760A574D52C0CA0173AC5 /* GraphCanvasShowcaseModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 290E69D5D63CD39E21761D70 /* GraphCanvasShowcaseModel.swift */; };
 		B0BCBE25B502ED44752E29FC /* FlowingDayPreferences in Frameworks */ = {isa = PBXBuildFile; productRef = C65BC7022C8EA5E8BB6852C5 /* FlowingDayPreferences */; };
-		B454F6056A83410611EDC99B /* ShowcaseLayoutBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41F87319D3930E20A36A91B3 /* ShowcaseLayoutBuilder.swift */; };
-		D7478D8CFAF3877D5C69FD3F /* FlowingDayGraphCanvasTestHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E58CE2EB1C2EA03BDA19FE43 /* FlowingDayGraphCanvasTestHostApp.swift */; };
-		FA884842339CA378E7DA8AAC /* ShowcaseDocumentFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A9786682F8655748390A6F /* ShowcaseDocumentFactory.swift */; };
+		BC1199CD15E55C51204FE854 /* ShowcaseDocumentFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = E97A4AF6F9BEA36013733FBB /* ShowcaseDocumentFactory.swift */; };
+		D2A8E14A7D7E7269D7EE48BC /* FlowingDayGraphCanvasUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CF98D3373386FE6E200C0F /* FlowingDayGraphCanvasUITests.swift */; };
+		E41927EBC7A2D82B753364A6 /* GraphCanvasShowcaseModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01209E62585F308EFAE5022 /* GraphCanvasShowcaseModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -33,16 +33,16 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		290E69D5D63CD39E21761D70 /* GraphCanvasShowcaseModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphCanvasShowcaseModel.swift; sourceTree = "<group>"; };
-		3B7327FC087CFA5A87A05173 /* FlowingDayGraphCanvasUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowingDayGraphCanvasUITests.swift; sourceTree = "<group>"; };
 		3BC3C707296239D1B584F997 /* FlowingDayGraphCanvasTestHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlowingDayGraphCanvasTestHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		41F87319D3930E20A36A91B3 /* ShowcaseLayoutBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowcaseLayoutBuilder.swift; sourceTree = "<group>"; };
-		49E44D13E68CD3EBAE26BFD5 /* GraphCanvasShowcaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphCanvasShowcaseView.swift; sourceTree = "<group>"; };
-		4C41E4D3C37AB43170F61700 /* GraphCanvasShowcaseComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphCanvasShowcaseComponents.swift; sourceTree = "<group>"; };
-		89A9786682F8655748390A6F /* ShowcaseDocumentFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowcaseDocumentFactory.swift; sourceTree = "<group>"; };
+		4E552767CF70C2828BE4CEE7 /* GraphCanvasShowcaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphCanvasShowcaseView.swift; sourceTree = "<group>"; };
+		6AF1FF39FAE8A34683811A1D /* ShowcaseLayoutBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowcaseLayoutBuilder.swift; sourceTree = "<group>"; };
+		73403D01208A5BF91718AB88 /* GraphCanvasShowcaseComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphCanvasShowcaseComponents.swift; sourceTree = "<group>"; };
 		AE8E099A923EA415948D9A82 /* FlowingDayGraphCanvasUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FlowingDayGraphCanvasUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		BAA8765073AEF5DBDC9BACFC /* flowing-day-ui */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "flowing-day-ui"; path = .; sourceTree = SOURCE_ROOT; };
-		E58CE2EB1C2EA03BDA19FE43 /* FlowingDayGraphCanvasTestHostApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowingDayGraphCanvasTestHostApp.swift; sourceTree = "<group>"; };
+		BAA8765073AEF5DBDC9BACFC /* flowing-day-ui */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "flowing-day-ui"; path = ../../..; sourceTree = SOURCE_ROOT; };
+		D3CF98D3373386FE6E200C0F /* FlowingDayGraphCanvasUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowingDayGraphCanvasUITests.swift; sourceTree = "<group>"; };
+		E01209E62585F308EFAE5022 /* GraphCanvasShowcaseModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphCanvasShowcaseModel.swift; sourceTree = "<group>"; };
+		E7A938D5D4213E55CD5962E0 /* FlowingDayGraphCanvasTestHostApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowingDayGraphCanvasTestHostApp.swift; sourceTree = "<group>"; };
+		E97A4AF6F9BEA36013733FBB /* ShowcaseDocumentFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowcaseDocumentFactory.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -62,32 +62,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		20E5DA903A5F835B985B80D0 /* FlowingDayGraphCanvasExample */ = {
+		170B2280DB30B945037CAB31 /* TestHost */ = {
 			isa = PBXGroup;
 			children = (
-				4C41E4D3C37AB43170F61700 /* GraphCanvasShowcaseComponents.swift */,
-				290E69D5D63CD39E21761D70 /* GraphCanvasShowcaseModel.swift */,
-				49E44D13E68CD3EBAE26BFD5 /* GraphCanvasShowcaseView.swift */,
-				89A9786682F8655748390A6F /* ShowcaseDocumentFactory.swift */,
-				41F87319D3930E20A36A91B3 /* ShowcaseLayoutBuilder.swift */,
+				E7A938D5D4213E55CD5962E0 /* FlowingDayGraphCanvasTestHostApp.swift */,
 			);
-			path = FlowingDayGraphCanvasExample;
-			sourceTree = "<group>";
-		};
-		3A141F5D1C8A8B0FF9979B9B /* Examples */ = {
-			isa = PBXGroup;
-			children = (
-				20E5DA903A5F835B985B80D0 /* FlowingDayGraphCanvasExample */,
-			);
-			path = Examples;
+			path = TestHost;
 			sourceTree = "<group>";
 		};
 		55EECC67CD7583F474119C65 = {
 			isa = PBXGroup;
 			children = (
-				3A141F5D1C8A8B0FF9979B9B /* Examples */,
+				7D25012DAA94AE0D3851CF93 /* flowing-day-ui */,
+				9663356BA7C25BC76D641D3E /* FlowingDayGraphCanvasUITests */,
 				5BCE19C3AC1EF2E70E53CDF4 /* Packages */,
-				B93389B36003206459E5DA3A /* UITesting */,
+				170B2280DB30B945037CAB31 /* TestHost */,
 				B0B00F0FE9A825AF96FF22FB /* Products */,
 			);
 			sourceTree = "<group>";
@@ -100,6 +89,31 @@
 			name = Packages;
 			sourceTree = "<group>";
 		};
+		77E58681362324EAA6EB39D9 /* Examples */ = {
+			isa = PBXGroup;
+			children = (
+				E6EE86F396E947AEA230D819 /* FlowingDayGraphCanvasExample */,
+			);
+			path = Examples;
+			sourceTree = "<group>";
+		};
+		7D25012DAA94AE0D3851CF93 /* flowing-day-ui */ = {
+			isa = PBXGroup;
+			children = (
+				77E58681362324EAA6EB39D9 /* Examples */,
+			);
+			name = "flowing-day-ui";
+			path = ../../..;
+			sourceTree = "<group>";
+		};
+		9663356BA7C25BC76D641D3E /* FlowingDayGraphCanvasUITests */ = {
+			isa = PBXGroup;
+			children = (
+				D3CF98D3373386FE6E200C0F /* FlowingDayGraphCanvasUITests.swift */,
+			);
+			path = FlowingDayGraphCanvasUITests;
+			sourceTree = "<group>";
+		};
 		B0B00F0FE9A825AF96FF22FB /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -109,29 +123,16 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		B93389B36003206459E5DA3A /* UITesting */ = {
+		E6EE86F396E947AEA230D819 /* FlowingDayGraphCanvasExample */ = {
 			isa = PBXGroup;
 			children = (
-				EA28D8A1F4417802D83F1740 /* FlowingDayGraphCanvasUITests */,
-				B9846C2D3CDF18DD49984F94 /* TestHost */,
+				73403D01208A5BF91718AB88 /* GraphCanvasShowcaseComponents.swift */,
+				E01209E62585F308EFAE5022 /* GraphCanvasShowcaseModel.swift */,
+				4E552767CF70C2828BE4CEE7 /* GraphCanvasShowcaseView.swift */,
+				E97A4AF6F9BEA36013733FBB /* ShowcaseDocumentFactory.swift */,
+				6AF1FF39FAE8A34683811A1D /* ShowcaseLayoutBuilder.swift */,
 			);
-			path = UITesting;
-			sourceTree = "<group>";
-		};
-		B9846C2D3CDF18DD49984F94 /* TestHost */ = {
-			isa = PBXGroup;
-			children = (
-				E58CE2EB1C2EA03BDA19FE43 /* FlowingDayGraphCanvasTestHostApp.swift */,
-			);
-			path = TestHost;
-			sourceTree = "<group>";
-		};
-		EA28D8A1F4417802D83F1740 /* FlowingDayGraphCanvasUITests */ = {
-			isa = PBXGroup;
-			children = (
-				3B7327FC087CFA5A87A05173 /* FlowingDayGraphCanvasUITests.swift */,
-			);
-			path = FlowingDayGraphCanvasUITests;
+			path = FlowingDayGraphCanvasExample;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -203,7 +204,7 @@
 			mainGroup = 55EECC67CD7583F474119C65;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				A92212ABEAF738FC6C2317B9 /* XCLocalSwiftPackageReference "." */,
+				4DA59330B8152CAD8E707324 /* XCLocalSwiftPackageReference "../../.." */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B0B00F0FE9A825AF96FF22FB /* Products */;
@@ -221,12 +222,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D7478D8CFAF3877D5C69FD3F /* FlowingDayGraphCanvasTestHostApp.swift in Sources */,
-				232A0A2E56F0D60605545385 /* GraphCanvasShowcaseComponents.swift in Sources */,
-				98F760A574D52C0CA0173AC5 /* GraphCanvasShowcaseModel.swift in Sources */,
-				35012D51AC46F03B89700374 /* GraphCanvasShowcaseView.swift in Sources */,
-				FA884842339CA378E7DA8AAC /* ShowcaseDocumentFactory.swift in Sources */,
-				B454F6056A83410611EDC99B /* ShowcaseLayoutBuilder.swift in Sources */,
+				538E4299F664CF4131D904AE /* FlowingDayGraphCanvasTestHostApp.swift in Sources */,
+				6814D3403A5C876C086A26BE /* GraphCanvasShowcaseComponents.swift in Sources */,
+				E41927EBC7A2D82B753364A6 /* GraphCanvasShowcaseModel.swift in Sources */,
+				8F56FE649638E564C3419010 /* GraphCanvasShowcaseView.swift in Sources */,
+				BC1199CD15E55C51204FE854 /* ShowcaseDocumentFactory.swift in Sources */,
+				4A21EA2619CA8D84C5C920B0 /* ShowcaseLayoutBuilder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -234,7 +235,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				685518E9A483F779232E0AB4 /* FlowingDayGraphCanvasUITests.swift in Sources */,
+				D2A8E14A7D7E7269D7EE48BC /* FlowingDayGraphCanvasUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -465,9 +466,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		A92212ABEAF738FC6C2317B9 /* XCLocalSwiftPackageReference "." */ = {
+		4DA59330B8152CAD8E707324 /* XCLocalSwiftPackageReference "../../.." */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = .;
+			relativePath = ../../..;
 		};
 /* End XCLocalSwiftPackageReference section */
 
