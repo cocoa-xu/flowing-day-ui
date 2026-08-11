@@ -6,6 +6,18 @@ test.beforeEach(async ({ page }) => {
   await page.locator('#window').waitFor()
 })
 
+test('landing favicon is discoverable and loadable', async ({ page, request }) => {
+  const favicon = page.locator('link[rel="icon"]')
+
+  await expect(favicon).toHaveAttribute('href', './src/favicon.svg')
+  await expect(favicon).toHaveAttribute('type', 'image/svg+xml')
+  await expect(favicon).toHaveAttribute('sizes', 'any')
+
+  const response = await request.get('/docs/src/favicon.svg')
+  expect(response.ok()).toBe(true)
+  expect(response.headers()['content-type']).toContain('image/svg+xml')
+})
+
 test('landing detail overlays stay anchored to their controls', async ({ page }) => {
   const detailRow = page.locator('fd-row[label="A Closer Look"]')
   const tooltip = detailRow.locator('fd-tooltip')

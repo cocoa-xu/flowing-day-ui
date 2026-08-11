@@ -3,8 +3,19 @@ import { describe, expect, it } from 'vitest'
 
 const landing = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
 const landingStyles = readFileSync(new URL('./landing.css', import.meta.url), 'utf8')
+const favicon = readFileSync(new URL('./favicon.svg', import.meta.url), 'utf8')
 
 describe('landing page structure', () => {
+  it('publishes a theme-aware Sakura Petal favicon', () => {
+    expect(landing).toContain(
+      '<link rel="icon" href="./src/favicon.svg" type="image/svg+xml" sizes="any" />',
+    )
+    expect(favicon).toContain('<title>FlowingDayUI Sakura Petal</title>')
+    expect(favicon).toContain('@media (prefers-color-scheme: dark)')
+    expect(favicon).toContain('class="petal-back"')
+    expect(favicon).toContain('class="petal-front"')
+  })
+
   it('introduces components before composed experiences', () => {
     const components = landing.indexOf('id="components"')
     const moreComponents = landing.indexOf('id="more-components"')
