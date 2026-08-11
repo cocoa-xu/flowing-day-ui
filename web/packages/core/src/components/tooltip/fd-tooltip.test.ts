@@ -3,6 +3,9 @@ import { FdTooltip } from './fd-tooltip.js'
 
 async function mount(markup: string): Promise<FdTooltip> {
   const host = document.createElement('div')
+  host.style.position = 'fixed'
+  host.style.left = '-10000px'
+  host.style.top = '-10000px'
   host.innerHTML = markup
   document.body.append(host)
   const element = host.querySelector('fd-tooltip') as FdTooltip
