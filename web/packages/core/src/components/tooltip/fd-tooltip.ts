@@ -1,7 +1,8 @@
 import { type CSSResultGroup, css, html, nothing, type PropertyValues } from 'lit'
-import { customElement, property, query } from 'lit/decorators.js'
+import { customElement, property, query, state } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { type FdOverlayPlacement, positionOverlay } from '../../internal/overlay-position.js'
+import { hasMeaningfulSlotContent } from '../../internal/slot-content.js'
 import { textRole } from '../../internal/typography.js'
 import '../icon/fd-icon.js'
 
@@ -96,6 +97,8 @@ export class FdTooltip extends FdElement {
 
   @query('.surface') private surface!: HTMLElement
 
+  @state() private hasCustomContent = false
+
   #trigger: HTMLElement | null = null
 
   #triggerDescribedBy: string | null = null
@@ -137,6 +140,12 @@ export class FdTooltip extends FdElement {
         .find((element): element is HTMLElement => element instanceof HTMLElement) ?? null
     this.#triggerDescribedBy = this.#trigger?.getAttribute('aria-describedby') ?? null
     this.#updateTriggerDescription()
+  }
+
+  #onContentSlotChange = (event: Event): void => {
+    this.hasCustomContent = hasMeaningfulSlotContent(
+      (event.target as HTMLSlotElement).assignedNodes({ flatten: true }),
+    )
   }
 
   #restoreTriggerDescription(): void {
@@ -261,7 +270,10 @@ export class FdTooltip extends FdElement {
           ${this.symbol ? html`<fd-icon name=${this.symbol}></fd-icon>` : nothing}
           <div class="copy">
             ${this.heading ? html`<p class="heading">${this.heading}</p>` : nothing}
-            <p class="text"><slot>${this.text}</slot></p>
+            <p class="text">
+              <slot @slotchange=${this.#onContentSlotChange}></slot>
+              ${this.hasCustomContent ? nothing : this.text}
+            </p>
           </div>
         </div>
       </div>

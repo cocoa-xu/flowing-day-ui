@@ -75,6 +75,18 @@ describe('fd-tooltip timing', () => {
 })
 
 describe('fd-tooltip semantics', () => {
+  it('shows its text when formatting whitespace occupies the default slot', async () => {
+    const element = await mount(`
+      <fd-tooltip text="Shows more information">
+        <button slot="trigger">Help</button>
+      </fd-tooltip>
+    `)
+
+    expect(surface(element).querySelector('.text')?.textContent?.trim()).toBe(
+      'Shows more information',
+    )
+  })
+
   it('describes the trigger without replacing its accessible name', async () => {
     const element = await mount(`
       <fd-tooltip text="Shows more information">

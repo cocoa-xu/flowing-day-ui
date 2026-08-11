@@ -131,4 +131,24 @@ describe('landing page structure', () => {
     expect(canvas).toContain('class="canvas-expand-icon"')
     expect(canvas).toContain('class="canvas-collapse-icon"')
   })
+
+  it('lets mixed-row sections align separators with the leading text edge', () => {
+    const start = landing.indexOf('id="preferences"')
+    const end = landing.indexOf('id="start"')
+    const preferences = landing.slice(start, end)
+
+    expect(preferences).not.toContain('leading-edge="icon-text"')
+
+    for (const marker of [
+      'label="Switch Group"',
+      '<fd-section label="Rows">',
+      '<fd-section label="FlowingDayUI">',
+    ]) {
+      const sectionStart = landing.indexOf(marker)
+      const section = landing.slice(sectionStart, landing.indexOf('</fd-section>', sectionStart))
+
+      expect(sectionStart).toBeGreaterThan(-1)
+      expect(section).not.toContain('leading-edge="icon-text"')
+    }
+  })
 })
