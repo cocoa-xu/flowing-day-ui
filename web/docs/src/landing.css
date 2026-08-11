@@ -450,6 +450,7 @@ html[data-landing-scheme="dark"] .component-composition::before {
   gap: 10px;
   padding-inline: 13px;
   color: var(--landing-muted);
+  cursor: default;
   font-family: var(--fd-font-rounded);
   user-select: none;
   -webkit-user-select: none;
@@ -500,36 +501,44 @@ html[data-landing-scheme="dark"] .component-composition::before {
 }
 
 .component-composition-secondary {
+  display: grid;
   grid-column: 1;
   grid-row: 1;
+  align-content: start;
+  gap: 26px;
+  padding-block: 18px;
 }
 
 .component-composition-secondary::before {
   inset: 2% 8% 3% 2%;
 }
 
+.component-composition-secondary :where(.component-card, .component-choice-tags) {
+  position: relative;
+  inset: auto;
+}
+
 .component-card-search {
-  top: 18px;
-  right: 0;
+  grid-row: 1;
+  justify-self: end;
   width: 520px;
 }
 
 .component-card-collection {
-  top: 224px;
-  left: 0;
+  grid-row: 3;
+  justify-self: start;
   width: 590px;
 }
 
 .component-card-disclosure {
-  right: 24px;
-  bottom: 12px;
+  grid-row: 4;
+  justify-self: end;
   width: 510px;
 }
 
 .component-choice-tags {
-  position: absolute;
-  top: 148px;
-  left: 18px;
+  grid-row: 2;
+  justify-self: start;
   display: flex;
   flex-wrap: wrap;
   width: 250px;

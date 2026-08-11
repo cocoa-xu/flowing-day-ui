@@ -50,6 +50,20 @@ describe('landing page structure', () => {
     expect(composition).toContain('href="#preferences"')
   })
 
+  it('keeps variable-height discovery cards in document flow', () => {
+    const secondaryStyles = landingStyles.slice(
+      landingStyles.indexOf('.component-composition-secondary {'),
+      landingStyles.indexOf(
+        '.component-card-search {',
+        landingStyles.indexOf('.component-composition-secondary {'),
+      ),
+    )
+
+    expect(secondaryStyles).toContain('display: grid')
+    expect(secondaryStyles).toContain('position: relative')
+    expect(secondaryStyles).toContain('inset: auto')
+  })
+
   it('starts the decorative graph with reusable controls', () => {
     const backdrop = landing.slice(
       landing.indexOf('class="landing-canvas-world"'),
