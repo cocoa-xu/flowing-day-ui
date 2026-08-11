@@ -118,17 +118,3 @@ extension FlowingProgress where Label == Text {
     }
   }
 }
-
-extension FlowingProgress where Label == EmptyView {
-  public init(value: Double, total: Double = 1) {
-    self.init(value: value, total: total) {
-      EmptyView()
-    }
-  }
-
-  public init() {
-    self.init {
-      EmptyView()
-    }
-  }
-}

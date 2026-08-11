@@ -87,7 +87,9 @@ where Value: Strideable & Comparable, Value.Stride: SignedNumeric & Comparable {
       .frame(height: FlowingStepperMetrics.controlHeight)
       .background(surfaces.control, in: controlShape)
       .overlay {
-        controlShape.strokeBorder(FlowingPalette.hairline)
+        controlShape.strokeBorder(
+          hasKeyboardFocus ? accent.foreground.opacity(0.42) : FlowingPalette.hairline
+        )
       }
     }
     .opacity(isEnabled ? 1 : FlowingStepperMetrics.disabledOpacity)

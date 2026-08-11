@@ -75,19 +75,3 @@ extension FlowingDatePicker where Label == Text {
     }
   }
 }
-
-extension FlowingDatePicker where Label == EmptyView {
-  public init(
-    selection: Binding<Date>,
-    in bounds: ClosedRange<Date>? = nil,
-    components: FlowingDatePickerComponents = .dateAndTime
-  ) {
-    self.init(
-      selection: selection,
-      in: bounds,
-      components: components
-    ) {
-      EmptyView()
-    }
-  }
-}

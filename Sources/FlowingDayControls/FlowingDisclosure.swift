@@ -70,6 +70,7 @@ public struct FlowingDisclosure<Label: View, Content: View>: View {
   @Environment(\.flowingAccent) private var accent
   @Environment(\.flowingStrings) private var strings
   @Environment(\.flowingTypography) private var typography
+  @FocusState private var hasKeyboardFocus: Bool
   @Binding private var isExpanded: Bool
   private let minimumHeaderHeight: CGFloat?
   private let contentInsets: EdgeInsets?
@@ -110,10 +111,17 @@ public struct FlowingDisclosure<Label: View, Content: View>: View {
         }
         .padding(contentInsets ?? FlowingDisclosureMetrics.defaultContentInsets)
         .frame(minHeight: minimumHeaderHeight)
+        .background {
+          if hasKeyboardFocus {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+              .fill(accent.veil.opacity(0.58))
+          }
+        }
         .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
       .modifier(FlowingFocusEffectDisabledModifier())
+      .focused($hasKeyboardFocus)
       .accessibilityValue(isExpanded ? strings.expanded : strings.collapsed)
 
       FlowingDisclosureContent(isExpanded: isExpanded) {

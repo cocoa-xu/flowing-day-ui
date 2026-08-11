@@ -67,7 +67,8 @@ public struct FlowingSegmentedControl<Value: Hashable>: View {
       ForEach(options) { option in
         FlowingSegmentButton(
           option: option,
-          isSelected: selection == option.value
+          isSelected: selection == option.value,
+          showsKeyboardFocus: hasKeyboardFocus
         ) {
           selection = option.value
           hasKeyboardFocus = true
@@ -139,6 +140,7 @@ private struct FlowingSegmentButton<Value: Hashable>: View {
   @State private var isHovering = false
   let option: FlowingSegmentOption<Value>
   let isSelected: Bool
+  let showsKeyboardFocus: Bool
   let action: () -> Void
 
   var body: some View {
@@ -151,7 +153,7 @@ private struct FlowingSegmentButton<Value: Hashable>: View {
         .background(background, in: shape)
         .overlay {
           shape.strokeBorder(
-            isSelected ? accent.foreground.opacity(0.22) : FlowingPalette.hairline,
+            selectedBorderColor,
             lineWidth: FlowingSegmentedControlMetrics.selectedBorderWidth
           )
         }
@@ -190,6 +192,11 @@ private struct FlowingSegmentButton<Value: Hashable>: View {
       return accent.veil
     }
     return surfaces.control
+  }
+
+  private var selectedBorderColor: Color {
+    guard isSelected else { return FlowingPalette.hairline }
+    return accent.foreground.opacity(showsKeyboardFocus ? 0.42 : 0.22)
   }
 
   private var shape: RoundedRectangle {

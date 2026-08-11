@@ -578,7 +578,7 @@ struct ControlsShowcase: View {
         }
         FlowingDisclosureContent(isExpanded: progressKind == .determinate) {
           HStack(spacing: 12) {
-            FlowingSlider(value: $progressValue, in: 0...1, step: 0.01)
+            FlowingSlider("Progress", value: $progressValue, in: 0...1, step: 0.01)
             Text(progressValue, format: .percent.precision(.fractionLength(0)))
               .font(typography.value.font)
               .foregroundStyle(.secondary)
@@ -675,7 +675,7 @@ struct ControlsShowcase: View {
       VStack(alignment: .leading, spacing: 16) {
         FlowingSwitch("Quiet animations", isOn: $switchValue)
         HStack(spacing: 12) {
-          FlowingSlider(value: $sliderValue, in: 0...1, step: 0.01)
+          FlowingSlider("Intensity", value: $sliderValue, in: 0...1, step: 0.01)
           Text(sliderValue, format: .percent.precision(.fractionLength(0)))
             .font(typography.value.font)
             .foregroundStyle(.secondary)

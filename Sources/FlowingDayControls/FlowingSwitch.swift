@@ -4,12 +4,7 @@ public struct FlowingSwitch: View {
   @Environment(\.flowingAccent) private var accent
   @Environment(\.flowingTypography) private var typography
   @Binding private var isOn: Bool
-  private let title: String?
-
-  public init(isOn: Binding<Bool>) {
-    title = nil
-    _isOn = isOn
-  }
+  private let title: String
 
   public init(_ title: String, isOn: Binding<Bool>) {
     self.title = title
@@ -18,11 +13,9 @@ public struct FlowingSwitch: View {
 
   public var body: some View {
     Toggle(isOn: $isOn) {
-      if let title {
-        Text(title)
-          .font(typography.rowTitle.font)
-          .foregroundStyle(FlowingPalette.ink)
-      }
+      Text(title)
+        .font(typography.rowTitle.font)
+        .foregroundStyle(FlowingPalette.ink)
     }
     .toggleStyle(.switch)
     .controlSize(.small)

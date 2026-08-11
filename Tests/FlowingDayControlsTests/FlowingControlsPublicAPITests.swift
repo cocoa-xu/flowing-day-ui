@@ -18,7 +18,7 @@ final class FlowingControlsPublicAPITests: XCTestCase {
       FlowingSwitch("Enabled", isOn: enabled)
       FlowingTextField("Name", text: text)
       FlowingSegmentedControl(label: "Section", selection: selection, options: options)
-      FlowingSlider(value: .constant(0.5), in: 0...1)
+      FlowingSlider("Intensity", value: .constant(0.5), in: 0...1)
     }
     .flowingAccent(.petal)
     .flowingMetrics(.standard)

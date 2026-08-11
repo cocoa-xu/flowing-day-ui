@@ -39,6 +39,7 @@ public struct FlowingConnectedSegmentedControl<Value: Hashable>: View {
         FlowingConnectedSegmentButton(
           option: option,
           isSelected: selection == option.value,
+          showsKeyboardFocus: hasKeyboardFocus,
           selectionNamespace: selectionNamespace
         ) {
           selection = option.value
@@ -131,6 +132,7 @@ private struct FlowingConnectedSegmentButton<Value: Hashable>: View {
   @State private var isHovering = false
   let option: FlowingSegmentOption<Value>
   let isSelected: Bool
+  let showsKeyboardFocus: Bool
   let selectionNamespace: Namespace.ID
   let action: () -> Void
 
@@ -142,7 +144,7 @@ private struct FlowingConnectedSegmentButton<Value: Hashable>: View {
             .fill(accent.wash)
             .overlay {
               selectionShape.strokeBorder(
-                accent.foreground.opacity(0.22),
+                accent.foreground.opacity(showsKeyboardFocus ? 0.42 : 0.22),
                 lineWidth: FlowingConnectedSegmentedControlMetrics.selectedBorderWidth
               )
             }

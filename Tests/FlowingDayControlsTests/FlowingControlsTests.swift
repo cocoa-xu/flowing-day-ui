@@ -145,7 +145,7 @@ final class FlowingControlsTests: XCTestCase {
   func testSwitchAndSliderComposeOutsidePreferencesRows() {
     let content = VStack {
       FlowingSwitch("Updates", isOn: .constant(true))
-      FlowingSlider(value: .constant(0.5), in: 0...1)
+      FlowingSlider("Intensity", value: .constant(0.5), in: 0...1)
     }
     .frame(width: 240)
 

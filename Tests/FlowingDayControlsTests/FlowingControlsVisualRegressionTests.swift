@@ -309,7 +309,7 @@ private struct ControlsVisualFixture: View {
             )
             FlowingSecureField("Access key", text: .constant("gentle-morning"))
           }
-          FlowingSlider(value: .constant(0.64), in: 0...1)
+          FlowingSlider("Progress", value: .constant(0.64), in: 0...1)
           FlowingProgress("Preparing preview", value: 0.64)
         }
       }

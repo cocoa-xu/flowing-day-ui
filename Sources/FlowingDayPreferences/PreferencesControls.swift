@@ -237,8 +237,8 @@ public struct PreferencesSwitchRow: View {
 
   public var body: some View {
     PreferencesRow(symbol: symbol, title: title, caption: caption) {
-      FlowingSwitch(isOn: $isOn)
-        .accessibilityLabel(title)
+      FlowingSwitch(title, isOn: $isOn)
+        .labelsHidden()
     }
   }
 }
@@ -366,8 +366,7 @@ public struct PreferencesSliderRow: View {
           .font(preferencesTypography.sliderValue.font)
           .foregroundStyle(FlowingPalette.muted)
       }
-      FlowingSlider(value: $value, in: range, step: step)
-        .accessibilityLabel(title)
+      FlowingSlider(title, value: $value, in: range, step: step, formatValue: format)
       if let caption {
         Text(caption)
           .font(typography.rowCaption.font)
@@ -539,11 +538,11 @@ public struct PreferencesColorPickerRow: View {
   public var body: some View {
     PreferencesRow(symbol: symbol, title: title, caption: caption) {
       FlowingColorPicker(
+        title,
         selection: $selection,
         supportsOpacity: supportsOpacity
       )
       .labelsHidden()
-      .accessibilityLabel(title)
     }
   }
 }

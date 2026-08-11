@@ -288,6 +288,7 @@ public struct FlowingTabs<Value: Hashable>: View {
         FlowingTabButton(
           option: option,
           isSelected: selection == option.value,
+          showsKeyboardFocus: hasKeyboardFocus,
           labelContent: labelContent,
           itemAlignment: itemAlignment,
           style: style,
@@ -344,6 +345,7 @@ private struct FlowingTabButton<Value: Hashable>: View {
   @State private var isHovering = false
   let option: FlowingTabOption<Value>
   let isSelected: Bool
+  let showsKeyboardFocus: Bool
   let labelContent: FlowingTabLabelContent
   let itemAlignment: FlowingTabsAlignment
   let style: FlowingTabsStyle
@@ -377,6 +379,14 @@ private struct FlowingTabButton<Value: Hashable>: View {
         .foregroundStyle(labelColor)
         .lineLimit(1)
         .frame(maxWidth: .infinity, alignment: itemAlignment.frameAlignment)
+        .background {
+          if isSelected && showsKeyboardFocus {
+            RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
+              .fill(accent.veil.opacity(0.58))
+              .padding(.horizontal, -6)
+              .padding(.vertical, -4)
+          }
+        }
       ZStack {
         Color.clear
         if isSelected {
@@ -399,7 +409,9 @@ private struct FlowingTabButton<Value: Hashable>: View {
         softSurfaceShape
           .fill(accent.veil)
           .overlay {
-            softSurfaceShape.strokeBorder(accent.fill.opacity(0.13))
+            softSurfaceShape.strokeBorder(
+              accent.fill.opacity(showsKeyboardFocus ? 0.34 : 0.13)
+            )
           }
           .matchedGeometryEffect(id: "soft-surface", in: selectionNamespace)
       } else if isHovering && isEnabled && option.isEnabled {

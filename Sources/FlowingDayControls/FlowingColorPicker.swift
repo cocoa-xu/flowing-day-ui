@@ -40,17 +40,3 @@ extension FlowingColorPicker where Label == Text {
     }
   }
 }
-
-extension FlowingColorPicker where Label == EmptyView {
-  public init(
-    selection: Binding<Color>,
-    supportsOpacity: Bool = false
-  ) {
-    self.init(
-      selection: selection,
-      supportsOpacity: supportsOpacity
-    ) {
-      EmptyView()
-    }
-  }
-}

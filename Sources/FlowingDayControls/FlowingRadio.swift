@@ -51,6 +51,7 @@ public struct FlowingRadio<Label: View>: View {
   @Environment(\.flowingTypography) private var typography
   @State private var isHovering = false
   private let isSelected: Bool
+  private let showsKeyboardFocus: Bool
   private let action: () -> Void
   private let label: Label
 
@@ -59,7 +60,22 @@ public struct FlowingRadio<Label: View>: View {
     action: @escaping () -> Void,
     @ViewBuilder label: () -> Label
   ) {
+    self.init(
+      isSelected: isSelected,
+      showsKeyboardFocus: false,
+      action: action,
+      label: label
+    )
+  }
+
+  fileprivate init(
+    isSelected: Bool,
+    showsKeyboardFocus: Bool,
+    action: @escaping () -> Void,
+    @ViewBuilder label: () -> Label
+  ) {
     self.isSelected = isSelected
+    self.showsKeyboardFocus = showsKeyboardFocus
     self.action = action
     self.label = label()
   }
@@ -73,7 +89,7 @@ public struct FlowingRadio<Label: View>: View {
           Circle()
             .strokeBorder(
               isSelected ? accent.fill : FlowingPalette.muted.opacity(0.48),
-              lineWidth: 1
+              lineWidth: isSelected && showsKeyboardFocus ? 1.5 : 1
             )
           Circle()
             .fill(accent.fill)
@@ -185,7 +201,10 @@ public struct FlowingRadioGroup<Value: Hashable>: View {
   @ViewBuilder
   private var optionsView: some View {
     ForEach(options) { option in
-      FlowingRadio(isSelected: selection == option.value) {
+      FlowingRadio(
+        isSelected: selection == option.value,
+        showsKeyboardFocus: hasKeyboardFocus
+      ) {
         guard isEnabled, option.isEnabled else { return }
         selection = option.value
         hasKeyboardFocus = true
