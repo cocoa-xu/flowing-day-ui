@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/ci.yml)
 
-FlowingDayUI is a personal SwiftUI design toolkit for macOS applications. `FlowingDayPreferences` provides an integrated preferences window, and `FlowingDayCanvas` provides a composable, virtualized infinite viewport.
+FlowingDayUI is a personal SwiftUI design toolkit for macOS applications. `FlowingDayControls` provides reusable desktop controls, `FlowingDayPreferences` composes them into an integrated preferences window, and `FlowingDayCanvas` provides a composable, virtualized infinite viewport.
 
 The package requires macOS 13 or later.
 
@@ -20,6 +20,7 @@ Add FlowingDayUI to your package dependencies:
 Add the products needed by the application target and import their modules:
 
 ```swift
+import FlowingDayControls
 import FlowingDayPreferences
 import FlowingDayCanvas
 ```
@@ -34,7 +35,8 @@ Add the package by local path while developing applications alongside it:
 
 Design values are authored only in
 `web/packages/core/src/tokens/tokens.json`. Regenerate the committed Swift theme with
-`cd web && corepack pnpm tokens:swift`; `PreferencesTheme.swift` is generated output.
+`cd web && corepack pnpm tokens:swift`; the committed `FlowingTheme.swift`,
+`FlowingAccentPalette.swift`, and `PreferencesTheme.swift` files are generated output.
 
 Run the dogfooding example as a native macOS executable:
 
@@ -64,9 +66,9 @@ struct AppPreferencesView: View {
             selection: $selection,
             configuration: PreferencesViewConfiguration(
                 applicationName: "Example",
-                defaultAccent: PreferencesAccent(
-                    fill: PreferencesPalette.dynamic(light: 0x6D9EA5, dark: 0x93C8CF),
-                    foreground: PreferencesPalette.dynamic(light: 0x4E7B82, dark: 0x9FD1D8)
+                defaultAccent: FlowingAccent(
+                    fill: FlowingPalette.dynamic(light: 0x6D9EA5, dark: 0x93C8CF),
+                    foreground: FlowingPalette.dynamic(light: 0x4E7B82, dark: 0x9FD1D8)
                 )
             ),
             groups: [
@@ -338,20 +340,20 @@ PreferencesDependentRows(isVisible: showNetwork) {
 
 ## Theming
 
-`FlowingDayPreferences` ships with the typography, spacing, and surface hierarchy used by Afloat. Applications can replace any semantic font or background without rebuilding the components:
+`FlowingDayControls` owns the shared typography, spacing, accent, and surface hierarchy. Applications can replace any semantic font or background without rebuilding the components:
 
 ```swift
 let configuration = PreferencesViewConfiguration(
     applicationName: "Example",
     defaultAccent: accent,
-    typography: PreferencesTypography(
-        rowTitle: PreferencesTextStyle(
+    typography: FlowingTypography(
+        rowTitle: FlowingTextStyle(
             size: 14,
             weight: .medium,
             fontName: "Avenir Next Medium"
         )
     ),
-    surfaces: PreferencesSurfaces(
+    surfaces: FlowingSurfaces(
         card: Color(nsColor: .controlBackgroundColor),
         field: Color(nsColor: .textBackgroundColor)
     )

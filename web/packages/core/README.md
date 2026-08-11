@@ -60,7 +60,7 @@ or subtree when its labels should also allow text selection.
 
 ## Theming
 
-Every value in `PreferencesTheme.swift` is a CSS custom property. Because custom properties
+Every value in `FlowingTheme.swift` is a CSS custom property. Because custom properties
 inherit through shadow boundaries, setting one anywhere retints the subtree below it — the
 same semantics as overriding a SwiftUI environment value:
 
@@ -70,7 +70,7 @@ same semantics as overriding a SwiftUI environment value:
 ```
 
 `--fd-accent` is the only accent knob you need. Fill, foreground, wash and veil all derive
-from it in both light and dark, using the same lightness steps as `PreferencesAccent`.
+from it in both light and dark, using the same lightness steps as `FlowingAccent`.
 
 The named Swift palette is available as CSS tokens and JavaScript values:
 
@@ -135,12 +135,12 @@ Editors pick up attribute and event completions from the bundled
 | Swift | Web | Why |
 | --- | --- | --- |
 | `title:` | `label` attribute | `title` is a global HTML attribute and would raise a native tooltip |
-| `PreferencesAccent(fill:foreground:)` | one `--fd-accent` | The four literals are one hue at four lightnesses, so they derive |
-| `PreferencesPopupControl`'s `NSPanel` | Popover API | The top layer escapes the scroll container as a child window did |
+| `FlowingAccent(fill:foreground:)` | one `--fd-accent` | The four literals are one hue at four lightnesses, so they derive |
+| `FlowingSelectButton`'s `NSPanel` | Popover API | The top layer escapes the scroll container as a child window did |
 | `PreferencesWindowPresenter` | not ported | `NSPanel` has no web equivalent; the page decides how to present the view |
 | `Toggle(.switch)` | custom-drawn | AppKit chrome publishes no metrics, so the geometry is tokenised |
 | `truncationMode(.middle)` | split head and tail | No CSS keyword truncates a middle, so the tail is held back and the head ellipsises into it |
-| `PreferencesWrappingLayout` | `flex-wrap` | The custom `Layout` places each item at its ideal size on the row's top edge, which is a wrapping flex line |
+| `FlowingWrappingLayout` | `flex-wrap` | The custom `Layout` places each item at its ideal size on the row's top edge, which is a wrapping flex line |
 | `action:` closure | `fd-activate` event | A `click` on the host also fires for the row label, which never ran the closure |
 | `accessibilityValue(_:)` for state | `aria-checked` / `aria-pressed` / `aria-expanded` / `aria-selected` | The state is native to the platform, and a screen reader speaks it in its own language rather than the page's |
 

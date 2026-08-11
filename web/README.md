@@ -1,7 +1,7 @@
 # FlowingDayUI for the web
 
-Workspace for `@flowing-day/ui`, a framework-agnostic port of the `FlowingDayPreferences`
-SwiftUI toolkit built as standard Custom Elements.
+Workspace for `@flowing-day/ui`, a framework-agnostic port of the `FlowingDayControls`
+SwiftUI module and its Preferences compositions, built as standard Custom Elements.
 
 **Using the library?** The package README is
 [`packages/core/README.md`](./packages/core/README.md) — install, theming, components.
@@ -51,7 +51,8 @@ publint and are-the-types-wrong.
 
 Every design value lives in `packages/core/src/tokens/tokens.json`. It is the sole token
 source for every platform. The TypeScript token module reads it directly, and
-`scripts/generate-swift-theme.mjs` emits the committed `PreferencesTheme.swift` artifact.
+`scripts/generate-swift-theme.mjs` emits the committed Swift theme artifacts for
+`FlowingDayControls` and `FlowingDayPreferences`.
 Do not edit generated Swift values by hand.
 
 The web token module produces two CSS artifacts from the same data:
@@ -88,13 +89,14 @@ set, since scoped packages default to restricted.
 
 ## Status
 
-Every reusable view in `Sources/FlowingDayPreferences` is ported — 51 elements, listed by group in
+Every reusable view in `Sources/FlowingDayControls` and each Preferences composition is
+ported — 51 elements, listed by group in
 [the package README](packages/core/README.md#components).
 
 Two are deliberately left out. `PreferencesWindowPresenter` has no web counterpart: `NSPanel`
 is the presenter's job, not the view's, so how the window is presented is the page's call —
 which is why the landing page keeps its drag logic in `docs/src/drag.ts`. And
-`PreferencesSliderRepresentable` is the SwiftUI↔AppKit bridge; the `PreferencesSliderControl`
+`FlowingSliderRepresentable` is the SwiftUI↔AppKit bridge; the `FlowingSliderControl`
 behind it is what `fd-slider` reproduces.
 
 Swift and web now share the same token source. A generated-file check fails CI if either
