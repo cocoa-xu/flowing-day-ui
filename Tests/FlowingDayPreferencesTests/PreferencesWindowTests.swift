@@ -89,6 +89,22 @@ final class PreferencesWindowTests: XCTestCase {
     XCTAssertEqual(presenter.window.level, .normal)
   }
 
+  func testShowingPanelClearsInitialControlFocusAndPreservesVisibleFocus() {
+    let presenter = PreferencesWindowPresenter(rootView: Color.clear)
+    let window = presenter.window
+    let responder = TestFirstResponderView()
+    window.contentView?.addSubview(responder)
+    defer { window.close() }
+
+    XCTAssertTrue(window.makeFirstResponder(responder))
+    presenter.show()
+    XCTAssertTrue(window.firstResponder === window)
+
+    XCTAssertTrue(window.makeFirstResponder(responder))
+    presenter.show()
+    XCTAssertTrue(window.firstResponder === responder)
+  }
+
   func testCommandWClosesPanel() throws {
     let presenter = PreferencesWindowPresenter(rootView: Color.clear)
     let window = presenter.window
@@ -111,4 +127,8 @@ final class PreferencesWindowTests: XCTestCase {
     XCTAssertFalse(window.isVisible)
   }
 
+}
+
+private final class TestFirstResponderView: NSView {
+  override var acceptsFirstResponder: Bool { true }
 }

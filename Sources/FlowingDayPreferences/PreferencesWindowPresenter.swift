@@ -95,7 +95,8 @@ public final class PreferencesWindowPresenter<Content: View> {
 
   public func show() {
     onShow()
-    if !window.isVisible {
+    let wasVisible = window.isVisible
+    if !wasVisible {
       window.center()
     }
     if configuration.activatesApplication {
@@ -106,6 +107,9 @@ public final class PreferencesWindowPresenter<Content: View> {
       }
     }
     window.makeKeyAndOrderFront(nil)
+    if !wasVisible {
+      window.makeFirstResponder(nil)
+    }
   }
 }
 
