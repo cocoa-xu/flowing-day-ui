@@ -188,7 +188,8 @@ let package = Package(
     ),
     .testTarget(
       name: "FlowingDayControlsTests",
-      dependencies: ["FlowingDayControls"]
+      dependencies: ["FlowingDayControls"],
+      resources: [.copy("VisualReferences")]
     ),
     .testTarget(
       name: "FlowingDayPreferencesTests",
