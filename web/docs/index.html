@@ -26,23 +26,23 @@
         </svg>
         <span
           class="landing-map-node"
-          data-tone="honey"
+          data-emphasis="brand"
           style="--map-x: 236px; --map-y: 265px"
+        >
+          <span class="landing-map-marker"></span>
+          Controls
+        </span>
+        <span
+          class="landing-map-node"
+          data-emphasis="quiet"
+          style="--map-x: 820px; --map-y: 190px"
         >
           <span class="landing-map-marker"></span>
           Preferences
         </span>
         <span
           class="landing-map-node"
-          data-tone="sprout"
-          style="--map-x: 820px; --map-y: 190px"
-        >
-          <span class="landing-map-marker"></span>
-          Components
-        </span>
-        <span
-          class="landing-map-node"
-          data-tone="honey"
+          data-emphasis="brand"
           style="--map-x: 1520px; --map-y: 330px"
         >
           <span class="landing-map-marker"></span>
@@ -50,7 +50,7 @@
         </span>
         <span
           class="landing-map-node"
-          data-tone="sprout"
+          data-emphasis="quiet"
           style="--map-x: 480px; --map-y: 980px"
         >
           <span class="landing-map-marker"></span>
@@ -58,7 +58,7 @@
         </span>
         <span
           class="landing-map-node"
-          data-tone="honey"
+          data-emphasis="brand"
           style="--map-x: 1080px; --map-y: 1100px"
         >
           <span class="landing-map-marker"></span>
@@ -66,7 +66,7 @@
         </span>
         <span
           class="landing-map-node"
-          data-tone="sprout"
+          data-emphasis="quiet"
           style="--map-x: 1830px; --map-y: 920px"
         >
           <span class="landing-map-marker"></span>
@@ -132,6 +132,14 @@
                 <fd-option value="japanese">Japanese</fd-option>
                 <fd-option value="french">French</fd-option>
               </fd-popup-row>
+              <fd-separator></fd-separator>
+              <div class="component-control-sample">
+                <fd-checkbox
+                  label="Remember This Choice"
+                  indicator-placement="trailing"
+                  checked
+                ></fd-checkbox>
+              </div>
             </fd-card>
           </article>
 
@@ -151,6 +159,10 @@
               ></fd-slider-row>
               <fd-separator></fd-separator>
               <fd-switch-row label="Gentle Motion" checked></fd-switch-row>
+              <fd-separator></fd-separator>
+              <div class="component-control-sample component-progress-sample">
+                <fd-progress label="Ready for the day" value="68" total="100"></fd-progress>
+              </div>
             </fd-card>
           </article>
 
@@ -160,6 +172,14 @@
               <small class="component-card-caption">Inviting, never demanding</small>
             </header>
             <fd-card>
+              <div class="component-control-sample">
+                <fd-text-field
+                  label="Moment Name"
+                  value="A quiet afternoon"
+                  emphasis="accented"
+                ></fd-text-field>
+              </div>
+              <fd-separator></fd-separator>
               <fd-button-row
                 id="hero-save"
                 label="Save This Moment"
@@ -226,6 +246,22 @@
                 <fd-option value="images" selected>Images</fd-option>
                 <fd-option value="links">Links</fd-option>
               </fd-multi-select-row>
+              <fd-separator></fd-separator>
+              <div class="component-tabs-sample">
+                <fd-tabs
+                  label="Collection View"
+                  value="recent"
+                  variant="soft-surface"
+                  sizing="equal"
+                >
+                  <fd-option value="recent">Recent</fd-option>
+                  <fd-option value="shared">Shared</fd-option>
+                  <fd-option value="saved">Saved</fd-option>
+                  <span class="component-tab-note" slot="recent">A calm place for what just arrived.</span>
+                  <span class="component-tab-note" slot="shared">Everything shared with you stays nearby.</span>
+                  <span class="component-tab-note" slot="saved">The things worth returning to.</span>
+                </fd-tabs>
+              </div>
             </fd-card>
           </article>
 
@@ -246,6 +282,30 @@
                 <fd-separator></fd-separator>
                 <fd-value-row label="Status" value="Ready"></fd-value-row>
               </fd-dependent-rows>
+              <fd-separator></fd-separator>
+              <fd-row label="A Closer Look" caption="Helpful context, only when invited.">
+                <span class="component-inline-actions" slot="trailing">
+                  <fd-tooltip text="A short explanation, without interrupting your work.">
+                    <fd-icon-button
+                      slot="trigger"
+                      label="Show a brief explanation"
+                      symbol="info.circle"
+                      emphasis="standard"
+                    ></fd-icon-button>
+                  </fd-tooltip>
+                  <fd-popover label="A little more" minimum-width="220" maximum-width="280">
+                    <fd-icon-button
+                      slot="trigger"
+                      label="Open more details"
+                      symbol="eye"
+                      emphasis="standard"
+                    ></fd-icon-button>
+                    <p class="component-popover-copy">
+                      Richer content can stay close to its source without crowding the page.
+                    </p>
+                  </fd-popover>
+                </span>
+              </fd-row>
             </fd-card>
           </article>
 

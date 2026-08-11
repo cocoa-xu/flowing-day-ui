@@ -216,7 +216,7 @@ html[data-landing-scheme="dark"] .landing-canvas-surface::after {
   opacity: 0.48;
 }
 
-.landing-map-node[data-tone="sprout"] {
+.landing-map-node[data-emphasis="quiet"] {
   --map-accent: color-mix(in oklab, var(--landing-accent) 48%, var(--landing-map-ink));
 }
 
@@ -413,7 +413,7 @@ html[data-landing-scheme="dark"] .landing-canvas-surface::after {
 .component-composition {
   position: relative;
   width: min(760px, 100%);
-  min-height: 630px;
+  min-height: 760px;
   isolation: isolate;
   pointer-events: none;
 }
@@ -477,7 +477,7 @@ html[data-landing-scheme="dark"] .component-composition::before {
 }
 
 .component-card-adjustment {
-  top: 248px;
+  top: 294px;
   left: 0;
   width: 490px;
 }
@@ -490,7 +490,7 @@ html[data-landing-scheme="dark"] .component-composition::before {
 
 .component-tags {
   position: absolute;
-  top: 178px;
+  top: 230px;
   left: 22px;
   display: flex;
   flex-wrap: wrap;
@@ -515,7 +515,7 @@ html[data-landing-scheme="dark"] .component-composition::before {
 }
 
 .component-card-collection {
-  top: 222px;
+  top: 224px;
   left: 0;
   width: 590px;
 }
@@ -535,6 +535,42 @@ html[data-landing-scheme="dark"] .component-composition::before {
   width: 250px;
   gap: 7px;
   pointer-events: auto;
+}
+
+.component-control-sample,
+.component-tabs-sample {
+  padding: 13px 16px;
+}
+
+.component-progress-sample fd-progress {
+  width: 100%;
+}
+
+.component-tabs-sample {
+  padding: 8px 10px 12px;
+}
+
+.component-tab-note {
+  display: block;
+  margin: 9px 10px 1px;
+  color: var(--landing-muted);
+  font-family: var(--fd-font-rounded);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.component-inline-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.component-popover-copy {
+  margin: 0;
+  color: var(--landing-muted);
+  font-family: var(--fd-font-rounded);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .experience-link {

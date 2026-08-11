@@ -29,6 +29,9 @@ describe('landing page structure', () => {
     expect(composition).toContain('<fd-slider-row')
     expect(composition).toContain('<fd-switch-row')
     expect(composition).toContain('<fd-button-row')
+    expect(composition).toContain('<fd-checkbox')
+    expect(composition).toContain('<fd-progress')
+    expect(composition).toContain('<fd-text-field')
     expect(composition).not.toContain('id="hero-accent"')
   })
 
@@ -41,7 +44,20 @@ describe('landing page structure', () => {
     expect(composition).toContain('<fd-multi-select-row')
     expect(composition).toContain('<fd-expandable-row')
     expect(composition).toContain('<fd-selectable-tag')
+    expect(composition).toContain('<fd-tabs')
+    expect(composition).toContain('<fd-tooltip')
+    expect(composition).toContain('<fd-popover')
     expect(composition).toContain('href="#preferences"')
+  })
+
+  it('starts the decorative graph with reusable controls', () => {
+    const backdrop = landing.slice(
+      landing.indexOf('class="landing-canvas-world"'),
+      landing.indexOf('</fd-canvas>'),
+    )
+
+    expect(backdrop.indexOf('Controls')).toBeGreaterThan(-1)
+    expect(backdrop.indexOf('Preferences')).toBeGreaterThan(backdrop.indexOf('Controls'))
   })
 
   it('keeps the decorative backdrop out of pointer interaction', () => {
