@@ -1,3 +1,4 @@
+import FlowingDayControls
 import FlowingDayPreferences
 import SwiftUI
 
@@ -23,7 +24,7 @@ struct ExamplePreferencesView: View {
   @State private var contentWidth = ExampleContentWidth.standard
   @State private var sidebarWidth = 224.0
   @State private var textScale = ExampleTextScale.standard
-  @State private var headingFace = PreferencesFontDesign.rounded
+  @State private var headingFace = FlowingFontDesign.rounded
   @State private var showsSeparators = true
 
   var body: some View {
@@ -48,8 +49,8 @@ struct ExamplePreferencesView: View {
     )
   }
 
-  private var metrics: PreferencesMetrics {
-    var metrics = PreferencesMetrics.standard
+  private var metrics: FlowingMetrics {
+    var metrics = FlowingMetrics.standard
     metrics.cardRadius = corners.cardRadius
     metrics.controlRadius = corners.controlRadius
     metrics.rowInset = density.rowInset
@@ -58,8 +59,8 @@ struct ExamplePreferencesView: View {
     return metrics
   }
 
-  private var typography: PreferencesTypography {
-    var typography = PreferencesTypography.standard
+  private var typography: FlowingTypography {
+    var typography = FlowingTypography.standard
     typography.apply(scale: textScale.multiplier, headingFace: headingFace)
     return typography
   }

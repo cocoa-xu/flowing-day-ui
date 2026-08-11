@@ -419,10 +419,12 @@ private final class GraphCanvasPerformanceDriver: ObservableObject, @unchecked S
 
   private func moveToMainDisplay(_ window: NSWindow) {
     let mainDisplayID = CGMainDisplayID()
-    guard let screen = NSScreen.screens.first(where: { screen in
-      (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?
-        .uint32Value == mainDisplayID
-    }) else {
+    guard
+      let screen = NSScreen.screens.first(where: { screen in
+        (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?
+          .uint32Value == mainDisplayID
+      })
+    else {
       return
     }
     let visibleFrame = screen.visibleFrame
@@ -717,8 +719,8 @@ private struct GraphCanvasPerformancePhaseResult: Encodable {
   }
 }
 
-private extension Duration {
-  var seconds: TimeInterval {
+extension Duration {
+  fileprivate var seconds: TimeInterval {
     let parts = components
     return Double(parts.seconds) + Double(parts.attoseconds) / 1_000_000_000_000_000_000
   }

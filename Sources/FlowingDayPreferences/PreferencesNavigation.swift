@@ -1,4 +1,5 @@
 import AppKit
+import FlowingDayControls
 import SwiftUI
 
 enum PreferencesRoundedScrollGeometry {
@@ -35,7 +36,7 @@ public struct PreferencesPage<ID: Hashable>: Identifiable {
   public let subtitle: String?
   public let icon: PreferencesPageIcon
   public let headerIcon: PreferencesPageIcon
-  public let accent: PreferencesAccent?
+  public let accent: FlowingAccent?
   public let isAvailable: Bool
   let content: AnyView
 
@@ -45,7 +46,7 @@ public struct PreferencesPage<ID: Hashable>: Identifiable {
     subtitle: String? = nil,
     icon: PreferencesPageIcon,
     headerIcon: PreferencesPageIcon? = nil,
-    accent: PreferencesAccent? = nil,
+    accent: FlowingAccent? = nil,
     isAvailable: Bool = true,
     @ViewBuilder content: () -> Content
   ) {
@@ -105,7 +106,7 @@ public struct PreferencesView<ID: Hashable>: View {
       ?? pages.first { $0.isAvailable }
   }
 
-  private var accent: PreferencesAccent {
+  private var accent: FlowingAccent {
     selectedPage?.accent ?? configuration.defaultAccent
   }
 
@@ -113,7 +114,7 @@ public struct PreferencesView<ID: Hashable>: View {
     HStack(spacing: 0) {
       sidebar
       Rectangle()
-        .fill(PreferencesPalette.hairline)
+        .fill(FlowingPalette.hairline)
         .frame(width: 1)
       content
     }
@@ -123,15 +124,15 @@ public struct PreferencesView<ID: Hashable>: View {
     )
     .overlay {
       RoundedRectangle(cornerRadius: configuration.cornerRadius, style: .continuous)
-        .strokeBorder(PreferencesPalette.edge)
+        .strokeBorder(FlowingPalette.edge)
     }
     .tint(accent.fill)
-    .environment(\.preferencesAccent, accent)
-    .environment(\.preferencesStrings, configuration.strings)
-    .environment(\.preferencesMetrics, configuration.metrics)
-    .environment(\.preferencesTypography, configuration.typography)
-    .environment(\.preferencesSurfaces, configuration.surfaces)
-    .animation(reduceMotion ? nil : .easeInOut(duration: PreferencesMotion.page), value: selection)
+    .environment(\.flowingAccent, accent)
+    .environment(\.flowingStrings, configuration.strings.controls)
+    .environment(\.flowingMetrics, configuration.metrics)
+    .environment(\.flowingTypography, configuration.typography)
+    .environment(\.flowingSurfaces, configuration.surfaces)
+    .animation(reduceMotion ? nil : .easeInOut(duration: FlowingMotion.page), value: selection)
     .onAppear(perform: reconcileSelection)
     .onChange(of: pages.map(\.id)) { _ in reconcileSelection() }
     .onChange(of: pages.map(\.isAvailable)) { _ in reconcileSelection() }
@@ -139,9 +140,12 @@ public struct PreferencesView<ID: Hashable>: View {
 
   private var sidebar: some View {
     VStack(alignment: .leading, spacing: 0) {
-      PreferencesCloseButton(action: windowActions.dismiss)
-        .padding(.leading, 8)
-        .padding(.top, 4)
+      PreferencesCloseButton(
+        accessibilityLabel: configuration.strings.closePreferences,
+        action: windowActions.dismiss
+      )
+      .padding(.leading, 8)
+      .padding(.top, 4)
 
       HStack(spacing: 11) {
         Image(nsImage: configuration.applicationIcon ?? NSApp.applicationIconImage)
@@ -151,10 +155,10 @@ public struct PreferencesView<ID: Hashable>: View {
         VStack(alignment: .leading, spacing: 1) {
           Text(configuration.applicationName)
             .font(configuration.typography.brandTitle.font)
-            .foregroundStyle(PreferencesPalette.ink)
+            .foregroundStyle(FlowingPalette.ink)
           Text(configuration.preferencesTitle)
             .font(configuration.typography.brandSubtitle.font)
-            .foregroundStyle(PreferencesPalette.faint)
+            .foregroundStyle(FlowingPalette.faint)
         }
       }
       .padding(.horizontal, 20)
@@ -179,7 +183,7 @@ public struct PreferencesView<ID: Hashable>: View {
       if let footer = configuration.sidebarFooter {
         Text(footer)
           .font(configuration.typography.brandSubtitle.font)
-          .foregroundStyle(PreferencesPalette.faint)
+          .foregroundStyle(FlowingPalette.faint)
           .padding(.horizontal, 20)
           .padding(.bottom, 18)
       }
@@ -223,16 +227,16 @@ public struct PreferencesView<ID: Hashable>: View {
 }
 
 private struct PreferencesCloseButton: View {
+  let accessibilityLabel: String
   let action: () -> Void
-  @Environment(\.preferencesStrings) private var strings
-  @Environment(\.preferencesSurfaces) private var surfaces
+  @Environment(\.flowingSurfaces) private var surfaces
   @State private var isHovering = false
 
   var body: some View {
     Button(action: action) {
       Image(systemName: "xmark")
         .font(.system(size: 8, weight: .bold))
-        .foregroundStyle(isHovering ? Color.black.opacity(0.55) : PreferencesPalette.muted)
+        .foregroundStyle(isHovering ? Color.black.opacity(0.55) : FlowingPalette.muted)
         .frame(width: 16, height: 16)
         .background(isHovering ? closeColor : surfaces.field, in: Circle())
         .frame(width: 24, height: 32)
@@ -240,20 +244,20 @@ private struct PreferencesCloseButton: View {
     }
     .buttonStyle(.plain)
     .onHover { isHovering = $0 }
-    .animation(.easeOut(duration: PreferencesMotion.hover), value: isHovering)
-    .accessibilityLabel(strings.closePreferences)
+    .animation(.easeOut(duration: FlowingMotion.hover), value: isHovering)
+    .accessibilityLabel(accessibilityLabel)
   }
 
   private var closeColor: Color {
-    PreferencesPalette.closeHover
+    FlowingPalette.closeHover
   }
 }
 
 private struct PreferencesSidebarGroup<ID: Hashable>: View {
   let group: PreferencesPageGroup<ID>
   @Binding var selection: ID
-  let defaultAccent: PreferencesAccent
-  @Environment(\.preferencesTypography) private var typography
+  let defaultAccent: FlowingAccent
+  @Environment(\.flowingTypography) private var typography
 
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
@@ -261,7 +265,7 @@ private struct PreferencesSidebarGroup<ID: Hashable>: View {
         Text(title.uppercased())
           .font(typography.sidebarGroup.font)
           .tracking(0.8)
-          .foregroundStyle(PreferencesPalette.faint)
+          .foregroundStyle(FlowingPalette.faint)
           .padding(.horizontal, 8)
           .padding(.bottom, 3)
       }
@@ -282,11 +286,11 @@ private struct PreferencesSidebarGroup<ID: Hashable>: View {
 private struct PreferencesSidebarRow<ID: Hashable>: View {
   let page: PreferencesPage<ID>
   let isSelected: Bool
-  let accent: PreferencesAccent
+  let accent: FlowingAccent
   let isIndented: Bool
   let action: () -> Void
-  @Environment(\.preferencesTypography) private var typography
-  @Environment(\.preferencesSurfaces) private var surfaces
+  @Environment(\.flowingTypography) private var typography
+  @Environment(\.flowingSurfaces) private var surfaces
 
   var body: some View {
     Button(action: action) {
@@ -294,7 +298,7 @@ private struct PreferencesSidebarRow<ID: Hashable>: View {
         icon
         Text(page.title)
           .font(isSelected ? typography.sidebarItemSelected.font : typography.sidebarItem.font)
-          .foregroundStyle(isSelected ? PreferencesPalette.ink : PreferencesPalette.muted)
+          .foregroundStyle(isSelected ? FlowingPalette.ink : FlowingPalette.muted)
         Spacer(minLength: 0)
       }
       .padding(.leading, isIndented ? 10 : 0)
@@ -322,7 +326,7 @@ private struct PreferencesSidebarRow<ID: Hashable>: View {
     case .system(let symbol):
       Image(systemName: symbol)
         .font(.system(size: 12, weight: .medium))
-        .foregroundStyle(isSelected ? accent.foreground : PreferencesPalette.muted)
+        .foregroundStyle(isSelected ? accent.foreground : FlowingPalette.muted)
         .frame(width: 18)
     case .application:
       Image(nsImage: NSApp.applicationIconImage)
@@ -347,8 +351,8 @@ private struct PreferencesSidebarRow<ID: Hashable>: View {
 
 private struct PreferencesPageHeader<ID: Hashable>: View {
   let page: PreferencesPage<ID>
-  let accent: PreferencesAccent
-  @Environment(\.preferencesTypography) private var typography
+  let accent: FlowingAccent
+  @Environment(\.flowingTypography) private var typography
 
   var body: some View {
     HStack(spacing: 14) {
@@ -356,11 +360,11 @@ private struct PreferencesPageHeader<ID: Hashable>: View {
       VStack(alignment: .leading, spacing: 3) {
         Text(page.title)
           .font(typography.pageTitle.font)
-          .foregroundStyle(PreferencesPalette.ink)
+          .foregroundStyle(FlowingPalette.ink)
         if let subtitle = page.subtitle {
           Text(subtitle)
             .font(typography.pageSubtitle.font)
-            .foregroundStyle(PreferencesPalette.muted)
+            .foregroundStyle(FlowingPalette.muted)
             .lineLimit(2)
         }
       }

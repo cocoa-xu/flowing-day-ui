@@ -25,7 +25,7 @@ const MARGIN = 8
 const GAP = 6
 
 /**
- * Mirrors `PreferencesPopupControl`, the 691 lines of AppKit that back `PreferencesPopupRow`.
+ * Mirrors `FlowingSelectButton`, the AppKit control that backs `PreferencesPopupRow`.
  *
  * The `NSPanel` and its global event monitors become a Popover API element: the top layer
  * escapes the scroll container exactly as a child window did, and light dismiss plus

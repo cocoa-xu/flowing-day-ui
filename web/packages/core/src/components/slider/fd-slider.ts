@@ -3,9 +3,9 @@ import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { FdSliderMath } from '../../internal/slider-math.js'
 
-/** `PreferencesSliderControl.knobDiameter`. */
+/** `FlowingSliderControl.knobDiameter`. */
 const KNOB = 13
-/** `PreferencesSliderControl.trackHeight`. */
+/** `FlowingSliderControl.trackHeight`. */
 const TRACK = 3
 
 /**
@@ -177,7 +177,7 @@ export class FdSlider extends FdElement {
     return getComputedStyle(this).direction === 'rtl'
   }
 
-  /** `PreferencesSliderControl.updateValue(with:)`, measured from the inline start. */
+  /** `FlowingSliderControl.updateValue(with:)`, measured from the inline start. */
   #commit(clientX: number): void {
     const bounds = this.getBoundingClientRect()
     const usableWidth = Math.max(bounds.width - KNOB, 1)

@@ -1,4 +1,5 @@
 import AppKit
+import FlowingDayControls
 import FlowingDayPreferences
 import XCTest
 

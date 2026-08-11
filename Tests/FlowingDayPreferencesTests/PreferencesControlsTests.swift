@@ -1,6 +1,7 @@
 import SwiftUI
 import XCTest
 
+@testable import FlowingDayControls
 @testable import FlowingDayPreferences
 
 final class PreferencesControlsTests: XCTestCase {
@@ -41,8 +42,8 @@ final class PreferencesControlsTests: XCTestCase {
   }
 
   func testDefaultThemeMatchesPreferencesVisualHierarchy() {
-    let typography = PreferencesTypography.standard
-    let surfaces = PreferencesSurfaces.standard
+    let typography = FlowingTypography.standard
+    let surfaces = FlowingSurfaces.standard
 
     XCTAssertEqual(typography.pageTitle.size, 25)
     XCTAssertEqual(typography.pageTitle.weight, .semibold)
@@ -51,19 +52,19 @@ final class PreferencesControlsTests: XCTestCase {
     XCTAssertEqual(typography.body.size, 12)
     XCTAssertEqual(typography.rowTitle.size, 13)
     XCTAssertEqual(typography.sectionHeader.size, 10.5)
-    XCTAssertEqual(surfaces.sidebar, PreferencesPalette.card)
-    XCTAssertEqual(surfaces.card, PreferencesPalette.control)
+    XCTAssertEqual(surfaces.sidebar, FlowingPalette.card)
+    XCTAssertEqual(surfaces.card, FlowingPalette.control)
   }
 
   func testThemeCanBeCustomizedPerApplication() {
-    let typography = PreferencesTypography(
-      rowTitle: PreferencesTextStyle(
+    let typography = FlowingTypography(
+      rowTitle: FlowingTextStyle(
         size: 15,
         weight: .medium,
         fontName: "Helvetica Neue"
       )
     )
-    let surfaces = PreferencesSurfaces(card: .orange, field: .purple)
+    let surfaces = FlowingSurfaces(card: .orange, field: .purple)
 
     XCTAssertEqual(typography.rowTitle.size, 15)
     XCTAssertEqual(typography.rowTitle.weight, .medium)

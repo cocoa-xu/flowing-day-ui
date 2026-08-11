@@ -1,8 +1,9 @@
+import FlowingDayControls
 import FlowingDayPreferences
 import SwiftUI
 
 struct ControlsShowcase: View {
-  @Environment(\.preferencesTypography) private var typography
+  @Environment(\.flowingTypography) private var typography
   @State private var checkboxValue = true
   @State private var checkboxAlignment = FlowingCheckboxContentAlignment.leading
   @State private var checkboxIndicator = FlowingCheckboxIndicatorPlacement.leading
@@ -1000,7 +1001,7 @@ struct ControlsShowcase: View {
         preview()
       }
       Rectangle()
-        .fill(PreferencesPalette.hairline)
+        .fill(FlowingPalette.hairline)
         .frame(height: 1)
       componentMode("Options") {
         VStack(alignment: .leading, spacing: 10) {

@@ -1,3 +1,4 @@
+import FlowingDayControls
 import FlowingDayPreferences
 import SwiftUI
 
@@ -61,7 +62,7 @@ struct AppearanceShowcase: View {
       PreferencesSection(
         "Surfaces",
         footer:
-          "Window, card, and control radii come from PreferencesViewConfiguration and PreferencesMetrics."
+          "Window, card, and control radii come from PreferencesViewConfiguration and FlowingMetrics."
       ) {
         PreferencesSegmentedRow(
           title: "Corners",
@@ -143,7 +144,7 @@ struct LayoutShowcase: View {
     PreferencesPaneStack {
       PreferencesSection(
         "Density",
-        footer: "Row insets and section spacing are live PreferencesMetrics values."
+        footer: "Row insets and section spacing are live FlowingMetrics values."
       ) {
         PreferencesSegmentedRow(
           title: "Row Density",
@@ -198,13 +199,13 @@ struct LayoutShowcase: View {
 
 struct TypographyShowcase: View {
   @Binding var textScale: ExampleTextScale
-  @Binding var headingFace: PreferencesFontDesign
+  @Binding var headingFace: FlowingFontDesign
 
   var body: some View {
     PreferencesPaneStack {
       PreferencesSection(
         "Scale",
-        footer: "PreferencesTypography exposes a semantic text style for each role in the window."
+        footer: "FlowingTypography exposes a semantic text style for each role in the window."
       ) {
         PreferencesSegmentedRow(
           title: "Type Scale",
@@ -530,7 +531,7 @@ struct PreferencesComponentsShowcase: View {
 }
 
 private struct ExampleAccentFamilyGrid: View {
-  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.flowingMetrics) private var metrics
   let family: ExampleAccentFamily
   @Binding var selection: ExampleAccent
   let customColor: Color
@@ -548,7 +549,7 @@ private struct ExampleAccentFamilyGrid: View {
           FlowingChip(accent.title) {
             selection = accent
           }
-          .preferencesAccent(accent.value(customColor: customColor))
+          .flowingAccent(accent.value(customColor: customColor))
         } else {
           Color.clear
             .frame(height: 30)
@@ -570,7 +571,7 @@ struct AboutShowcase: View {
         PreferencesValueRow(
           symbol: "shippingbox",
           title: "Package",
-          value: "FlowingDayPreferences"
+          value: "FlowingDayUI"
         )
         PreferencesRowSeparator(leadingEdge: .iconText)
         PreferencesValueRow(title: "License", value: "Apache-2.0")

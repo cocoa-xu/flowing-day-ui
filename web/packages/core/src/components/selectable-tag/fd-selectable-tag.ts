@@ -8,7 +8,7 @@ import { tagStyles } from '../../internal/tag.js'
  * each of foreground, background and border. Selection is owned by the caller, exactly
  * as the SwiftUI original takes `isSelected` and hands back an action.
  *
- * `inactive-accent` is `PreferencesAccent?`: the unselected pill re-derives the accent set
+ * `inactive-accent` is `FlowingAccent?`: the unselected pill re-derives the accent set
  * from that colour, which is what `data-fd-accent-scope` exists for.
  *
  * @fires fd-activate - When the tag is pressed.

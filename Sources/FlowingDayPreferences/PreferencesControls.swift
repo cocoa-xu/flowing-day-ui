@@ -1,4 +1,5 @@
 import AppKit
+import FlowingDayControls
 import SwiftUI
 
 enum PreferencesRowLayout {
@@ -54,7 +55,7 @@ enum PreferencesSectionSeparatorResolver {
 }
 
 public struct PreferencesSectionHeader: View {
-  @Environment(\.preferencesTypography) private var typography
+  @Environment(\.flowingTypography) private var typography
   private let title: String
 
   public init(_ title: String) {
@@ -65,7 +66,7 @@ public struct PreferencesSectionHeader: View {
     Text(title.uppercased())
       .font(typography.sectionHeader.font)
       .tracking(0.7)
-      .foregroundStyle(PreferencesPalette.faint)
+      .foregroundStyle(FlowingPalette.faint)
       .padding(.leading, 4)
       .padding(.bottom, 7)
   }
@@ -86,7 +87,7 @@ public struct PreferencesCard<Content: View>: View {
 }
 
 public struct PreferencesRowSeparator: View {
-  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.flowingMetrics) private var metrics
   @Environment(\.preferencesRowSeparatorLeadingEdge) private var sectionLeadingEdge
   private let leadingEdge: PreferencesRowSeparatorLeadingEdge?
 
@@ -96,7 +97,7 @@ public struct PreferencesRowSeparator: View {
 
   public var body: some View {
     Rectangle()
-      .fill(PreferencesPalette.hairline)
+      .fill(FlowingPalette.hairline)
       .frame(height: 1)
       .padding(.leading, metrics.rowInset + additionalLeadingInset)
   }
@@ -110,7 +111,7 @@ public struct PreferencesRowSeparator: View {
 }
 
 public struct PreferencesPaneStack<Content: View>: View {
-  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.flowingMetrics) private var metrics
   private let content: Content
 
   public init(@ViewBuilder content: () -> Content) {
@@ -162,8 +163,8 @@ public struct PreferencesSection<Content: View>: View {
 }
 
 public struct PreferencesRow<Trailing: View>: View {
-  @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesTypography) private var typography
+  @Environment(\.flowingMetrics) private var metrics
+  @Environment(\.flowingTypography) private var typography
   private let symbol: String?
   private let title: String
   private let caption: String?
@@ -186,17 +187,17 @@ public struct PreferencesRow<Trailing: View>: View {
       if let symbol {
         Image(systemName: symbol)
           .font(.system(size: 13, weight: .medium))
-          .foregroundStyle(PreferencesPalette.muted)
+          .foregroundStyle(FlowingPalette.muted)
           .frame(width: PreferencesRowLayout.symbolWidth)
       }
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
           .font(typography.rowTitle.font)
-          .foregroundStyle(PreferencesPalette.ink)
+          .foregroundStyle(FlowingPalette.ink)
         if let caption {
           Text(caption)
             .font(typography.rowCaption.font)
-            .foregroundStyle(PreferencesPalette.faint)
+            .foregroundStyle(FlowingPalette.faint)
             .fixedSize(horizontal: false, vertical: true)
         }
       }
@@ -319,8 +320,8 @@ public struct PreferencesSwitchGroup<Content: View>: View {
 }
 
 public struct PreferencesSliderRow: View {
-  @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesTypography) private var typography
+  @Environment(\.flowingMetrics) private var metrics
+  @Environment(\.flowingTypography) private var typography
   private let symbol: String?
   private let title: String
   private let caption: String?
@@ -353,23 +354,23 @@ public struct PreferencesSliderRow: View {
         if let symbol {
           Image(systemName: symbol)
             .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(PreferencesPalette.muted)
+            .foregroundStyle(FlowingPalette.muted)
             .frame(width: 20)
         }
         Text(title)
           .font(typography.rowTitle.font)
-          .foregroundStyle(PreferencesPalette.ink)
+          .foregroundStyle(FlowingPalette.ink)
         Spacer(minLength: 10)
         Text(format(value))
           .font(typography.sliderValue.font)
-          .foregroundStyle(PreferencesPalette.muted)
+          .foregroundStyle(FlowingPalette.muted)
       }
       FlowingSlider(value: $value, in: range, step: step)
         .accessibilityLabel(title)
       if let caption {
         Text(caption)
           .font(typography.rowCaption.font)
-          .foregroundStyle(PreferencesPalette.faint)
+          .foregroundStyle(FlowingPalette.faint)
           .fixedSize(horizontal: false, vertical: true)
       }
     }
@@ -416,10 +417,10 @@ public struct PreferencesPopupRow<Value: Hashable>: View {
 }
 
 public struct PreferencesSearchPickerRow<Value: Hashable>: View {
-  @Environment(\.preferencesAccent) private var accent
-  @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesStrings) private var strings
-  @Environment(\.preferencesTypography) private var typography
+  @Environment(\.flowingAccent) private var accent
+  @Environment(\.flowingMetrics) private var metrics
+  @Environment(\.flowingStrings) private var strings
+  @Environment(\.flowingTypography) private var typography
   @State private var isExpanded = false
   @State private var query = ""
   private let symbol: String?
@@ -460,17 +461,17 @@ public struct PreferencesSearchPickerRow<Value: Hashable>: View {
         if let symbol {
           Image(systemName: symbol)
             .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(PreferencesPalette.muted)
+            .foregroundStyle(FlowingPalette.muted)
             .frame(width: PreferencesRowLayout.symbolWidth)
         }
         VStack(alignment: .leading, spacing: 2) {
           Text(title)
             .font(typography.rowTitle.font)
-            .foregroundStyle(PreferencesPalette.ink)
+            .foregroundStyle(FlowingPalette.ink)
           if let caption {
             Text(caption)
               .font(typography.rowCaption.font)
-              .foregroundStyle(PreferencesPalette.faint)
+              .foregroundStyle(FlowingPalette.faint)
               .fixedSize(horizontal: false, vertical: true)
           }
         }
@@ -774,8 +775,8 @@ public struct PreferencesLinkRow: View {
 }
 
 public struct PreferencesExpandableRow: View {
-  @Environment(\.preferencesMetrics) private var metrics
-  @Environment(\.preferencesTypography) private var typography
+  @Environment(\.flowingMetrics) private var metrics
+  @Environment(\.flowingTypography) private var typography
   private let symbol: String?
   private let title: String
   private let caption: String?
@@ -808,17 +809,17 @@ public struct PreferencesExpandableRow: View {
         if let symbol {
           Image(systemName: symbol)
             .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(PreferencesPalette.muted)
+            .foregroundStyle(FlowingPalette.muted)
             .frame(width: PreferencesRowLayout.symbolWidth)
         }
         VStack(alignment: .leading, spacing: 2) {
           Text(title)
             .font(typography.rowTitle.font)
-            .foregroundStyle(PreferencesPalette.ink)
+            .foregroundStyle(FlowingPalette.ink)
           if let caption {
             Text(caption)
               .font(typography.rowCaption.font)
-              .foregroundStyle(PreferencesPalette.faint)
+              .foregroundStyle(FlowingPalette.faint)
               .fixedSize(horizontal: false, vertical: true)
           }
         }
@@ -865,7 +866,7 @@ extension PreferencesValueRow where Trailing == EmptyView {
 }
 
 public struct PreferencesEmptyRow: View {
-  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.flowingMetrics) private var metrics
   private let message: String
   private let symbol: String?
 
@@ -888,7 +889,7 @@ public struct PreferencesEmptyRow: View {
 }
 
 public struct PreferencesFlowGrid<Item: Identifiable, Label: View>: View {
-  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.flowingMetrics) private var metrics
   private let items: [Item]
   private let spacing: CGFloat
   private let label: (Item) -> Label
@@ -911,7 +912,7 @@ public struct PreferencesFlowGrid<Item: Identifiable, Label: View>: View {
 }
 
 public struct PreferencesGrid<Item: Identifiable, Label: View>: View {
-  @Environment(\.preferencesMetrics) private var metrics
+  @Environment(\.flowingMetrics) private var metrics
   private let items: [Item]
   private let minimumWidth: CGFloat
   private let label: (Item) -> Label

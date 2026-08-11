@@ -6,7 +6,7 @@ import { baseStyles, FdElement } from '../../internal/base-element.js'
  * Mirrors `PreferencesFlowGrid`: items laid out left to right, wrapping when the next one
  * no longer fits, spaced equally on both axes and pushed to the leading edge.
  *
- * `PreferencesWrappingLayout`, the custom `Layout` behind it, places each item at its ideal
+ * `FlowingWrappingLayout`, the custom `Layout` behind it, places each item at its ideal
  * size on the current row's top edge, which is what a wrapping flex line does. None of
  * its 59 lines survive the crossing.
  *

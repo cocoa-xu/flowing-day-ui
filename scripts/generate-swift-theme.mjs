@@ -4,10 +4,14 @@ import { fileURLToPath } from 'node:url'
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const tokensPath = resolve(repositoryRoot, 'web/packages/core/src/tokens/tokens.json')
-const themeOutputPath = resolve(repositoryRoot, 'Sources/FlowingDayPreferences/PreferencesTheme.swift')
+const themeOutputPath = resolve(repositoryRoot, 'Sources/FlowingDayControls/FlowingTheme.swift')
 const accentOutputPath = resolve(
   repositoryRoot,
-  'Sources/FlowingDayPreferences/PreferencesAccentPalette.swift',
+  'Sources/FlowingDayControls/FlowingAccentPalette.swift',
+)
+const preferencesOutputPath = resolve(
+  repositoryRoot,
+  'Sources/FlowingDayPreferences/PreferencesTheme.swift',
 )
 const raw = JSON.parse(await readFile(tokensPath, 'utf8'))
 const groups = raw.groups
@@ -34,7 +38,7 @@ const swiftFontDesigns = new Set(['standard', 'rounded', 'serif', 'monospaced'])
 
 const tokenFontWeights = Object.keys(raw.fontWeights).filter((name) => !name.startsWith('$'))
 if (tokenFontWeights.join() !== swiftFontWeights.join()) {
-  throw new Error('fontWeights must match PreferencesFontWeight')
+  throw new Error('fontWeights must match FlowingFontWeight')
 }
 
 for (const [role, style] of Object.entries(raw.typography.roles)) {
@@ -83,8 +87,8 @@ const namedAccentEntries = namedAccentFamilies.flatMap(([family, accents]) =>
 )
 const namedAccentNames = new Set(namedAccentEntries.map(({ name }) => name))
 
-if (raw.namedAccents?.$source !== 'PreferencesNamedAccentBase') {
-  throw new Error('namedAccents must come from PreferencesNamedAccentBase')
+if (raw.namedAccents?.$source !== 'FlowingNamedAccentBase') {
+  throw new Error('namedAccents must come from FlowingNamedAccentBase')
 }
 if (namedAccentEntries.length === 0 || namedAccentNames.size !== namedAccentEntries.length) {
   throw new Error('namedAccents must contain unique names')
@@ -103,7 +107,7 @@ function colorArguments(value) {
   return { light, dark, lightAlpha, darkAlpha }
 }
 
-function colorExpression(value, functionName = 'PreferencesPalette.dynamic', indentation = '  ') {
+function colorExpression(value, functionName = 'FlowingPalette.dynamic', indentation = '  ') {
   const { light, dark, lightAlpha, darkAlpha } = colorArguments(value)
   if (lightAlpha === 1 && darkAlpha === 1) {
     return `${functionName}(light: ${swiftHex(light)}, dark: ${swiftHex(dark)})`
@@ -113,11 +117,11 @@ function colorExpression(value, functionName = 'PreferencesPalette.dynamic', ind
 }
 
 function surfaceExpression(name) {
-  const reference = consume(name, 'PreferencesSurfaces.standard').ref
+  const reference = consume(name, 'FlowingSurfaces.standard').ref
   if (!reference?.startsWith('palette-')) {
     throw new Error(`${name} must reference a palette token`)
   }
-  return `PreferencesPalette.${swiftIdentifier(reference.slice('palette-'.length))}`
+  return `FlowingPalette.${swiftIdentifier(reference.slice('palette-'.length))}`
 }
 
 function textStyleExpression(style, indentation = '') {
@@ -125,13 +129,13 @@ function textStyleExpression(style, indentation = '') {
   if (style.weight !== undefined) argumentsList.push(`weight: .${style.weight}`)
   if (style.design !== undefined) argumentsList.push(`design: .${style.design}`)
   if (style.monospacedDigits === true) argumentsList.push('usesMonospacedDigits: true')
-  if (argumentsList.length === 1) return `PreferencesTextStyle(${argumentsList[0]})`
-  return `PreferencesTextStyle(\n${indentation}  ${argumentsList.join(`,\n${indentation}  `)}\n${indentation})`
+  if (argumentsList.length === 1) return `FlowingTextStyle(${argumentsList[0]})`
+  return `FlowingTextStyle(\n${indentation}  ${argumentsList.join(`,\n${indentation}  `)}\n${indentation})`
 }
 
 function typographyProperties() {
   return Object.keys(raw.typography.roles)
-    .map((role) => `  public var ${swiftIdentifier(role)}: PreferencesTextStyle`)
+    .map((role) => `  public var ${swiftIdentifier(role)}: FlowingTextStyle`)
     .join('\n')
 }
 
@@ -139,7 +143,7 @@ function typographyParameters() {
   return Object.entries(raw.typography.roles)
     .map(
       ([role, style]) =>
-        `    ${swiftIdentifier(role)}: PreferencesTextStyle = ${textStyleExpression(style, '    ')}`,
+        `    ${swiftIdentifier(role)}: FlowingTextStyle = ${textStyleExpression(style, '    ')}`,
     )
     .join(',\n')
 }
@@ -158,7 +162,7 @@ function paletteDeclarations() {
   return names
     .map((name) => {
       const identifier = swiftIdentifier(name.slice('palette-'.length))
-      return `  public static let ${identifier} = ${colorExpression(consume(name, 'PreferencesPalette'))}`
+      return `  public static let ${identifier} = ${colorExpression(consume(name, 'FlowingPalette'))}`
     })
     .join('\n')
 }
@@ -171,10 +175,10 @@ function motionDeclaration(name, reduced = false) {
     ? `reduced${baseName[0].toUpperCase()}${baseName.slice(1)}`
     : regularIdentifier
   if (value.ms !== undefined) {
-    return `  static let ${identifier}: TimeInterval = ${swiftSeconds(value.ms)}`
+    return `  public static let ${identifier}: TimeInterval = ${swiftSeconds(value.ms)}`
   }
   if (value.px !== undefined) {
-    return `  static let ${identifier}: CGFloat = ${swiftNumber(value.px)}`
+    return `  public static let ${identifier}: CGFloat = ${swiftNumber(value.px)}`
   }
   return null
 }
@@ -190,35 +194,34 @@ const motionDeclarations = [
   .filter(Boolean)
   .join('\n')
 
-const accentReference = consume('accent', 'PreferencesAccent.celadon').ref
+const accentReference = consume('accent', 'FlowingAccent.celadon').ref
 if (accentReference !== 'accent-celadon') {
   throw new Error('accent must reference accent-celadon')
 }
 const celadon = namedAccentEntries.find(({ name }) => name === 'celadon')?.value
 if (celadon === undefined) throw new Error('namedAccents must contain celadon')
 const accentBase = celadon.color
-const accentLift = consume('accent-lift', 'PreferencesAccent.celadon').number
-const accentContrast = consume('accent-contrast', 'PreferencesAccent.celadon').number
+const accentLift = consume('accent-lift', 'FlowingAccent.celadon').number
+const accentContrast = consume('accent-contrast', 'FlowingAccent.celadon').number
 const metric = (name) =>
-  swiftNumber(consume(`metric-${name}`, 'PreferencesMetrics.standard').px)
+  swiftNumber(consume(`metric-${name}`, 'FlowingMetrics.standard').px)
 const windowValue = (name) =>
   swiftNumber(consume(name, 'PreferencesViewConfiguration').px)
 const knobFill = colorExpression(
-  consume('knob-fill', 'PreferencesPalette'),
-  'PreferencesPalette.dynamicNSColor',
+  consume('knob-fill', 'FlowingPalette'),
+  'FlowingPalette.dynamicNSColor',
 )
 const knobBorder = colorExpression(
-  consume('knob-border', 'PreferencesPalette'),
-  'PreferencesPalette.dynamicNSColor',
+  consume('knob-border', 'FlowingPalette'),
+  'FlowingPalette.dynamicNSColor',
 )
 const closeHover = colorExpression(consume('close-hover', 'PreferencesViewConfiguration'))
 
 const output = `// Generated by scripts/generate-swift-theme.mjs from tokens.json. Do not edit.
 
-import AppKit
 import SwiftUI
 
-public struct PreferencesMetrics: Equatable, Sendable {
+public struct FlowingMetrics: Equatable, Sendable {
   public var cardRadius: CGFloat
   public var controlRadius: CGFloat
   public var rowInset: CGFloat
@@ -239,10 +242,10 @@ public struct PreferencesMetrics: Equatable, Sendable {
     self.sectionSpacing = sectionSpacing
   }
 
-  public static let standard = PreferencesMetrics()
+  public static let standard = FlowingMetrics()
 }
 
-public struct PreferencesTypography: Sendable {
+public struct FlowingTypography: Sendable {
 ${typographyProperties()}
 
   public init(
@@ -251,10 +254,10 @@ ${typographyParameters()}
 ${typographyAssignments()}
   }
 
-  public static let standard = PreferencesTypography()
+  public static let standard = FlowingTypography()
 }
 
-public struct PreferencesSurfaces: Equatable, Sendable {
+public struct FlowingSurfaces: Equatable, Sendable {
   public var canvas: Color
   public var sidebar: Color
   public var card: Color
@@ -275,7 +278,59 @@ public struct PreferencesSurfaces: Equatable, Sendable {
     self.field = field
   }
 
-  public static let standard = PreferencesSurfaces()
+  public static let standard = FlowingSurfaces()
+}
+
+enum FlowingAccentToken {
+  static let base: UInt32 = ${swiftHex(accentBase)}
+  static let fillLightness = FlowingAppearanceValue<CGFloat>(
+    light: ${swiftNumber(accentLift.light)},
+    dark: ${swiftNumber(accentLift.dark)}
+  )
+  static let foregroundContrast = FlowingAppearanceValue<CGFloat>(
+    light: ${swiftNumber(accentContrast.light)},
+    dark: ${swiftNumber(accentContrast.dark)}
+  )
+}
+
+extension FlowingAccent {
+  public static let celadon = FlowingAccent.derived(
+    base: FlowingAccentToken.base,
+    fillLightness: FlowingAccentToken.fillLightness,
+    foregroundContrast: FlowingAccentToken.foregroundContrast
+  )
+}
+
+extension FlowingPalette {
+${paletteDeclarations()}
+
+  static let sliderKnobColor = ${knobFill}
+  static let sliderKnobBorderColor = ${knobBorder}
+  public static let closeHover = ${closeHover}
+}
+
+public enum FlowingMotion {
+${motionDeclarations}
+}
+`
+
+const preferencesOutput = `// Generated by scripts/generate-swift-theme.mjs from tokens.json. Do not edit.
+
+import AppKit
+import FlowingDayControls
+import SwiftUI
+
+public struct PreferencesStrings: Equatable, Sendable {
+  public var closePreferences: String
+  public var controls: FlowingStrings
+
+  public init(
+    closePreferences: String = "Close Preferences",
+    controls: FlowingStrings = FlowingStrings()
+  ) {
+    self.closePreferences = closePreferences
+    self.controls = controls
+  }
 }
 
 public enum PreferencesContentWidthPolicy: Equatable, Sendable {
@@ -299,11 +354,11 @@ public struct PreferencesViewConfiguration {
   public var preferencesTitle: String
   public var applicationIcon: NSImage?
   public var sidebarFooter: String?
-  public var defaultAccent: PreferencesAccent
+  public var defaultAccent: FlowingAccent
   public var strings: PreferencesStrings
-  public var metrics: PreferencesMetrics
-  public var typography: PreferencesTypography
-  public var surfaces: PreferencesSurfaces
+  public var metrics: FlowingMetrics
+  public var typography: FlowingTypography
+  public var surfaces: FlowingSurfaces
   public var contentWidthPolicy: PreferencesContentWidthPolicy
   public var sidebarWidth: CGFloat
   public var cornerRadius: CGFloat
@@ -313,11 +368,11 @@ public struct PreferencesViewConfiguration {
     preferencesTitle: String = "Preferences",
     applicationIcon: NSImage? = nil,
     sidebarFooter: String? = nil,
-    defaultAccent: PreferencesAccent = .celadon,
+    defaultAccent: FlowingAccent = .celadon,
     strings: PreferencesStrings = PreferencesStrings(),
-    metrics: PreferencesMetrics = .standard,
-    typography: PreferencesTypography = .standard,
-    surfaces: PreferencesSurfaces = .standard,
+    metrics: FlowingMetrics = .standard,
+    typography: FlowingTypography = .standard,
+    surfaces: FlowingSurfaces = .standard,
     contentWidthPolicy: PreferencesContentWidthPolicy = .centered(),
     sidebarWidth: CGFloat = ${windowValue('sidebar-width')},
     cornerRadius: CGFloat = ${windowValue('window-radius')}
@@ -336,45 +391,13 @@ public struct PreferencesViewConfiguration {
     self.cornerRadius = cornerRadius
   }
 }
-
-enum PreferencesAccentToken {
-  static let base: UInt32 = ${swiftHex(accentBase)}
-  static let fillLightness = PreferencesAppearanceValue<CGFloat>(
-    light: ${swiftNumber(accentLift.light)},
-    dark: ${swiftNumber(accentLift.dark)}
-  )
-  static let foregroundContrast = PreferencesAppearanceValue<CGFloat>(
-    light: ${swiftNumber(accentContrast.light)},
-    dark: ${swiftNumber(accentContrast.dark)}
-  )
-}
-
-extension PreferencesAccent {
-  public static let celadon = PreferencesAccent.derived(
-    base: PreferencesAccentToken.base,
-    fillLightness: PreferencesAccentToken.fillLightness,
-    foregroundContrast: PreferencesAccentToken.foregroundContrast
-  )
-}
-
-extension PreferencesPalette {
-${paletteDeclarations()}
-
-  static let sliderKnobColor = ${knobFill}
-  static let sliderKnobBorderColor = ${knobBorder}
-  static let closeHover = ${closeHover}
-}
-
-enum PreferencesMotion {
-${motionDeclarations}
-}
 `
 
 const namedAccentBaseDeclarations = namedAccentFamilies
   .map(([, accents]) =>
     Object.entries(accents)
       .map(([name, value]) => {
-        const expression = name === 'celadon' ? 'PreferencesAccentToken.base' : swiftHex(value.color)
+        const expression = name === 'celadon' ? 'FlowingAccentToken.base' : swiftHex(value.color)
         return `  static let ${swiftIdentifier(name)}: UInt32 = ${expression}`
       })
       .join('\n'),
@@ -391,7 +414,7 @@ const namedAccentProperties = namedAccentFamilies
       .filter((name) => name !== 'celadon')
       .map(
         (name) =>
-          `  public static let ${swiftIdentifier(name)} = named(base: PreferencesNamedAccentBase.${swiftIdentifier(name)})`,
+          `  public static let ${swiftIdentifier(name)} = named(base: FlowingNamedAccentBase.${swiftIdentifier(name)})`,
       )
       .join('\n'),
   )
@@ -399,7 +422,7 @@ const namedAccentProperties = namedAccentFamilies
 
 const accentOutput = `// Generated by scripts/generate-swift-theme.mjs from tokens.json. Do not edit.
 
-enum PreferencesNamedAccentBase {
+enum FlowingNamedAccentBase {
 ${namedAccentBaseDeclarations}
 
   static let all: [UInt32] = [
@@ -407,14 +430,14 @@ ${namedAccentAll}
   ]
 }
 
-extension PreferencesAccent {
+extension FlowingAccent {
 ${namedAccentProperties}
 
-  private static func named(base: UInt32) -> PreferencesAccent {
-    PreferencesAccent.derived(
+  private static func named(base: UInt32) -> FlowingAccent {
+    FlowingAccent.derived(
       base: base,
-      fillLightness: PreferencesAccentToken.fillLightness,
-      foregroundContrast: PreferencesAccentToken.foregroundContrast
+      fillLightness: FlowingAccentToken.fillLightness,
+      foregroundContrast: FlowingAccentToken.foregroundContrast
     )
   }
 }
@@ -432,13 +455,20 @@ if (unhandledTokens.length > 0) {
 if (process.argv.includes('--check')) {
   const currentTheme = await readFile(themeOutputPath, 'utf8').catch(() => '')
   const currentAccents = await readFile(accentOutputPath, 'utf8').catch(() => '')
-  if (currentTheme !== output || currentAccents !== accentOutput) {
+  const currentPreferences = await readFile(preferencesOutputPath, 'utf8').catch(() => '')
+  if (
+    currentTheme !== output ||
+    currentAccents !== accentOutput ||
+    currentPreferences !== preferencesOutput
+  ) {
     console.error('Generated Swift theme files are out of date. Run node scripts/generate-swift-theme.mjs.')
     process.exitCode = 1
   }
 } else {
   await writeFile(themeOutputPath, output, 'utf8')
   await writeFile(accentOutputPath, accentOutput, 'utf8')
+  await writeFile(preferencesOutputPath, preferencesOutput, 'utf8')
   console.log(`generated ${themeOutputPath}`)
   console.log(`generated ${accentOutputPath}`)
+  console.log(`generated ${preferencesOutputPath}`)
 }

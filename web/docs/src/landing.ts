@@ -141,7 +141,7 @@ if (preferencesWindow) makeMovableByBackground(preferencesWindow)
  * Every control in this window restyles the window it lives in. Each one writes design
  * tokens onto the window element, so the change reaches the shadow root of every
  * component below without any of them knowing about it — the same propagation
- * `.preferencesAccent(_:)` and its siblings give a SwiftUI subtree.
+ * `.flowingAccent(_:)` and its siblings give a SwiftUI subtree.
  */
 const set = (token: string, value: string) => preferencesWindow?.style.setProperty(token, value)
 

@@ -25,7 +25,7 @@ describe('srgb', () => {
     expect(srgb(0x000000)).toBe('#000000')
   })
 
-  it('decomposes channels the same way PreferencesPalette.srgb does', () => {
+  it('decomposes channels the same way FlowingPalette.srgb does', () => {
     expect(srgb(0x1d1d1b, 0.5)).toBe('rgb(29 29 27 / 0.5)')
   })
 })
@@ -44,7 +44,7 @@ describe('dynamic and translucent', () => {
 })
 
 describe('fontWeights', () => {
-  it('maps every PreferencesFontWeight case onto a CSS numeric weight', () => {
+  it('maps every FlowingFontWeight case onto a CSS numeric weight', () => {
     expect(Object.keys(fontWeights)).toEqual([
       'ultraLight',
       'thin',
@@ -195,7 +195,7 @@ describe('tokenGroups', () => {
   })
 
   /**
-   * The four literals of PreferencesAccent.celadon are one hue at four lightnesses, so
+   * The four literals of FlowingAccent.celadon are one hue at four lightnesses, so
    * every other accent token chains off `accent` rather than being spelled out.
    */
   it('derives the whole accent set from that one colour', () => {
@@ -225,12 +225,12 @@ describe('tokenGroups', () => {
     expect(dark('surface-card')).toBe(light('surface-card'))
   })
 
-  it('cross-maps surfaces onto the palette exactly as PreferencesSurfaces.standard does', () => {
+  it('cross-maps surfaces onto the palette exactly as FlowingSurfaces.standard does', () => {
     expect(light('surface-sidebar')).toBe('var(--fd-palette-card)')
     expect(light('surface-card')).toBe('var(--fd-palette-control)')
   })
 
-  it('carries PreferencesMetrics.standard', () => {
+  it('carries FlowingMetrics.standard', () => {
     expect(light('metric-card-radius')).toBe('14px')
     expect(light('metric-control-radius')).toBe('9px')
     expect(light('metric-row-inset')).toBe('18px')
@@ -238,7 +238,7 @@ describe('tokenGroups', () => {
     expect(light('metric-section-spacing')).toBe('20px')
   })
 
-  it('carries the full PreferencesPalette, both appearances', () => {
+  it('carries the full FlowingPalette, both appearances', () => {
     expect(flat.get('palette-canvas')).toEqual({ light: '#FCFCFB', dark: '#161617' })
     expect(flat.get('palette-card')).toEqual({ light: '#F2F2EF', dark: '#232326' })
     expect(flat.get('palette-control')).toEqual({ light: '#FFFFFF', dark: '#2E2E31' })
@@ -262,7 +262,7 @@ describe('tokenGroups', () => {
     }
   })
 
-  it('keeps the literal type scale from PreferencesTypography.standard', () => {
+  it('keeps the literal type scale from FlowingTypography.standard', () => {
     expect(light('text-row-title-size')).toBe('13px')
     expect(light('text-row-caption-size')).toBe('11px')
     expect(light('text-page-title-size')).toBe('25px')

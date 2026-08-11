@@ -1,3 +1,4 @@
+import FlowingDayControls
 import FlowingDayPreferences
 import SwiftUI
 
@@ -148,14 +149,14 @@ enum ExampleAccent: CaseIterable, Hashable {
   }
 
   var color: Color {
-    preset?.fill ?? PreferencesAccent.celadon.fill
+    preset?.fill ?? FlowingAccent.celadon.fill
   }
 
-  func value(customColor: Color) -> PreferencesAccent {
-    preset ?? PreferencesAccent(fill: customColor, foreground: customColor)
+  func value(customColor: Color) -> FlowingAccent {
+    preset ?? FlowingAccent(fill: customColor, foreground: customColor)
   }
 
-  private var preset: PreferencesAccent? {
+  private var preset: FlowingAccent? {
     switch self {
     case .coral: .coral
     case .poppy: .poppy
@@ -380,8 +381,8 @@ enum ExampleAccentFamily: CaseIterable, Identifiable {
   }
 }
 
-extension PreferencesTypography {
-  mutating func apply(scale: CGFloat, headingFace: PreferencesFontDesign) {
+extension FlowingTypography {
+  mutating func apply(scale: CGFloat, headingFace: FlowingFontDesign) {
     brandTitle.size *= scale
     brandSubtitle.size *= scale
     sidebarGroup.size *= scale

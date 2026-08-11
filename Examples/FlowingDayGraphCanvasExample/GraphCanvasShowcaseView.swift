@@ -1,8 +1,8 @@
 import FlowingDayCanvas
+import FlowingDayControls
 import FlowingDayGraphCanvas
 import FlowingDayGraphComposition
 import FlowingDayGraphCore
-import FlowingDayPreferences
 import SwiftUI
 
 struct GraphCanvasShowcaseView: View {
@@ -18,14 +18,14 @@ struct GraphCanvasShowcaseView: View {
   var body: some View {
     VStack(spacing: 0) {
       header
-      Divider().overlay(PreferencesPalette.hairline)
+      Divider().overlay(FlowingPalette.hairline)
       HStack(spacing: 0) {
         sidebar
-        Divider().overlay(PreferencesPalette.hairline)
+        Divider().overlay(FlowingPalette.hairline)
         canvas
       }
     }
-    .background(PreferencesPalette.canvas)
+    .background(FlowingPalette.canvas)
     .onAppear(perform: fitPresentation)
   }
 
@@ -34,10 +34,10 @@ struct GraphCanvasShowcaseView: View {
       VStack(alignment: .leading, spacing: 2) {
         Text("Graph Canvas")
           .font(.system(size: 17, weight: .semibold, design: .rounded))
-          .foregroundStyle(PreferencesPalette.ink)
+          .foregroundStyle(FlowingPalette.ink)
         Text("Layouts, composition, interaction, and rendering")
           .font(.system(size: 11.5))
-          .foregroundStyle(PreferencesPalette.muted)
+          .foregroundStyle(FlowingPalette.muted)
       }
       Spacer(minLength: 20)
       showcasePicker(
@@ -60,7 +60,7 @@ struct GraphCanvasShowcaseView: View {
     }
     .padding(.horizontal, 22)
     .frame(height: 74)
-    .background(PreferencesPalette.control)
+    .background(FlowingPalette.control)
   }
 
   private var sidebar: some View {
@@ -82,15 +82,15 @@ struct GraphCanvasShowcaseView: View {
                   }
                 }
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(PreferencesPalette.ink)
+                .foregroundStyle(FlowingPalette.ink)
                 .padding(.horizontal, 10)
                 .frame(height: 34)
                 .background(
                   RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(
                       segment.focusPath == model.projectionState.focusPath
-                        ? PreferencesAccent.celadon.wash
-                        : PreferencesPalette.field.opacity(0.55)
+                        ? FlowingAccent.celadon.wash
+                        : FlowingPalette.field.opacity(0.55)
                     )
                 )
               }
@@ -109,13 +109,13 @@ struct GraphCanvasShowcaseView: View {
                   bindingIndicator(isActive: row.internalEndpoint != nil)
                   VStack(alignment: .leading, spacing: 2) {
                     Text(row.external.capitalized)
-                      .foregroundStyle(PreferencesPalette.ink)
+                      .foregroundStyle(FlowingPalette.ink)
                     if let endpoint = row.internalEndpoint {
                       Text("Mapped to \(endpoint)")
-                        .foregroundStyle(PreferencesPalette.muted)
+                        .foregroundStyle(FlowingPalette.muted)
                     } else {
                       Text("Unbound external port")
-                        .foregroundStyle(PreferencesPalette.faint)
+                        .foregroundStyle(FlowingPalette.faint)
                     }
                   }
                   Spacer(minLength: 0)
@@ -124,7 +124,7 @@ struct GraphCanvasShowcaseView: View {
                 .padding(10)
                 .background(
                   RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(PreferencesPalette.field.opacity(0.55))
+                    .fill(FlowingPalette.field.opacity(0.55))
                 )
               }
               .buttonStyle(.plain)
@@ -153,12 +153,12 @@ struct GraphCanvasShowcaseView: View {
         sidebarSection("Latest Intent") {
           Text(model.lastEvent)
             .font(.system(size: 11.5))
-            .foregroundStyle(PreferencesPalette.muted)
+            .foregroundStyle(FlowingPalette.muted)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
             .background(
               RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(PreferencesPalette.field.opacity(0.55))
+                .fill(FlowingPalette.field.opacity(0.55))
             )
             .accessibilityIdentifier("showcase-last-intent")
         }
@@ -175,7 +175,7 @@ struct GraphCanvasShowcaseView: View {
       .padding(18)
     }
     .frame(width: 274)
-    .background(PreferencesPalette.card)
+    .background(FlowingPalette.card)
   }
 
   @ViewBuilder
@@ -222,8 +222,8 @@ struct GraphCanvasShowcaseView: View {
           FlowingGraphCanvasDefaultEdge(
             context: $1,
             style: FlowingGraphCanvasDefaultEdgeStyle(
-              color: PreferencesPalette.faint.opacity(0.72),
-              selectedColor: PreferencesAccent.celadon.fill
+              color: FlowingPalette.faint.opacity(0.72),
+              selectedColor: FlowingAccent.celadon.fill
             )
           )
         },
@@ -242,14 +242,14 @@ struct GraphCanvasShowcaseView: View {
                 proxy: context.proxy,
                 configuration: FlowingGraphMiniMapConfiguration(visibility: .always),
                 style: FlowingGraphMiniMapStyle(
-                  background: PreferencesPalette.control.opacity(0.96),
-                  border: PreferencesPalette.hairline,
-                  edge: PreferencesPalette.faint.opacity(0.4),
-                  viewportFill: PreferencesAccent.celadon.fill.opacity(0.12),
-                  viewportStroke: PreferencesAccent.celadon.fill,
+                  background: FlowingPalette.control.opacity(0.96),
+                  border: FlowingPalette.hairline,
+                  edge: FlowingPalette.faint.opacity(0.4),
+                  viewportFill: FlowingAccent.celadon.fill.opacity(0.12),
+                  viewportStroke: FlowingAccent.celadon.fill,
                   nodeStyles: [
                     FlowingGraphMiniMapNodeStyle(
-                      fill: PreferencesPalette.muted.opacity(0.62)
+                      fill: FlowingPalette.muted.opacity(0.62)
                     )
                   ]
                 )
@@ -279,7 +279,7 @@ struct GraphCanvasShowcaseView: View {
     } else {
       ProgressView()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(PreferencesPalette.canvas)
+        .background(FlowingPalette.canvas)
     }
   }
 
@@ -295,7 +295,7 @@ struct GraphCanvasShowcaseView: View {
       Text(title.uppercased())
         .font(.system(size: 8.5, weight: .semibold))
         .tracking(0.7)
-        .foregroundStyle(PreferencesPalette.faint)
+        .foregroundStyle(FlowingPalette.faint)
       Picker(title, selection: selection) {
         ForEach(Array(Selection.allCases)) { option in
           Text(option.rawValue).tag(option)
@@ -315,7 +315,7 @@ struct GraphCanvasShowcaseView: View {
       Text(title.uppercased())
         .font(.system(size: 9, weight: .semibold))
         .tracking(0.7)
-        .foregroundStyle(PreferencesPalette.faint)
+        .foregroundStyle(FlowingPalette.faint)
       content()
     }
   }
@@ -323,24 +323,24 @@ struct GraphCanvasShowcaseView: View {
   private func capability(_ title: String, icon: String) -> some View {
     HStack(spacing: 8) {
       Image(systemName: icon)
-        .foregroundStyle(PreferencesAccent.celadon.foreground)
+        .foregroundStyle(FlowingAccent.celadon.foreground)
         .frame(width: 18)
       Text(title)
-        .foregroundStyle(PreferencesPalette.muted)
+        .foregroundStyle(FlowingPalette.muted)
     }
     .font(.system(size: 11.5))
   }
 
   private func bindingIndicator(isActive: Bool) -> some View {
     Circle()
-      .fill(isActive ? PreferencesAccent.celadon.fill : PreferencesPalette.control)
+      .fill(isActive ? FlowingAccent.celadon.fill : FlowingPalette.control)
       .overlay {
         if isActive {
           Image(systemName: "checkmark")
             .font(.system(size: 7, weight: .bold))
-            .foregroundStyle(PreferencesAccent.celadon.foreground)
+            .foregroundStyle(FlowingAccent.celadon.foreground)
         } else {
-          Circle().strokeBorder(PreferencesPalette.hairline)
+          Circle().strokeBorder(FlowingPalette.hairline)
         }
       }
       .frame(width: 16, height: 16)
@@ -385,11 +385,11 @@ struct GraphCanvasShowcaseView: View {
     } label: {
       Image(systemName: symbol)
         .font(.system(size: 11, weight: .medium))
-        .foregroundStyle(PreferencesPalette.muted)
+        .foregroundStyle(FlowingPalette.muted)
         .frame(width: width, height: 28)
         .background(
           RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(PreferencesPalette.field)
+            .fill(FlowingPalette.field)
         )
     }
     .buttonStyle(.plain)

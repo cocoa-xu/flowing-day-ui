@@ -11,7 +11,7 @@ import {
 /**
  * Inside a shadow root every token is read through a private `--_fd-*` alias whose
  * fallback is the public `--fd-*` token. Declaring the public name anywhere up the
- * tree therefore wins, which is how `.preferencesAccent(_:)` and friends propagate in
+ * tree therefore wins, which is how `.flowingAccent(_:)` and friends propagate in
  * SwiftUI — an environment value overridden for a subtree.
  */
 const toPrivateRefs = (value: string) => value.replaceAll('var(--fd-', 'var(--_fd-')
@@ -121,7 +121,7 @@ ${reducedMotionBlock('    ')}
  *
  * Appearance follows the OS by default; `data-fd-scheme` on any element forces one
  * appearance for that subtree, which is the web analogue of handing a different
- * `PreferencesSurfaces` to part of the view tree.
+ * `FlowingSurfaces` to part of the view tree.
  */
 export function globalThemeCss(): string {
   return `/* Generated from src/tokens/tokens.ts — do not edit by hand. */

@@ -1,4 +1,5 @@
 import AppKit
+import FlowingDayControls
 import SwiftUI
 import XCTest
 
@@ -6,6 +7,16 @@ import XCTest
 
 @MainActor
 final class PreferencesNavigationTests: XCTestCase {
+  func testPreferencesStringsKeepWindowAndControlCopySeparate() {
+    let strings = PreferencesStrings(
+      closePreferences: "Close Example Preferences",
+      controls: FlowingStrings(selected: "Chosen")
+    )
+
+    XCTAssertEqual(strings.closePreferences, "Close Example Preferences")
+    XCTAssertEqual(strings.controls.selected, "Chosen")
+  }
+
   func testRoundedScrollIndicatorsStayInsideTheCornerSafeArea() {
     XCTAssertEqual(PreferencesRoundedScrollGeometry.indicatorInset(cornerRadius: 18), 9)
     XCTAssertEqual(PreferencesRoundedScrollGeometry.indicatorInset(cornerRadius: 0), 0)

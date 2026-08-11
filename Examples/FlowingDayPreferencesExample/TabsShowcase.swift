@@ -1,3 +1,4 @@
+import FlowingDayControls
 import FlowingDayPreferences
 import SwiftUI
 
@@ -26,8 +27,8 @@ enum ExampleTab: String, CaseIterable, Hashable {
 }
 
 struct ExampleTabsPreview: View {
-  @Environment(\.preferencesAccent) private var accent
-  @Environment(\.preferencesTypography) private var typography
+  @Environment(\.flowingAccent) private var accent
+  @Environment(\.flowingTypography) private var typography
   @Binding var selection: ExampleTab
   let style: FlowingTabsStyle
   let sizing: FlowingTabsSizing
@@ -60,10 +61,10 @@ struct ExampleTabsPreview: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(selection.title)
             .font(typography.rowTitle.font)
-            .foregroundStyle(PreferencesPalette.ink)
+            .foregroundStyle(FlowingPalette.ink)
           Text(selection.detail)
             .font(typography.rowCaption.font)
-            .foregroundStyle(PreferencesPalette.muted)
+            .foregroundStyle(FlowingPalette.muted)
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)

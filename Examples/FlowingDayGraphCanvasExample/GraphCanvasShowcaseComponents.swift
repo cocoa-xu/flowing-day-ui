@@ -1,7 +1,7 @@
 import FlowingDayCanvas
+import FlowingDayControls
 import FlowingDayGraphCanvas
 import FlowingDayGraphComposition
-import FlowingDayPreferences
 import SwiftUI
 
 struct ShowcaseGridBackground: View {
@@ -18,7 +18,7 @@ struct ShowcaseGridBackground: View {
       draw(levels.coarse, in: &graphics, size: size, radius: 1.15)
       draw(levels.fine, in: &graphics, size: size, radius: 0.85)
     }
-    .background(PreferencesPalette.canvas)
+    .background(FlowingPalette.canvas)
   }
 
   private func draw(
@@ -42,7 +42,7 @@ struct ShowcaseGridBackground: View {
         )
         graphics.fill(
           Path(ellipseIn: rect),
-          with: .color(PreferencesPalette.faint.opacity(0.18 + 0.18 * level.opacity))
+          with: .color(FlowingPalette.faint.opacity(0.18 + 0.18 * level.opacity))
         )
         y += spacing
       }
@@ -59,13 +59,13 @@ struct ShowcaseNode: View {
     let scale = context.renderScale
     ZStack(alignment: .topLeading) {
       RoundedRectangle(cornerRadius: 14 * scale, style: .continuous)
-        .fill(PreferencesPalette.control)
+        .fill(FlowingPalette.control)
         .overlay {
           RoundedRectangle(cornerRadius: 14 * scale, style: .continuous)
             .strokeBorder(
               context.isSelected
-                ? PreferencesAccent.celadon.fill
-                : PreferencesPalette.hairline,
+                ? FlowingAccent.celadon.fill
+                : FlowingPalette.hairline,
               lineWidth: context.isSelected ? 2 : 1
             )
         }
@@ -73,10 +73,10 @@ struct ShowcaseNode: View {
       VStack(alignment: .leading, spacing: 3 * scale) {
         Text(node.value)
           .font(.system(size: 13 * scale, weight: .semibold, design: .rounded))
-          .foregroundStyle(PreferencesPalette.ink)
+          .foregroundStyle(FlowingPalette.ink)
         Text(node.value == "Subgraph" ? "Composite node" : "Graph node")
           .font(.system(size: 9.5 * scale))
-          .foregroundStyle(PreferencesPalette.muted)
+          .foregroundStyle(FlowingPalette.muted)
         Spacer(minLength: 0)
       }
       .padding(13 * scale)
@@ -117,13 +117,13 @@ struct ShowcasePort: View {
   private var fillColor: Color {
     switch context.connectionState {
     case .source:
-      PreferencesAccent.celadon.fill
+      FlowingAccent.celadon.fill
     case .target(.valid, let isCandidate):
       isCandidate ? Color.green.opacity(0.3) : Color.green.opacity(0.12)
     case .target(.invalid, let isCandidate):
-      isCandidate ? Color.red.opacity(0.25) : PreferencesPalette.control
+      isCandidate ? Color.red.opacity(0.25) : FlowingPalette.control
     case .idle:
-      context.isSelected ? PreferencesAccent.celadon.fill : PreferencesPalette.control
+      context.isSelected ? FlowingAccent.celadon.fill : FlowingPalette.control
     }
   }
 
@@ -132,9 +132,9 @@ struct ShowcasePort: View {
     case .target(.valid, _):
       .green
     case .target(.invalid, let isCandidate):
-      isCandidate ? .red : PreferencesAccent.celadon.fill.opacity(0.45)
+      isCandidate ? .red : FlowingAccent.celadon.fill.opacity(0.45)
     case .idle, .source:
-      PreferencesAccent.celadon.fill
+      FlowingAccent.celadon.fill
     }
   }
 }
@@ -152,7 +152,7 @@ struct ShowcaseWorldDecoration: View {
       )
       Text("World Decoration")
         .font(.system(size: 9 * context.renderContext.zoom, weight: .medium))
-        .foregroundStyle(PreferencesPalette.faint)
+        .foregroundStyle(FlowingPalette.faint)
         .position(point)
         .allowsHitTesting(false)
       FlowingGraphCanvasGuideLayer(
@@ -162,8 +162,8 @@ struct ShowcaseWorldDecoration: View {
         FlowingGraphCanvasDefaultGuide(
           context: guideContext,
           style: FlowingGraphCanvasDefaultGuideStyle(
-            lineColor: PreferencesAccent.celadon.fill.opacity(0.84),
-            labelBackgroundColor: PreferencesAccent.celadon.fill
+            lineColor: FlowingAccent.celadon.fill.opacity(0.84),
+            labelBackgroundColor: FlowingAccent.celadon.fill
           ),
           measurementText: { "\(Int($0.rounded())) pt" }
         )
@@ -179,15 +179,15 @@ struct ShowcaseWorldDecoration: View {
   ) -> some View {
     ZStack {
       Rectangle()
-        .strokeBorder(PreferencesAccent.celadon.fill, lineWidth: 1.5)
+        .strokeBorder(FlowingAccent.celadon.fill, lineWidth: 1.5)
         .allowsHitTesting(false)
       FlowingGraphCanvasResizeHandles(actions: resize.actions) { edges in
         let isCorner = edges.rawValue.nonzeroBitCount == 2
         RoundedRectangle(cornerRadius: isCorner ? 3 : 2, style: .continuous)
-          .fill(PreferencesPalette.control)
+          .fill(FlowingPalette.control)
           .overlay {
             RoundedRectangle(cornerRadius: isCorner ? 3 : 2, style: .continuous)
-              .strokeBorder(PreferencesAccent.celadon.fill, lineWidth: 1.5)
+              .strokeBorder(FlowingAccent.celadon.fill, lineWidth: 1.5)
           }
           .frame(width: isCorner ? 10 : 9, height: isCorner ? 10 : 9)
           .accessibilityLabel("Resize \(resizeHandleName(edges))")
@@ -239,18 +239,18 @@ struct ShowcaseCanvasTools: View {
           proxy.fit(content.contentBounds, padding: 56, maximumZoom: 1.1)
         }
         .font(.system(size: 11.5, weight: .semibold))
-        .foregroundStyle(PreferencesPalette.ink)
+        .foregroundStyle(FlowingPalette.ink)
         .buttonStyle(.plain)
         .padding(.horizontal, 10)
       }
       .padding(4)
       .background(
         Capsule()
-          .fill(PreferencesPalette.control)
+          .fill(FlowingPalette.control)
           .shadow(color: .black.opacity(0.09), radius: 10, y: 4)
       )
       .overlay {
-        Capsule().strokeBorder(PreferencesPalette.hairline)
+        Capsule().strokeBorder(FlowingPalette.hairline)
       }
     }
   }
@@ -266,15 +266,15 @@ struct ShowcaseCanvasTools: View {
         .font(.system(size: 12, weight: .semibold))
         .foregroundStyle(
           session.tool == tool
-            ? PreferencesAccent.celadon.foreground
-            : PreferencesPalette.muted
+            ? FlowingAccent.celadon.foreground
+            : FlowingPalette.muted
         )
         .frame(width: 30, height: 28)
         .background(
           RoundedRectangle(cornerRadius: 8, style: .continuous)
             .fill(
               session.tool == tool
-                ? PreferencesAccent.celadon.fill
+                ? FlowingAccent.celadon.fill
                 : Color.clear
             )
         )
