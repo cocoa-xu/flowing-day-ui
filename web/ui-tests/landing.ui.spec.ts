@@ -43,10 +43,12 @@ test('landing detail overlays stay anchored to their controls', async ({ page })
 test('landing footer remains restrained at narrow widths', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const footer = page.locator('.site-footer')
+  const profile = footer.getByRole('link', { name: 'Cocoa' })
 
   await footer.scrollIntoViewIfNeeded()
   await expect(footer).toBeVisible()
   await expect(footer).toHaveText('Copyright © 2026 Cocoa')
+  await expect(profile).toHaveAttribute('href', 'https://github.com/cocoa-xu')
   await expect(footer).toHaveCSS('font-size', '11px')
   await expect(footer).toHaveCSS('border-top-width', '1px')
   const bounds = await footer.boundingBox()

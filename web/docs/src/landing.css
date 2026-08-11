@@ -631,6 +631,21 @@ html[data-landing-scheme="dark"] .component-composition::before {
   font-size: inherit;
 }
 
+.site-footer a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  color: var(--landing-accent-foreground);
+}
+
+.site-footer a:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid color-mix(in srgb, var(--landing-accent) 46%, transparent);
+  outline-offset: 3px;
+}
+
 /* Driven by the Appearance page's "Show row separators" switch. */
 fd-preferences-window[data-separators="off"] fd-separator {
   display: none;

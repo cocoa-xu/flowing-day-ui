@@ -121,7 +121,9 @@ describe('landing page structure', () => {
   it('ends with a restrained copyright footer', () => {
     const footer = landing.slice(landing.indexOf('<footer class="site-footer">'))
 
-    expect(footer).toContain('<small>Copyright © 2026 Cocoa</small>')
+    expect(footer).toContain(
+      '<small>Copyright © 2026 <a href="https://github.com/cocoa-xu">Cocoa</a></small>',
+    )
     expect(footer.indexOf('</footer>')).toBeLessThan(footer.indexOf('<script'))
   })
 
