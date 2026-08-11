@@ -125,35 +125,13 @@ html[data-landing-scheme="dark"] body {
 }
 
 .landing-canvas-surface {
-  background:
-    radial-gradient(
-      ellipse 44rem 35rem at 12% 3%,
-      oklch(from var(--landing-honey) 0.93 calc(c * 0.42) h / 0.64),
-      transparent 70%
-    ),
-    radial-gradient(
-      ellipse 46rem 38rem at 88% 8%,
-      oklch(from var(--landing-sprout) 0.94 calc(c * 0.36) h / 0.58),
-      transparent 72%
-    ),
-    linear-gradient(180deg, #fffef9 0%, #f7f7f0 100%);
+  background: linear-gradient(180deg, #fdfdfb 0%, var(--landing-page) 100%);
 }
 
 .landing-canvas-surface::after {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(
-      ellipse 44rem 35rem at 12% 3%,
-      oklch(from var(--landing-honey) 0.3 calc(c * 0.42) h / 0.46),
-      transparent 72%
-    ),
-    radial-gradient(
-      ellipse 46rem 38rem at 88% 8%,
-      oklch(from var(--landing-sprout) 0.28 calc(c * 0.36) h / 0.4),
-      transparent 74%
-    ),
-    linear-gradient(180deg, #171912 0%, var(--landing-page) 100%);
+  background: linear-gradient(180deg, #151714 0%, var(--landing-page) 100%);
   content: "";
   opacity: 0;
   pointer-events: none;
@@ -169,12 +147,7 @@ html[data-landing-scheme="dark"] .landing-canvas-surface::after {
   inset: 0;
   background-image: radial-gradient(
     circle,
-    color-mix(
-        in oklab,
-        color-mix(in oklab, var(--landing-honey) 46%, var(--landing-sprout)) 38%,
-        var(--landing-map-ink)
-      )
-      1px,
+    color-mix(in oklab, var(--landing-map-ink) 44%, transparent) 1px,
     transparent 1.25px
   );
   background-position: var(--backdrop-grid-x) var(--backdrop-grid-y);
@@ -209,11 +182,7 @@ html[data-landing-scheme="dark"] .landing-canvas-surface::after {
   overflow: visible;
   fill: none;
   opacity: 0.3;
-  stroke: color-mix(
-    in oklab,
-    color-mix(in oklab, var(--landing-honey) 48%, var(--landing-sprout)) 42%,
-    var(--landing-map-ink)
-  );
+  stroke: var(--landing-map-ink);
   stroke-linecap: round;
   stroke-width: 1.5;
 }
@@ -223,7 +192,7 @@ html[data-landing-scheme="dark"] .landing-canvas-surface::after {
 }
 
 .landing-map-node {
-  --map-accent: var(--landing-honey);
+  --map-accent: var(--landing-accent);
 
   position: absolute;
   top: var(--map-y);
@@ -235,11 +204,11 @@ html[data-landing-scheme="dark"] .landing-canvas-surface::after {
   box-sizing: border-box;
   gap: 10px;
   padding: 0 17px 0 13px;
-  border: 1px solid color-mix(in oklab, var(--map-accent) 16%, var(--landing-map-neutral));
+  border: 1px solid var(--landing-map-neutral);
   border-radius: 15px;
   background: var(--landing-map-surface);
   box-shadow: var(--landing-map-shadow);
-  color: color-mix(in oklab, var(--map-accent) 30%, var(--landing-map-ink));
+  color: var(--landing-map-ink);
   font-family: var(--fd-font-rounded);
   font-size: 13px;
   font-weight: 610;
@@ -248,7 +217,7 @@ html[data-landing-scheme="dark"] .landing-canvas-surface::after {
 }
 
 .landing-map-node[data-tone="sprout"] {
-  --map-accent: var(--landing-sprout);
+  --map-accent: color-mix(in oklab, var(--landing-accent) 48%, var(--landing-map-ink));
 }
 
 .landing-map-marker {

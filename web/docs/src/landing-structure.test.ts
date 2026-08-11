@@ -59,6 +59,22 @@ describe('landing page structure', () => {
     expect(backdropStyles).toContain('pointer-events: none')
   })
 
+  it('keeps the backdrop neutral and reserves color for small markers', () => {
+    const surfaceStyles = landingStyles.slice(
+      landingStyles.indexOf('.landing-canvas-surface {'),
+      landingStyles.indexOf('}', landingStyles.indexOf('.landing-canvas-surface {')),
+    )
+    const markerStyles = landingStyles.slice(
+      landingStyles.indexOf('.landing-map-marker {'),
+      landingStyles.indexOf('}', landingStyles.indexOf('.landing-map-marker {')),
+    )
+
+    expect(surfaceStyles).not.toContain('radial-gradient')
+    expect(surfaceStyles).not.toContain('--landing-honey')
+    expect(surfaceStyles).not.toContain('--landing-sprout')
+    expect(markerStyles).toContain('--map-accent')
+  })
+
   it('links navigation to each experience', () => {
     expect(landing).toContain('<a href="#components">Components</a>')
     expect(landing).toContain('<a href="#preferences" data-page="appearance">Preferences</a>')
