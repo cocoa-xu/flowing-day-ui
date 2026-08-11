@@ -38,6 +38,9 @@ declare global {
     'fd-submit': CustomEvent<undefined>
     'fd-query-change': CustomEvent<{ query: string }>
     'fd-page-change': CustomEvent<{ page: string }>
-    'fd-close': CustomEvent<undefined>
+    'fd-open': CustomEvent<undefined>
+    'fd-confirm': CustomEvent<undefined>
+    'fd-cancel': CustomEvent<undefined>
+    'fd-close': CustomEvent<{ returnValue?: string } | undefined>
   }
 }

@@ -51,3 +51,28 @@ export const magnifyingGlass = svg`
       stroke-linecap="round"
     />
   </svg>`
+
+export const warningTriangle = svg`
+  <svg viewBox="0 0 16 16" aria-hidden="true">
+    <path
+      d="M8 2.1 14.1 13H1.9L8 2.1Z"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linejoin="round"
+    />
+    <path d="M8 5.6v3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+    <circle cx="8" cy="11.3" r="0.8" fill="currentColor" />
+  </svg>`
+
+export const trash = svg`
+  <svg viewBox="0 0 16 16" aria-hidden="true">
+    <path
+      d="M4.3 5.2h7.4l-.5 8H4.8l-.5-8Zm1.8-2.4h3.8l.6 1.4h-5l.6-1.4Z"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.35"
+      stroke-linejoin="round"
+    />
+    <path d="M3 4.2h10M6.7 7v4.2M9.3 7v4.2" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" />
+  </svg>`

@@ -11,6 +11,8 @@ import './components/connected-segmented-row/fd-connected-segmented-row.js'
 import './components/connected-segmented-control/fd-connected-segmented-control.js'
 import './components/dependent-rows/fd-dependent-rows.js'
 import './components/disclosure/fd-disclosure.js'
+import './components/dialog/fd-dialog-action.js'
+import './components/dialog/fd-dialog.js'
 import './components/empty-row/fd-empty-row.js'
 import './components/empty-state/fd-empty-state.js'
 import './components/expandable-row/fd-expandable-row.js'
@@ -28,6 +30,7 @@ import './components/page/fd-page.js'
 import './components/pane-stack/fd-pane-stack.js'
 import './components/popup-row/fd-popup-row.js'
 import './components/popup/fd-popup.js'
+import './components/popover/fd-popover.js'
 import './components/progress/fd-progress.js'
 import './components/row/fd-row.js'
 import './components/search-picker-row/fd-search-picker-row.js'
@@ -46,8 +49,10 @@ import './components/switch-row/fd-switch-row.js'
 import './components/switch/fd-switch.js'
 import './components/symbol-segmented-row/fd-symbol-segmented-row.js'
 import './components/tag/fd-tag.js'
+import './components/tabs/fd-tabs.js'
 import './components/text-area/fd-text-area.js'
 import './components/text-field/fd-text-field.js'
+import './components/tooltip/fd-tooltip.js'
 import './components/value-row/fd-value-row.js'
 import './components/value-text/fd-value-text.js'
 
@@ -68,6 +73,12 @@ export { FdColorPickerRow } from './components/color-picker-row/fd-color-picker-
 export { FdConnectedSegmentedControl } from './components/connected-segmented-control/fd-connected-segmented-control.js'
 export { FdConnectedSegmentedRow } from './components/connected-segmented-row/fd-connected-segmented-row.js'
 export { FdDependentRows } from './components/dependent-rows/fd-dependent-rows.js'
+export {
+  type FdConfirmationKind,
+  FdDialog,
+  type FdDialogTone,
+} from './components/dialog/fd-dialog.js'
+export { FdDialogAction } from './components/dialog/fd-dialog-action.js'
 export { FdDisclosure } from './components/disclosure/fd-disclosure.js'
 export { FdEmptyRow } from './components/empty-row/fd-empty-row.js'
 export { FdEmptyState, type FdEmptyStateLayout } from './components/empty-state/fd-empty-state.js'
@@ -88,6 +99,7 @@ export { FdOption } from './components/option/fd-option.js'
 export { FdPage } from './components/page/fd-page.js'
 export { FdPageGroup } from './components/page/fd-page-group.js'
 export { FdPaneStack } from './components/pane-stack/fd-pane-stack.js'
+export { FdPopover } from './components/popover/fd-popover.js'
 export { FdPopup, type FdPopupOption } from './components/popup/fd-popup.js'
 export { FdPopupRow } from './components/popup-row/fd-popup-row.js'
 export {
@@ -116,14 +128,24 @@ export { FdSwitch } from './components/switch/fd-switch.js'
 export { FdSwitchGroup } from './components/switch-group/fd-switch-group.js'
 export { FdSwitchRow } from './components/switch-row/fd-switch-row.js'
 export { FdSymbolSegmentedRow } from './components/symbol-segmented-row/fd-symbol-segmented-row.js'
+export {
+  type FdTabLabelContent,
+  FdTabs,
+  type FdTabsAlignment,
+  type FdTabsOverflow,
+  type FdTabsSizing,
+  type FdTabsVariant,
+} from './components/tabs/fd-tabs.js'
 export { FdTag } from './components/tag/fd-tag.js'
 export { FdTextArea } from './components/text-area/fd-text-area.js'
 export { FdTextField } from './components/text-field/fd-text-field.js'
+export { FdTooltip } from './components/tooltip/fd-tooltip.js'
 export { FdValueRow } from './components/value-row/fd-value-row.js'
 export { FdValueText, type FdValueTextTruncation } from './components/value-text/fd-value-text.js'
 export type { FdActivateDetail, FdChangeDetail } from './internal/events.js'
 export { FdIcons } from './internal/icon-registry.js'
 export type { CollectedOption } from './internal/options.js'
+export type { FdOverlayPlacement } from './internal/overlay-position.js'
 export { FdSliderMath } from './internal/slider-math.js'
 export { type FdStrings, FdStringsRegistry } from './internal/strings.js'
 export type { FdTextFieldEmphasis } from './internal/text-input.js'
