@@ -64,45 +64,32 @@ describe('landing page structure', () => {
     expect(secondaryStyles).toContain('inset: auto')
   })
 
-  it('starts the decorative graph with reusable controls', () => {
+  it('uses a quiet decorative backdrop without graph content', () => {
     const backdrop = landing.slice(
-      landing.indexOf('class="landing-canvas-world"'),
-      landing.indexOf('</fd-canvas>'),
-    )
-
-    expect(backdrop.indexOf('Controls')).toBeGreaterThan(-1)
-    expect(backdrop.indexOf('Preferences')).toBeGreaterThan(backdrop.indexOf('Controls'))
-  })
-
-  it('keeps the decorative backdrop out of pointer interaction', () => {
-    const backdrop = landing.slice(
-      landing.indexOf('<fd-canvas\n      id="landing-backdrop"'),
-      landing.indexOf('>', landing.indexOf('id="landing-backdrop"')),
+      landing.indexOf('<div id="landing-backdrop"'),
+      landing.indexOf('<header class="site-header">'),
     )
     const backdropStyles = landingStyles.slice(
       landingStyles.indexOf('.landing-backdrop {'),
       landingStyles.indexOf('}', landingStyles.indexOf('.landing-backdrop {')),
     )
 
-    expect(backdrop).not.toContain('interaction-mode')
-    expect(backdrop).not.toContain('allows-page-scroll')
+    expect(backdrop).toContain('class="landing-canvas-surface"')
+    expect(backdrop).not.toContain('landing-canvas-world')
+    expect(landing).not.toContain('landing-canvas-routes')
+    expect(landing).not.toContain('landing-map-node')
     expect(backdropStyles).toContain('pointer-events: none')
   })
 
-  it('keeps the backdrop neutral and reserves color for small markers', () => {
+  it('keeps the backdrop surface neutral', () => {
     const surfaceStyles = landingStyles.slice(
       landingStyles.indexOf('.landing-canvas-surface {'),
       landingStyles.indexOf('}', landingStyles.indexOf('.landing-canvas-surface {')),
-    )
-    const markerStyles = landingStyles.slice(
-      landingStyles.indexOf('.landing-map-marker {'),
-      landingStyles.indexOf('}', landingStyles.indexOf('.landing-map-marker {')),
     )
 
     expect(surfaceStyles).not.toContain('radial-gradient')
     expect(surfaceStyles).not.toContain('--landing-honey')
     expect(surfaceStyles).not.toContain('--landing-sprout')
-    expect(markerStyles).toContain('--map-accent')
   })
 
   it('links navigation to each experience', () => {

@@ -7,73 +7,10 @@
     <link rel="stylesheet" href="./src/landing.css" />
   </head>
   <body>
-    <fd-canvas
-      id="landing-backdrop"
-      class="landing-backdrop"
-      viewport-tab-index="-1"
-      aria-hidden="true"
-    >
-      <div class="landing-canvas-surface" slot="background"></div>
-      <div class="landing-canvas-grid" slot="background"></div>
-      <div class="landing-canvas-world" slot="world">
-        <svg class="landing-canvas-routes" viewBox="0 0 2400 1500" aria-hidden="true">
-          <path d="M382 288 C600 288 610 213 820 213" />
-          <path d="M966 213 C1240 213 1260 353 1520 353" />
-          <path d="M382 288 C470 550 420 810 480 1003" />
-          <path d="M626 1003 C840 1003 860 1123 1080 1123" />
-          <path d="M1226 1123 C1450 1123 1580 943 1830 943" />
-          <path d="M1666 353 C1910 353 1960 660 1990 900" />
-        </svg>
-        <span
-          class="landing-map-node"
-          data-emphasis="brand"
-          style="--map-x: 236px; --map-y: 265px"
-        >
-          <span class="landing-map-marker"></span>
-          Controls
-        </span>
-        <span
-          class="landing-map-node"
-          data-emphasis="quiet"
-          style="--map-x: 820px; --map-y: 190px"
-        >
-          <span class="landing-map-marker"></span>
-          Preferences
-        </span>
-        <span
-          class="landing-map-node"
-          data-emphasis="brand"
-          style="--map-x: 1520px; --map-y: 330px"
-        >
-          <span class="landing-map-marker"></span>
-          Canvas
-        </span>
-        <span
-          class="landing-map-node"
-          data-emphasis="quiet"
-          style="--map-x: 480px; --map-y: 980px"
-        >
-          <span class="landing-map-marker"></span>
-          Motion
-        </span>
-        <span
-          class="landing-map-node"
-          data-emphasis="brand"
-          style="--map-x: 1080px; --map-y: 1100px"
-        >
-          <span class="landing-map-marker"></span>
-          Accessibility
-        </span>
-        <span
-          class="landing-map-node"
-          data-emphasis="quiet"
-          style="--map-x: 1830px; --map-y: 920px"
-        >
-          <span class="landing-map-marker"></span>
-          Tokens
-        </span>
-      </div>
-    </fd-canvas>
+    <div id="landing-backdrop" class="landing-backdrop" aria-hidden="true">
+      <div class="landing-canvas-surface"></div>
+      <div class="landing-canvas-grid"></div>
+    </div>
 
     <header class="site-header">
       <a class="brand" href="#components" aria-label="FlowingDayUI home">

@@ -21,11 +21,8 @@ body {
   --landing-navigation-surface: rgb(255 255 253 / 0.82);
   --landing-navigation-shadow:
     0 12px 34px rgb(64 78 68 / 0.11), inset 0 1px rgb(255 255 255 / 0.84);
-  --landing-map-neutral: #d4d7d0;
-  --landing-map-surface: rgb(255 255 252 / 0.72);
-  --landing-map-ink: #5f635d;
-  --landing-map-shadow: 0 12px 32px rgb(67 74 64 / 0.055), inset 0 1px rgb(255 255 255 / 0.84);
-  --landing-map-marker-ring: #fff;
+  --landing-card-surface: rgb(255 255 252 / 0.72);
+  --landing-backdrop-grid: #7b8078;
   --landing-canvas: #fff;
   --landing-grid: #c4c8c2;
   --landing-edge: #b3b7b1;
@@ -74,11 +71,8 @@ html[data-landing-scheme="dark"] body {
   --landing-navigation-border: rgb(255 255 255 / 0.09);
   --landing-navigation-surface: rgb(28 31 27 / 0.84);
   --landing-navigation-shadow: 0 14px 38px rgb(0 0 0 / 0.32), inset 0 1px rgb(255 255 255 / 0.07);
-  --landing-map-neutral: #3d423a;
-  --landing-map-surface: rgb(25 28 24 / 0.76);
-  --landing-map-ink: #9ca298;
-  --landing-map-shadow: 0 14px 36px rgb(0 0 0 / 0.2), inset 0 1px rgb(255 255 255 / 0.055);
-  --landing-map-marker-ring: #1b1e1a;
+  --landing-card-surface: rgb(25 28 24 / 0.76);
+  --landing-backdrop-grid: #8d9488;
   --landing-canvas: #151714;
   --landing-grid: #484d46;
   --landing-edge: #5a6057;
@@ -147,87 +141,21 @@ html[data-landing-scheme="dark"] .landing-canvas-surface::after {
   inset: 0;
   background-image: radial-gradient(
     circle,
-    color-mix(in oklab, var(--landing-map-ink) 44%, transparent) 1px,
+    color-mix(in oklab, var(--landing-backdrop-grid) 44%, transparent) 1px,
     transparent 1.25px
   );
-  background-position: var(--backdrop-grid-x) var(--backdrop-grid-y);
+  background-position: 0 0;
   content: "";
 }
 
 .landing-canvas-grid::before {
-  opacity: calc(var(--backdrop-grid-coarse-opacity, 0.5) * 0.2);
-  background-size: var(--backdrop-grid-coarse-spacing, 64px)
-    var(--backdrop-grid-coarse-spacing, 64px);
+  opacity: 0.1;
+  background-size: 64px 64px;
 }
 
 .landing-canvas-grid::after {
-  opacity: calc(var(--backdrop-grid-fine-opacity, 0.5) * 0.16);
-  background-size: var(--backdrop-grid-fine-spacing, 32px) var(--backdrop-grid-fine-spacing, 32px);
-}
-
-.landing-canvas-world {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 2400px;
-  height: 1500px;
-  pointer-events: none;
-}
-
-.landing-canvas-routes {
-  position: absolute;
-  inset: 0;
-  width: 2400px;
-  height: 1500px;
-  overflow: visible;
-  fill: none;
-  opacity: 0.3;
-  stroke: var(--landing-map-ink);
-  stroke-linecap: round;
-  stroke-width: 1.5;
-}
-
-.landing-canvas-routes path {
-  vector-effect: non-scaling-stroke;
-}
-
-.landing-map-node {
-  --map-accent: var(--landing-accent);
-
-  position: absolute;
-  top: var(--map-y);
-  left: var(--map-x);
-  display: inline-flex;
-  align-items: center;
-  min-width: 146px;
-  height: 46px;
-  box-sizing: border-box;
-  gap: 10px;
-  padding: 0 17px 0 13px;
-  border: 1px solid var(--landing-map-neutral);
-  border-radius: 15px;
-  background: var(--landing-map-surface);
-  box-shadow: var(--landing-map-shadow);
-  color: var(--landing-map-ink);
-  font-family: var(--fd-font-rounded);
-  font-size: 13px;
-  font-weight: 610;
-  letter-spacing: -0.01em;
-  opacity: 0.48;
-}
-
-.landing-map-node[data-emphasis="quiet"] {
-  --map-accent: color-mix(in oklab, var(--landing-accent) 48%, var(--landing-map-ink));
-}
-
-.landing-map-marker {
-  width: 8px;
-  height: 8px;
-  flex: none;
-  border: 3px solid color-mix(in oklab, var(--map-accent) 18%, var(--landing-map-marker-ring));
-  border-radius: 50%;
-  background: var(--map-accent);
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--map-accent) 32%, transparent);
+  opacity: 0.07;
+  background-size: 32px 32px;
 }
 
 .site-header {
@@ -660,7 +588,7 @@ html[data-landing-scheme="dark"] .component-composition::before {
   padding: 20px;
   border: 1px solid var(--landing-component-field-border);
   border-radius: 22px;
-  background: var(--landing-map-surface);
+  background: var(--landing-card-surface);
   box-shadow: var(--landing-component-shadow);
   grid-template-rows: auto 1fr auto;
 }
@@ -1103,12 +1031,6 @@ html[data-landing-scheme="dark"] .canvas-frame {
     view-timeline: --canvas-arrival block;
   }
 
-  .landing-canvas-world {
-    animation: landing-world-release 1ms linear both;
-    animation-range: entry 0% entry 85%;
-    animation-timeline: --canvas-arrival;
-  }
-
   .canvas-world {
     animation: canvas-world-arrival 1ms linear both;
     animation-range: entry 28% entry 100%;
@@ -1119,24 +1041,6 @@ html[data-landing-scheme="dark"] .canvas-frame {
     animation: canvas-copy-reveal 1ms linear both;
     animation-range: entry 52% entry 100%;
     animation-timeline: --canvas-arrival;
-  }
-}
-
-@keyframes landing-world-release {
-  0%,
-  18% {
-    opacity: 1;
-    filter: blur(0);
-  }
-
-  78% {
-    opacity: 0.12;
-    filter: blur(1.5px);
-  }
-
-  100% {
-    opacity: 0;
-    filter: blur(3px);
   }
 }
 
@@ -1167,7 +1071,6 @@ html[data-landing-scheme="dark"] .canvas-frame {
 @media (prefers-reduced-motion: no-preference) {
   body,
   .site-nav,
-  .landing-map-node,
   .canvas-showcase,
   .canvas-frame,
   .canvas-node,
@@ -1193,7 +1096,6 @@ html[data-landing-scheme="dark"] .canvas-frame {
     transition: opacity 220ms ease-out;
   }
 
-  .landing-canvas-routes,
   .canvas-edges {
     transition: stroke 180ms ease-out;
   }
@@ -1404,8 +1306,7 @@ html[data-landing-scheme="dark"] .canvas-frame {
 
   .canvas-frame,
   .canvas-showcase-header,
-  .canvas-world,
-  .landing-canvas-world {
+  .canvas-world {
     animation: none;
   }
 }
