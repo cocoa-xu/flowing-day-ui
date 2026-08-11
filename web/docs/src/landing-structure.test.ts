@@ -101,8 +101,17 @@ describe('landing page structure', () => {
 
     expect(start).toContain('FlowingDayControls')
     expect(start).toContain('@flowing-day/ui')
-    expect(start).toContain('Swift guide')
-    expect(start).toContain('Web guide')
+    expect(start).toContain('Swift Guide')
+    expect(start).toContain('Web Guide')
+    expect(start).not.toContain('Swift guide')
+    expect(start).not.toContain('Web guide')
+  })
+
+  it('ends with a restrained copyright footer', () => {
+    const footer = landing.slice(landing.indexOf('<footer class="site-footer">'))
+
+    expect(footer).toContain('<small>Copyright © 2026 Cocoa</small>')
+    expect(footer.indexOf('</footer>')).toBeLessThan(footer.indexOf('<script'))
   })
 
   it('does not advertise the canvas without a meaningful demonstration', () => {

@@ -613,6 +613,24 @@ html[data-landing-scheme="dark"] .component-composition::before {
   outline-offset: 3px;
 }
 
+.site-footer {
+  position: relative;
+  z-index: 1;
+  width: min(1240px, calc(100% - 64px));
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 24px 0 32px;
+  border-top: 1px solid var(--landing-navigation-border);
+  color: var(--landing-faint);
+  font-family: var(--fd-font-rounded);
+  font-size: 11px;
+  letter-spacing: 0.01em;
+}
+
+.site-footer small {
+  font-size: inherit;
+}
+
 /* Driven by the Appearance page's "Show row separators" switch. */
 fd-preferences-window[data-separators="off"] fd-separator {
   display: none;
@@ -793,6 +811,11 @@ fd-preferences-window[data-separators="off"] fd-separator {
   .component-choice-tags {
     order: 4;
     padding-inline: 8px;
+  }
+
+  .site-footer {
+    width: calc(100% - 32px);
+    padding: 20px 0 28px;
   }
 }
 
