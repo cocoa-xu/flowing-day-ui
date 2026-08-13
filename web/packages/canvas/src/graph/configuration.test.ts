@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { resolveGraphCanvasConfiguration } from './configuration.js'
+import {
+  resolveGraphCanvasConfiguration,
+  resolveGraphCanvasGridConfiguration,
+} from './configuration.js'
 
 describe('graph canvas configuration', () => {
   it('matches the Swift defaults', () => {
@@ -55,5 +58,48 @@ describe('graph canvas configuration', () => {
         keyboardNudging: { step: 8, largeStep: 4 },
       }),
     ).toThrow('large keyboard nudge step must not be smaller than the standard step')
+  })
+
+  it('matches Swift node resizing and snapping initializer semantics', () => {
+    expect(
+      resolveGraphCanvasConfiguration({
+        nodeResizing: { isEnabled: true, minimumSize: { width: 0, height: 0 } },
+        snapping: { isEnabled: false },
+      }),
+    ).toMatchObject({
+      nodeResizing: { isEnabled: true, minimumSize: { width: 0, height: 0 } },
+      snapping: { isEnabled: false, showsGuides: true },
+    })
+  })
+
+  it('resolves and validates Swift-aligned grid values', () => {
+    expect(
+      resolveGraphCanvasGridConfiguration({
+        origin: { x: 5, y: 10 },
+        majorCellSize: { width: 80, height: 60 },
+        subdivisions: { x: 4, y: 3 },
+        enabledAxes: new Set(['x']),
+        roundingPolicy: 'down',
+      }),
+    ).toEqual({
+      origin: { x: 5, y: 10 },
+      majorCellSize: { width: 80, height: 60 },
+      minorCellSize: { width: 20, height: 20 },
+      subdivisions: { x: 4, y: 3 },
+      enabledAxes: new Set(['x']),
+      roundingPolicy: 'down',
+    })
+    expect(() =>
+      resolveGraphCanvasGridConfiguration({
+        origin: { x: Number.NaN, y: 0 },
+        majorCellSize: { width: 20, height: 20 },
+      }),
+    ).toThrow('grid origin must be finite')
+    expect(() =>
+      resolveGraphCanvasGridConfiguration({
+        majorCellSize: { width: 20, height: 20 },
+        subdivisions: { x: 0 },
+      }),
+    ).toThrow('horizontal grid subdivisions must be positive')
   })
 })

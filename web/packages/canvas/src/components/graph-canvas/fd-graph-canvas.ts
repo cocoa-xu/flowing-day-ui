@@ -1551,7 +1551,6 @@ export class FdGraphCanvas
     const policy = this.interactionPolicy
     const targets = configuration.snapping.targets
     const grid = configuration.snapping.grid
-    const subdivisions = grid?.subdivisions ?? {}
     this.resolvedGraphConfiguration = configuration
     this.resolvedInteractionConfiguration = resolveGraphCanvasInteractionConfiguration({
       nodeDragging: configuration.nodeDraggingMode !== 'disabled',
@@ -1588,13 +1587,13 @@ export class FdGraphCanvas
           ? {
               grid: {
                 enabled: targets.has('grid'),
-                width: grid.majorCellSize.width / (subdivisions.x ?? 1),
-                height: grid.majorCellSize.height / (subdivisions.y ?? 1),
-                originX: grid.origin?.x ?? 0,
-                originY: grid.origin?.y ?? 0,
-                snapsX: grid.enabledAxes?.has('x') ?? true,
-                snapsY: grid.enabledAxes?.has('y') ?? true,
-                rounding: grid.roundingPolicy ?? 'nearest',
+                width: grid.minorCellSize.width,
+                height: grid.minorCellSize.height,
+                originX: grid.origin.x,
+                originY: grid.origin.y,
+                snapsX: grid.enabledAxes.has('x'),
+                snapsY: grid.enabledAxes.has('y'),
+                rounding: grid.roundingPolicy,
               },
             }
           : {}),

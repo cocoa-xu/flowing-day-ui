@@ -41,6 +41,15 @@ export interface FdGraphCanvasGridConfiguration {
   readonly roundingPolicy?: FdGraphCanvasGridRoundingPolicy
 }
 
+export interface FdResolvedGraphCanvasGridConfiguration {
+  readonly origin: FdCanvasPoint
+  readonly majorCellSize: FdCanvasSize
+  readonly minorCellSize: FdCanvasSize
+  readonly subdivisions: Required<FdGraphCanvasGridSubdivisions>
+  readonly enabledAxes: ReadonlySet<FdGraphCanvasGridAxis>
+  readonly roundingPolicy: FdGraphCanvasGridRoundingPolicy
+}
+
 export type FdGraphCanvasSnapTarget = 'alignment' | 'grid' | 'equalSpacing' | 'equalSize'
 
 export interface FdGraphCanvasSnappingConfiguration {
@@ -92,7 +101,7 @@ export interface FdResolvedGraphCanvasConfiguration {
   readonly nodeResizing: Required<FdGraphCanvasNodeResizingConfiguration>
   readonly connectionEditing: Required<FdGraphCanvasConnectionEditingConfiguration>
   readonly snapping: Omit<Required<FdGraphCanvasSnappingConfiguration>, 'grid'> & {
-    readonly grid?: FdGraphCanvasGridConfiguration
+    readonly grid?: FdResolvedGraphCanvasGridConfiguration
   }
   readonly rendersDefaultGuides: boolean
   readonly allowsArrangementCommands: boolean
@@ -114,6 +123,33 @@ const positive = (value: number, name: string): number => {
 const positiveInteger = (value: number, name: string): number => {
   if (!Number.isInteger(value) || value <= 0) throw new RangeError(`${name} must be positive`)
   return value
+}
+
+export function resolveGraphCanvasGridConfiguration(
+  configuration: FdGraphCanvasGridConfiguration,
+): FdResolvedGraphCanvasGridConfiguration {
+  const origin = configuration.origin ?? { x: 0, y: 0 }
+  const subdivisions = configuration.subdivisions ?? {}
+  const x = positiveInteger(subdivisions.x ?? 1, 'horizontal grid subdivisions')
+  const y = positiveInteger(subdivisions.y ?? 1, 'vertical grid subdivisions')
+  if (!Number.isFinite(origin.x) || !Number.isFinite(origin.y)) {
+    throw new RangeError('grid origin must be finite')
+  }
+  const majorCellSize = {
+    width: positive(configuration.majorCellSize.width, 'major grid cell width'),
+    height: positive(configuration.majorCellSize.height, 'major grid cell height'),
+  }
+  return {
+    origin: { ...origin },
+    majorCellSize,
+    minorCellSize: {
+      width: majorCellSize.width / x,
+      height: majorCellSize.height / y,
+    },
+    subdivisions: { x, y },
+    enabledAxes: new Set(configuration.enabledAxes ?? ['x', 'y']),
+    roundingPolicy: configuration.roundingPolicy ?? 'nearest',
+  }
 }
 
 export function resolveGraphCanvasConfiguration(
@@ -148,8 +184,8 @@ export function resolveGraphCanvasConfiguration(
     nodeResizing: {
       isEnabled: configuration.nodeResizing?.isEnabled ?? false,
       minimumSize: {
-        width: positive(minimumSize.width, 'minimum node width'),
-        height: positive(minimumSize.height, 'minimum node height'),
+        width: nonnegative(minimumSize.width, 'minimum node width'),
+        height: nonnegative(minimumSize.height, 'minimum node height'),
       },
     },
     connectionEditing: {
@@ -172,17 +208,27 @@ export function resolveGraphCanvasConfiguration(
     snapping: {
       isEnabled: configuration.snapping?.isEnabled ?? false,
       targets:
-        configuration.snapping?.targets ??
-        new Set<FdGraphCanvasSnapTarget>(['alignment', 'grid', 'equalSpacing', 'equalSize']),
+        new Set(
+          configuration.snapping?.targets ?? [
+            'alignment',
+            'grid',
+            'equalSpacing',
+            'equalSize',
+          ],
+        ),
       tolerance: snapTolerance,
       searchRadius: nonnegative(configuration.snapping?.searchRadius ?? 600, 'snap search radius'),
       maximumCandidates: positiveInteger(
         configuration.snapping?.maximumCandidates ?? 512,
         'maximum snap candidates',
       ),
-      ...(configuration.snapping?.grid ? { grid: configuration.snapping.grid } : {}),
+      ...(configuration.snapping?.grid
+        ? { grid: resolveGraphCanvasGridConfiguration(configuration.snapping.grid) }
+        : {}),
       showsGuides:
-        configuration.snapping?.showsGuides ?? configuration.snapping?.isEnabled ?? false,
+        configuration.snapping === undefined
+          ? false
+          : (configuration.snapping.showsGuides ?? true),
       guideOffset: nonnegative(configuration.snapping?.guideOffset ?? 8, 'snap guide offset'),
       releaseTolerance: snapReleaseTolerance,
     },
