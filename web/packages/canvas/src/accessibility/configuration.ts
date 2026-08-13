@@ -1,6 +1,6 @@
 import type { FdAnyGraphEdge, FdAnyGraphNode, FdGraphPort } from '../graph/model.js'
 import type { FdGraphCanvasPlatformAdapter } from '../graph/platform-adapter.js'
-import type { FdGraphNavigationDirection } from '../interactions/keyboard.js'
+import type { FdGraphCanvasNavigationDirection } from '../interactions/keyboard.js'
 
 export interface FdGraphCanvasAccessibilityCapabilities {
   readonly focusNavigation?: boolean
@@ -62,7 +62,7 @@ export type FdGraphCanvasAccessibilityCommand =
   | { readonly kind: 'perform'; readonly action: FdGraphCanvasElementAction }
   | {
       readonly kind: 'move'
-      readonly direction: FdGraphNavigationDirection
+      readonly direction: FdGraphCanvasNavigationDirection
       readonly large: boolean
     }
 
@@ -122,7 +122,7 @@ const defaultEdgeRepresentation = (
   return label ? element(label) : { kind: 'hidden' }
 }
 
-const directions: Readonly<Record<string, FdGraphNavigationDirection>> = {
+const directions: Readonly<Record<string, FdGraphCanvasNavigationDirection>> = {
   ArrowUp: 'up',
   ArrowDown: 'down',
   ArrowLeft: 'left',

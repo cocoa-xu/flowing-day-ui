@@ -1,7 +1,7 @@
 import type { FdGraphCanvasAccessibilityConfiguration } from '../accessibility/configuration.js'
 import { type FdCanvasConfiguration, resolveCanvasConfiguration } from '../configuration.js'
 import type { FdCanvasPoint, FdCanvasSize } from '../geometry.js'
-import type { FdGraphKeyboardSelectionBehavior } from '../interactions/keyboard.js'
+import type { FdGraphCanvasKeyboardSelectionBehavior } from '../interactions/keyboard.js'
 import type { FdGraphCanvasRenderingBackendPreference } from '../rendering/backend.js'
 
 export type FdGraphCanvasNodeDraggingMode = 'disabled' | 'single' | 'multiple'
@@ -66,7 +66,7 @@ export interface FdGraphCanvasSnappingConfiguration {
 
 export interface FdGraphCanvasKeyboardNavigationConfiguration {
   readonly isEnabled?: boolean
-  readonly selectionBehavior?: FdGraphKeyboardSelectionBehavior
+  readonly selectionBehavior?: FdGraphCanvasKeyboardSelectionBehavior
   readonly keepsFocusedNodeVisible?: boolean
 }
 
@@ -207,15 +207,9 @@ export function resolveGraphCanvasConfiguration(
     },
     snapping: {
       isEnabled: configuration.snapping?.isEnabled ?? false,
-      targets:
-        new Set(
-          configuration.snapping?.targets ?? [
-            'alignment',
-            'grid',
-            'equalSpacing',
-            'equalSize',
-          ],
-        ),
+      targets: new Set(
+        configuration.snapping?.targets ?? ['alignment', 'grid', 'equalSpacing', 'equalSize'],
+      ),
       tolerance: snapTolerance,
       searchRadius: nonnegative(configuration.snapping?.searchRadius ?? 600, 'snap search radius'),
       maximumCandidates: positiveInteger(
@@ -226,9 +220,7 @@ export function resolveGraphCanvasConfiguration(
         ? { grid: resolveGraphCanvasGridConfiguration(configuration.snapping.grid) }
         : {}),
       showsGuides:
-        configuration.snapping === undefined
-          ? false
-          : (configuration.snapping.showsGuides ?? true),
+        configuration.snapping === undefined ? false : (configuration.snapping.showsGuides ?? true),
       guideOffset: nonnegative(configuration.snapping?.guideOffset ?? 8, 'snap guide offset'),
       releaseTolerance: snapReleaseTolerance,
     },

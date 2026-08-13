@@ -1,4 +1,4 @@
-import type { FdGraphNavigationDirection } from '../interactions/keyboard.js'
+import type { FdGraphCanvasNavigationDirection } from '../interactions/keyboard.js'
 import type { FdGraphCanvasElementAction } from './configuration.js'
 import type { FdGraphCanvasAccessibilityElementReference } from './snapshot.js'
 
@@ -13,7 +13,7 @@ export type FdGraphCanvasAccessibilityRequest =
   | {
       readonly kind: 'move'
       readonly element: FdGraphCanvasAccessibilityElementReference
-      readonly direction: FdGraphNavigationDirection
+      readonly direction: FdGraphCanvasNavigationDirection
       readonly largeStep: boolean
     }
 

@@ -16,12 +16,15 @@ export type {
   FdGraphCanvasTransientConnection,
 } from './connection.js'
 export {
-  defaultGraphKeyboardCommandResolver,
-  type FdGraphKeyboardCommand,
-  type FdGraphKeyboardCommandContext,
-  type FdGraphKeyboardCommandResolver,
-  type FdGraphKeyboardSelectionBehavior,
-  type FdGraphNavigationDirection,
+  defaultGraphCanvasKeyboardCommandResolver,
+  type FdGraphCanvasKeyboardCommand,
+  type FdGraphCanvasKeyboardCommandContext,
+  type FdGraphCanvasKeyboardCommandResolver,
+  FdGraphCanvasKeyboardNavigator,
+  FdGraphCanvasKeyboardNudger,
+  type FdGraphCanvasKeyboardSelectionBehavior,
+  type FdGraphCanvasNavigationCandidate,
+  type FdGraphCanvasNavigationDirection,
 } from './keyboard.js'
 export * from './navigation.js'
 export * from './selection.js'

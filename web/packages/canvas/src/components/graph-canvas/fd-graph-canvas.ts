@@ -103,13 +103,13 @@ import {
   resolveGraphConnectionEditingConfiguration,
 } from '../../interactions/connection.js'
 import {
-  type FdGraphKeyboardCommand,
-  type FdGraphKeyboardNavigationCandidate,
-  type FdGraphNavigationDirection,
-  type FdResolvedGraphCanvasKeyboardConfiguration,
-  graphKeyboardTranslation,
-  nextGraphKeyboardNodeID,
-  resolveGraphCanvasKeyboardConfiguration,
+  defaultGraphCanvasKeyboardCommandResolver,
+  type FdGraphCanvasKeyboardCommand,
+  type FdGraphCanvasKeyboardCommandResolver,
+  FdGraphCanvasKeyboardNavigator,
+  FdGraphCanvasKeyboardNudger,
+  type FdGraphCanvasNavigationCandidate,
+  type FdGraphCanvasNavigationDirection,
 } from '../../interactions/keyboard.js'
 import type { FdGraphCanvasJumpToElementOptions } from '../../interactions/navigation.js'
 import {
@@ -861,8 +861,8 @@ export class FdGraphCanvas
   private resolvedInteractionConfiguration = resolveGraphCanvasInteractionConfiguration({})
   private resolvedGraphConfiguration: FdResolvedGraphCanvasConfiguration =
     resolveGraphCanvasConfiguration()
-  private resolvedKeyboardConfiguration: FdResolvedGraphCanvasKeyboardConfiguration =
-    resolveGraphCanvasKeyboardConfiguration()
+  private keyboardCommandResolver: FdGraphCanvasKeyboardCommandResolver =
+    defaultGraphCanvasKeyboardCommandResolver
   private resolvedAccessibilityConfiguration: FdResolvedGraphCanvasAccessibilityConfiguration =
     resolveGraphCanvasAccessibilityConfiguration()
   private resolvedHistoryConfiguration: FdResolvedGraphCanvasHistoryConfiguration =
@@ -875,7 +875,7 @@ export class FdGraphCanvas
   })
   private accessibilityBridge: FdGraphCanvasAccessibilityBridge | undefined
   private accessibilityFocusedElementKey: string | undefined
-  private keyboardCandidates: FdGraphKeyboardNavigationCandidate[] = []
+  private keyboardCandidates: FdGraphCanvasNavigationCandidate[] = []
   private readonly keyboardCandidateIndices = new Map<FdGraphElementID, number>()
   private selectedElementValues: readonly FdGraphElementReference[] = []
   private selectedElementKeys = new Set<string>()
@@ -1639,20 +1639,8 @@ export class FdGraphCanvas
       minimumDragDistance: configuration.connectionEditing.minimumDragDistance,
       rendersDefaultPreview: configuration.connectionEditing.rendersDefaultPreview,
     })
-    const navigation = configuration.keyboardNavigation
-    const nudging = configuration.keyboardNudging
-    this.resolvedKeyboardConfiguration = resolveGraphCanvasKeyboardConfiguration({
-      enabled: navigation.isEnabled || nudging.isEnabled,
-      navigation: navigation.isEnabled,
-      nudging: nudging.isEnabled,
-      nudgeStep: nudging.step,
-      largeNudgeStep: nudging.largeStep,
-      selectionBehavior: navigation.selectionBehavior,
-      keepsFocusedNodeVisible: navigation.keepsFocusedNodeVisible,
-      ...(this.platformAdapter.resolveKeyboardCommand
-        ? { resolveCommand: this.platformAdapter.resolveKeyboardCommand }
-        : {}),
-    })
+    this.keyboardCommandResolver =
+      this.platformAdapter.resolveKeyboardCommand ?? defaultGraphCanvasKeyboardCommandResolver
     this.resolvedAccessibilityConfiguration = resolveGraphCanvasAccessibilityConfiguration(
       configuration.accessibility,
       this.platformAdapter,
@@ -2000,7 +1988,7 @@ export class FdGraphCanvas
 
   private moveAccessibilityElement(
     key: string | undefined,
-    direction: FdGraphNavigationDirection,
+    direction: FdGraphCanvasNavigationDirection,
     large: boolean,
   ): boolean {
     if (!key || !this.resolvedAccessibilityConfiguration.capabilities.movement) return false
@@ -2042,7 +2030,13 @@ export class FdGraphCanvas
   }
 
   private handleKeyboardFocusIn = (): void => {
-    if (!this.resolvedKeyboardConfiguration.enabled || this.focusedNodeID !== undefined) return
+    const { keyboardNavigation, keyboardNudging } = this.resolvedGraphConfiguration
+    if (
+      (!keyboardNavigation.isEnabled && !keyboardNudging.isEnabled) ||
+      this.focusedNodeID !== undefined
+    ) {
+      return
+    }
     const selected = this.keyboardCandidates.find(({ id }) => this.selectedNodeIDs.has(id))
     const first = selected ?? this.keyboardCandidates[0]
     if (first) this.setFocusedNode(first.id, 'keyboard', false)
@@ -2054,16 +2048,20 @@ export class FdGraphCanvas
       event.stopPropagation()
       return
     }
-    if (!this.resolvedKeyboardConfiguration.enabled || this.isEditableKeyboardTarget(event)) return
-    const command = this.resolvedKeyboardConfiguration.resolveCommand(event, {
+    const { keyboardNavigation, keyboardNudging } = this.resolvedGraphConfiguration
+    if (
+      (!keyboardNavigation.isEnabled && !keyboardNudging.isEnabled) ||
+      this.isEditableKeyboardTarget(event)
+    ) {
+      return
+    }
+    const command = this.keyboardCommandResolver(event, {
       hasSelection: this.selectedNodeIDs.size > 0,
       focusedNodeIsSelected:
         this.focusedNodeID !== undefined && this.selectedNodeIDs.has(this.focusedNodeID),
-      navigationEnabled: this.resolvedKeyboardConfiguration.navigation,
-      nudgingEnabled: this.resolvedKeyboardConfiguration.nudging,
-      selectionEnabled:
-        this.resolvedKeyboardConfiguration.selection &&
-        this.resolvedInteractionConfiguration.selection !== 'none',
+      navigationEnabled: keyboardNavigation.isEnabled,
+      nudgingEnabled: keyboardNudging.isEnabled,
+      selectionEnabled: this.resolvedInteractionConfiguration.selection !== 'none',
       historyEnabled: this.resolvedHistoryConfiguration.enabled,
     })
     if (!command || !this.performKeyboardCommand(command)) return
@@ -2071,7 +2069,7 @@ export class FdGraphCanvas
     event.stopPropagation()
   }
 
-  private performKeyboardCommand(command: FdGraphKeyboardCommand): boolean {
+  private performKeyboardCommand(command: FdGraphCanvasKeyboardCommand): boolean {
     switch (command.kind) {
       case 'navigate':
         return this.navigateKeyboardFocus(command.direction)
@@ -2101,19 +2099,21 @@ export class FdGraphCanvas
     }
   }
 
-  private navigateKeyboardFocus(direction: FdGraphNavigationDirection): boolean {
+  private navigateKeyboardFocus(direction: FdGraphCanvasNavigationDirection): boolean {
     if (this.keyboardCandidates.length === 0) return false
     const current =
       this.keyboardCandidates.find(({ id }) => id === this.focusedNodeID) ??
       this.keyboardCandidates.find(({ id }) => this.selectedNodeIDs.has(id))
     if (!current) return this.focusKeyboardCandidate(this.keyboardCandidates[0])
-    const nodeID = nextGraphKeyboardNodeID(current, direction, this.keyboardCandidates)
+    const nodeID = FdGraphCanvasKeyboardNavigator.nextNodeID(
+      current,
+      direction,
+      this.keyboardCandidates,
+    )
     return this.focusKeyboardCandidate(this.keyboardCandidates.find(({ id }) => id === nodeID))
   }
 
-  private focusKeyboardCandidate(
-    candidate: FdGraphKeyboardNavigationCandidate | undefined,
-  ): boolean {
+  private focusKeyboardCandidate(candidate: FdGraphCanvasNavigationCandidate | undefined): boolean {
     if (!candidate) return false
     this.setFocusedNode(candidate.id, 'keyboard', true)
     return true
@@ -2123,11 +2123,14 @@ export class FdGraphCanvas
     nodeID: FdGraphElementID,
     source: FdGraphFocusChangeDetail['source'],
     updatesSelection: boolean,
-    keepsVisible = this.resolvedKeyboardConfiguration.keepsFocusedNodeVisible,
+    keepsVisible = this.resolvedGraphConfiguration.keyboardNavigation.keepsFocusedNodeVisible,
   ): void {
     const node = this.index.nodes.get(nodeID)
     if (!node || !this.nodeCapabilities(node.id).keyboardNavigable) return
-    if (updatesSelection && this.resolvedKeyboardConfiguration.selectionBehavior === 'replace') {
+    if (
+      updatesSelection &&
+      this.resolvedGraphConfiguration.keyboardNavigation.selectionBehavior === 'replace'
+    ) {
       this.setSelection(new Set([nodeID]), 'replace', { phase: 'ended', source: 'keyboard' })
     }
     this.setFocusedElement(graphNodeReference(nodeID), source, keepsVisible)
@@ -2182,17 +2185,22 @@ export class FdGraphCanvas
     return true
   }
 
-  private nudgeKeyboardSelection(direction: FdGraphNavigationDirection, large: boolean): boolean {
+  private nudgeKeyboardSelection(
+    direction: FdGraphCanvasNavigationDirection,
+    large: boolean,
+  ): boolean {
     const selectedNodes = [...this.selectedNodeIDs].flatMap((id) => {
       const node = this.index.nodes.get(id)
       return node ? [node] : []
     })
     const nodes = this.admittedKeyboardDragNodes(selectedNodes)
     if (nodes.length === 0) return false
-    const distance = large
-      ? this.resolvedKeyboardConfiguration.largeNudgeStep
-      : this.resolvedKeyboardConfiguration.nudgeStep
-    const translation = graphKeyboardTranslation(direction, distance)
+    const translation = FdGraphCanvasKeyboardNudger.translation(
+      direction,
+      this.resolvedGraphConfiguration.keyboardNudging,
+      new Set(large ? ['largeKeyboardNudge'] : []),
+    )
+    if (!translation) return false
     const changes = nodes.map(({ id, frame }) => ({
       nodeID: id,
       before: frame,
