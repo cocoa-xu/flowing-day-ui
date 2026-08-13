@@ -1,3 +1,4 @@
+import type { FdCanvasPoint, FdCanvasSize } from '../geometry.js'
 import type { FdGraphElementID } from '../graph/model.js'
 import { graphElementKey } from '../graph/model.js'
 
@@ -356,6 +357,158 @@ export class FdGraphLayoutTopology<
   }
 }
 
+export interface FdGraphLayoutNodeSize<NodeID extends FdGraphElementID = FdGraphElementID> {
+  readonly nodeID: NodeID
+  readonly size: FdCanvasSize
+}
+
+export interface FdGraphPortAnchor<
+  NodeID extends FdGraphElementID = FdGraphElementID,
+  PortID extends FdGraphElementID = FdGraphElementID,
+> {
+  readonly key: FdGraphLayoutPortKey<NodeID, PortID>
+  readonly position: FdCanvasPoint
+  readonly normal: { readonly dx: number; readonly dy: number }
+}
+
+export interface FdGraphNodePlacementState<NodeID extends FdGraphElementID = FdGraphElementID> {
+  readonly nodeID: NodeID
+  readonly offset: FdCanvasSize
+}
+
+type FdGraphLayoutInputIssueKind =
+  | 'presentationSnapshotIdentityMismatch'
+  | 'duplicateNodeSize'
+  | 'missingNodeSize'
+  | 'unknownNodeSize'
+  | 'invalidNodeSize'
+  | 'duplicatePortAnchor'
+  | 'missingPortAnchor'
+  | 'unknownPortAnchor'
+  | 'invalidPortAnchor'
+  | 'duplicatePlacementState'
+  | 'unknownPlacementState'
+  | 'invalidPlacementState'
+
+export class FdGraphLayoutInputIssue extends Error {
+  readonly kind: FdGraphLayoutInputIssueKind
+  readonly details: Readonly<Record<string, unknown>>
+
+  constructor(kind: FdGraphLayoutInputIssueKind, details: Readonly<Record<string, unknown>> = {}) {
+    super(kind)
+    this.name = 'FdGraphLayoutInputIssue'
+    this.kind = kind
+    this.details = details
+  }
+}
+
+interface FdGraphLayoutInputOptions<
+  NodeID extends FdGraphElementID,
+  PortID extends FdGraphElementID,
+  EdgeID extends FdGraphElementID,
+> {
+  readonly id: FdLayoutInputID
+  readonly topology: FdGraphLayoutTopology<NodeID, PortID, EdgeID>
+  readonly nodeSizes: readonly FdGraphLayoutNodeSize<NodeID>[]
+  readonly portAnchors: readonly FdGraphPortAnchor<NodeID, PortID>[]
+  readonly placementState?: readonly FdGraphNodePlacementState<NodeID>[]
+}
+
+export class FdGraphLayoutInput<
+  NodeID extends FdGraphElementID = FdGraphElementID,
+  PortID extends FdGraphElementID = FdGraphElementID,
+  EdgeID extends FdGraphElementID = FdGraphElementID,
+> {
+  readonly id: FdLayoutInputID
+  readonly topology: FdGraphLayoutTopology<NodeID, PortID, EdgeID>
+  readonly nodeSizes: readonly FdGraphLayoutNodeSize<NodeID>[]
+  readonly portAnchors: readonly FdGraphPortAnchor<NodeID, PortID>[]
+  readonly placementState: readonly FdGraphNodePlacementState<NodeID>[]
+  readonly #nodeSizeByID = new Map<NodeID, FdCanvasSize>()
+  readonly #portAnchorByKey = new Map<string, FdGraphPortAnchor<NodeID, PortID>>()
+  readonly #placementOffsetByID = new Map<NodeID, FdCanvasSize>()
+
+  constructor(options: FdGraphLayoutInputOptions<NodeID, PortID, EdgeID>) {
+    if (options.id.presentationSnapshotID !== options.topology.snapshotID) {
+      this.fail('presentationSnapshotIdentityMismatch')
+    }
+    const knownNodeIDs = new Set(options.topology.nodeIDs)
+    const knownPortKeys = new Set(options.topology.ports.map(({ key }) => layoutPortKey(key)))
+
+    for (const entry of options.nodeSizes) {
+      if (!knownNodeIDs.has(entry.nodeID)) this.fail('unknownNodeSize', { nodeID: entry.nodeID })
+      if (!validSize(entry.size)) this.fail('invalidNodeSize', { nodeID: entry.nodeID })
+      if (this.#nodeSizeByID.has(entry.nodeID)) {
+        this.fail('duplicateNodeSize', { nodeID: entry.nodeID })
+      }
+      this.#nodeSizeByID.set(entry.nodeID, entry.size)
+    }
+    for (const nodeID of options.topology.nodeIDs) {
+      if (!this.#nodeSizeByID.has(nodeID)) this.fail('missingNodeSize', { nodeID })
+    }
+
+    for (const anchor of options.portAnchors) {
+      const key = layoutPortKey(anchor.key)
+      if (!knownPortKeys.has(key)) this.fail('unknownPortAnchor', { key: anchor.key })
+      if (!validPoint(anchor.position) || !validVector(anchor.normal)) {
+        this.fail('invalidPortAnchor', { key: anchor.key })
+      }
+      if (this.#portAnchorByKey.has(key)) this.fail('duplicatePortAnchor', { key: anchor.key })
+      this.#portAnchorByKey.set(key, anchor)
+    }
+    for (const port of options.topology.ports) {
+      if (!this.#portAnchorByKey.has(layoutPortKey(port.key))) {
+        this.fail('missingPortAnchor', { key: port.key })
+      }
+    }
+
+    for (const state of options.placementState ?? []) {
+      if (!knownNodeIDs.has(state.nodeID)) {
+        this.fail('unknownPlacementState', { nodeID: state.nodeID })
+      }
+      if (!validOffset(state.offset)) {
+        this.fail('invalidPlacementState', { nodeID: state.nodeID })
+      }
+      if (this.#placementOffsetByID.has(state.nodeID)) {
+        this.fail('duplicatePlacementState', { nodeID: state.nodeID })
+      }
+      this.#placementOffsetByID.set(state.nodeID, state.offset)
+    }
+
+    this.id = options.id
+    this.topology = options.topology
+    this.nodeSizes = options.topology.nodeIDs.map((nodeID) => ({
+      nodeID,
+      size: this.#nodeSizeByID.get(nodeID) as FdCanvasSize,
+    }))
+    this.portAnchors = options.topology.ports.map(
+      ({ key }) =>
+        this.#portAnchorByKey.get(layoutPortKey(key)) as FdGraphPortAnchor<NodeID, PortID>,
+    )
+    this.placementState = options.topology.nodeIDs.flatMap((nodeID) => {
+      const offset = this.#placementOffsetByID.get(nodeID)
+      return offset ? [{ nodeID, offset }] : []
+    })
+  }
+
+  size(nodeID: NodeID): FdCanvasSize | undefined {
+    return this.#nodeSizeByID.get(nodeID)
+  }
+
+  anchor(key: FdGraphLayoutPortKey<NodeID, PortID>): FdGraphPortAnchor<NodeID, PortID> | undefined {
+    return this.#portAnchorByKey.get(layoutPortKey(key))
+  }
+
+  placementOffset(nodeID: NodeID): FdCanvasSize | undefined {
+    if (!this.#nodeSizeByID.has(nodeID)) return undefined
+    return this.#placementOffsetByID.get(nodeID) ?? { width: 0, height: 0 }
+  }
+
+  private fail(kind: FdGraphLayoutInputIssueKind, details?: Record<string, unknown>): never {
+    throw new FdGraphLayoutInputIssue(kind, details)
+  }
+}
+
 const layoutPortKey = <NodeID extends FdGraphElementID, PortID extends FdGraphElementID>(
   key: FdGraphLayoutPortKey<NodeID, PortID>,
 ): string => `${graphElementKey(key.nodeID)}:${graphElementKey(key.portID)}`
@@ -372,6 +525,17 @@ const append = <ID>(map: Map<ID, ID[]>, key: ID, value: ID): void => {
   values.push(value)
   map.set(key, values)
 }
+
+const validPoint = ({ x, y }: FdCanvasPoint): boolean => Number.isFinite(x) && Number.isFinite(y)
+
+const validVector = ({ dx, dy }: { readonly dx: number; readonly dy: number }): boolean =>
+  Number.isFinite(dx) && Number.isFinite(dy)
+
+const validOffset = ({ width, height }: FdCanvasSize): boolean =>
+  Number.isFinite(width) && Number.isFinite(height)
+
+const validSize = (size: FdCanvasSize): boolean =>
+  validOffset(size) && size.width >= 0 && size.height >= 0
 
 const containmentCycle = <NodeID>(
   nodeIDs: readonly NodeID[],

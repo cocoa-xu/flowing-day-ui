@@ -1,12 +1,25 @@
 import { describe, expect, it } from 'vitest'
 import {
+  FdGraphLayoutInput,
+  FdGraphLayoutInputIssue,
   FdGraphLayoutPort,
   FdGraphLayoutTopology,
   FdGraphLayoutTopologyIssue,
   FdLayoutComponentIdentity,
+  FdLayoutInputID,
   FdLayoutPipelineIdentity,
   FdLayoutPipelineStageRole,
+  FdLayoutRevision,
 } from './model.js'
+
+const inputID = (snapshotID: string): FdLayoutInputID =>
+  new FdLayoutInputID(
+    snapshotID,
+    new FdLayoutPipelineIdentity(new FdLayoutComponentIdentity('pipeline')),
+    new FdLayoutComponentIdentity('node-size'),
+    new FdLayoutComponentIdentity('port-anchor'),
+    new FdLayoutRevision(),
+  )
 
 describe('graph layout model', () => {
   it('preserves Swift layout identity structure', () => {
@@ -85,6 +98,69 @@ describe('graph layout model', () => {
       expect(error).toBeInstanceOf(FdGraphLayoutTopologyIssue)
       expect((error as FdGraphLayoutTopologyIssue).kind).toBe('containmentCycle')
       expect((error as FdGraphLayoutTopologyIssue).details.nodeIDs).toEqual(['one', 'two', 'one'])
+    }
+  })
+
+  it('normalizes layout input into topology order', () => {
+    const topology = new FdGraphLayoutTopology({
+      snapshotID: 'input',
+      nodeIDs: ['one', 'two'],
+      ports: [new FdGraphLayoutPort('input', 'two')],
+      edges: [],
+    })
+    const input = new FdGraphLayoutInput({
+      id: inputID('input'),
+      topology,
+      nodeSizes: [
+        { nodeID: 'two', size: { width: 20, height: 30 } },
+        { nodeID: 'one', size: { width: 10, height: 15 } },
+      ],
+      portAnchors: [
+        {
+          key: { nodeID: 'two', portID: 'input' },
+          position: { x: 0, y: 15 },
+          normal: { dx: -1, dy: 0 },
+        },
+      ],
+      placementState: [{ nodeID: 'two', offset: { width: 5, height: -3 } }],
+    })
+
+    expect(input.nodeSizes.map(({ nodeID }) => nodeID)).toEqual(['one', 'two'])
+    expect(input.size('two')).toEqual({ width: 20, height: 30 })
+    expect(input.anchor({ nodeID: 'two', portID: 'input' })?.normal).toEqual({ dx: -1, dy: 0 })
+    expect(input.placementOffset('one')).toEqual({ width: 0, height: 0 })
+    expect(input.placementOffset('two')).toEqual({ width: 5, height: -3 })
+  })
+
+  it('rejects incomplete and mismatched layout input', () => {
+    const topology = new FdGraphLayoutTopology({
+      snapshotID: 'expected',
+      nodeIDs: ['node'],
+      ports: [],
+      edges: [],
+    })
+
+    expect(
+      () =>
+        new FdGraphLayoutInput({
+          id: inputID('other'),
+          topology,
+          nodeSizes: [{ nodeID: 'node', size: { width: 10, height: 10 } }],
+          portAnchors: [],
+        }),
+    ).toThrowError(expect.objectContaining({ kind: 'presentationSnapshotIdentityMismatch' }))
+
+    try {
+      new FdGraphLayoutInput({
+        id: inputID('expected'),
+        topology,
+        nodeSizes: [],
+        portAnchors: [],
+      })
+      throw new Error('expected missing node size')
+    } catch (error) {
+      expect(error).toBeInstanceOf(FdGraphLayoutInputIssue)
+      expect((error as FdGraphLayoutInputIssue).kind).toBe('missingNodeSize')
     }
   })
 })
