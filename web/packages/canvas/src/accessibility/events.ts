@@ -1,5 +1,5 @@
 import type { FdGraphCanvasNavigationDirection } from '../interactions/keyboard.js'
-import type { FdGraphCanvasElementAction } from './configuration.js'
+import type { FdGraphCanvasElementAction } from '../interactions/session.js'
 import type { FdGraphCanvasAccessibilityElementReference } from './snapshot.js'
 
 export type FdGraphCanvasAccessibilityRequest =

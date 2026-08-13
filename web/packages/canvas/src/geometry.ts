@@ -138,13 +138,20 @@ export class FdCanvasViewport {
   readonly size: FdCanvasSize
   readonly contentBounds: FdCanvasRect
 
-  constructor(transform: FdCanvasTransform, size: FdCanvasSize, contentBounds: FdCanvasRect) {
+  constructor(
+    transform: FdCanvasTransform = FdCanvasTransform.identity,
+    size: FdCanvasSize = { width: 0, height: 0 },
+    contentBounds: FdCanvasRect = { x: 0, y: 0, width: 0, height: 0 },
+  ) {
     this.transform = transform
     this.size = size
     this.contentBounds = contentBounds
   }
 
   get visibleWorldRect(): FdCanvasRect {
+    if (this.contentBounds.width === 0 || this.contentBounds.height === 0) {
+      return { x: 0, y: 0, width: 0, height: 0 }
+    }
     return this.transform.removeRect(this.contentBounds)
   }
 }

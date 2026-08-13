@@ -1,6 +1,9 @@
 import type { FdAnyGraphEdge, FdAnyGraphNode, FdGraphPort } from '../graph/model.js'
 import type { FdGraphCanvasPlatformAdapter } from '../graph/platform-adapter.js'
 import type { FdGraphCanvasNavigationDirection } from '../interactions/keyboard.js'
+import type { FdGraphCanvasElementAction } from '../interactions/session.js'
+
+export type { FdGraphCanvasElementAction } from '../interactions/session.js'
 
 export interface FdGraphCanvasAccessibilityCapabilities {
   readonly focusNavigation?: boolean
@@ -19,15 +22,6 @@ export interface FdGraphCanvasAccessibilityActionLabels {
   readonly moveLeft?: string
   readonly moveRight?: string
 }
-
-export type FdGraphCanvasElementAction =
-  | 'collapse'
-  | 'expand'
-  | 'drillIn'
-  | 'inspect'
-  | 'beginConnection'
-  | 'completeConnection'
-  | 'cancelConnection'
 
 export interface FdGraphCanvasAccessibilityAction {
   readonly action: FdGraphCanvasElementAction

@@ -57,3 +57,4 @@ export {
   type FdGraphCanvasSelectionMode,
   FdGraphCanvasSessionReducer,
 } from './selection.js'
+export * from './session.js'

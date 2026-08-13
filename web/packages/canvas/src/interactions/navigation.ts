@@ -1,4 +1,4 @@
-export type FdGraphCanvasJumpSelectionBehavior = 'preserve' | 'replace' | 'add'
+import type { FdGraphCanvasJumpSelectionBehavior } from './session.js'
 
 export interface FdGraphCanvasJumpToElementOptions {
   readonly selection?: FdGraphCanvasJumpSelectionBehavior
