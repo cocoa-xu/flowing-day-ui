@@ -2,6 +2,18 @@ import type { FdCanvasInsets, FdCanvasRect, FdCanvasSize } from '../geometry.js'
 import type { FdAnyGraphSnapshot, FdGraphElementID } from '../graph/model.js'
 import { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
 
+function mapValue<Key, Value>(map: ReadonlyMap<Key, Value>, key: Key): Value {
+  const value = map.get(key)
+  if (value === undefined) throw new Error('Layered layout invariant failed')
+  return value
+}
+
+function arrayValue<Value>(values: readonly Value[], index: number): Value {
+  const value = values[index]
+  if (value === undefined) throw new Error('Layered layout invariant failed')
+  return value
+}
+
 export type FdLayeredLayoutDirection = 'topToBottom' | 'leftToRight'
 
 export interface FdLayeredLayoutConfiguration {
@@ -50,22 +62,22 @@ export function layoutLayeredGraph(
   const predecessors = new Map(snapshot.nodes.map((node) => [node.id, [] as FdGraphElementID[]]))
   const neighbors = new Map(snapshot.nodes.map((node) => [node.id, [] as FdGraphElementID[]]))
   for (const edge of snapshot.edges) {
-    successors.get(edge.source.nodeID)!.push(edge.target.nodeID)
-    predecessors.get(edge.target.nodeID)!.push(edge.source.nodeID)
-    neighbors.get(edge.source.nodeID)!.push(edge.target.nodeID)
-    neighbors.get(edge.target.nodeID)!.push(edge.source.nodeID)
+    mapValue(successors, edge.source.nodeID).push(edge.target.nodeID)
+    mapValue(predecessors, edge.target.nodeID).push(edge.source.nodeID)
+    mapValue(neighbors, edge.source.nodeID).push(edge.target.nodeID)
+    mapValue(neighbors, edge.target.nodeID).push(edge.source.nodeID)
   }
 
   const indegree = new Map(
-    snapshot.nodes.map((node) => [node.id, predecessors.get(node.id)!.length]),
+    snapshot.nodes.map((node) => [node.id, mapValue(predecessors, node.id).length]),
   )
   const queue = snapshot.nodes.filter((node) => indegree.get(node.id) === 0).map((node) => node.id)
   const topologicalOrder: FdGraphElementID[] = []
   for (let cursor = 0; cursor < queue.length; cursor += 1) {
-    const nodeID = queue[cursor]!
+    const nodeID = arrayValue(queue, cursor)
     topologicalOrder.push(nodeID)
-    for (const targetID of successors.get(nodeID)!) {
-      const next = indegree.get(targetID)! - 1
+    for (const targetID of mapValue(successors, nodeID)) {
+      const next = mapValue(indegree, targetID) - 1
       indegree.set(targetID, next)
       if (next === 0) queue.push(targetID)
     }
@@ -74,16 +86,16 @@ export function layoutLayeredGraph(
 
   const ranks = new Map(snapshot.nodes.map((node) => [node.id, 0]))
   for (const sourceID of topologicalOrder) {
-    for (const targetID of successors.get(sourceID)!) {
-      ranks.set(targetID, Math.max(ranks.get(targetID)!, ranks.get(sourceID)! + 1))
+    for (const targetID of mapValue(successors, sourceID)) {
+      ranks.set(targetID, Math.max(mapValue(ranks, targetID), mapValue(ranks, sourceID) + 1))
     }
   }
 
   const parentOrder = new Map<FdGraphElementID, number>()
   for (const node of snapshot.nodes) {
     let minimum = Number.MAX_SAFE_INTEGER
-    for (const parentID of predecessors.get(node.id)!) {
-      minimum = Math.min(minimum, order.get(parentID)!)
+    for (const parentID of mapValue(predecessors, node.id)) {
+      minimum = Math.min(minimum, mapValue(order, parentID))
     }
     parentOrder.set(node.id, minimum)
   }
@@ -95,23 +107,24 @@ export function layoutLayeredGraph(
     const stack = [node.id]
     visited.add(node.id)
     while (stack.length > 0) {
-      const nodeID = stack.pop()!
+      const nodeID = stack.pop()
+      if (nodeID === undefined) break
       component.push(nodeID)
-      for (const neighborID of neighbors.get(nodeID)!) {
+      for (const neighborID of mapValue(neighbors, nodeID)) {
         if (visited.has(neighborID)) continue
         visited.add(neighborID)
         stack.push(neighborID)
       }
     }
-    components.push(component.sort((left, right) => order.get(left)! - order.get(right)!))
+    components.push(component.sort((left, right) => mapValue(order, left) - mapValue(order, right)))
   }
 
   const primarySize = (id: FdGraphElementID) => {
-    const frame = nodeByID.get(id)!.frame
+    const frame = mapValue(nodeByID, id).frame
     return direction === 'topToBottom' ? frame.height : frame.width
   }
   const crossSize = (id: FdGraphElementID) => {
-    const frame = nodeByID.get(id)!.frame
+    const frame = mapValue(nodeByID, id).frame
     return direction === 'topToBottom' ? frame.width : frame.height
   }
   const primarySpacing =
@@ -137,7 +150,7 @@ export function layoutLayeredGraph(
 
   const rankPrimarySizes = new Map<number, number>()
   for (const node of snapshot.nodes) {
-    const rank = ranks.get(node.id)!
+    const rank = mapValue(ranks, node.id)
     rankPrimarySizes.set(rank, Math.max(rankPrimarySizes.get(rank) ?? 0, primarySize(node.id)))
   }
   const occupiedRanks = [...rankPrimarySizes.keys()].sort((left, right) => left - right)
@@ -145,7 +158,7 @@ export function layoutLayeredGraph(
   let precedingPrimarySizes = 0
   for (const rank of occupiedRanks) {
     rankPrimaryOrigins.set(rank, primaryLeading + rank * primarySpacing + precedingPrimarySizes)
-    precedingPrimarySizes += rankPrimarySizes.get(rank)!
+    precedingPrimarySizes += mapValue(rankPrimarySizes, rank)
   }
 
   const frames = new Map<FdGraphElementID, FdCanvasRect>()
@@ -153,15 +166,17 @@ export function layoutLayeredGraph(
   for (const component of components) {
     const layers = new Map<number, FdGraphElementID[]>()
     for (const nodeID of component) {
-      const rank = ranks.get(nodeID)!
+      const rank = mapValue(ranks, nodeID)
       const layer = layers.get(rank) ?? []
       layer.push(nodeID)
       layers.set(rank, layer)
     }
     for (const layer of layers.values()) {
       layer.sort((left, right) => {
-        const parentDifference = parentOrder.get(left)! - parentOrder.get(right)!
-        return parentDifference === 0 ? order.get(left)! - order.get(right)! : parentDifference
+        const parentDifference = mapValue(parentOrder, left) - mapValue(parentOrder, right)
+        return parentDifference === 0
+          ? mapValue(order, left) - mapValue(order, right)
+          : parentDifference
       })
     }
     const layerCrossSize = (ids: readonly FdGraphElementID[]) =>
@@ -180,41 +195,42 @@ export function layoutLayeredGraph(
         return center
       })
       let centers = nodeIDs.map((nodeID, index) => {
-        const childCenters = successors
-          .get(nodeID)!
+        const childCenters = mapValue(successors, nodeID)
           .map((childID) => frames.get(childID))
           .filter((frame): frame is FdCanvasRect => frame !== undefined)
           .map((frame) =>
             direction === 'topToBottom' ? frame.x + frame.width / 2 : frame.y + frame.height / 2,
           )
         return childCenters.length === 0
-          ? defaultCenters[index]!
+          ? arrayValue(defaultCenters, index)
           : childCenters.reduce((sum, value) => sum + value, 0) / childCenters.length
       })
       for (let index = 1; index < centers.length; index += 1) {
         const minimum =
-          centers[index - 1]! +
-          (crossSize(nodeIDs[index - 1]!) + crossSize(nodeIDs[index]!)) / 2 +
+          arrayValue(centers, index - 1) +
+          (crossSize(arrayValue(nodeIDs, index - 1)) + crossSize(arrayValue(nodeIDs, index))) / 2 +
           crossSpacing
-        centers[index] = Math.max(centers[index]!, minimum)
+        centers[index] = Math.max(arrayValue(centers, index), minimum)
       }
-      const minimumCenter = componentCrossOrigin + crossSize(nodeIDs[0]!) / 2
-      const maximumCenter =
-        componentCrossOrigin + componentCrossSize - crossSize(nodeIDs.at(-1)!) / 2
-      if (centers[0]! < minimumCenter) {
-        const adjustment = minimumCenter - centers[0]!
+      const firstNodeID = arrayValue(nodeIDs, 0)
+      const lastNodeID = arrayValue(nodeIDs, nodeIDs.length - 1)
+      const minimumCenter = componentCrossOrigin + crossSize(firstNodeID) / 2
+      const maximumCenter = componentCrossOrigin + componentCrossSize - crossSize(lastNodeID) / 2
+      if (arrayValue(centers, 0) < minimumCenter) {
+        const adjustment = minimumCenter - arrayValue(centers, 0)
         centers = centers.map((center) => center + adjustment)
       }
-      if (centers.at(-1)! > maximumCenter) {
-        const adjustment = centers.at(-1)! - maximumCenter
+      if (arrayValue(centers, centers.length - 1) > maximumCenter) {
+        const adjustment = arrayValue(centers, centers.length - 1) - maximumCenter
         centers = centers.map((center) => center - adjustment)
       }
-      if (centers[0]! < minimumCenter) centers = defaultCenters
+      if (arrayValue(centers, 0) < minimumCenter) centers = defaultCenters
       for (const [index, nodeID] of nodeIDs.entries()) {
-        const node = nodeByID.get(nodeID)!
-        const crossOrigin = centers[index]! - crossSize(nodeID) / 2
+        const node = mapValue(nodeByID, nodeID)
+        const crossOrigin = arrayValue(centers, index) - crossSize(nodeID) / 2
         const primaryOrigin =
-          rankPrimaryOrigins.get(rank)! + (rankPrimarySizes.get(rank)! - primarySize(nodeID)) / 2
+          mapValue(rankPrimaryOrigins, rank) +
+          (mapValue(rankPrimarySizes, rank) - primarySize(nodeID)) / 2
         frames.set(
           nodeID,
           direction === 'topToBottom'
@@ -237,9 +253,9 @@ export function layoutLayeredGraph(
   }
 
   const measuredCross = componentCrossOrigin - configuration.componentSpacing + crossTrailing
-  const lastRank = occupiedRanks.at(-1)!
+  const lastRank = arrayValue(occupiedRanks, occupiedRanks.length - 1)
   const measuredPrimary =
-    rankPrimaryOrigins.get(lastRank)! + rankPrimarySizes.get(lastRank)! + primaryTrailing
+    mapValue(rankPrimaryOrigins, lastRank) + mapValue(rankPrimarySizes, lastRank) + primaryTrailing
   const measuredSize =
     direction === 'topToBottom'
       ? { width: measuredCross, height: measuredPrimary }
