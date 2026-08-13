@@ -206,7 +206,7 @@ export type FdGraphCanvasSessionCommandAction<
       readonly zoom?: number
     }
   | { readonly kind: 'restoreViewport'; readonly transform: FdCanvasTransform }
-  | { readonly kind: 'select'; readonly command: FdGraphCanvasSelectionCommand }
+  | { readonly kind: 'select'; readonly command: FdGraphCanvasSelectionCommand<ElementID> }
   | {
       readonly kind: 'fit'
       readonly scope: FdGraphCanvasFitScope<ElementID>

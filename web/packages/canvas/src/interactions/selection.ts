@@ -86,17 +86,22 @@ export class FdGraphCanvasMarquee {
   }
 }
 
-export type FdGraphCanvasSelectionCommand =
-  | { readonly kind: 'replace'; readonly elementIDs: ReadonlySet<FdGraphElementID> }
-  | { readonly kind: 'add'; readonly elementIDs: ReadonlySet<FdGraphElementID> }
-  | { readonly kind: 'remove'; readonly elementIDs: ReadonlySet<FdGraphElementID> }
-  | { readonly kind: 'toggle'; readonly elementIDs: ReadonlySet<FdGraphElementID> }
+export type FdGraphCanvasSelectionCommand<
+  ElementID extends FdGraphElementID = FdGraphElementID,
+> =
+  | { readonly kind: 'replace'; readonly elementIDs: ReadonlySet<ElementID> }
+  | { readonly kind: 'add'; readonly elementIDs: ReadonlySet<ElementID> }
+  | { readonly kind: 'remove'; readonly elementIDs: ReadonlySet<ElementID> }
+  | { readonly kind: 'toggle'; readonly elementIDs: ReadonlySet<ElementID> }
   | { readonly kind: 'clear' }
 
 export class FdGraphCanvasSessionReducer {
   private constructor() {}
 
-  static apply(command: FdGraphCanvasSelectionCommand, selection: Set<FdGraphElementID>): void {
+  static apply<ElementID extends FdGraphElementID>(
+    command: FdGraphCanvasSelectionCommand<ElementID>,
+    selection: Set<ElementID>,
+  ): void {
     if (command.kind === 'clear') {
       selection.clear()
       return

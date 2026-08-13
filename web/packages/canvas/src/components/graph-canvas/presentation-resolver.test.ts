@@ -8,6 +8,8 @@ import {
   FdGraphPresentationLocalElementID,
 } from '../../graph/presentation.js'
 import {
+  FdGraphCanvasSessionCommand,
+  FdGraphCanvasSessionID,
   FdGraphCanvasSessionState,
   FdGraphCanvasTransientNodeDrag,
   FdGraphCanvasTransientNodeResize,
@@ -279,6 +281,143 @@ describe('graph canvas presentation resolver', () => {
     expect(focusRect).toHaveBeenCalledWith({ x: 0, y: 0, width: 100, height: 80 }, 1.5)
     expect(element.session.viewport).toBe(viewport)
     expect(onViewportChange).toHaveBeenCalledWith(viewport, 'continuous')
+  })
+
+  it('handles source-aligned session commands once and only for the target session', async () => {
+    const content = makeContent()
+    const sessionID = new FdGraphCanvasSessionID('target-session')
+    const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
+    element.content = content
+    element.sessionID = sessionID
+    const onIntent = vi.fn()
+    element.onIntent = onIntent
+    document.body.append(element)
+    await element.updateComplete
+    const engine = element.shadowRoot?.querySelector(
+      'fd-graph-canvas-engine',
+    ) as FdGraphCanvasEngine
+    const focusRect = vi.spyOn(engine, 'focusRect').mockImplementation(() => {})
+    const fitRect = vi.spyOn(engine, 'fitRect').mockImplementation(() => {})
+
+    element.command = new FdGraphCanvasSessionCommand(
+      sessionID,
+      { kind: 'jumpToElement', elementID: 'target', selection: 'replace', zoom: 1.4 },
+      false,
+      'jump',
+    )
+    await element.updateComplete
+
+    expect(element.session.focusedElementID).toBe('target')
+    expect(element.session.selection).toEqual(new Set(['target']))
+    expect(focusRect).toHaveBeenCalledWith(
+      { x: 240, y: 0, width: 100, height: 80 },
+      1.4,
+      { animated: false },
+    )
+
+    element.command = new FdGraphCanvasSessionCommand(
+      sessionID,
+      { kind: 'select', command: { kind: 'replace', elementIDs: new Set(['source', 'missing']) } },
+      true,
+      'select',
+    )
+    await element.updateComplete
+    expect(element.session.selection).toEqual(new Set(['source']))
+
+    element.command = new FdGraphCanvasSessionCommand(
+      sessionID,
+      { kind: 'fit', scope: { kind: 'selection' }, padding: 32, maximumZoom: 2 },
+      true,
+      'fit',
+    )
+    await element.updateComplete
+    expect(fitRect).toHaveBeenCalledWith(
+      { x: 0, y: 0, width: 100, height: 80 },
+      32,
+      2,
+      { animated: true },
+    )
+
+    element.command = new FdGraphCanvasSessionCommand(
+      sessionID,
+      { kind: 'inspect', elementID: 'edge' },
+      true,
+      'inspect',
+    )
+    await element.updateComplete
+    expect(onIntent).toHaveBeenLastCalledWith({
+      kind: 'elementAction',
+      intent: expect.objectContaining({
+        action: 'inspect',
+        elementID: 'edge',
+        basePresentationSnapshotID: 'presentation',
+      }),
+    })
+
+    element.command = new FdGraphCanvasSessionCommand(
+      new FdGraphCanvasSessionID('other-session'),
+      { kind: 'focus', elementID: 'source' },
+      true,
+      'wrong-target',
+    )
+    await element.updateComplete
+    expect(focusRect).toHaveBeenCalledTimes(1)
+  })
+
+  it('emits source-aligned arrangement intents without changing engine-owned frames', async () => {
+    const content = makeContent()
+    const sessionID = new FdGraphCanvasSessionID('arrangement-session')
+    const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
+    element.content = content
+    element.sessionID = sessionID
+    element.session = new FdGraphCanvasSessionState({ selection: new Set(['source', 'target']) })
+    const onIntent = vi.fn()
+    element.onIntent = onIntent
+    document.body.append(element)
+    await element.updateComplete
+
+    element.command = new FdGraphCanvasSessionCommand(
+      sessionID,
+      { kind: 'arrange', action: { kind: 'align', alignment: 'leading' } },
+      true,
+      'arrange',
+    )
+    await element.updateComplete
+
+    expect(onIntent).toHaveBeenCalledWith({
+      kind: 'nodeArrangementRequested',
+      intent: expect.objectContaining({
+        action: { kind: 'align', alignment: 'leading' },
+        translations: new Map([
+          ['target', { width: -240, height: 0 }],
+        ]),
+        basePresentationSnapshotID: 'presentation',
+        baseLayoutInputID: content.id,
+      }),
+    })
+  })
+
+  it('reconciles session identities and stale transient state when content changes', async () => {
+    const content = makeContent()
+    const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
+    element.session = new FdGraphCanvasSessionState({
+      selection: new Set(['source', 'missing']),
+      focusedElementID: 'missing',
+      hoveredElementID: 'missing',
+      transientNodeDrag: new FdGraphCanvasTransientNodeDrag({
+        nodeID: 'source',
+        basePresentationSnapshotID: 'stale',
+        baseLayoutInputID: content.id,
+      }),
+    })
+    element.content = content
+    document.body.append(element)
+    await element.updateComplete
+
+    expect(element.session.selection).toEqual(new Set(['source']))
+    expect(element.session.focusedElementID).toBeUndefined()
+    expect(element.session.hoveredElementID).toBeUndefined()
+    expect(element.session.transientNodeDrag).toBeUndefined()
   })
 
   it('preserves canonical identities at the private rendering-engine boundary', () => {
