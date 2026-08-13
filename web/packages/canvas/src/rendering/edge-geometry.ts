@@ -1,5 +1,6 @@
 import type { FdCanvasPoint } from '../geometry.js'
 import type { FdAnyGraphEdge } from '../graph/model.js'
+import { type FdGraphEdgePathSegment, FdGraphEdgeRoute } from '../layout/pipeline.js'
 
 export interface FdGraphArrowGeometry {
   readonly tip: FdCanvasPoint
@@ -16,15 +17,18 @@ export interface FdGraphCubicEdgeGeometry {
   readonly targetArrow?: FdGraphArrowGeometry
 }
 
+export interface FdGraphEdgeGeometry {
+  readonly route: FdGraphEdgeRoute
+  readonly targetArrow?: FdGraphArrowGeometry
+}
+
 export interface FdGraphEdgeGeometryInput {
   readonly edge: FdAnyGraphEdge
   readonly source: FdCanvasPoint
   readonly target: FdCanvasPoint
 }
 
-export type FdGraphEdgeGeometryResolver = (
-  input: FdGraphEdgeGeometryInput,
-) => FdGraphCubicEdgeGeometry
+export type FdGraphEdgeGeometryResolver = (input: FdGraphEdgeGeometryInput) => FdGraphEdgeGeometry
 
 export interface FdGraphCubicEdgeGeometryConfiguration {
   readonly direction?: 'horizontal' | 'vertical' | 'automatic'
@@ -83,10 +87,14 @@ export function graphCubicEdgeGeometryResolver(
     )
     const control = multiply(axis, controlDistance)
     return {
-      start: source,
-      control1: add(source, control),
-      control2: subtract(end, control),
-      end,
+      route: new FdGraphEdgeRoute(source, [
+        {
+          kind: 'cubic',
+          control1: add(source, control),
+          control2: subtract(end, control),
+          end,
+        },
+      ]),
       ...(arrow ? { targetArrow: arrowGeometry(end, tip, axis, arrow.width) } : {}),
     }
   }
@@ -117,6 +125,90 @@ export function graphCubicEdgePoint(
 
 export function graphCubicEdgePath(geometry: FdGraphCubicEdgeGeometry): string {
   return `M ${geometry.start.x} ${geometry.start.y} C ${geometry.control1.x} ${geometry.control1.y}, ${geometry.control2.x} ${geometry.control2.y}, ${geometry.end.x} ${geometry.end.y}`
+}
+
+export function graphEdgePath(geometry: FdGraphEdgeGeometry): string {
+  const commands = [`M ${geometry.route.start.x} ${geometry.route.start.y}`]
+  for (const segment of geometry.route.segments) {
+    if (segment.kind === 'line') commands.push(`L ${segment.end.x} ${segment.end.y}`)
+    else if (segment.kind === 'quadratic') {
+      commands.push(
+        `Q ${segment.control.x} ${segment.control.y}, ${segment.end.x} ${segment.end.y}`,
+      )
+    } else {
+      commands.push(
+        `C ${segment.control1.x} ${segment.control1.y}, ${segment.control2.x} ${segment.control2.y}, ${segment.end.x} ${segment.end.y}`,
+      )
+    }
+  }
+  return commands.join(' ')
+}
+
+export function graphEdgePoint(geometry: FdGraphEdgeGeometry, progress: number): FdCanvasPoint {
+  if (!Number.isFinite(progress) || progress < 0 || progress > 1) {
+    throw new RangeError('edge progress must be between zero and one')
+  }
+  const cubics = graphEdgeCubicSegments(geometry)
+  if (cubics.length === 0) return geometry.route.start
+  const scaled = progress * cubics.length
+  const index = Math.min(Math.floor(scaled), cubics.length - 1)
+  return graphCubicEdgePoint(cubics[index] as FdGraphCubicEdgeGeometry, scaled - index)
+}
+
+export function graphEdgeCubicSegments(
+  geometry: FdGraphEdgeGeometry,
+): readonly FdGraphCubicEdgeGeometry[] {
+  const cubics: FdGraphCubicEdgeGeometry[] = []
+  let start = geometry.route.start
+  for (const segment of geometry.route.segments) {
+    cubics.push(cubicSegment(start, segment))
+    start = segment.end
+  }
+  return cubics
+}
+
+export function graphEdgeArrowGeometry(
+  route: FdGraphEdgeRoute,
+  length: number,
+  width: number,
+): FdGraphArrowGeometry | undefined {
+  const final = graphEdgeCubicSegments({ route }).at(-1)
+  if (!final) return undefined
+  const tangent = subtract(final.end, final.control2)
+  const tangentLength = Math.hypot(tangent.x, tangent.y)
+  if (tangentLength === 0) return undefined
+  const direction = multiply(tangent, 1 / tangentLength)
+  const baseCenter = subtract(final.end, multiply(direction, length))
+  return arrowGeometry(baseCenter, final.end, direction, width)
+}
+
+const cubicSegment = (
+  start: FdCanvasPoint,
+  segment: FdGraphEdgePathSegment,
+): FdGraphCubicEdgeGeometry => {
+  if (segment.kind === 'cubic') {
+    return {
+      start,
+      control1: segment.control1,
+      control2: segment.control2,
+      end: segment.end,
+    }
+  }
+  if (segment.kind === 'quadratic') {
+    return {
+      start,
+      control1: add(start, multiply(subtract(segment.control, start), 2 / 3)),
+      control2: add(segment.end, multiply(subtract(segment.control, segment.end), 2 / 3)),
+      end: segment.end,
+    }
+  }
+  const delta = subtract(segment.end, start)
+  return {
+    start,
+    control1: add(start, multiply(delta, 1 / 3)),
+    control2: add(start, multiply(delta, 2 / 3)),
+    end: segment.end,
+  }
 }
 
 const resolveDirection = (

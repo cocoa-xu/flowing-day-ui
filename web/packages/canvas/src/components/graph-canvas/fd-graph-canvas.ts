@@ -137,6 +137,7 @@ import { FdGraphDOMRenderingBackend } from '../../rendering/dom-backend.js'
 import {
   defaultGraphEdgeGeometryResolver,
   type FdGraphEdgeGeometryResolver,
+  graphEdgeCubicSegments,
 } from '../../rendering/edge-geometry.js'
 import { FdGraphRenderGeometryCache } from '../../rendering/frame-cache.js'
 import {
@@ -1554,9 +1555,10 @@ export class FdGraphCanvasEngine
     for (const edge of candidates) {
       const source = this.endpointPoint(edge, 'source')
       const target = this.endpointPoint(edge, 'target')
-      const distance = graphCubicEdgeDistance(
-        worldPoint,
-        this.edgeGeometryResolver({ edge, source, target }),
+      const distance = Math.min(
+        ...graphEdgeCubicSegments(this.edgeGeometryResolver({ edge, source, target })).map(
+          (segment) => graphCubicEdgeDistance(worldPoint, segment),
+        ),
       )
       const hitTolerance =
         Math.max(edgeHitTestMinimumTolerance, (edge.style?.width ?? 2) / 2 + edgeHitTestPadding) /

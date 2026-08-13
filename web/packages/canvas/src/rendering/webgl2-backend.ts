@@ -7,6 +7,7 @@ import {
   FdGraphDOMRenderingBackend,
   type FdGraphDOMRenderingBackendConfiguration,
 } from './dom-backend.js'
+import { graphEdgeCubicSegments } from './edge-geometry.js'
 
 export interface FdGraphWebGL2RenderingBackendConfiguration
   extends FdGraphDOMRenderingBackendConfiguration {
@@ -447,7 +448,10 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
     const context = this.context
     const buffers = this.buffers
     if (!context || !buffers) return
-    const edgeData = new Float32Array(frame.edges.length * edgeStride)
+    const edgeSegments = frame.edges.flatMap((rendered) =>
+      graphEdgeCubicSegments(rendered.geometry).map((segment) => ({ rendered, segment })),
+    )
+    const edgeData = new Float32Array(edgeSegments.length * edgeStride)
     const arrows = frame.edges.filter(({ geometry }) => geometry.targetArrow !== undefined)
     const arrowData = new Float32Array(arrows.length * arrowStride)
     const nodeData = new Float32Array(frame.nodes.length * nodeStride)
@@ -457,7 +461,7 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
     const defaultStroke = this.cssColor('--fd-canvas-node-border-color', '#d7dcd8')
     const accent = this.cssColor('--fd-canvas-accent-color', '#6d9ea5')
     let offset = 0
-    for (const rendered of frame.edges) {
+    for (const { rendered, segment } of edgeSegments) {
       const color =
         rendered.focused || rendered.selected
           ? rendered.focused
@@ -466,14 +470,14 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
           : this.color(rendered.edge.style?.color, defaultEdge)
       edgeData.set(
         [
-          rendered.geometry.start.x,
-          rendered.geometry.start.y,
-          rendered.geometry.control1.x,
-          rendered.geometry.control1.y,
-          rendered.geometry.control2.x,
-          rendered.geometry.control2.y,
-          rendered.geometry.end.x,
-          rendered.geometry.end.y,
+          segment.start.x,
+          segment.start.y,
+          segment.control1.x,
+          segment.control1.y,
+          segment.control2.x,
+          segment.control2.y,
+          segment.end.x,
+          segment.end.y,
           ...this.premultiplied(color),
           rendered.edge.style?.width ?? 2,
           rendered.edge.style?.dashed ? 1 : 0,
@@ -484,7 +488,8 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
     }
     offset = 0
     for (const rendered of arrows) {
-      const arrow = rendered.geometry.targetArrow!
+      const arrow = rendered.geometry.targetArrow
+      if (!arrow) continue
       const color =
         rendered.focused || rendered.selected
           ? rendered.focused
@@ -533,7 +538,7 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
     context.bufferData(context.ARRAY_BUFFER, arrowData, context.DYNAMIC_DRAW)
     context.bindBuffer(context.ARRAY_BUFFER, buffers.node)
     context.bufferData(context.ARRAY_BUFFER, nodeData, context.DYNAMIC_DRAW)
-    this.edgeCount = frame.edges.length
+    this.edgeCount = edgeSegments.length
     this.arrowCount = arrows.length
     this.nodeCount = frame.nodes.length
   }

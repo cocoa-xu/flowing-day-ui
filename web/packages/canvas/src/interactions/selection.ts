@@ -5,6 +5,7 @@ import {
   defaultGraphEdgeGeometryResolver,
   type FdGraphCubicEdgeGeometry,
   graphCubicEdgePoint,
+  graphEdgeCubicSegments,
 } from '../rendering/edge-geometry.js'
 import type { FdGraphMarqueeBehavior, FdGraphSelectionBehavior } from './configuration.js'
 
@@ -86,9 +87,7 @@ export class FdGraphCanvasMarquee {
   }
 }
 
-export type FdGraphCanvasSelectionCommand<
-  ElementID extends FdGraphElementID = FdGraphElementID,
-> =
+export type FdGraphCanvasSelectionCommand<ElementID extends FdGraphElementID = FdGraphElementID> =
   | { readonly kind: 'replace'; readonly elementIDs: ReadonlySet<ElementID> }
   | { readonly kind: 'add'; readonly elementIDs: ReadonlySet<ElementID> }
   | { readonly kind: 'remove'; readonly elementIDs: ReadonlySet<ElementID> }
@@ -169,14 +168,14 @@ export function graphEdgeDistance(
   target: FdCanvasPoint,
   segmentCount = 16,
 ): number {
-  return graphCubicEdgeDistance(
-    point,
-    defaultGraphEdgeGeometryResolver({
-      edge: { id: 'hit-test', source: { nodeID: 'source' }, target: { nodeID: 'target' } },
-      source,
-      target,
-    }),
-    segmentCount,
+  return Math.min(
+    ...graphEdgeCubicSegments(
+      defaultGraphEdgeGeometryResolver({
+        edge: { id: 'hit-test', source: { nodeID: 'source' }, target: { nodeID: 'target' } },
+        source,
+        target,
+      }),
+    ).map((segment) => graphCubicEdgeDistance(point, segment, segmentCount)),
   )
 }
 

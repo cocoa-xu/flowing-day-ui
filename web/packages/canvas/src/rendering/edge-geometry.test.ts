@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { graphCubicEdgeGeometryResolver, graphCubicEdgePoint } from './edge-geometry.js'
+import { FdGraphEdgeRoute } from '../layout/pipeline.js'
+import {
+  graphCubicEdgeGeometryResolver,
+  graphEdgeCubicSegments,
+  graphEdgePath,
+  graphEdgePoint,
+} from './edge-geometry.js'
 
 const edge = {
   id: 'edge',
@@ -15,10 +21,14 @@ describe('graph cubic edge geometry', () => {
       target: { x: 220, y: 130 },
     })
 
-    expect(geometry.start).toEqual({ x: 20, y: 30 })
-    expect(geometry.control1).toEqual({ x: 110, y: 30 })
-    expect(geometry.control2).toEqual({ x: 130, y: 130 })
-    expect(geometry.end).toEqual({ x: 220, y: 130 })
+    expect(graphEdgeCubicSegments(geometry)).toEqual([
+      {
+        start: { x: 20, y: 30 },
+        control1: { x: 110, y: 30 },
+        control2: { x: 130, y: 130 },
+        end: { x: 220, y: 130 },
+      },
+    ])
   })
 
   it('routes vertically and keeps the arrow clear of its target', () => {
@@ -35,10 +45,11 @@ describe('graph cubic edge geometry', () => {
       target: { x: 140, y: 260 },
     })
 
-    expect(geometry.end.y).toBeCloseTo(250.5)
+    const segment = graphEdgeCubicSegments(geometry)[0]
+    expect(segment?.end.y).toBeCloseTo(250.5)
     expect(geometry.targetArrow?.tip).toEqual({ x: 140, y: 257 })
-    expect(geometry.control1.x).toBe(40)
-    expect(geometry.control2.x).toBe(140)
+    expect(segment?.control1.x).toBe(40)
+    expect(segment?.control2.x).toBe(140)
   })
 
   it('returns a stable midpoint for label placement', () => {
@@ -48,7 +59,23 @@ describe('graph cubic edge geometry', () => {
       target: { x: 100, y: 200 },
     })
 
-    expect(graphCubicEdgePoint(geometry, 0.5)).toEqual({ x: 50, y: 100 })
+    expect(graphEdgePoint(geometry, 0.5)).toEqual({ x: 50, y: 100 })
+  })
+
+  it('preserves mixed layout route segments without flattening their path', () => {
+    const route = new FdGraphEdgeRoute({ x: 0, y: 0 }, [
+      { kind: 'line', end: { x: 20, y: 0 } },
+      { kind: 'quadratic', control: { x: 30, y: 10 }, end: { x: 40, y: 0 } },
+      {
+        kind: 'cubic',
+        control1: { x: 50, y: -10 },
+        control2: { x: 60, y: 10 },
+        end: { x: 70, y: 0 },
+      },
+    ])
+
+    expect(graphEdgePath({ route })).toBe('M 0 0 L 20 0 Q 30 10, 40 0 C 50 -10, 60 10, 70 0')
+    expect(graphEdgeCubicSegments({ route })).toHaveLength(3)
   })
 
   it('rejects invalid control distance ranges', () => {

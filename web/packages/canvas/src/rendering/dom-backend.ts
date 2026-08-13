@@ -1,17 +1,13 @@
+import { FdGraphCanvasNodeCapabilities } from '../graph/interaction-policy.js'
 import type { FdGraphPort } from '../graph/model.js'
 import { graphElementKey } from '../graph/model.js'
-import { FdGraphCanvasNodeCapabilities } from '../graph/interaction-policy.js'
 import type {
   FdGraphRenderEdge,
   FdGraphRenderFrame,
   FdGraphRenderingBackend,
   FdGraphRenderingSurface,
 } from './backend.js'
-import {
-  type FdGraphArrowGeometry,
-  graphCubicEdgePath,
-  graphCubicEdgePoint,
-} from './edge-geometry.js'
+import { type FdGraphArrowGeometry, graphEdgePath, graphEdgePoint } from './edge-geometry.js'
 
 export interface FdGraphDOMRenderingBackendConfiguration {
   readonly createNodeContent?: (node: FdGraphRenderFrame['nodes'][number]) => Node | string | null
@@ -232,7 +228,7 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
           this.edgeElements.set(key, path)
           this.edgeLayer.append(path)
         }
-        path.setAttribute('d', graphCubicEdgePath(rendered.geometry))
+        path.setAttribute('d', graphEdgePath(rendered.geometry))
         this.setOptionalStyle(path.style, '--fd-graph-edge-color', rendered.edge.style?.color)
         this.setOptionalStyle(
           path.style,
@@ -291,7 +287,7 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
       )
       label.dataset.fdSnapshotRevision = String(snapshotRevision)
     }
-    const position = graphCubicEdgePoint(rendered.geometry, 0.5)
+    const position = graphEdgePoint(rendered.geometry, 0.5)
     label.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) translate(-50%, -50%)`
     this.setOptionalStyle(label.style, '--fd-graph-edge-color', rendered.edge.style?.color)
     label.toggleAttribute('data-selected', rendered.selected)

@@ -13,7 +13,13 @@ import type {
   FdGraphPresentationNode,
   FdGraphPresentationPort,
 } from '../../graph/presentation.js'
+import { FdGraphCanvasTransientGeometry } from '../../interactions/transient-geometry.js'
 import type { FdGraphEdgeRoute } from '../../layout/pipeline.js'
+import {
+  defaultGraphEdgeGeometryResolver,
+  type FdGraphEdgeGeometryResolver,
+  graphEdgeArrowGeometry,
+} from '../../rendering/edge-geometry.js'
 
 export interface FdGraphCanvasEngineNodeData<
   ElementID extends FdGraphElementID = FdGraphElementID,
@@ -92,6 +98,25 @@ export const graphCanvasEngineSnapshot = <ElementID extends FdGraphElementID>(
     ]
   }),
 })
+
+export const graphCanvasEngineEdgeGeometryResolver: FdGraphEdgeGeometryResolver = (input) => {
+  const data = input.edge.data as FdGraphCanvasEngineEdgeData | undefined
+  if (!data?.route) return defaultGraphEdgeGeometryResolver(input)
+  const end = data.route.segments.at(-1)?.end ?? data.route.start
+  const route = FdGraphCanvasTransientGeometry.deforming(
+    data.route,
+    {
+      width: input.source.x - data.route.start.x,
+      height: input.source.y - data.route.start.y,
+    },
+    {
+      width: input.target.x - end.x,
+      height: input.target.y - end.y,
+    },
+  )
+  const targetArrow = data.isDirected ? graphEdgeArrowGeometry(route, 6, 6) : undefined
+  return { route, ...(targetArrow ? { targetArrow } : {}) }
+}
 
 const enginePort = <ElementID extends FdGraphElementID>(
   port: FdGraphPresentationPort<ElementID>,

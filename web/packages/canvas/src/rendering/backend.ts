@@ -6,7 +6,7 @@ import type {
   FdGraphElementID,
   FdGraphElementReference,
 } from '../graph/model.js'
-import type { FdGraphCubicEdgeGeometry } from './edge-geometry.js'
+import type { FdGraphEdgeGeometry } from './edge-geometry.js'
 
 export type FdGraphCanvasRenderingBackendPreference = 'automatic' | 'webgl2' | 'dom'
 export type FdGraphCanvasResolvedRenderingBackend = 'webgl2' | 'dom' | (string & {})
@@ -28,7 +28,7 @@ export interface FdGraphRenderEdge {
   readonly edge: FdAnyGraphEdge
   readonly source: FdCanvasPoint
   readonly target: FdCanvasPoint
-  readonly geometry: FdGraphCubicEdgeGeometry
+  readonly geometry: FdGraphEdgeGeometry
   readonly selected: boolean
   readonly focused: boolean
   readonly hovered: boolean

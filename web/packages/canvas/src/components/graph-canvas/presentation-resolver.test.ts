@@ -27,7 +27,10 @@ import {
   FdGraphLayoutResult,
   FdGraphNodePlacement,
 } from '../../layout/pipeline.js'
-import { graphCanvasEngineSnapshot } from './engine-adapter.js'
+import {
+  graphCanvasEngineEdgeGeometryResolver,
+  graphCanvasEngineSnapshot,
+} from './engine-adapter.js'
 import type { FdGraphCanvasEngine } from './fd-graph-canvas.js'
 import type { FdGraphCanvas } from './fd-graph-canvas-element.js'
 import './fd-graph-canvas-element.js'
@@ -693,6 +696,15 @@ describe('graph canvas presentation resolver', () => {
         data: expect.objectContaining({ localID: edgeLocalID, isDirected: true }),
       }),
     ])
+    const edge = snapshot.edges[0]
+    if (!edge) throw new Error('missing edge')
+    expect(
+      graphCanvasEngineEdgeGeometryResolver({
+        edge,
+        source: { x: 100, y: 40 },
+        target: { x: 240, y: 40 },
+      }).route,
+    ).toEqual(new FdGraphEdgeRoute({ x: 100, y: 40 }, [{ kind: 'line', end: { x: 240, y: 40 } }]))
   })
 
   it('applies matching transient drag geometry to nodes, ports, and edges', () => {
@@ -714,8 +726,8 @@ describe('graph canvas presentation resolver', () => {
       height: 80,
     })
     const sourceAnchor = content.anchor(sourcePortLocalID)
-    expect(sourceAnchor).toBeDefined()
-    expect(resolver.anchor(sourceAnchor!, sourceNodeLocalID).position).toEqual({ x: 400, y: 60 })
+    if (!sourceAnchor) throw new Error('missing source anchor')
+    expect(resolver.anchor(sourceAnchor, sourceNodeLocalID).position).toEqual({ x: 400, y: 60 })
     expect(resolver.edgeRoute(edgeLocalID)).toMatchObject({
       start: { x: 400, y: 60 },
       segments: [{ end: { x: 240, y: 40 } }],
@@ -768,8 +780,8 @@ describe('graph canvas presentation resolver', () => {
       height: 160,
     })
     const sourceAnchor = content.anchor(sourcePortLocalID)
-    expect(sourceAnchor).toBeDefined()
-    expect(resolver.anchor(sourceAnchor!, sourceNodeLocalID).position).toEqual({ x: 200, y: 80 })
+    if (!sourceAnchor) throw new Error('missing source anchor')
+    expect(resolver.anchor(sourceAnchor, sourceNodeLocalID).position).toEqual({ x: 200, y: 80 })
 
     const dragWins = new FdGraphCanvasPresentationResolver(
       content,

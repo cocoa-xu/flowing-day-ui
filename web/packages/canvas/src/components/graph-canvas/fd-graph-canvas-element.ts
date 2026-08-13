@@ -49,7 +49,10 @@ import {
 import { sameLayoutInputID } from '../../layout/model.js'
 import type { FdGraphCanvasEngine } from './fd-graph-canvas.js'
 import './fd-graph-canvas.js'
-import { graphCanvasEngineSnapshot } from './engine-adapter.js'
+import {
+  graphCanvasEngineEdgeGeometryResolver,
+  graphCanvasEngineSnapshot,
+} from './engine-adapter.js'
 import {
   graphCanvasConnectionCancellationIntent,
   graphCanvasConnectionCompletionIntent,
@@ -115,6 +118,7 @@ export class FdGraphCanvas<
         .configuration=${this.configuration}
         .contentInsets=${this.contentInsets}
         .contentChangeBehavior=${this.contentChangeBehavior}
+        .edgeGeometryResolver=${graphCanvasEngineEdgeGeometryResolver}
         .interactionPolicy=${this.interactionPolicy}
         .tool=${this.session.tool}
         .selectedElements=${this.elementReferences(this.session.selection)}
