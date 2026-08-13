@@ -1,6 +1,7 @@
 # FlowingDayUI
 
-[![CI](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/ci.yml)
+[![Swift](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/swift.yml/badge.svg)](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/swift.yml)
+[![Web](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/web.yml/badge.svg)](https://github.com/cocoa-xu/flowing-day-ui/actions/workflows/web.yml)
 
 FlowingDayUI is a desktop-grade interface toolkit for SwiftUI and the web. It provides reusable controls, a composed Preferences experience, and a high-performance infinite canvas without taking ownership of application state or product semantics.
 
