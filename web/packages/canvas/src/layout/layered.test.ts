@@ -82,8 +82,6 @@ describe('layered graph layout', () => {
     )
 
     expect(result.nodeFrames.size).toBe(nodeCount)
-    expect(result.nodeFrames.get(nodeCount - 1)!.x).toBeGreaterThan(
-      result.nodeFrames.get(0)!.x,
-    )
+    expect(result.nodeFrames.get(nodeCount - 1)!.x).toBeGreaterThan(result.nodeFrames.get(0)!.x)
   })
 })

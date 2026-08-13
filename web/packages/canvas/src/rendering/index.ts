@@ -1,5 +1,6 @@
 export * from './backend.js'
 export * from './dom-backend.js'
+export * from './edge-geometry.js'
 export * from './frame-cache.js'
 export * from './guide-renderer.js'
 export * from './webgl2-backend.js'

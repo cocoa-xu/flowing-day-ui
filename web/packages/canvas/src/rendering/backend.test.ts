@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { resolveGraphRenderingBackendKind } from './backend.js'
+import { FdGraphDOMRenderingBackend } from './dom-backend.js'
 import { FdGraphWebGL2RenderingBackend } from './webgl2-backend.js'
 
 describe('graph rendering backend resolution', () => {
@@ -18,5 +19,6 @@ describe('graph rendering backend resolution', () => {
       RangeError,
     )
     expect(() => new FdGraphWebGL2RenderingBackend({ minimumDOMNodeZoom: -1 })).toThrow(RangeError)
+    expect(() => new FdGraphDOMRenderingBackend({ minimumEdgeLabelZoom: -1 })).toThrow(RangeError)
   })
 })

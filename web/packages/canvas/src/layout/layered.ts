@@ -1,8 +1,5 @@
 import type { FdCanvasInsets, FdCanvasRect, FdCanvasSize } from '../geometry.js'
-import type {
-  FdAnyGraphSnapshot,
-  FdGraphElementID,
-} from '../graph/model.js'
+import type { FdAnyGraphSnapshot, FdGraphElementID } from '../graph/model.js'
 import { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
 
 export type FdLayeredGraphLayoutDirection = 'topToBottom' | 'leftToRight'
@@ -59,7 +56,9 @@ export function layoutLayeredGraph(
     neighbors.get(edge.target.nodeID)!.push(edge.source.nodeID)
   }
 
-  const indegree = new Map(snapshot.nodes.map((node) => [node.id, predecessors.get(node.id)!.length]))
+  const indegree = new Map(
+    snapshot.nodes.map((node) => [node.id, predecessors.get(node.id)!.length]),
+  )
   const queue = snapshot.nodes.filter((node) => indegree.get(node.id) === 0).map((node) => node.id)
   const topologicalOrder: FdGraphElementID[] = []
   for (let cursor = 0; cursor < queue.length; cursor += 1) {
@@ -172,9 +171,7 @@ export function layoutLayeredGraph(
     for (const layer of layers.values()) {
       componentCrossSize = Math.max(componentCrossSize, layerCrossSize(layer))
     }
-    for (const [rank, nodeIDs] of [...layers.entries()].sort(
-      ([left], [right]) => right - left,
-    )) {
+    for (const [rank, nodeIDs] of [...layers.entries()].sort(([left], [right]) => right - left)) {
       const occupied = layerCrossSize(nodeIDs)
       let cursor = componentCrossOrigin + (componentCrossSize - occupied) / 2
       const defaultCenters = nodeIDs.map((nodeID) => {
@@ -188,9 +185,7 @@ export function layoutLayeredGraph(
           .map((childID) => frames.get(childID))
           .filter((frame): frame is FdCanvasRect => frame !== undefined)
           .map((frame) =>
-            direction === 'topToBottom'
-              ? frame.x + frame.width / 2
-              : frame.y + frame.height / 2,
+            direction === 'topToBottom' ? frame.x + frame.width / 2 : frame.y + frame.height / 2,
           )
         return childCenters.length === 0
           ? defaultCenters[index]!
@@ -219,13 +214,22 @@ export function layoutLayeredGraph(
         const node = nodeByID.get(nodeID)!
         const crossOrigin = centers[index]! - crossSize(nodeID) / 2
         const primaryOrigin =
-          rankPrimaryOrigins.get(rank)! +
-          (rankPrimarySizes.get(rank)! - primarySize(nodeID)) / 2
+          rankPrimaryOrigins.get(rank)! + (rankPrimarySizes.get(rank)! - primarySize(nodeID)) / 2
         frames.set(
           nodeID,
           direction === 'topToBottom'
-            ? { x: crossOrigin, y: primaryOrigin, width: node.frame.width, height: node.frame.height }
-            : { x: primaryOrigin, y: crossOrigin, width: node.frame.width, height: node.frame.height },
+            ? {
+                x: crossOrigin,
+                y: primaryOrigin,
+                width: node.frame.width,
+                height: node.frame.height,
+              }
+            : {
+                x: primaryOrigin,
+                y: crossOrigin,
+                width: node.frame.width,
+                height: node.frame.height,
+              },
         )
       }
     }

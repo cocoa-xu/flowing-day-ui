@@ -6,9 +6,17 @@ import type {
   FdGraphRenderingBackend,
   FdGraphRenderingSurface,
 } from './backend.js'
+import {
+  type FdGraphArrowGeometry,
+  graphCubicEdgePath,
+  graphCubicEdgePoint,
+} from './edge-geometry.js'
 
 export interface FdGraphDOMRenderingBackendConfiguration {
   readonly createNodeContent?: (node: FdGraphRenderFrame['nodes'][number]) => Node | string | null
+  readonly createEdgeLabelContent?: (edge: FdGraphRenderEdge) => Node | string | null
+  readonly minimumEdgeLabelZoom?: number
+  readonly rendersEdgeDecorations?: boolean
   readonly rendersEdgePaths?: boolean
   readonly rendersEdgeLabels?: boolean
   readonly rendersNodes?: boolean
@@ -21,17 +29,30 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
   private readonly nodeElements = new Map<string, HTMLElement>()
   private readonly portElementsByNode = new Map<string, readonly HTMLElement[]>()
   private readonly edgeElements = new Map<string, SVGPathElement>()
-  private readonly edgeLabelElements = new Map<string, SVGTextElement>()
+  private readonly edgeArrowElements = new Map<string, SVGPathElement>()
+  private readonly edgeLabelElements = new Map<string, HTMLElement>()
   private readonly edgeLayer = document.createElementNS(svgNamespace, 'svg')
+  private readonly edgeLabelLayer = document.createElement('div')
   private readonly nodeLayer = document.createElement('div')
   private surface: FdGraphRenderingSurface | undefined
   private renderedSnapshotRevision = -1
   private renderedPresentationRevision = -1
+  private renderedEdgeLabelVisibility: boolean | undefined
 
   constructor(private readonly configuration: FdGraphDOMRenderingBackendConfiguration = {}) {
+    if (
+      configuration.minimumEdgeLabelZoom !== undefined &&
+      (!Number.isFinite(configuration.minimumEdgeLabelZoom) ||
+        configuration.minimumEdgeLabelZoom < 0)
+    ) {
+      throw new RangeError('minimum edge label zoom must be nonnegative')
+    }
     this.edgeLayer.classList.add('graph-edge-layer')
     this.edgeLayer.setAttribute('part', 'edge-layer')
     this.edgeLayer.setAttribute('aria-hidden', 'true')
+    this.edgeLabelLayer.classList.add('graph-edge-label-layer')
+    this.edgeLabelLayer.setAttribute('part', 'edge-label-layer')
+    this.edgeLabelLayer.setAttribute('aria-hidden', 'true')
     this.nodeLayer.classList.add('graph-node-layer')
     this.nodeLayer.setAttribute('part', 'node-layer')
     this.nodeLayer.setAttribute('aria-hidden', 'true')
@@ -41,35 +62,43 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     if (this.surface === surface) return
     this.unmount()
     this.surface = surface
-    surface.world.append(this.edgeLayer, this.nodeLayer)
+    surface.world.append(this.edgeLayer, this.edgeLabelLayer, this.nodeLayer)
   }
 
   render(frame: FdGraphRenderFrame): void {
     if (!this.surface) return
+    const edgeLabelsVisible =
+      frame.viewport.transform.zoom >= (this.configuration.minimumEdgeLabelZoom ?? 0)
     if (
       frame.snapshotRevision === this.renderedSnapshotRevision &&
-      frame.presentationRevision === this.renderedPresentationRevision
+      frame.presentationRevision === this.renderedPresentationRevision &&
+      edgeLabelsVisible === this.renderedEdgeLabelVisibility
     ) {
       return
     }
     this.renderedSnapshotRevision = frame.snapshotRevision
     this.renderedPresentationRevision = frame.presentationRevision
-    this.updateEdges(frame.edges)
+    this.renderedEdgeLabelVisibility = edgeLabelsVisible
+    this.updateEdges(frame, edgeLabelsVisible)
     this.updateNodes(frame)
   }
 
   unmount(): void {
     this.edgeLayer.remove()
+    this.edgeLabelLayer.remove()
     this.nodeLayer.remove()
     this.edgeLayer.replaceChildren()
+    this.edgeLabelLayer.replaceChildren()
     this.nodeLayer.replaceChildren()
     this.nodeElements.clear()
     this.portElementsByNode.clear()
     this.edgeElements.clear()
+    this.edgeArrowElements.clear()
     this.edgeLabelElements.clear()
     this.surface = undefined
     this.renderedSnapshotRevision = -1
     this.renderedPresentationRevision = -1
+    this.renderedEdgeLabelVisibility = undefined
   }
 
   private updateNodes(frame: FdGraphRenderFrame): void {
@@ -181,9 +210,9 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     }
   }
 
-  private updateEdges(edges: readonly FdGraphRenderEdge[]): void {
+  private updateEdges(frame: FdGraphRenderFrame, edgeLabelsVisible: boolean): void {
     const visibleKeys = new Set<string>()
-    for (const rendered of edges) {
+    for (const rendered of frame.edges) {
       const key = graphElementKey(rendered.edge.id)
       visibleKeys.add(key)
       if (this.configuration.rendersEdgePaths !== false) {
@@ -196,7 +225,7 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
           this.edgeElements.set(key, path)
           this.edgeLayer.append(path)
         }
-        path.setAttribute('d', this.edgePath(rendered))
+        path.setAttribute('d', graphCubicEdgePath(rendered.geometry))
         this.setOptionalStyle(path.style, '--fd-graph-edge-color', rendered.edge.style?.color)
         this.setOptionalStyle(
           path.style,
@@ -208,30 +237,83 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
         path.toggleAttribute('data-focused', rendered.focused)
         path.toggleAttribute('data-hovered', rendered.hovered)
       }
-      if (this.configuration.rendersEdgeLabels !== false && rendered.edge.label)
-        this.updateEdgeLabel(key, rendered)
+      if (this.configuration.rendersEdgeDecorations !== false && rendered.geometry.targetArrow) {
+        this.updateEdgeArrow(key, rendered)
+      } else this.removeEdgeArrow(key)
+      if (
+        this.configuration.rendersEdgeLabels !== false &&
+        rendered.edge.label &&
+        edgeLabelsVisible
+      )
+        this.updateEdgeLabel(key, rendered, frame.snapshotRevision)
       else this.removeEdgeLabel(key)
     }
     for (const [key, path] of this.edgeElements) {
       if (visibleKeys.has(key)) continue
       path.remove()
       this.edgeElements.delete(key)
-      this.removeEdgeLabel(key)
     }
+    for (const key of this.edgeArrowElements.keys())
+      if (!visibleKeys.has(key)) this.removeEdgeArrow(key)
+    for (const key of this.edgeLabelElements.keys())
+      if (!visibleKeys.has(key)) this.removeEdgeLabel(key)
   }
 
-  private updateEdgeLabel(key: string, rendered: FdGraphRenderEdge): void {
+  private updateEdgeLabel(
+    key: string,
+    rendered: FdGraphRenderEdge,
+    snapshotRevision: number,
+  ): void {
     let label = this.edgeLabelElements.get(key)
     if (!label) {
-      label = document.createElementNS(svgNamespace, 'text')
+      label = document.createElement('span')
       label.classList.add('graph-edge-label')
       label.setAttribute('part', 'edge-label')
+      label.dataset.fdGraphEdge = key
       this.edgeLabelElements.set(key, label)
-      this.edgeLayer.append(label)
+      this.edgeLabelLayer.append(label)
     }
-    label.textContent = rendered.edge.label ?? ''
-    label.setAttribute('x', String((rendered.source.x + rendered.target.x) / 2))
-    label.setAttribute('y', String((rendered.source.y + rendered.target.y) / 2 - 8))
+    if (label.dataset.fdSnapshotRevision !== String(snapshotRevision)) {
+      const custom = this.configuration.createEdgeLabelContent?.(rendered)
+      label.replaceChildren(
+        custom instanceof Node
+          ? custom
+          : document.createTextNode(
+              typeof custom === 'string' ? custom : (rendered.edge.label ?? ''),
+            ),
+      )
+      label.dataset.fdSnapshotRevision = String(snapshotRevision)
+    }
+    const position = graphCubicEdgePoint(rendered.geometry, 0.5)
+    label.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) translate(-50%, -50%)`
+    this.setOptionalStyle(label.style, '--fd-graph-edge-color', rendered.edge.style?.color)
+    label.toggleAttribute('data-selected', rendered.selected)
+    label.toggleAttribute('data-focused', rendered.focused)
+    label.toggleAttribute('data-hovered', rendered.hovered)
+  }
+
+  private updateEdgeArrow(key: string, rendered: FdGraphRenderEdge): void {
+    const geometry = rendered.geometry.targetArrow
+    if (!geometry) return
+    let arrow = this.edgeArrowElements.get(key)
+    if (!arrow) {
+      arrow = document.createElementNS(svgNamespace, 'path')
+      arrow.classList.add('graph-edge-arrow')
+      arrow.setAttribute('part', 'edge-decoration edge-arrow')
+      arrow.dataset.fdGraphEdge = key
+      this.edgeArrowElements.set(key, arrow)
+      this.edgeLayer.append(arrow)
+    }
+    arrow.setAttribute('d', this.arrowPath(geometry))
+    this.setOptionalStyle(arrow.style, '--fd-graph-edge-color', rendered.edge.style?.color)
+    arrow.toggleAttribute('data-selected', rendered.selected)
+    arrow.toggleAttribute('data-focused', rendered.focused)
+    arrow.toggleAttribute('data-hovered', rendered.hovered)
+  }
+
+  private removeEdgeArrow(key: string): void {
+    this.edgeArrowElements.get(key)?.remove()
+    this.edgeArrowElements.delete(key)
   }
 
   private removeEdgeLabel(key: string): void {
@@ -239,11 +321,21 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     this.edgeLabelElements.delete(key)
   }
 
-  private edgePath({ source, target }: FdGraphRenderEdge): string {
-    const distance = Math.abs(target.x - source.x)
-    const control = Math.max(distance * 0.45, 48)
-    const direction = target.x >= source.x ? 1 : -1
-    return `M ${source.x} ${source.y} C ${source.x + control * direction} ${source.y}, ${target.x - control * direction} ${target.y}, ${target.x} ${target.y}`
+  private arrowPath(geometry: FdGraphArrowGeometry): string {
+    const trailingControl = this.interpolate(geometry.baseTrailing, geometry.tip, 0.58)
+    const leadingControl = this.interpolate(geometry.baseLeading, geometry.tip, 0.58)
+    return `M ${geometry.tip.x} ${geometry.tip.y} Q ${trailingControl.x} ${trailingControl.y}, ${geometry.baseTrailing.x} ${geometry.baseTrailing.y} Q ${geometry.baseCenter.x} ${geometry.baseCenter.y}, ${geometry.baseLeading.x} ${geometry.baseLeading.y} Q ${leadingControl.x} ${leadingControl.y}, ${geometry.tip.x} ${geometry.tip.y} Z`
+  }
+
+  private interpolate(
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+    amount: number,
+  ) {
+    return {
+      x: start.x + (end.x - start.x) * amount,
+      y: start.y + (end.y - start.y) * amount,
+    }
   }
 
   private setOptionalStyle(style: CSSStyleDeclaration, name: string, value?: string): void {

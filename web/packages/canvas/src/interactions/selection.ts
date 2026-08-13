@@ -1,10 +1,12 @@
 import type { FdCanvasPoint } from '../geometry.js'
 import { canvasRectContains, canvasRectsIntersect, type FdCanvasRect } from '../geometry.js'
 import type { FdAnyGraphNode, FdGraphElementID } from '../graph/model.js'
+import {
+  defaultGraphEdgeGeometryResolver,
+  type FdGraphCubicEdgeGeometry,
+  graphCubicEdgePoint,
+} from '../rendering/edge-geometry.js'
 import type { FdGraphMarqueeBehavior, FdGraphSelectionBehavior } from './configuration.js'
-
-const graphEdgeControlRatio = 0.45
-const graphEdgeMinimumControlDistance = 48
 
 export type FdGraphSelectionMode = 'replace' | 'extend' | 'toggle'
 
@@ -65,34 +67,30 @@ export function graphEdgeDistance(
   target: FdCanvasPoint,
   segmentCount = 16,
 ): number {
+  return graphCubicEdgeDistance(
+    point,
+    defaultGraphEdgeGeometryResolver({
+      edge: { id: 'hit-test', source: { nodeID: 'source' }, target: { nodeID: 'target' } },
+      source,
+      target,
+    }),
+    segmentCount,
+  )
+}
+
+export function graphCubicEdgeDistance(
+  point: FdCanvasPoint,
+  geometry: FdGraphCubicEdgeGeometry,
+  segmentCount = 16,
+): number {
   if (!Number.isInteger(segmentCount) || segmentCount <= 0) {
     throw new RangeError('edge hit-test segment count must be a positive integer')
   }
-  const horizontalDistance = Math.abs(target.x - source.x)
-  const control = Math.max(
-    horizontalDistance * graphEdgeControlRatio,
-    graphEdgeMinimumControlDistance,
-  )
-  const direction = target.x >= source.x ? 1 : -1
-  const firstControl = { x: source.x + control * direction, y: source.y }
-  const secondControl = { x: target.x - control * direction, y: target.y }
   let minimumDistance = Number.POSITIVE_INFINITY
-  let previous = source
+  let previous = geometry.start
   for (let index = 1; index <= segmentCount; index += 1) {
     const progress = index / segmentCount
-    const remaining = 1 - progress
-    const current = {
-      x:
-        remaining ** 3 * source.x +
-        3 * remaining ** 2 * progress * firstControl.x +
-        3 * remaining * progress ** 2 * secondControl.x +
-        progress ** 3 * target.x,
-      y:
-        remaining ** 3 * source.y +
-        3 * remaining ** 2 * progress * firstControl.y +
-        3 * remaining * progress ** 2 * secondControl.y +
-        progress ** 3 * target.y,
-    }
+    const current = graphCubicEdgePoint(geometry, progress)
     minimumDistance = Math.min(minimumDistance, pointToSegmentDistance(point, previous, current))
     previous = current
   }
