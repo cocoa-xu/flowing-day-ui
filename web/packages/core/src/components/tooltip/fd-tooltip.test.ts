@@ -24,12 +24,12 @@ afterEach(() => {
 
 describe('fd-tooltip timing', () => {
   it('uses the same deliberate delay as SwiftUI', () => {
-    expect(FdTooltip.defaultDelay).toBe(650)
+    expect(FdTooltip.defaultDelay).toBe(0.65)
   })
 
   it('opens after hover delay and closes on pointer exit', async () => {
     const element = await mount(`
-      <fd-tooltip text="Shows more information" delay="0">
+      <fd-tooltip accessibility-text="More information" message="Shows more information" delay="0">
         <button slot="trigger">Help</button>
       </fd-tooltip>
     `)
@@ -46,7 +46,7 @@ describe('fd-tooltip timing', () => {
 
   it('cancels a pending presentation when the pointer leaves', async () => {
     const element = await mount(`
-      <fd-tooltip text="Shows more information" delay="20">
+      <fd-tooltip accessibility-text="More information" message="Shows more information" delay="0.02">
         <button slot="trigger">Help</button>
       </fd-tooltip>
     `)
@@ -65,7 +65,7 @@ describe('fd-tooltip timing', () => {
 
   it('uses focus as the keyboard equivalent of hover', async () => {
     const element = await mount(`
-      <fd-tooltip text="Shows more information" delay="0">
+      <fd-tooltip accessibility-text="More information" message="Shows more information" delay="0">
         <button slot="trigger">Help</button>
       </fd-tooltip>
     `)
@@ -85,19 +85,19 @@ describe('fd-tooltip timing', () => {
 describe('fd-tooltip semantics', () => {
   it('shows its text when formatting whitespace occupies the default slot', async () => {
     const element = await mount(`
-      <fd-tooltip text="Shows more information">
+      <fd-tooltip accessibility-text="More information" message="Shows more information">
         <button slot="trigger">Help</button>
       </fd-tooltip>
     `)
 
-    expect(surface(element).querySelector('.text')?.textContent?.trim()).toBe(
+    expect(surface(element).querySelector('.message')?.textContent?.trim()).toBe(
       'Shows more information',
     )
   })
 
   it('describes the trigger without replacing its accessible name', async () => {
     const element = await mount(`
-      <fd-tooltip text="Shows more information">
+      <fd-tooltip accessibility-text="More information" message="Shows more information">
         <button slot="trigger" aria-label="Help">?</button>
       </fd-tooltip>
     `)
@@ -105,12 +105,13 @@ describe('fd-tooltip semantics', () => {
 
     expect(trigger.getAttribute('aria-label')).toBe('Help')
     expect(surface(element).getAttribute('role')).toBe('tooltip')
+    expect(surface(element).getAttribute('aria-label')).toBe('More information')
     expect(trigger.getAttribute('aria-describedby')).toBe(surface(element).id)
   })
 
   it('restores an application description when disconnected', async () => {
     const element = await mount(`
-      <fd-tooltip text="Temporary description">
+      <fd-tooltip accessibility-text="Temporary description" message="Temporary description">
         <button slot="trigger" aria-describedby="application-description">Help</button>
       </fd-tooltip>
     `)
@@ -123,7 +124,7 @@ describe('fd-tooltip semantics', () => {
 
   it('preserves application descriptions while connected', async () => {
     const element = await mount(`
-      <fd-tooltip text="Original tooltip">
+      <fd-tooltip accessibility-text="Original tooltip" message="Original tooltip">
         <button slot="trigger" aria-describedby="application-description">Help</button>
       </fd-tooltip>
     `)
@@ -137,7 +138,7 @@ describe('fd-tooltip semantics', () => {
 
   it('dismisses on Escape', async () => {
     const element = await mount(`
-      <fd-tooltip text="Shows more information" delay="0">
+      <fd-tooltip accessibility-text="More information" message="Shows more information" delay="0">
         <button slot="trigger">Help</button>
       </fd-tooltip>
     `)
@@ -153,7 +154,7 @@ describe('fd-tooltip semantics', () => {
 
   it('keeps rich content noninteractive', async () => {
     const element = await mount(`
-      <fd-tooltip heading="Confirmation" text="Use this only for important actions" symbol="info">
+      <fd-tooltip title="Confirmation" message="Use this only for important actions" symbol="info" accessibility-text="Important action details">
         <button slot="trigger">Help</button>
         <strong>Custom explanation</strong>
       </fd-tooltip>

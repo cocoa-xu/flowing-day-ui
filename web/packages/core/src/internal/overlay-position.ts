@@ -1,4 +1,11 @@
-export type FdOverlayPlacement = 'top' | 'bottom' | 'leading' | 'trailing'
+export type FdEdge = 'top' | 'bottom' | 'leading' | 'trailing'
+
+export interface FdEdgeInsets {
+  top: number
+  leading: number
+  bottom: number
+  trailing: number
+}
 
 export interface FdOverlayPosition {
   left: number
@@ -17,21 +24,21 @@ export function positionOverlay(
   anchor: DOMRectReadOnly,
   overlay: DOMRectReadOnly,
   viewport: FdOverlayViewport,
-  placement: FdOverlayPlacement,
+  arrowEdge: FdEdge,
   gap: number,
   margin: number,
   isRTL: boolean,
 ): FdOverlayPosition {
-  const resolvedPlacement =
-    placement === 'leading'
+  const resolvedEdge =
+    arrowEdge === 'leading'
       ? isRTL
         ? 'trailing'
         : 'leading'
-      : placement === 'trailing'
+      : arrowEdge === 'trailing'
         ? isRTL
           ? 'leading'
           : 'trailing'
-        : placement
+        : arrowEdge
 
   const centeredLeft = anchor.left + (anchor.width - overlay.width) / 2
   const centeredTop = anchor.top + (anchor.height - overlay.height) / 2
@@ -43,19 +50,19 @@ export function positionOverlay(
   let left = centeredLeft
   let top = above
 
-  switch (resolvedPlacement) {
+  switch (resolvedEdge) {
     case 'top':
-      top = above >= margin ? above : below
-      break
-    case 'bottom':
       top = below + overlay.height <= viewport.height - margin ? below : above
       break
+    case 'bottom':
+      top = above >= margin ? above : below
+      break
     case 'leading':
-      left = before >= margin ? before : after
+      left = after + overlay.width <= viewport.width - margin ? after : before
       top = centeredTop
       break
     case 'trailing':
-      left = after + overlay.width <= viewport.width - margin ? after : before
+      left = before >= margin ? before : after
       top = centeredTop
       break
   }

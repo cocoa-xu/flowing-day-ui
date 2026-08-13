@@ -222,7 +222,10 @@
               <fd-separator></fd-separator>
               <fd-row label="A Closer Look" caption="Helpful context, only when invited.">
                 <span class="component-inline-actions" slot="trailing">
-                  <fd-tooltip text="A short explanation, without interrupting your work.">
+                  <fd-tooltip
+                    accessibility-text="A short explanation"
+                    message="A short explanation, without interrupting your work."
+                  >
                     <fd-icon-button
                       slot="trigger"
                       label="Show a brief explanation"
@@ -230,7 +233,11 @@
                       emphasis="standard"
                     ></fd-icon-button>
                   </fd-tooltip>
-                  <fd-popover label="A little more" minimum-width="220" maximum-width="280">
+                  <fd-popover
+                    accessibility-label="A little more"
+                    minimum-width="220"
+                    maximum-width="280"
+                  >
                     <fd-icon-button
                       slot="trigger"
                       label="Open more details"

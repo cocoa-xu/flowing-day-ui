@@ -20,7 +20,7 @@ afterEach(() => {
 describe('fd-popover lifecycle', () => {
   it('opens from its trigger in the browser top layer', async () => {
     const element = await mount(`
-      <fd-popover label="Preview options">
+      <fd-popover accessibility-label="Preview options">
         <button slot="trigger">Options</button>
         <p>Changes apply immediately.</p>
       </fd-popover>
@@ -39,7 +39,7 @@ describe('fd-popover lifecycle', () => {
 
   it('tracks native light-dismiss state', async () => {
     const element = await mount(`
-      <fd-popover label="Preview options"><button slot="trigger">Options</button></fd-popover>
+      <fd-popover accessibility-label="Preview options"><button slot="trigger">Options</button></fd-popover>
     `)
     const onClose = vi.fn()
     element.addEventListener('fd-close', onClose)
@@ -53,7 +53,7 @@ describe('fd-popover lifecycle', () => {
 
   it('dismisses on scroll only while open', async () => {
     const element = await mount(`
-      <fd-popover label="Preview options"><button slot="trigger">Options</button></fd-popover>
+      <fd-popover accessibility-label="Preview options"><button slot="trigger">Options</button></fd-popover>
     `)
     element.show()
     await element.updateComplete
@@ -66,7 +66,7 @@ describe('fd-popover lifecycle', () => {
 
   it('restores trigger accessibility attributes when disconnected', async () => {
     const element = await mount(`
-      <fd-popover label="Preview options">
+      <fd-popover accessibility-label="Preview options">
         <button slot="trigger" aria-haspopup="menu" aria-expanded="mixed">Options</button>
       </fd-popover>
     `)
@@ -80,25 +80,25 @@ describe('fd-popover lifecycle', () => {
 
   it('updates only the accessible label it owns', async () => {
     const element = await mount(`
-      <fd-popover label="Preview options"><button slot="trigger">Options</button></fd-popover>
+      <fd-popover accessibility-label="Preview options"><button slot="trigger">Options</button></fd-popover>
     `)
     const trigger = element.querySelector('button') as HTMLButtonElement
 
-    element.label = 'Layout options'
+    element.accessibilityLabel = 'Layout options'
     await element.updateComplete
     expect(trigger.getAttribute('aria-label')).toBe('Layout options')
 
-    element.label = ''
+    element.accessibilityLabel = ''
     await element.updateComplete
     expect(trigger.hasAttribute('aria-label')).toBe(false)
 
     const preserved = await mount(`
-      <fd-popover label="Preview options">
+      <fd-popover accessibility-label="Preview options">
         <button slot="trigger" aria-label="Application label">Options</button>
       </fd-popover>
     `)
     const preservedTrigger = preserved.querySelector('button') as HTMLButtonElement
-    preserved.label = 'Layout options'
+    preserved.accessibilityLabel = 'Layout options'
     await preserved.updateComplete
 
     expect(preservedTrigger.getAttribute('aria-label')).toBe('Application label')
@@ -108,7 +108,7 @@ describe('fd-popover lifecycle', () => {
 describe('fd-popover presentation', () => {
   it('honors bounded content widths without a layout observer', async () => {
     const element = await mount(`
-      <fd-popover label="Details" minimum-width="240" maximum-width="360">
+      <fd-popover accessibility-label="Details" minimum-width="240" maximum-width="360">
         <button slot="trigger">Details</button>
         <p>Content</p>
       </fd-popover>
@@ -123,7 +123,7 @@ describe('fd-popover presentation', () => {
 
   it('accepts arbitrary interactive content', async () => {
     const element = await mount(`
-      <fd-popover label="Details">
+      <fd-popover accessibility-label="Details">
         <button slot="trigger">Details</button>
         <label><input type="checkbox" /> Live preview</label>
       </fd-popover>
@@ -131,5 +131,16 @@ describe('fd-popover presentation', () => {
 
     expect(element.querySelector('input')).not.toBeNull()
     expect(surface(element).getAttribute('role')).toBe('dialog')
+  })
+
+  it('uses Swift content insets and arrow edge defaults', async () => {
+    const element = await mount(`
+      <fd-popover accessibility-label="Details">
+        <button slot="trigger">Details</button>
+      </fd-popover>
+    `)
+
+    expect(element.arrowEdge).toBe('top')
+    expect(getComputedStyle(surface(element)).padding).toBe('13px')
   })
 })

@@ -175,7 +175,7 @@ export type { FdActivateDetail, FdChangeDetail } from './internal/events.js'
 export type { FdFieldValidation } from './internal/field-validation.js'
 export { FdIcons } from './internal/icon-registry.js'
 export type { CollectedOption } from './internal/options.js'
-export type { FdOverlayPlacement } from './internal/overlay-position.js'
+export type { FdEdge, FdEdgeInsets } from './internal/overlay-position.js'
 export type {
   FdSegmentLabelStyle,
   FdSegmentOption,

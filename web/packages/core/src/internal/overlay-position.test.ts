@@ -16,13 +16,13 @@ describe('overlay positioning', () => {
         10,
         false,
       ),
-    ).toEqual({ left: 80, top: 42 })
+    ).toEqual({ left: 80, top: 138 })
   })
 
   it('flips away from a constrained edge', () => {
     expect(
       positionOverlay(
-        rect(100, 12, 40, 30),
+        rect(100, 238, 40, 30),
         rect(0, 0, 80, 50),
         { width: 400, height: 300 },
         'top',
@@ -30,7 +30,7 @@ describe('overlay positioning', () => {
         10,
         false,
       ),
-    ).toEqual({ left: 80, top: 50 })
+    ).toEqual({ left: 80, top: 180 })
   })
 
   it('resolves leading and trailing from writing direction', () => {
@@ -38,8 +38,8 @@ describe('overlay positioning', () => {
     const overlay = rect(0, 0, 50, 40)
     const viewport = { width: 400, height: 300 }
 
-    expect(positionOverlay(anchor, overlay, viewport, 'leading', 8, 10, false).left).toBe(42)
-    expect(positionOverlay(anchor, overlay, viewport, 'leading', 8, 10, true).left).toBe(148)
+    expect(positionOverlay(anchor, overlay, viewport, 'leading', 8, 10, false).left).toBe(148)
+    expect(positionOverlay(anchor, overlay, viewport, 'leading', 8, 10, true).left).toBe(42)
   })
 
   it('clamps oversized positions to the viewport margin', () => {

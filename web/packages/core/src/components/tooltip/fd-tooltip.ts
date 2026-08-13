@@ -1,12 +1,12 @@
 import { type CSSResultGroup, css, html, nothing, type PropertyValues } from 'lit'
 import { customElement, property, query, state } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
-import { type FdOverlayPlacement, positionOverlay } from '../../internal/overlay-position.js'
+import { type FdEdge, positionOverlay } from '../../internal/overlay-position.js'
 import { hasMeaningfulSlotContent } from '../../internal/slot-content.js'
 import { textRole } from '../../internal/typography.js'
 import '../icon/fd-icon.js'
 
-const DEFAULT_TOOLTIP_DELAY = 650
+const DEFAULT_TOOLTIP_DELAY = 0.65
 const TOOLTIP_GAP = 7
 const TOOLTIP_MARGIN = 8
 let tooltipInstance = 0
@@ -64,18 +64,18 @@ export class FdTooltip extends FdElement {
         min-width: 0;
       }
 
-      .heading {
+      .title {
         ${textRole('row-title')}
         margin: 0;
         color: var(--_fd-palette-ink);
       }
 
-      .text {
+      .message {
         ${textRole('row-caption')}
         margin: 0;
       }
 
-      .heading + .text {
+      .title + .message {
         margin-top: 2px;
       }
     `,
@@ -83,13 +83,15 @@ export class FdTooltip extends FdElement {
 
   static readonly defaultDelay = DEFAULT_TOOLTIP_DELAY
 
-  @property({ reflect: true }) text = ''
+  @property({ reflect: true, attribute: 'accessibility-text' }) accessibilityText = ''
 
-  @property({ reflect: true }) heading: string | null = null
+  @property({ reflect: true }) message = ''
+
+  @property({ reflect: true }) override title = ''
 
   @property({ reflect: true }) symbol: string | null = null
 
-  @property({ reflect: true }) placement: FdOverlayPlacement = 'top'
+  @property({ reflect: true, attribute: 'arrow-edge' }) arrowEdge: FdEdge = 'top'
 
   @property({ type: Number }) delay = DEFAULT_TOOLTIP_DELAY
 
@@ -121,7 +123,7 @@ export class FdTooltip extends FdElement {
   override updated(changed: PropertyValues<this>): void {
     super.updated(changed)
     if (changed.has('open')) this.#synchronizePresentation()
-    if (this.open && changed.has('placement')) this.#position()
+    if (this.open && changed.has('arrowEdge')) this.#position()
   }
 
   override disconnectedCallback(): void {
@@ -171,7 +173,7 @@ export class FdTooltip extends FdElement {
     this.#timer = window.setTimeout(() => {
       this.#timer = null
       this.open = true
-    }, delay)
+    }, delay * 1_000)
   }
 
   #onLeave = (): void => {
@@ -240,7 +242,7 @@ export class FdTooltip extends FdElement {
         width: document.documentElement.clientWidth,
         height: document.documentElement.clientHeight,
       },
-      this.placement,
+      this.arrowEdge,
       TOOLTIP_GAP,
       TOOLTIP_MARGIN,
       getComputedStyle(this).direction === 'rtl',
@@ -264,15 +266,16 @@ export class FdTooltip extends FdElement {
         id=${this.#surfaceID}
         popover="manual"
         role="tooltip"
+        aria-label=${this.accessibilityText || this.message}
         @toggle=${this.#onToggle}
       >
         <div class="content">
           ${this.symbol ? html`<fd-icon name=${this.symbol}></fd-icon>` : nothing}
           <div class="copy">
-            ${this.heading ? html`<p class="heading">${this.heading}</p>` : nothing}
-            <p class="text">
+            ${this.title ? html`<p class="title">${this.title}</p>` : nothing}
+            <p class="message">
               <slot @slotchange=${this.#onContentSlotChange}></slot>
-              ${this.hasCustomContent ? nothing : this.text}
+              ${this.hasCustomContent ? nothing : this.message}
             </p>
           </div>
         </div>
