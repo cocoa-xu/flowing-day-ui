@@ -8,10 +8,10 @@ import type {
 } from '../graph/model.js'
 import type { FdGraphCubicEdgeGeometry } from './edge-geometry.js'
 
-export type FdGraphRenderingBackendPreference = 'automatic' | 'webgl2' | 'dom'
-export type FdGraphRenderingBackendKind = 'webgl2' | 'dom' | (string & {})
+export type FdGraphCanvasRenderingBackendPreference = 'automatic' | 'webgl2' | 'dom'
+export type FdGraphCanvasResolvedRenderingBackend = 'webgl2' | 'dom' | (string & {})
 
-export interface FdGraphRenderingCapabilities {
+export interface FdGraphCanvasRenderingBackendCapabilities {
   readonly webgl2: boolean
 }
 
@@ -58,26 +58,26 @@ export interface FdGraphRenderingSurface {
 }
 
 export interface FdGraphRenderingBackend {
-  readonly kind: FdGraphRenderingBackendKind
+  readonly kind: FdGraphCanvasResolvedRenderingBackend
   mount(surface: FdGraphRenderingSurface): void
   render(frame: FdGraphRenderFrame): void
   unmount(): void
 }
 
-export function detectGraphRenderingCapabilities(): FdGraphRenderingCapabilities {
+export function detectGraphCanvasRenderingBackendCapabilities(): FdGraphCanvasRenderingBackendCapabilities {
   return { webgl2: typeof WebGL2RenderingContext !== 'undefined' }
 }
 
-let cachedGraphRenderingCapabilities: FdGraphRenderingCapabilities | undefined
+let cachedGraphRenderingBackendCapabilities: FdGraphCanvasRenderingBackendCapabilities | undefined
 
-export function graphRenderingCapabilities(): FdGraphRenderingCapabilities {
-  cachedGraphRenderingCapabilities ??= detectGraphRenderingCapabilities()
-  return cachedGraphRenderingCapabilities
+export function graphCanvasRenderingBackendCapabilities(): FdGraphCanvasRenderingBackendCapabilities {
+  cachedGraphRenderingBackendCapabilities ??= detectGraphCanvasRenderingBackendCapabilities()
+  return cachedGraphRenderingBackendCapabilities
 }
 
-export function resolveGraphRenderingBackendKind(
-  preference: FdGraphRenderingBackendPreference,
-  capabilities: FdGraphRenderingCapabilities,
+export function resolveGraphCanvasRenderingBackend(
+  preference: FdGraphCanvasRenderingBackendPreference,
+  capabilities: FdGraphCanvasRenderingBackendCapabilities,
 ): 'webgl2' | 'dom' {
   switch (preference) {
     case 'automatic':

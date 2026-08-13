@@ -1,7 +1,7 @@
 import type {
   FdAnyGraphSnapshot,
   FdGraphCanvas,
-  FdGraphRenderingBackendPreference,
+  FdGraphCanvasRenderingBackendPreference,
 } from '@flowing-day/canvas'
 import '@flowing-day/canvas'
 import './style.css'
@@ -48,7 +48,7 @@ const status = statusElement
 const parameters = new URLSearchParams(location.search)
 const nodeCount = Math.max(Number(parameters.get('nodes') ?? 1_000), 1)
 const requestedBackend = (parameters.get('backend') ??
-  'automatic') as FdGraphRenderingBackendPreference
+  'automatic') as FdGraphCanvasRenderingBackendPreference
 const columnCount = Math.max(Math.ceil(Math.sqrt(nodeCount * 1.7)), 1)
 const horizontalSpacing = 132
 const verticalSpacing = 84

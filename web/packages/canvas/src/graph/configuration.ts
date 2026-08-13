@@ -1,11 +1,8 @@
 import type { FdGraphCanvasAccessibilityConfiguration } from '../accessibility/configuration.js'
-import {
-  type FdCanvasConfiguration,
-  resolveCanvasConfiguration,
-} from '../configuration.js'
+import { type FdCanvasConfiguration, resolveCanvasConfiguration } from '../configuration.js'
 import type { FdCanvasPoint, FdCanvasSize } from '../geometry.js'
 import type { FdGraphKeyboardSelectionBehavior } from '../interactions/keyboard.js'
-import type { FdGraphRenderingBackendPreference } from '../rendering/backend.js'
+import type { FdGraphCanvasRenderingBackendPreference } from '../rendering/backend.js'
 
 export type FdGraphCanvasNodeDraggingMode = 'disabled' | 'single' | 'multiple'
 
@@ -71,7 +68,7 @@ export interface FdGraphCanvasKeyboardNudgingConfiguration {
 }
 
 export interface FdGraphCanvasConfiguration {
-  readonly renderingBackend?: FdGraphRenderingBackendPreference
+  readonly renderingBackend?: FdGraphCanvasRenderingBackendPreference
   readonly canvas?: Partial<FdCanvasConfiguration>
   readonly edgeRenderPadding?: number
   readonly marqueeMinimumDistance?: number
@@ -87,7 +84,7 @@ export interface FdGraphCanvasConfiguration {
 }
 
 export interface FdResolvedGraphCanvasConfiguration {
-  readonly renderingBackend: FdGraphRenderingBackendPreference
+  readonly renderingBackend: FdGraphCanvasRenderingBackendPreference
   readonly canvas: FdCanvasConfiguration
   readonly edgeRenderPadding: number
   readonly marqueeMinimumDistance: number
@@ -185,7 +182,7 @@ export function resolveGraphCanvasConfiguration(
       ),
       ...(configuration.snapping?.grid ? { grid: configuration.snapping.grid } : {}),
       showsGuides:
-        configuration.snapping?.showsGuides ?? (configuration.snapping?.isEnabled ?? false),
+        configuration.snapping?.showsGuides ?? configuration.snapping?.isEnabled ?? false,
       guideOffset: nonnegative(configuration.snapping?.guideOffset ?? 8, 'snap guide offset'),
       releaseTolerance: snapReleaseTolerance,
     },

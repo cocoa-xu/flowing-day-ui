@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { resolveGraphRenderingBackendKind } from './backend.js'
+import { resolveGraphCanvasRenderingBackend } from './backend.js'
 import { FdGraphDOMRenderingBackend } from './dom-backend.js'
 import { FdGraphWebGL2RenderingBackend } from './webgl2-backend.js'
 
 describe('graph rendering backend resolution', () => {
   it('selects the fastest supported production backend automatically', () => {
-    expect(resolveGraphRenderingBackendKind('automatic', { webgl2: true })).toBe('webgl2')
-    expect(resolveGraphRenderingBackendKind('automatic', { webgl2: false })).toBe('dom')
+    expect(resolveGraphCanvasRenderingBackend('automatic', { webgl2: true })).toBe('webgl2')
+    expect(resolveGraphCanvasRenderingBackend('automatic', { webgl2: false })).toBe('dom')
   })
 
   it('falls back safely when an explicitly requested backend is unavailable', () => {
-    expect(resolveGraphRenderingBackendKind('webgl2', { webgl2: false })).toBe('dom')
-    expect(resolveGraphRenderingBackendKind('dom', { webgl2: true })).toBe('dom')
+    expect(resolveGraphCanvasRenderingBackend('webgl2', { webgl2: false })).toBe('dom')
+    expect(resolveGraphCanvasRenderingBackend('dom', { webgl2: true })).toBe('dom')
   })
 
   it('rejects invalid density thresholds', () => {

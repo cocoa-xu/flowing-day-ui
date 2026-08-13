@@ -113,13 +113,13 @@ import {
 } from '../../interactions/selection.js'
 import type { FdGraphMiniMapConfiguration } from '../../minimap/configuration.js'
 import type {
+  FdGraphCanvasRenderingBackendPreference,
   FdGraphRenderFrame,
   FdGraphRenderingBackend,
-  FdGraphRenderingBackendPreference,
 } from '../../rendering/backend.js'
 import {
-  graphRenderingCapabilities,
-  resolveGraphRenderingBackendKind,
+  graphCanvasRenderingBackendCapabilities,
+  resolveGraphCanvasRenderingBackend,
 } from '../../rendering/backend.js'
 import { FdGraphDOMRenderingBackend } from '../../rendering/dom-backend.js'
 import {
@@ -839,7 +839,7 @@ export class FdGraphCanvas
     { x: 0, y: 0, width: 1, height: 1 },
   )
   private activeBackendSource:
-    | FdGraphRenderingBackendPreference
+    | FdGraphCanvasRenderingBackendPreference
     | FdGraphRenderingBackend
     | undefined
   private indexedSnapshot: FdAnyGraphSnapshot | undefined
@@ -1578,7 +1578,10 @@ export class FdGraphCanvas
     this.backend?.unmount()
     const source = this.renderingBackendSource
     if (typeof source === 'string') {
-      const kind = resolveGraphRenderingBackendKind(source, graphRenderingCapabilities())
+      const kind = resolveGraphCanvasRenderingBackend(
+        source,
+        graphCanvasRenderingBackendCapabilities(),
+      )
       this.backend =
         kind === 'webgl2'
           ? new FdGraphWebGL2RenderingBackend(this.renderingConfiguration)
@@ -1590,7 +1593,7 @@ export class FdGraphCanvas
   }
 
   private get renderingBackendSource():
-    | FdGraphRenderingBackendPreference
+    | FdGraphCanvasRenderingBackendPreference
     | FdGraphRenderingBackend {
     return this.renderingAdapter ?? this.resolvedGraphConfiguration.renderingBackend
   }

@@ -24,12 +24,12 @@ import type {
 import { snapGraphTranslationRequest } from '../../interactions/arrangement.js'
 import { graphConnectionOriginForEdge } from '../../interactions/connection.js'
 import type {
+  FdGraphCanvasRenderingBackendPreference,
   FdGraphRenderFrame,
   FdGraphRenderingBackend,
-  FdGraphRenderingBackendPreference,
   FdGraphRenderingSurface,
 } from '../../rendering/backend.js'
-import { graphRenderingCapabilities } from '../../rendering/backend.js'
+import { graphCanvasRenderingBackendCapabilities } from '../../rendering/backend.js'
 import { FdGraphDOMRenderingBackend } from '../../rendering/dom-backend.js'
 import { FdGraphWebGL2RenderingBackend } from '../../rendering/webgl2-backend.js'
 import type { FdGraphCanvas } from './fd-graph-canvas.js'
@@ -66,7 +66,7 @@ const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() 
 
 async function mount(
   snapshot: FdAnyGraphSnapshot = graphSnapshot(),
-  backend?: FdGraphRenderingBackend | FdGraphRenderingBackendPreference,
+  backend?: FdGraphRenderingBackend | FdGraphCanvasRenderingBackendPreference,
 ): Promise<FdGraphCanvas> {
   const element = document.createElement('fd-graph-canvas')
   element.style.width = '800px'
@@ -175,7 +175,7 @@ describe('fd-graph-canvas rendering boundary', () => {
   it('uses WebGL2 when available and otherwise falls back to complete DOM rendering', async () => {
     const element = await mount()
     const root = element.shadowRoot
-    const usesWebGL2 = graphRenderingCapabilities().webgl2
+    const usesWebGL2 = graphCanvasRenderingBackendCapabilities().webgl2
 
     expect(element.resolvedRenderingBackend?.kind).toBe(usesWebGL2 ? 'webgl2' : 'dom')
     expect(root?.querySelectorAll('.graph-gpu-layer')).toHaveLength(usesWebGL2 ? 1 : 0)
