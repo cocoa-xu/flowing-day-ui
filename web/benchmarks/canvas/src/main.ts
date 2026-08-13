@@ -1,7 +1,25 @@
-import type {
-  FdAnyGraphSnapshot,
-  FdGraphCanvas,
-  FdGraphCanvasRenderingBackendPreference,
+import type { FdGraphCanvas, FdGraphCanvasRenderingBackendPreference } from '@flowing-day/canvas'
+import {
+  FdGraphCanvasContent,
+  FdGraphCanvasLayoutAdapter,
+  FdGraphCanvasSessionCommand,
+  FdGraphCanvasWebGL2VisualAdapter,
+  FdGraphEdgeRoute,
+  FdGraphElementAddress,
+  FdGraphInstanceHandle,
+  FdGraphInstancePath,
+  FdGraphLayoutInput,
+  FdGraphLayoutResult,
+  FdGraphNodePlacement,
+  FdGraphPresentation,
+  FdGraphPresentationLocalElementID,
+  FdGraphWebGL2RenderingBackend,
+  FdLayoutComponentIdentity,
+  FdLayoutInputID,
+  FdLayoutPipelineIdentity,
+  FdLayoutRevision,
+  graphCanvasRenderingBackendCapabilities,
+  resolveGraphCanvasRenderingBackend,
 } from '@flowing-day/canvas'
 import '@flowing-day/canvas'
 import './style.css'
@@ -53,9 +71,10 @@ const columnCount = Math.max(Math.ceil(Math.sqrt(nodeCount * 1.7)), 1)
 const horizontalSpacing = 132
 const verticalSpacing = 84
 
-function makeSnapshot(count: number): FdAnyGraphSnapshot {
+function makeContent(count: number): FdGraphCanvasContent<string> {
   const nodes = Array.from({ length: count }, (_, index) => ({
-    id: index,
+    id: `node-${index}`,
+    nodeID: index,
     frame: {
       x: (index % columnCount) * horizontalSpacing,
       y: Math.floor(index / columnCount) * verticalSpacing,
@@ -66,15 +85,107 @@ function makeSnapshot(count: number): FdAnyGraphSnapshot {
     ...(index % 3 === 0 ? { subtitle: 'Benchmark' } : {}),
   }))
   const edges = Array.from({ length: Math.max(count - 1, 0) }, (_, index) => ({
-    id: index,
-    source: { nodeID: index },
-    target: { nodeID: index + 1 },
+    id: `edge-${index}`,
+    edgeID: index,
+    source: `node-${index}`,
+    target: `node-${index + 1}`,
   }))
-  return { id: `benchmark-${count}`, nodes, edges }
+  const instanceHandle = new FdGraphInstanceHandle(0)
+  const localNodeID = (nodeID: number) =>
+    FdGraphPresentationLocalElementID.source({
+      instanceHandle,
+      elementID: { kind: 'node', nodeID },
+    })
+  const localEdgeID = (edgeID: number) =>
+    FdGraphPresentationLocalElementID.source({
+      instanceHandle,
+      elementID: { kind: 'edge', edgeID },
+    })
+  const address = (
+    elementID:
+      | { readonly kind: 'node'; readonly nodeID: number }
+      | { readonly kind: 'edge'; readonly edgeID: number },
+  ) =>
+    new FdGraphElementAddress({
+      instancePath: FdGraphInstancePath.root,
+      graphID: 'benchmark',
+      elementID,
+    })
+  const snapshotID = `benchmark-${count}`
+  const presentation = new FdGraphPresentation({
+    snapshotID,
+    documentSnapshotID: snapshotID,
+    entryPointID: 'main',
+    focusPath: FdGraphInstancePath.root,
+    instances: [],
+    nodes: nodes.map((node) => ({
+      id: node.id,
+      localID: localNodeID(node.nodeID),
+      address: address({ kind: 'node', nodeID: node.nodeID }),
+      value: node,
+    })),
+    ports: [],
+    edges: edges.map((edge) => ({
+      id: edge.id,
+      localID: localEdgeID(edge.edgeID),
+      address: address({ kind: 'edge', edgeID: edge.edgeID }),
+      endpoints: {
+        kind: 'directed' as const,
+        source: { kind: 'node' as const, id: edge.source },
+        target: { kind: 'node' as const, id: edge.target },
+      },
+      value: edge,
+    })),
+    contextEdges: [],
+  })
+  const component = new FdLayoutComponentIdentity('benchmark')
+  const topology = FdGraphCanvasLayoutAdapter.topology(presentation)
+  const input = new FdGraphLayoutInput({
+    id: new FdLayoutInputID(
+      snapshotID,
+      new FdLayoutPipelineIdentity(component),
+      component,
+      component,
+      new FdLayoutRevision('benchmark'),
+    ),
+    topology,
+    nodeSizes: nodes.map((node) => ({
+      nodeID: localNodeID(node.nodeID),
+      size: { width: node.frame.width, height: node.frame.height },
+    })),
+    portAnchors: [],
+  })
+  const placement = new FdGraphNodePlacement(
+    input,
+    nodes.map((node) => ({ nodeID: localNodeID(node.nodeID), frame: node.frame })),
+    {
+      x: 0,
+      y: 0,
+      width: (Math.min(count, columnCount) - 1) * horizontalSpacing + 104,
+      height: Math.floor((count - 1) / columnCount) * verticalSpacing + 56,
+    },
+  )
+  const result = new FdGraphLayoutResult(
+    input,
+    placement,
+    edges.map((edge) => {
+      const source = nodes[edge.edgeID]?.frame
+      const target = nodes[edge.edgeID + 1]?.frame
+      if (!source || !target) throw new Error('benchmark edge invariant failed')
+      return {
+        edgeID: localEdgeID(edge.edgeID),
+        route: new FdGraphEdgeRoute(
+          { x: source.x + source.width, y: source.y + source.height / 2 },
+          [{ kind: 'line', end: { x: target.x, y: target.y + target.height / 2 } }],
+        ),
+      }
+    }),
+  )
+  return new FdGraphCanvasContent({ presentation, layoutInput: input, layoutResult: result })
 }
 
 const buildStartedAt = performance.now()
-const snapshot = makeSnapshot(nodeCount)
+const content = makeContent(nodeCount)
 graph.configuration = {
   renderingBackend: requestedBackend,
   canvas: {
@@ -88,12 +199,10 @@ graph.configuration = {
   nodeResizing: { isEnabled: true },
 }
 graph.contentChangeBehavior = { kind: 'fit', padding: 48, maximumZoom: 1 }
-graph.miniMapConfiguration = {
-  visibility: 'always',
-  interaction: 'panAndZoom',
-  refreshPolicy: 'adaptiveLive',
-}
-graph.snapshot = snapshot
+graph.webGL2VisualAdapter = new FdGraphCanvasWebGL2VisualAdapter({
+  content: () => new FdGraphWebGL2RenderingBackend(),
+})
+graph.content = content
 const buildDuration = performance.now() - buildStartedAt
 
 const animationFrame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve))
@@ -173,7 +282,8 @@ function metrics(
 }
 
 function canvasTarget(): HTMLElement {
-  const target = graph.shadowRoot?.querySelector<HTMLElement>('fd-canvas')
+  const engine = graph.shadowRoot?.querySelector<HTMLElement>('fd-graph-canvas-engine')
+  const target = engine?.shadowRoot?.querySelector<HTMLElement>('fd-canvas')
   if (!target) throw new Error('canvas target is unavailable')
   return target
 }
@@ -192,8 +302,13 @@ function dispatchWheel(deltaX: number, deltaY: number, control = false): void {
 }
 
 async function prepareScenario(scenario: FdBenchmarkScenario): Promise<void> {
-  if (scenario === 'drag' || scenario === 'click') graph.focusNode(0, 1, { animated: false })
-  else graph.fit(48, 1, { animated: false })
+  graph.command = new FdGraphCanvasSessionCommand(
+    graph.sessionID,
+    scenario === 'drag' || scenario === 'click'
+      ? { kind: 'focus', elementID: 'node-0', zoom: 1 }
+      : { kind: 'fit', scope: { kind: 'presentation' }, padding: 48, maximumZoom: 1 },
+    false,
+  )
   await settle()
 }
 
@@ -204,7 +319,7 @@ function pointerDispatcher(
   const target = canvasTarget()
   target.setPointerCapture = () => undefined
   const bounds = graph.getBoundingClientRect()
-  const start = graph.viewport.transform.applyPoint({ x: 52, y: 28 })
+  const start = graph.session.viewport.transform.applyPoint({ x: 52, y: 28 })
   const clientX = bounds.left + start.x
   const clientY = bounds.top + start.y
   let active = false
@@ -270,18 +385,22 @@ async function measure(scenario: FdBenchmarkScenario, duration: number): Promise
 
 const initializationStartedAt = performance.now()
 const initializationDuration = settle().then(() => performance.now() - initializationStartedAt)
+const resolvedBackend = resolveGraphCanvasRenderingBackend(
+  requestedBackend,
+  graphCanvasRenderingBackendCapabilities(),
+)
 const ready = initializationDuration.then(() => {
-  status.value = `${nodeCount.toLocaleString()} nodes · ${snapshot.edges.length.toLocaleString()} edges · ${graph.resolvedRenderingBackend?.kind ?? 'pending'}`
+  status.value = `${nodeCount.toLocaleString()} nodes · ${Math.max(nodeCount - 1, 0).toLocaleString()} edges · ${resolvedBackend}`
 })
 
 window.fdCanvasBenchmark = {
   ready,
   nodeCount,
-  edgeCount: snapshot.edges.length,
+  edgeCount: Math.max(nodeCount - 1, 0),
   buildDuration,
   initializationDuration,
   get backend() {
-    return graph.resolvedRenderingBackend?.kind ?? 'pending'
+    return resolvedBackend
   },
   measure,
 }
