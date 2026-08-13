@@ -38,6 +38,10 @@ subset while requiring the interaction anchor to remain included. Per-node size 
 set independent minimum and maximum dimensions without putting product policy into the graph
 model.
 
+Disabling `interactionConfiguration.nodeResizing` also removes the shared resize bounds and
+handles. Node selection remains available, so read-mostly products can keep selection and dragging
+without implying that node sizes are editable.
+
 The standard solver supports alignment, configurable grid rounding, equal-spacing chains,
 equal-size resizing, hysteresis, and measurement guides. Candidate lookup is constrained by
 `searchRadius` and `maximumCandidates` so dense graphs do not turn pointer input into a full graph

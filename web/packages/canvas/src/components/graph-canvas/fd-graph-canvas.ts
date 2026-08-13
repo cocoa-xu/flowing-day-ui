@@ -14,7 +14,6 @@ import {
 import type {
   FdCanvasConfiguration,
   FdCanvasContentChangeBehavior,
-  FdCanvasGridConfiguration,
   FdCanvasRequest,
 } from '../../configuration.js'
 import type { FdCanvasViewportChangeDetail } from '../../events.js'
@@ -696,8 +695,6 @@ export class FdGraphCanvas
 
   @property({ attribute: false }) snapshot: FdAnyGraphSnapshot = emptySnapshot
   @property({ attribute: false }) configuration: Partial<FdCanvasConfiguration> = {}
-  @property({ attribute: false })
-  gridConfiguration: Partial<FdCanvasGridConfiguration> | undefined
   @property({ attribute: false }) contentInsets: FdCanvasInsets = zeroCanvasInsets
   @property({ attribute: false }) contentChangeBehavior: FdCanvasContentChangeBehavior = {
     kind: 'fit',
@@ -916,7 +913,6 @@ export class FdGraphCanvas
         exportparts="viewport:canvas-viewport"
         interaction-mode=${this.tool === 'pan' ? 'pan' : 'content'}
         .configuration=${this.configuration}
-        .gridConfiguration=${this.gridConfiguration}
         .contentRect=${this.canvasContentRect}
         .contentInsets=${this.contentInsets}
         .contentChangeBehavior=${this.contentChangeBehavior}
@@ -2333,8 +2329,9 @@ export class FdGraphCanvas
       if (frame) frames.set(id, frame)
     }
     const bounds = graphSelectionBounds(frames)
-    this.selectionBoundsElement.hidden = bounds === undefined
-    if (!bounds) return
+    const isVisible = bounds !== undefined && this.resizeHandlesVisible
+    this.selectionBoundsElement.hidden = !isVisible
+    if (!bounds || !isVisible) return
     this.selectionBoundsElement.style.transform = `translate3d(${bounds.x}px, ${bounds.y}px, 0)`
     this.selectionBoundsElement.style.width = `${bounds.width}px`
     this.selectionBoundsElement.style.height = `${bounds.height}px`

@@ -3,13 +3,11 @@ import { customElement, property, query } from 'lit/decorators.js'
 import {
   type FdCanvasConfiguration,
   type FdCanvasContentChangeBehavior,
-  type FdCanvasGridConfiguration,
   type FdCanvasInteractionMode,
   type FdCanvasRequest,
   type FdCanvasViewportAction,
   type FdCanvasViewportChangePhase,
   resolveCanvasConfiguration,
-  resolveCanvasGridConfiguration,
 } from '../../configuration.js'
 import type {
   FdCanvasDragDetail,
@@ -17,7 +15,6 @@ import type {
   FdCanvasViewportChangeDetail,
 } from '../../events.js'
 import {
-  FdCanvasGridLevels,
   type FdCanvasInsets,
   type FdCanvasPoint,
   type FdCanvasRect,
@@ -100,26 +97,6 @@ export class FdCanvas extends LitElement {
       pointer-events: none;
     }
 
-    .grid,
-    .grid-level {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-    }
-
-    .grid[hidden] {
-      display: none;
-    }
-
-    .grid-level {
-      background-image: radial-gradient(
-        circle at 0 0,
-        var(--fd-canvas-grid-color, rgb(125 135 131 / 0.3)) 0 var(--fd-canvas-grid-dot-size),
-        transparent calc(var(--fd-canvas-grid-dot-size) + 0.25px)
-      );
-      background-repeat: repeat;
-    }
-
     .world {
       position: absolute;
       z-index: 1;
@@ -143,8 +120,6 @@ export class FdCanvas extends LitElement {
   `
 
   @property({ attribute: false }) configuration: Partial<FdCanvasConfiguration> = {}
-  @property({ attribute: false })
-  gridConfiguration: Partial<FdCanvasGridConfiguration> | undefined
   @property({ attribute: false }) contentRect: FdCanvasRect = {
     x: 0,
     y: 0,
@@ -163,9 +138,6 @@ export class FdCanvas extends LitElement {
 
   @query('.viewport') private viewportElement!: HTMLDivElement
   @query('.world') private worldElement!: HTMLDivElement
-  @query('.grid') private gridElement!: HTMLDivElement
-  @query('.grid-coarse') private coarseGridElement!: HTMLDivElement
-  @query('.grid-fine') private fineGridElement!: HTMLDivElement
 
   private resolvedConfiguration = resolveCanvasConfiguration({})
   private transformValue = FdCanvasTransform.identity
@@ -203,13 +175,7 @@ export class FdCanvas extends LitElement {
         @pointercancel=${this.handlePointerEnd}
         @dblclick=${this.handleSmartMagnify}
       >
-        <div class="background" part="background">
-          <div class="grid" part="grid" hidden>
-            <div class="grid-level grid-coarse" part="grid-coarse"></div>
-            <div class="grid-level grid-fine" part="grid-fine"></div>
-          </div>
-          <slot name="background"></slot>
-        </div>
+        <div class="background" part="background"><slot name="background"></slot></div>
         <div class="world" part="world"><slot></slot><slot name="world"></slot></div>
         <div class="overlay" part="overlay"><slot name="overlay"></slot></div>
       </div>
@@ -238,7 +204,6 @@ export class FdCanvas extends LitElement {
         this.commitTransform(this.clampedTransform(this.transformValue), 'ended', true)
       }
     }
-    if (changed.has('gridConfiguration')) this.syncGrid()
     if (changed.has('contentInsets') && this.initialized) this.updateGeometry()
     if (changed.has('contentRect') && this.initialized) this.handleContentChange()
     if (changed.has('request')) this.handleRequest(this.request)
@@ -641,35 +606,8 @@ export class FdCanvas extends LitElement {
   ): void {
     this.transformValue = this.clampedTransform(transform)
     this.worldElement.style.transform = `translate3d(${this.transformValue.offset.x}px, ${this.transformValue.offset.y}px, 0) scale(${this.transformValue.zoom})`
-    this.syncGrid()
     this.refreshRenderWorldRect(forceRenderRefresh)
     this.emitViewportChange(phase)
-  }
-
-  private syncGrid(): void {
-    if (!this.gridElement) return
-    const source = this.gridConfiguration
-    this.gridElement.hidden = source === undefined
-    if (!source) return
-    const configuration = resolveCanvasGridConfiguration(source)
-    const levels = new FdCanvasGridLevels(
-      configuration.baseSpacing,
-      this.transformValue.zoom,
-      configuration.minimumVisualSpacing,
-      configuration.scaleFactor,
-    )
-    this.gridElement.style.setProperty('--fd-canvas-grid-dot-size', `${configuration.dotSize}px`)
-    this.syncGridLevel(this.coarseGridElement, levels.coarse.spacing, levels.coarse.opacity)
-    this.syncGridLevel(this.fineGridElement, levels.fine.spacing, levels.fine.opacity)
-  }
-
-  private syncGridLevel(element: HTMLElement, spacing: number, opacity: number): void {
-    const offset = this.transformValue.offset
-    const x = ((offset.x % spacing) + spacing) % spacing
-    const y = ((offset.y % spacing) + spacing) % spacing
-    element.style.backgroundSize = `${spacing}px ${spacing}px`
-    element.style.backgroundPosition = `${x}px ${y}px`
-    element.style.opacity = `${opacity}`
   }
 
   private emitViewportChange(phase: FdCanvasViewportChangePhase): void {
