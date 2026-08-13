@@ -3,6 +3,7 @@ import type { FdAnyGraphSnapshot } from '../graph/model.js'
 import { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
 import {
   beginGraphConnection,
+  FdGraphCanvasConnectionPolicy,
   graphConnectionOriginForEdge,
   nearestGraphConnectionTarget,
   resolveGraphConnection,
@@ -40,7 +41,7 @@ describe('graph connection editing', () => {
   it('matches the Swift connection editing defaults', () => {
     const configuration = resolveGraphConnectionEditingConfiguration()
 
-    expect(configuration.enabled).toBe(false)
+    expect(configuration.isEnabled).toBe(false)
     expect(configuration.allowsReconnection).toBe(true)
     expect(configuration.targetHitRadius).toBe(18)
     expect(configuration.sourceHitPadding).toBe(6)
@@ -50,7 +51,7 @@ describe('graph connection editing', () => {
 
   it('creates a validated connection between node-scoped ports', () => {
     const index = new FdGraphSnapshotIndex(snapshot)
-    const configuration = resolveGraphConnectionEditingConfiguration({ enabled: true })
+    const configuration = resolveGraphConnectionEditingConfiguration({ isEnabled: true })
     const started = beginGraphConnection(
       { kind: 'new', source: { nodeID: 'source', portID: 'out' } },
       snapshot.id,
@@ -84,10 +85,12 @@ describe('graph connection editing', () => {
 
   it('preserves validation feedback in a cancelled resolution', () => {
     const index = new FdGraphSnapshotIndex(snapshot)
-    const configuration = resolveGraphConnectionEditingConfiguration({
-      enabled: true,
-      validate: () => ({ kind: 'invalid', feedback: { message: 'Type mismatch' } }),
-    })
+    const configuration = resolveGraphConnectionEditingConfiguration(
+      { isEnabled: true },
+      new FdGraphCanvasConnectionPolicy({
+        validate: () => ({ kind: 'invalid', feedback: { message: 'Type mismatch' } }),
+      }),
+    )
     const started = beginGraphConnection(
       { kind: 'new', source: { nodeID: 'source', portID: 'out' } },
       snapshot.id,
@@ -121,7 +124,7 @@ describe('graph connection editing', () => {
     if (!edge) throw new Error('edge fixture is missing')
     const origin = graphConnectionOriginForEdge(edge, 'second')
     if (!origin) throw new Error('reconnection origin is missing')
-    const configuration = resolveGraphConnectionEditingConfiguration({ enabled: true })
+    const configuration = resolveGraphConnectionEditingConfiguration({ isEnabled: true })
     const started = beginGraphConnection(origin, snapshot.id, index, configuration)
     if (!started) throw new Error('connection did not start')
     const updated = updateGraphConnection(

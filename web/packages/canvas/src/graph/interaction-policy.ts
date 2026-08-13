@@ -1,10 +1,6 @@
 import type { FdCanvasRect, FdCanvasSize } from '../geometry.js'
 import type { FdGraphCanvasSnappingStrategy } from '../interactions/arrangement.js'
-import type {
-  FdGraphCanvasConnectionOrigin,
-  FdGraphCanvasConnectionValidation,
-  FdGraphCanvasConnectionValidationRequest,
-} from '../interactions/connection.js'
+import type { FdGraphCanvasConnectionPolicy } from '../interactions/connection.js'
 import type { FdGraphElementID } from './model.js'
 
 export type FdGraphCanvasInteractionModifier =
@@ -61,13 +57,6 @@ export type FdGraphCanvasNodeResizeAdmission =
 
 export type FdGraphCanvasResizeEdge = 'leading' | 'trailing' | 'top' | 'bottom'
 export type FdGraphCanvasResizeEdges = ReadonlySet<FdGraphCanvasResizeEdge>
-
-export interface FdGraphCanvasConnectionPolicy {
-  readonly canBegin?: (origin: FdGraphCanvasConnectionOrigin) => boolean
-  readonly validate?: (
-    request: FdGraphCanvasConnectionValidationRequest,
-  ) => FdGraphCanvasConnectionValidation
-}
 
 export interface FdGraphCanvasInteractionPolicy {
   readonly nodeCapabilities?: FdGraphCanvasNodeCapabilityMap

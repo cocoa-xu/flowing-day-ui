@@ -1,4 +1,5 @@
 import type { FdCanvasPoint } from '../geometry.js'
+import type { FdGraphCanvasConnectionEditingConfiguration } from '../graph/configuration.js'
 import type {
   FdAnyGraphEdge,
   FdGraphElementID,
@@ -39,30 +40,45 @@ export interface FdGraphCanvasConnectionValidationRequest {
   readonly baseLayoutInputID: string | number
 }
 
-export interface FdGraphConnectionEditingConfiguration {
-  readonly enabled?: boolean
-  readonly allowsReconnection?: boolean
-  readonly minimumDragDistance?: number
-  readonly sourceHitPadding?: number
-  readonly targetHitRadius?: number
-  readonly rendersDefaultPreview?: boolean
+interface FdGraphCanvasConnectionPolicyOptions {
   readonly canBegin?: (origin: FdGraphCanvasConnectionOrigin) => boolean
   readonly validate?: (
     request: FdGraphCanvasConnectionValidationRequest,
   ) => FdGraphCanvasConnectionValidation
 }
 
-export interface FdResolvedGraphConnectionEditingConfiguration {
-  readonly enabled: boolean
+export class FdGraphCanvasConnectionPolicy {
+  private readonly beginAdmission: (origin: FdGraphCanvasConnectionOrigin) => boolean
+  private readonly validation: (
+    request: FdGraphCanvasConnectionValidationRequest,
+  ) => FdGraphCanvasConnectionValidation
+
+  constructor(options: FdGraphCanvasConnectionPolicyOptions = {}) {
+    this.beginAdmission = options.canBegin ?? (() => true)
+    this.validation = options.validate ?? (() => ({ kind: 'valid' }))
+  }
+
+  canBegin(origin: FdGraphCanvasConnectionOrigin): boolean {
+    return this.beginAdmission(origin)
+  }
+
+  validate(request: FdGraphCanvasConnectionValidationRequest): FdGraphCanvasConnectionValidation {
+    return this.validation(request)
+  }
+
+  static get standard(): FdGraphCanvasConnectionPolicy {
+    return new FdGraphCanvasConnectionPolicy()
+  }
+}
+
+export interface FdResolvedGraphCanvasConnectionEditingConfiguration {
+  readonly isEnabled: boolean
   readonly allowsReconnection: boolean
   readonly minimumDragDistance: number
   readonly sourceHitPadding: number
   readonly targetHitRadius: number
   readonly rendersDefaultPreview: boolean
-  readonly canBegin: (origin: FdGraphCanvasConnectionOrigin) => boolean
-  readonly validate: (
-    request: FdGraphCanvasConnectionValidationRequest,
-  ) => FdGraphCanvasConnectionValidation
+  readonly policy: FdGraphCanvasConnectionPolicy
 }
 
 export interface FdGraphCanvasConnectionTarget {
@@ -127,10 +143,11 @@ const positive = (value: number, name: string): number => {
 }
 
 export function resolveGraphConnectionEditingConfiguration(
-  configuration: FdGraphConnectionEditingConfiguration = {},
-): FdResolvedGraphConnectionEditingConfiguration {
+  configuration: FdGraphCanvasConnectionEditingConfiguration = { isEnabled: false },
+  policy: FdGraphCanvasConnectionPolicy = FdGraphCanvasConnectionPolicy.standard,
+): FdResolvedGraphCanvasConnectionEditingConfiguration {
   return {
-    enabled: configuration.enabled ?? false,
+    isEnabled: configuration.isEnabled,
     allowsReconnection: configuration.allowsReconnection ?? true,
     minimumDragDistance: nonnegative(
       configuration.minimumDragDistance ?? 2,
@@ -142,8 +159,7 @@ export function resolveGraphConnectionEditingConfiguration(
     ),
     targetHitRadius: positive(configuration.targetHitRadius ?? 18, 'connection target hit radius'),
     rendersDefaultPreview: configuration.rendersDefaultPreview ?? true,
-    canBegin: configuration.canBegin ?? (() => true),
-    validate: configuration.validate ?? (() => ({ kind: 'valid' })),
+    policy,
   }
 }
 
@@ -176,9 +192,9 @@ export function beginGraphConnection(
   origin: FdGraphCanvasConnectionOrigin,
   snapshotID: string | number,
   index: FdGraphSnapshotIndex,
-  configuration: FdResolvedGraphConnectionEditingConfiguration,
+  configuration: FdResolvedGraphCanvasConnectionEditingConfiguration,
 ): FdGraphCanvasTransientConnection | undefined {
-  if (!configuration.enabled || !configuration.canBegin(origin)) return undefined
+  if (!configuration.isEnabled || !configuration.policy.canBegin(origin)) return undefined
   if (origin.kind === 'reconnect' && !configuration.allowsReconnection) return undefined
   const stationaryEndpoint = origin.kind === 'new' ? origin.source : origin.fixed
   const movingEndpoint = origin.kind === 'new' ? origin.source : origin.original
@@ -201,7 +217,7 @@ export function updateGraphConnection(
   snapshotID: string | number,
   index: FdGraphSnapshotIndex,
   targetHitRadius: number,
-  configuration: FdResolvedGraphConnectionEditingConfiguration,
+  configuration: FdResolvedGraphCanvasConnectionEditingConfiguration,
 ): FdGraphCanvasTransientConnection {
   if (
     connection.basePresentationSnapshotID !== snapshotID ||
@@ -229,7 +245,7 @@ export function updateGraphConnection(
     ...connection,
     movingPoint: candidate.point,
     candidate,
-    validation: configuration.validate({
+    validation: configuration.policy.validate({
       origin: connection.origin,
       target: candidate.endpoint,
       basePresentationSnapshotID: connection.basePresentationSnapshotID,

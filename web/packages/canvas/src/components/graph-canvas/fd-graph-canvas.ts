@@ -95,9 +95,10 @@ import {
 } from '../../interactions/configuration.js'
 import {
   type FdGraphCanvasConnectionOrigin,
+  FdGraphCanvasConnectionPolicy,
   type FdGraphCanvasConnectionResolution,
   type FdGraphCanvasTransientConnection,
-  type FdResolvedGraphConnectionEditingConfiguration,
+  type FdResolvedGraphCanvasConnectionEditingConfiguration,
   resolveGraphConnectionEditingConfiguration,
 } from '../../interactions/connection.js'
 import {
@@ -846,7 +847,8 @@ export class FdGraphCanvas
     resolveGraphCanvasAccessibilityConfiguration()
   private resolvedHistoryConfiguration: FdResolvedGraphCanvasHistoryConfiguration =
     resolveGraphCanvasHistoryConfiguration()
-  private connectionConfiguration = resolveGraphConnectionEditingConfiguration()
+  private connectionConfiguration: FdResolvedGraphCanvasConnectionEditingConfiguration =
+    resolveGraphConnectionEditingConfiguration()
   private historyDriver = this.createHistoryDriver()
   private activeAccessibilitySnapshot = new FdGraphCanvasAccessibilitySnapshot({
     canvasDescription: { label: 'Graph Canvas' },
@@ -898,7 +900,7 @@ export class FdGraphCanvas
     return this.snapshot.id
   }
 
-  get resolvedConnectionConfiguration(): FdResolvedGraphConnectionEditingConfiguration {
+  get resolvedConnectionConfiguration(): FdResolvedGraphCanvasConnectionEditingConfiguration {
     return this.connectionConfiguration
   }
 
@@ -1609,15 +1611,17 @@ export class FdGraphCanvas
           basePresentationSnapshotID: request.snapshotID,
         }) ?? { kind: 'allowAll' },
     })
-    this.connectionConfiguration = resolveGraphConnectionEditingConfiguration({
-      ...policy.connectionPolicy,
-      enabled: configuration.connectionEditing.isEnabled,
-      allowsReconnection: configuration.connectionEditing.allowsReconnection,
-      targetHitRadius: configuration.connectionEditing.targetHitRadius,
-      sourceHitPadding: configuration.connectionEditing.sourceHitPadding,
-      minimumDragDistance: configuration.connectionEditing.minimumDragDistance,
-      rendersDefaultPreview: configuration.connectionEditing.rendersDefaultPreview,
-    })
+    this.connectionConfiguration = resolveGraphConnectionEditingConfiguration(
+      {
+        isEnabled: configuration.connectionEditing.isEnabled,
+        allowsReconnection: configuration.connectionEditing.allowsReconnection,
+        targetHitRadius: configuration.connectionEditing.targetHitRadius,
+        sourceHitPadding: configuration.connectionEditing.sourceHitPadding,
+        minimumDragDistance: configuration.connectionEditing.minimumDragDistance,
+        rendersDefaultPreview: configuration.connectionEditing.rendersDefaultPreview,
+      },
+      policy.connectionPolicy ?? FdGraphCanvasConnectionPolicy.standard,
+    )
     this.keyboardCommandResolver =
       this.platformAdapter.resolveKeyboardCommand ?? defaultGraphCanvasKeyboardCommandResolver
     this.resolvedAccessibilityConfiguration = resolveGraphCanvasAccessibilityConfiguration(
@@ -2418,7 +2422,7 @@ export class FdGraphCanvas
   private syncPortHitPadding(): void {
     this.style.setProperty(
       '--fd-graph-port-hit-padding',
-      `${this.connectionConfiguration.enabled ? this.connectionConfiguration.sourceHitPadding : 0}px`,
+      `${this.connectionConfiguration.isEnabled ? this.connectionConfiguration.sourceHitPadding : 0}px`,
     )
   }
 

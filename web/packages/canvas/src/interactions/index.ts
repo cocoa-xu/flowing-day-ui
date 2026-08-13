@@ -21,20 +21,21 @@ export {
   type FdGraphCanvasTranslationSnapRequestOptions,
 } from './arrangement.js'
 export type { FdGraphCanvasTool } from './configuration.js'
-export type {
-  FdGraphCanvasConnectionCancellationIntent,
-  FdGraphCanvasConnectionCancellationReason,
-  FdGraphCanvasConnectionCompletionIntent,
-  FdGraphCanvasConnectionEndpoint,
-  FdGraphCanvasConnectionFeedback,
-  FdGraphCanvasConnectionOperation,
-  FdGraphCanvasConnectionOrigin,
-  FdGraphCanvasConnectionResolution,
-  FdGraphCanvasConnectionTarget,
-  FdGraphCanvasConnectionValidation,
-  FdGraphCanvasConnectionValidationRequest,
-  FdGraphCanvasEdgeEndpoint,
-  FdGraphCanvasTransientConnection,
+export {
+  type FdGraphCanvasConnectionCancellationIntent,
+  type FdGraphCanvasConnectionCancellationReason,
+  type FdGraphCanvasConnectionCompletionIntent,
+  type FdGraphCanvasConnectionEndpoint,
+  type FdGraphCanvasConnectionFeedback,
+  type FdGraphCanvasConnectionOperation,
+  type FdGraphCanvasConnectionOrigin,
+  FdGraphCanvasConnectionPolicy,
+  type FdGraphCanvasConnectionResolution,
+  type FdGraphCanvasConnectionTarget,
+  type FdGraphCanvasConnectionValidation,
+  type FdGraphCanvasConnectionValidationRequest,
+  type FdGraphCanvasEdgeEndpoint,
+  type FdGraphCanvasTransientConnection,
 } from './connection.js'
 export {
   defaultGraphCanvasKeyboardCommandResolver,

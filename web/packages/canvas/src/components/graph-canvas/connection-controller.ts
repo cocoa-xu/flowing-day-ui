@@ -9,7 +9,7 @@ import {
   type FdGraphCanvasConnectionOrigin,
   type FdGraphCanvasConnectionResolution,
   type FdGraphCanvasTransientConnection,
-  type FdResolvedGraphConnectionEditingConfiguration,
+  type FdResolvedGraphCanvasConnectionEditingConfiguration,
   resolveGraphConnection,
   updateGraphConnection,
 } from '../../interactions/connection.js'
@@ -18,7 +18,7 @@ export interface FdGraphCanvasConnectionDelegate {
   readonly snapshotID: string | number
   readonly viewport: FdCanvasViewport
   readonly graphIndex: FdGraphSnapshotIndex
-  readonly resolvedConnectionConfiguration: FdResolvedGraphConnectionEditingConfiguration
+  readonly resolvedConnectionConfiguration: FdResolvedGraphCanvasConnectionEditingConfiguration
   viewportPoint(event: PointerEvent): FdCanvasPoint
   setConnectionPresentation(connection: FdGraphCanvasTransientConnection | undefined): void
   emitConnectionResolution(resolution: FdGraphCanvasConnectionResolution): void

@@ -26,7 +26,10 @@ import {
   FdGraphCanvasSnappingStrategy,
   FdGraphCanvasSnapState,
 } from '../../interactions/arrangement.js'
-import { graphConnectionOriginForEdge } from '../../interactions/connection.js'
+import {
+  FdGraphCanvasConnectionPolicy,
+  graphConnectionOriginForEdge,
+} from '../../interactions/connection.js'
 import type {
   FdGraphCanvasRenderingBackendPreference,
   FdGraphRenderFrame,
@@ -1023,12 +1026,12 @@ describe('fd-graph-canvas connection editing', () => {
     const canvas = preparePointerInput(element)
     element.configuration = { connectionEditing: { isEnabled: true } }
     element.interactionPolicy = {
-      connectionPolicy: {
+      connectionPolicy: new FdGraphCanvasConnectionPolicy({
         validate: () => ({
           kind: 'invalid',
           feedback: { message: 'This input already has a connection.' },
         }),
-      },
+      }),
     }
     await element.updateComplete
     const cancellations: FdGraphConnectionCancelDetail[] = []
