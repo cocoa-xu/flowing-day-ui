@@ -1,3 +1,4 @@
+import AppKit
 import FlowingDayControls
 import FlowingDayPreferences
 import SwiftUI
@@ -35,7 +36,17 @@ final class PreferencesPublicAPITests: XCTestCase {
       configuration: configuration,
       groups: [PreferencesPageGroup(id: "application", pages: [page])]
     )
+    let imageRow = PreferencesRow(
+      icon: .image(NSImage(size: NSSize(width: 20, height: 20))),
+      title: "Image"
+    )
+    let templateRow = PreferencesRow(
+      icon: .template(NSImage(size: NSSize(width: 20, height: 20))),
+      title: "Template"
+    )
 
     XCTAssertNotNil(AnyView(view))
+    XCTAssertNotNil(AnyView(imageRow))
+    XCTAssertNotNil(AnyView(templateRow))
   }
 }
