@@ -3,6 +3,40 @@ import type { FdCanvasRect } from './geometry.js'
 export type FdCanvasInteractionMode = 'content' | 'pan'
 export type FdCanvasViewportChangePhase = 'continuous' | 'ended'
 
+export interface FdCanvasGridConfiguration {
+  readonly baseSpacing: number
+  readonly minimumVisualSpacing: number
+  readonly scaleFactor: number
+  readonly dotSize: number
+}
+
+export const defaultCanvasGridConfiguration: FdCanvasGridConfiguration = {
+  baseSpacing: 24,
+  minimumVisualSpacing: 12,
+  scaleFactor: 2,
+  dotSize: 1.35,
+}
+
+export const resolveCanvasGridConfiguration = (
+  configuration: Partial<FdCanvasGridConfiguration>,
+): FdCanvasGridConfiguration => {
+  const resolved = { ...defaultCanvasGridConfiguration, ...configuration }
+  if (
+    !Number.isFinite(resolved.baseSpacing) ||
+    resolved.baseSpacing <= 0 ||
+    !Number.isFinite(resolved.minimumVisualSpacing) ||
+    resolved.minimumVisualSpacing <= 0 ||
+    !Number.isFinite(resolved.dotSize) ||
+    resolved.dotSize <= 0
+  ) {
+    throw new RangeError('canvas grid dimensions must be finite and positive')
+  }
+  if (!Number.isFinite(resolved.scaleFactor) || resolved.scaleFactor <= 1) {
+    throw new RangeError('canvas grid scale factor must be finite and greater than one')
+  }
+  return resolved
+}
+
 export interface FdCanvasConfiguration {
   readonly initialZoom: number
   readonly focusedZoom: number

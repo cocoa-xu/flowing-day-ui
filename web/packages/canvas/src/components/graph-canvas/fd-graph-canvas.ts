@@ -14,6 +14,7 @@ import {
 import type {
   FdCanvasConfiguration,
   FdCanvasContentChangeBehavior,
+  FdCanvasGridConfiguration,
   FdCanvasRequest,
 } from '../../configuration.js'
 import type { FdCanvasViewportChangeDetail } from '../../events.js'
@@ -695,6 +696,8 @@ export class FdGraphCanvas
 
   @property({ attribute: false }) snapshot: FdAnyGraphSnapshot = emptySnapshot
   @property({ attribute: false }) configuration: Partial<FdCanvasConfiguration> = {}
+  @property({ attribute: false })
+  gridConfiguration: Partial<FdCanvasGridConfiguration> | undefined
   @property({ attribute: false }) contentInsets: FdCanvasInsets = zeroCanvasInsets
   @property({ attribute: false }) contentChangeBehavior: FdCanvasContentChangeBehavior = {
     kind: 'fit',
@@ -913,6 +916,7 @@ export class FdGraphCanvas
         exportparts="viewport:canvas-viewport"
         interaction-mode=${this.tool === 'pan' ? 'pan' : 'content'}
         .configuration=${this.configuration}
+        .gridConfiguration=${this.gridConfiguration}
         .contentRect=${this.canvasContentRect}
         .contentInsets=${this.contentInsets}
         .contentChangeBehavior=${this.contentChangeBehavior}
