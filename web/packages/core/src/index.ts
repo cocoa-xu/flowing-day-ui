@@ -33,6 +33,8 @@ import './components/popup-row/fd-popup-row.js'
 import './components/select/fd-select.js'
 import './components/popover/fd-popover.js'
 import './components/progress/fd-progress.js'
+import './components/radio/fd-radio.js'
+import './components/radio/fd-radio-group.js'
 import './components/row/fd-row.js'
 import './components/search-picker-row/fd-search-picker-row.js'
 import './components/search-picker/fd-search-picker.js'
@@ -111,6 +113,12 @@ export {
   FdPreferencesWindow,
 } from './components/preferences-window/fd-preferences-window.js'
 export { FdProgress } from './components/progress/fd-progress.js'
+export { FdRadio } from './components/radio/fd-radio.js'
+export {
+  FdRadioGroup,
+  type FdRadioGroupAxis,
+  type FdRadioOption,
+} from './components/radio/fd-radio-group.js'
 export { FdRow } from './components/row/fd-row.js'
 export { FdSearchPicker } from './components/search-picker/fd-search-picker.js'
 export { FdSearchPickerRow } from './components/search-picker-row/fd-search-picker-row.js'
