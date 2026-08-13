@@ -1,9 +1,9 @@
 import type { FdCanvasRect } from '../geometry.js'
 import type {
-  FdGraphConnectionCancellationReason,
-  FdGraphConnectionOperation,
-  FdGraphConnectionOrigin,
-  FdGraphTransientConnection,
+  FdGraphCanvasConnectionCancellationReason,
+  FdGraphCanvasConnectionOperation,
+  FdGraphCanvasConnectionOrigin,
+  FdGraphCanvasTransientConnection,
 } from '../interactions/connection.js'
 import type { FdGraphElementID, FdGraphElementReference } from './model.js'
 
@@ -45,19 +45,19 @@ export interface FdGraphNodeActivateDetail {
 }
 
 export interface FdGraphConnectionPreviewChangeDetail {
-  readonly connection?: FdGraphTransientConnection
+  readonly connection?: FdGraphCanvasTransientConnection
 }
 
 export interface FdGraphConnectionCompleteDetail {
   readonly snapshotID: string | number
-  readonly origin: FdGraphConnectionOrigin
-  readonly operation: FdGraphConnectionOperation
+  readonly origin: FdGraphCanvasConnectionOrigin
+  readonly operation: FdGraphCanvasConnectionOperation
 }
 
 export interface FdGraphConnectionCancelDetail {
   readonly snapshotID: string | number
-  readonly origin: FdGraphConnectionOrigin
-  readonly reason: FdGraphConnectionCancellationReason
+  readonly origin: FdGraphCanvasConnectionOrigin
+  readonly reason: FdGraphCanvasConnectionCancellationReason
 }
 
 declare global {

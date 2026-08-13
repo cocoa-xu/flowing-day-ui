@@ -92,9 +92,9 @@ import {
   resolveGraphCanvasInteractionConfiguration,
 } from '../../interactions/configuration.js'
 import {
-  type FdGraphConnectionOrigin,
-  type FdGraphConnectionResolution,
-  type FdGraphTransientConnection,
+  type FdGraphCanvasConnectionOrigin,
+  type FdGraphCanvasConnectionResolution,
+  type FdGraphCanvasTransientConnection,
   type FdResolvedGraphConnectionEditingConfiguration,
   resolveGraphConnectionEditingConfiguration,
 } from '../../interactions/connection.js'
@@ -1196,7 +1196,7 @@ export class FdGraphCanvas
     this.canvas.restore(options)
   }
 
-  beginConnection(origin: FdGraphConnectionOrigin): boolean {
+  beginConnection(origin: FdGraphCanvasConnectionOrigin): boolean {
     return this.connectionController?.begin(origin) ?? false
   }
 
@@ -2310,7 +2310,7 @@ export class FdGraphCanvas
     this.syncGuides(this.interactionPresentation.guides)
   }
 
-  setConnectionPresentation(connection: FdGraphTransientConnection | undefined): void {
+  setConnectionPresentation(connection: FdGraphCanvasTransientConnection | undefined): void {
     const detail: FdGraphConnectionPreviewChangeDetail = connection ? { connection } : {}
     this.dispatchEvent(
       new CustomEvent<FdGraphConnectionPreviewChangeDetail>('fd-graph-connection-preview-change', {
@@ -2350,8 +2350,8 @@ export class FdGraphCanvas
   }
 
   emitConnectionResolution(
-    connection: FdGraphTransientConnection,
-    resolution: FdGraphConnectionResolution,
+    connection: FdGraphCanvasTransientConnection,
+    resolution: FdGraphCanvasConnectionResolution,
   ): void {
     if (resolution.kind === 'completed') {
       const detail: FdGraphConnectionCompleteDetail = {
@@ -2389,7 +2389,7 @@ export class FdGraphCanvas
     )
   }
 
-  private syncConnectionPortStates(connection: FdGraphTransientConnection): void {
+  private syncConnectionPortStates(connection: FdGraphCanvasTransientConnection): void {
     const source =
       connection.origin.kind === 'new' ? connection.origin.source : connection.origin.original
     this.setConnectionPortState(source.nodeID, source.portID, 'source')

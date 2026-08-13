@@ -3,11 +3,11 @@ import { graphElementIDFromKey } from '../../graph/model.js'
 import type { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
 import {
   beginGraphConnection,
-  type FdGraphConnectionCancellationReason,
-  type FdGraphConnectionEndpoint,
-  type FdGraphConnectionOrigin,
-  type FdGraphConnectionResolution,
-  type FdGraphTransientConnection,
+  type FdGraphCanvasConnectionCancellationReason,
+  type FdGraphCanvasConnectionEndpoint,
+  type FdGraphCanvasConnectionOrigin,
+  type FdGraphCanvasConnectionResolution,
+  type FdGraphCanvasTransientConnection,
   type FdResolvedGraphConnectionEditingConfiguration,
   resolveGraphConnection,
   updateGraphConnection,
@@ -19,10 +19,10 @@ export interface FdGraphCanvasConnectionDelegate {
   readonly graphIndex: FdGraphSnapshotIndex
   readonly resolvedConnectionConfiguration: FdResolvedGraphConnectionEditingConfiguration
   viewportPoint(event: PointerEvent): FdCanvasPoint
-  setConnectionPresentation(connection: FdGraphTransientConnection | undefined): void
+  setConnectionPresentation(connection: FdGraphCanvasTransientConnection | undefined): void
   emitConnectionResolution(
-    connection: FdGraphTransientConnection,
-    resolution: FdGraphConnectionResolution,
+    connection: FdGraphCanvasTransientConnection,
+    resolution: FdGraphCanvasConnectionResolution,
   ): void
 }
 
@@ -33,7 +33,7 @@ interface FdGraphConnectionPointerSession {
 }
 
 export class FdGraphCanvasConnectionController {
-  private connection: FdGraphTransientConnection | undefined
+  private connection: FdGraphCanvasTransientConnection | undefined
   private pointerSession: FdGraphConnectionPointerSession | undefined
 
   constructor(private readonly delegate: FdGraphCanvasConnectionDelegate) {}
@@ -42,7 +42,7 @@ export class FdGraphCanvasConnectionController {
     return this.pointerSession?.pointerID
   }
 
-  get activeConnection(): FdGraphTransientConnection | undefined {
+  get activeConnection(): FdGraphCanvasTransientConnection | undefined {
     return this.connection
   }
 
@@ -75,7 +75,7 @@ export class FdGraphCanvasConnectionController {
     this.update(this.delegate.viewport.transform.removePoint(viewportPoint))
   }
 
-  pointerEnd(event: PointerEvent): FdGraphConnectionEndpoint | undefined {
+  pointerEnd(event: PointerEvent): FdGraphCanvasConnectionEndpoint | undefined {
     const session = this.pointerSession
     if (!session || event.pointerId !== session.pointerID) return undefined
     const clickedEndpoint =
@@ -90,7 +90,7 @@ export class FdGraphCanvasConnectionController {
     return clickedEndpoint
   }
 
-  begin(origin: FdGraphConnectionOrigin): boolean {
+  begin(origin: FdGraphCanvasConnectionOrigin): boolean {
     const connection = beginGraphConnection(
       origin,
       this.delegate.snapshotID,
@@ -132,7 +132,7 @@ export class FdGraphCanvasConnectionController {
     return true
   }
 
-  cancel(reason: FdGraphConnectionCancellationReason = { kind: 'cancelled' }): boolean {
+  cancel(reason: FdGraphCanvasConnectionCancellationReason = { kind: 'cancelled' }): boolean {
     const connection = this.connection
     if (!connection) return false
     this.connection = undefined
@@ -148,7 +148,7 @@ export class FdGraphCanvasConnectionController {
     this.delegate.setConnectionPresentation(undefined)
   }
 
-  private portEndpoint(event: PointerEvent): FdGraphConnectionEndpoint | undefined {
+  private portEndpoint(event: PointerEvent): FdGraphCanvasConnectionEndpoint | undefined {
     for (const candidate of event.composedPath()) {
       if (!(candidate instanceof HTMLElement)) continue
       const nodeKey = candidate.dataset.fdGraphNode

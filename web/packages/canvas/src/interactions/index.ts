@@ -1,15 +1,15 @@
 export * from './arrangement.js'
 export type { FdGraphCanvasTool } from './configuration.js'
 export type {
-  FdGraphConnectionCancellationReason,
-  FdGraphConnectionEndpoint,
-  FdGraphConnectionFeedback,
-  FdGraphConnectionOperation,
-  FdGraphConnectionOrigin,
-  FdGraphConnectionResolution,
-  FdGraphConnectionValidation,
-  FdGraphConnectionValidationRequest,
-  FdGraphTransientConnection,
+  FdGraphCanvasConnectionCancellationReason,
+  FdGraphCanvasConnectionEndpoint,
+  FdGraphCanvasConnectionFeedback,
+  FdGraphCanvasConnectionOperation,
+  FdGraphCanvasConnectionOrigin,
+  FdGraphCanvasConnectionResolution,
+  FdGraphCanvasConnectionValidation,
+  FdGraphCanvasConnectionValidationRequest,
+  FdGraphCanvasTransientConnection,
 } from './connection.js'
 export {
   defaultGraphKeyboardCommandResolver,

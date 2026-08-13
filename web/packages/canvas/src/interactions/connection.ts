@@ -8,31 +8,31 @@ import type {
 import { graphPortPoint } from '../graph/model.js'
 import type { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
 
-export type FdGraphConnectionEndpoint = FdGraphEndpoint<FdGraphElementID> & {
+export type FdGraphCanvasConnectionEndpoint = FdGraphEndpoint<FdGraphElementID> & {
   readonly portID: FdGraphElementID
 }
 
-export type FdGraphConnectionOrigin =
-  | { readonly kind: 'new'; readonly source: FdGraphConnectionEndpoint }
+export type FdGraphCanvasConnectionOrigin =
+  | { readonly kind: 'new'; readonly source: FdGraphCanvasConnectionEndpoint }
   | {
       readonly kind: 'reconnect'
       readonly edgeID: FdGraphElementID
       readonly endpoint: 'source' | 'target'
-      readonly original: FdGraphConnectionEndpoint
-      readonly fixed: FdGraphConnectionEndpoint
+      readonly original: FdGraphCanvasConnectionEndpoint
+      readonly fixed: FdGraphCanvasConnectionEndpoint
     }
 
-export interface FdGraphConnectionFeedback {
+export interface FdGraphCanvasConnectionFeedback {
   readonly message?: string
 }
 
-export type FdGraphConnectionValidation =
+export type FdGraphCanvasConnectionValidation =
   | { readonly kind: 'valid' }
-  | { readonly kind: 'invalid'; readonly feedback?: FdGraphConnectionFeedback }
+  | { readonly kind: 'invalid'; readonly feedback?: FdGraphCanvasConnectionFeedback }
 
-export interface FdGraphConnectionValidationRequest {
-  readonly origin: FdGraphConnectionOrigin
-  readonly target: FdGraphConnectionEndpoint
+export interface FdGraphCanvasConnectionValidationRequest {
+  readonly origin: FdGraphCanvasConnectionOrigin
+  readonly target: FdGraphCanvasConnectionEndpoint
   readonly snapshotID: string | number
 }
 
@@ -43,8 +43,10 @@ export interface FdGraphConnectionEditingConfiguration {
   readonly sourceHitPadding?: number
   readonly targetHitRadius?: number
   readonly rendersDefaultPreview?: boolean
-  readonly canBegin?: (origin: FdGraphConnectionOrigin) => boolean
-  readonly validate?: (request: FdGraphConnectionValidationRequest) => FdGraphConnectionValidation
+  readonly canBegin?: (origin: FdGraphCanvasConnectionOrigin) => boolean
+  readonly validate?: (
+    request: FdGraphCanvasConnectionValidationRequest,
+  ) => FdGraphCanvasConnectionValidation
 }
 
 export interface FdResolvedGraphConnectionEditingConfiguration {
@@ -54,46 +56,48 @@ export interface FdResolvedGraphConnectionEditingConfiguration {
   readonly sourceHitPadding: number
   readonly targetHitRadius: number
   readonly rendersDefaultPreview: boolean
-  readonly canBegin: (origin: FdGraphConnectionOrigin) => boolean
-  readonly validate: (request: FdGraphConnectionValidationRequest) => FdGraphConnectionValidation
+  readonly canBegin: (origin: FdGraphCanvasConnectionOrigin) => boolean
+  readonly validate: (
+    request: FdGraphCanvasConnectionValidationRequest,
+  ) => FdGraphCanvasConnectionValidation
 }
 
-export interface FdGraphConnectionTarget {
-  readonly endpoint: FdGraphConnectionEndpoint
+export interface FdGraphCanvasConnectionTarget {
+  readonly endpoint: FdGraphCanvasConnectionEndpoint
   readonly point: FdCanvasPoint
 }
 
-export interface FdGraphTransientConnection {
+export interface FdGraphCanvasTransientConnection {
   readonly snapshotID: string | number
-  readonly origin: FdGraphConnectionOrigin
+  readonly origin: FdGraphCanvasConnectionOrigin
   readonly stationaryPoint: FdCanvasPoint
   readonly movingPoint: FdCanvasPoint
-  readonly candidate?: FdGraphConnectionTarget
-  readonly validation?: FdGraphConnectionValidation
+  readonly candidate?: FdGraphCanvasConnectionTarget
+  readonly validation?: FdGraphCanvasConnectionValidation
 }
 
-export type FdGraphConnectionOperation =
+export type FdGraphCanvasConnectionOperation =
   | {
       readonly kind: 'create'
-      readonly source: FdGraphConnectionEndpoint
-      readonly target: FdGraphConnectionEndpoint
+      readonly source: FdGraphCanvasConnectionEndpoint
+      readonly target: FdGraphCanvasConnectionEndpoint
     }
   | {
       readonly kind: 'reconnect'
       readonly edgeID: FdGraphElementID
       readonly endpoint: 'source' | 'target'
-      readonly target: FdGraphConnectionEndpoint
+      readonly target: FdGraphCanvasConnectionEndpoint
     }
 
-export type FdGraphConnectionCancellationReason =
+export type FdGraphCanvasConnectionCancellationReason =
   | { readonly kind: 'cancelled' }
   | { readonly kind: 'noTarget' }
   | { readonly kind: 'staleSnapshot' }
-  | { readonly kind: 'invalidTarget'; readonly feedback?: FdGraphConnectionFeedback }
+  | { readonly kind: 'invalidTarget'; readonly feedback?: FdGraphCanvasConnectionFeedback }
 
-export type FdGraphConnectionResolution =
-  | { readonly kind: 'completed'; readonly operation: FdGraphConnectionOperation }
-  | { readonly kind: 'cancelled'; readonly reason: FdGraphConnectionCancellationReason }
+export type FdGraphCanvasConnectionResolution =
+  | { readonly kind: 'completed'; readonly operation: FdGraphCanvasConnectionOperation }
+  | { readonly kind: 'cancelled'; readonly reason: FdGraphCanvasConnectionCancellationReason }
 
 const nonnegative = (value: number, name: string): number => {
   if (!Number.isFinite(value) || value < 0) throw new RangeError(`${name} must not be negative`)
@@ -127,14 +131,14 @@ export function resolveGraphConnectionEditingConfiguration(
 export function graphConnectionEndpoint(
   nodeID: FdGraphElementID,
   port: FdGraphPort,
-): FdGraphConnectionEndpoint {
+): FdGraphCanvasConnectionEndpoint {
   return { nodeID, portID: port.id }
 }
 
 export function graphConnectionOriginForEdge(
   edge: FdAnyGraphEdge,
   endpoint: 'source' | 'target',
-): FdGraphConnectionOrigin | undefined {
+): FdGraphCanvasConnectionOrigin | undefined {
   const original = edge[endpoint]
   const fixed = edge[endpoint === 'source' ? 'target' : 'source']
   if (original.portID === undefined || fixed.portID === undefined) return undefined
@@ -148,11 +152,11 @@ export function graphConnectionOriginForEdge(
 }
 
 export function beginGraphConnection(
-  origin: FdGraphConnectionOrigin,
+  origin: FdGraphCanvasConnectionOrigin,
   snapshotID: string | number,
   index: FdGraphSnapshotIndex,
   configuration: FdResolvedGraphConnectionEditingConfiguration,
-): FdGraphTransientConnection | undefined {
+): FdGraphCanvasTransientConnection | undefined {
   if (!configuration.enabled || !configuration.canBegin(origin)) return undefined
   if (origin.kind === 'reconnect' && !configuration.allowsReconnection) return undefined
   const stationaryEndpoint = origin.kind === 'new' ? origin.source : origin.fixed
@@ -164,13 +168,13 @@ export function beginGraphConnection(
 }
 
 export function updateGraphConnection(
-  connection: FdGraphTransientConnection,
+  connection: FdGraphCanvasTransientConnection,
   worldPoint: FdCanvasPoint,
   snapshotID: string | number,
   index: FdGraphSnapshotIndex,
   targetHitRadius: number,
   configuration: FdResolvedGraphConnectionEditingConfiguration,
-): FdGraphTransientConnection {
+): FdGraphCanvasTransientConnection {
   if (connection.snapshotID !== snapshotID) return connection
   const candidate = nearestGraphConnectionTarget(
     index,
@@ -199,9 +203,9 @@ export function updateGraphConnection(
 }
 
 export function resolveGraphConnection(
-  connection: FdGraphTransientConnection,
+  connection: FdGraphCanvasTransientConnection,
   snapshotID: string | number,
-): FdGraphConnectionResolution {
+): FdGraphCanvasConnectionResolution {
   if (connection.snapshotID !== snapshotID) {
     return { kind: 'cancelled', reason: { kind: 'staleSnapshot' } }
   }
@@ -240,8 +244,8 @@ export function nearestGraphConnectionTarget(
   index: FdGraphSnapshotIndex,
   point: FdCanvasPoint,
   radius: number,
-  excluded?: FdGraphConnectionEndpoint,
-): FdGraphConnectionTarget | undefined {
+  excluded?: FdGraphCanvasConnectionEndpoint,
+): FdGraphCanvasConnectionTarget | undefined {
   nonnegative(radius, 'connection target radius')
   const nodes = index.nodesIn({
     x: point.x - radius,
@@ -251,7 +255,7 @@ export function nearestGraphConnectionTarget(
   })
   const maximumDistanceSquared = radius * radius
   let best:
-    | { readonly target: FdGraphConnectionTarget; readonly distanceSquared: number }
+    | { readonly target: FdGraphCanvasConnectionTarget; readonly distanceSquared: number }
     | undefined
   for (const node of nodes) {
     for (const port of node.ports ?? []) {
@@ -269,19 +273,19 @@ export function nearestGraphConnectionTarget(
 }
 
 export function connectionEndpointsEqual(
-  first: FdGraphConnectionEndpoint,
-  second: FdGraphConnectionEndpoint,
+  first: FdGraphCanvasConnectionEndpoint,
+  second: FdGraphCanvasConnectionEndpoint,
 ): boolean {
   return first.nodeID === second.nodeID && first.portID === second.portID
 }
 
-function movingEndpoint(origin: FdGraphConnectionOrigin): FdGraphConnectionEndpoint {
+function movingEndpoint(origin: FdGraphCanvasConnectionOrigin): FdGraphCanvasConnectionEndpoint {
   return origin.kind === 'new' ? origin.source : origin.original
 }
 
 function connectionEndpointPoint(
   index: FdGraphSnapshotIndex,
-  endpoint: FdGraphConnectionEndpoint,
+  endpoint: FdGraphCanvasConnectionEndpoint,
 ): FdCanvasPoint | undefined {
   const node = index.nodes.get(endpoint.nodeID)
   if (!node?.ports?.some(({ id }) => id === endpoint.portID)) return undefined
