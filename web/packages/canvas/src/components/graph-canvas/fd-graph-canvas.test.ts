@@ -93,6 +93,20 @@ function clientPoint(element: FdGraphCanvas, worldPoint: FdCanvasPoint): FdCanva
   return { x: bounds.left + point.x, y: bounds.top + point.y }
 }
 
+function applyFrameIntents(element: FdGraphCanvas): void {
+  element.addEventListener('fd-graph-node-frames-change', ({ detail }) => {
+    if (detail.phase !== 'ended') return
+    const frames = new Map(detail.changes.map(({ nodeID, after }) => [nodeID, after]))
+    element.snapshot = {
+      ...element.snapshot,
+      nodes: element.snapshot.nodes.map((node) => ({
+        ...node,
+        frame: frames.get(node.id) ?? node.frame,
+      })),
+    }
+  })
+}
+
 function dispatchPointer(
   target: EventTarget,
   type: 'pointerdown' | 'pointermove' | 'pointerup',
@@ -443,16 +457,12 @@ describe('fd-graph-canvas pointer editing', () => {
     expect(element.shadowRoot?.querySelector<HTMLElement>('.selection-marquee')?.hidden).toBe(true)
   })
 
-  it('drags a multi-node selection and commits one local snapshot on pointer release', async () => {
+  it('drags a multi-node selection and lets the consumer commit the resulting intent', async () => {
     const element = await mount()
     const canvas = preparePointerInput(element)
     element.selectedNodeIDs = new Set(['source', 'target'])
     element.configuration = { nodeDraggingMode: 'multiple' }
-    element.interactionConfiguration = {
-      frameUpdates: 'local',
-      multipleNodeDragging: true,
-      snapping: { enabled: false },
-    }
+    applyFrameIntents(element)
     await element.updateComplete
     const initialIndex = element.graphIndex
     const initialTransform = element.viewport.transform
@@ -477,7 +487,7 @@ describe('fd-graph-canvas pointer editing', () => {
     expect(element.snapshot.nodes[1]?.frame.y).toBe(240)
     await element.updateComplete
     await nextFrame()
-    expect(element.graphIndex).toBe(initialIndex)
+    expect(element.graphIndex).not.toBe(initialIndex)
     expect(element.viewport.transform).toEqual(initialTransform)
   })
 
@@ -486,11 +496,7 @@ describe('fd-graph-canvas pointer editing', () => {
     const canvas = preparePointerInput(element)
     element.selectedNodeIDs = new Set(['source', 'target'])
     element.configuration = { nodeDraggingMode: 'multiple' }
-    element.interactionConfiguration = {
-      frameUpdates: 'local',
-      multipleNodeDragging: true,
-      snapping: { enabled: false },
-    }
+    applyFrameIntents(element)
     element.interactionPolicy = {
       admitNodeDrag: ({
         anchorNodeID,
@@ -524,7 +530,6 @@ describe('fd-graph-canvas pointer editing', () => {
     const snapshot = graphSnapshot()
     const element = await mount(snapshot)
     const canvas = preparePointerInput(element)
-    element.interactionConfiguration = { snapping: { enabled: false } }
     await element.updateComplete
     const events: FdGraphNodeFramesChangeDetail[] = []
     element.addEventListener('fd-graph-node-frames-change', (event) => events.push(event.detail))
@@ -573,7 +578,7 @@ describe('fd-graph-canvas pointer editing', () => {
     const first = await mount()
     const firstCanvas = preparePointerInput(first)
     first.configuration = { snapping: { isEnabled: true } }
-    first.interactionConfiguration = { frameUpdates: 'local', snapping: { enabled: true } }
+    applyFrameIntents(first)
     await first.updateComplete
     const firstSource = first.shadowRoot?.querySelector(
       '[data-fd-graph-node="s:source"]',
@@ -589,7 +594,7 @@ describe('fd-graph-canvas pointer editing', () => {
     const second = await mount()
     const secondCanvas = preparePointerInput(second)
     second.configuration = { snapping: { isEnabled: true } }
-    second.interactionConfiguration = { frameUpdates: 'local', snapping: { enabled: true } }
+    applyFrameIntents(second)
     await second.updateComplete
     const secondSource = second.shadowRoot?.querySelector(
       '[data-fd-graph-node="s:source"]',
@@ -612,9 +617,8 @@ describe('fd-graph-canvas pointer editing', () => {
         targets: new Set(['grid', 'equalSpacing', 'equalSize']),
       },
     }
-    element.interactionConfiguration = {
-      frameUpdates: 'local',
-      snapping: { enabled: true, alignment: false },
+    applyFrameIntents(element)
+    element.interactionPolicy = {
       snappingStrategy: {
         translation: (request) => {
           const standard = snapGraphTranslationRequest(request)
@@ -651,10 +655,8 @@ describe('fd-graph-canvas pointer editing', () => {
       nodeResizing: { isEnabled: true },
       snapping: { isEnabled: true },
     }
-    element.interactionConfiguration = {
-      frameUpdates: 'local',
-      nodeResizing: true,
-      snapping: { enabled: true },
+    applyFrameIntents(element)
+    element.interactionPolicy = {
       snappingStrategy: {
         resize: () => {
           const bounds = { x: 40, y: 80, width: 240, height: 128 }
@@ -686,7 +688,7 @@ describe('fd-graph-canvas pointer editing', () => {
     const strategy = vi.fn(snapGraphTranslationRequest)
     const first = await mount()
     const firstCanvas = preparePointerInput(first)
-    first.interactionConfiguration = { snappingStrategy: { translation: strategy } }
+    first.interactionPolicy = { snappingStrategy: { translation: strategy } }
     await first.updateComplete
     const firstSource = first.shadowRoot?.querySelector(
       '[data-fd-graph-node="s:source"]',
@@ -700,10 +702,7 @@ describe('fd-graph-canvas pointer editing', () => {
 
     const second = await mount()
     const secondCanvas = preparePointerInput(second)
-    second.interactionConfiguration = {
-      snapping: { enabled: false },
-      snappingStrategy: { translation: strategy },
-    }
+    second.interactionPolicy = { snappingStrategy: { translation: strategy } }
     await second.updateComplete
     const secondSource = second.shadowRoot?.querySelector(
       '[data-fd-graph-node="s:source"]',
@@ -722,11 +721,7 @@ describe('fd-graph-canvas pointer editing', () => {
     const canvas = preparePointerInput(element)
     element.selectedNodeIDs = new Set(['source'])
     element.configuration = { nodeResizing: { isEnabled: true } }
-    element.interactionConfiguration = {
-      frameUpdates: 'local',
-      nodeResizing: true,
-      snapping: { enabled: false },
-    }
+    applyFrameIntents(element)
     await element.updateComplete
     const handles = element.shadowRoot?.querySelectorAll<HTMLElement>('.resize-handle')
     expect(handles).toHaveLength(8)
@@ -752,11 +747,7 @@ describe('fd-graph-canvas pointer editing', () => {
     const canvas = preparePointerInput(element)
     element.selectedNodeIDs = new Set(['source'])
     element.configuration = { nodeResizing: { isEnabled: true } }
-    element.interactionConfiguration = {
-      frameUpdates: 'local',
-      nodeResizing: true,
-      snapping: { enabled: false },
-    }
+    applyFrameIntents(element)
     element.interactionPolicy = {
       nodeSizeConstraints: {
         overrides: new Map([['source', { maximumWidth: 200, maximumHeight: 100 }]]),
@@ -785,11 +776,7 @@ describe('fd-graph-canvas pointer editing', () => {
     const canvas = preparePointerInput(element)
     element.selectedNodeIDs = new Set(['source', 'target'])
     element.configuration = { nodeResizing: { isEnabled: true } }
-    element.interactionConfiguration = {
-      frameUpdates: 'local',
-      nodeResizing: true,
-      snapping: { enabled: false },
-    }
+    applyFrameIntents(element)
     element.interactionPolicy = {
       admitNodeResize: ({ anchorNodeID, candidateNodeIDs, baseFrames, edges }) => {
         expect(anchorNodeID).toBe('source')
@@ -824,10 +811,6 @@ describe('fd-graph-canvas pointer editing', () => {
       nodeResizing: { isEnabled: true },
       snapping: { isEnabled: true, targets: new Set() },
     }
-    element.interactionConfiguration = {
-      nodeResizing: true,
-      snapping: { enabled: true, alignment: false, equalSpacing: false, equalSize: false },
-    }
     await element.updateComplete
     const handle = element.shadowRoot?.querySelector<HTMLElement>(
       '[data-fd-resize-handle="bottomRight"]',
@@ -861,10 +844,6 @@ describe('fd-graph-canvas pointer editing', () => {
     element.configuration = {
       nodeResizing: { isEnabled: true },
       snapping: { isEnabled: true, targets: new Set() },
-    }
-    element.interactionConfiguration = {
-      nodeResizing: true,
-      snapping: { enabled: true, alignment: false, equalSpacing: false, equalSize: false },
     }
     await element.updateComplete
     const handle = element.shadowRoot?.querySelector<HTMLElement>('[data-fd-resize-handle="right"]')
@@ -950,16 +929,6 @@ describe('fd-graph-canvas pointer editing', () => {
     expect(edge.hasAttribute('data-focused')).toBe(true)
     expect(changes.at(-1)?.selectedElements).toEqual(element.selectedElements)
   })
-
-  it('enforces single-selection policy across element kinds', async () => {
-    const element = await mount()
-    element.interactionConfiguration = { selection: 'single' }
-    element.selectedElements = [graphPortReference('source', 'output')]
-    await element.updateComplete
-
-    expect(element.jumpToElement('target', { selection: 'add', animated: false })).toBe(true)
-    expect(element.selectedElements).toEqual([graphNodeReference('target')])
-  })
 })
 
 describe('fd-graph-canvas connection editing', () => {
@@ -970,7 +939,6 @@ describe('fd-graph-canvas connection editing', () => {
       ...element.configuration,
       connectionEditing: { isEnabled: true },
     }
-    element.connectionEditingConfiguration = { enabled: true }
     await element.updateComplete
     await nextFrame()
     const sourcePort = element.shadowRoot?.querySelector<HTMLElement>(
@@ -999,7 +967,6 @@ describe('fd-graph-canvas connection editing', () => {
     const element = await mount(snapshot)
     const canvas = preparePointerInput(element)
     element.configuration = { connectionEditing: { isEnabled: true } }
-    element.connectionEditingConfiguration = { enabled: true }
     await element.updateComplete
     const previews: FdGraphConnectionPreviewChangeDetail[] = []
     const completions: FdGraphConnectionCompleteDetail[] = []
@@ -1043,12 +1010,13 @@ describe('fd-graph-canvas connection editing', () => {
     const element = await mount()
     const canvas = preparePointerInput(element)
     element.configuration = { connectionEditing: { isEnabled: true } }
-    element.connectionEditingConfiguration = {
-      enabled: true,
-      validate: () => ({
-        kind: 'invalid',
-        feedback: { message: 'This input already has a connection.' },
-      }),
+    element.interactionPolicy = {
+      connectionPolicy: {
+        validate: () => ({
+          kind: 'invalid',
+          feedback: { message: 'This input already has a connection.' },
+        }),
+      },
     }
     await element.updateComplete
     const cancellations: FdGraphConnectionCancelDetail[] = []
@@ -1084,7 +1052,6 @@ describe('fd-graph-canvas connection editing', () => {
     element.configuration = {
       connectionEditing: { isEnabled: true, rendersDefaultPreview: false },
     }
-    element.connectionEditingConfiguration = { enabled: true, rendersDefaultPreview: false }
     await element.updateComplete
     const previews: FdGraphConnectionPreviewChangeDetail[] = []
     const cancellations: FdGraphConnectionCancelDetail[] = []
@@ -1116,7 +1083,6 @@ describe('fd-graph-canvas connection editing', () => {
   it('supports programmatic endpoint reconnection and Escape cancellation', async () => {
     const element = await mount()
     element.configuration = { connectionEditing: { isEnabled: true } }
-    element.connectionEditingConfiguration = { enabled: true }
     await element.updateComplete
     const edge = element.snapshot.edges[0]
     if (!edge) throw new Error('missing edge fixture')
@@ -1178,8 +1144,7 @@ describe('fd-graph-canvas keyboard editing', () => {
     const element = await mount()
     const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
     element.configuration = { keyboardNudging: { step: 2, largeStep: 18 } }
-    element.interactionConfiguration = { frameUpdates: 'local' }
-    element.keyboardConfiguration = { nudgeStep: 2, largeNudgeStep: 18 }
+    applyFrameIntents(element)
     element.focusedNodeID = 'source'
     element.selectedNodeIDs = new Set(['source'])
     await element.updateComplete
@@ -1193,8 +1158,8 @@ describe('fd-graph-canvas keyboard editing', () => {
   it('applies drag admission to keyboard movement', async () => {
     const element = await mount()
     const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
-    element.interactionConfiguration = {
-      frameUpdates: 'local',
+    applyFrameIntents(element)
+    element.interactionPolicy = {
       admitNodeDrag: () => ({ kind: 'allowOnly', nodeIDs: new Set(['source']) }),
     }
     element.focusedNodeID = 'source'
@@ -1210,9 +1175,11 @@ describe('fd-graph-canvas keyboard editing', () => {
   it('allows the consumer to replace every default key binding', async () => {
     const element = await mount()
     const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
-    element.keyboardConfiguration = {
-      selectionBehavior: 'preserve',
-      resolveCommand: (event) =>
+    element.configuration = {
+      keyboardNavigation: { selectionBehavior: 'preserve' },
+    }
+    element.platformAdapter = {
+      resolveKeyboardCommand: (event) =>
         event.key === 'j' ? { kind: 'navigate', direction: 'right' } : undefined,
     }
     element.focusedNodeID = 'source'
@@ -1300,7 +1267,7 @@ describe('fd-graph-canvas arrangement', () => {
   it('arranges selected nodes through the standard event and history boundary', async () => {
     const element = await mount()
     element.selectedNodeIDs = new Set(['source', 'target'])
-    element.interactionConfiguration = { frameUpdates: 'local' }
+    applyFrameIntents(element)
     await element.updateComplete
     const events: FdGraphNodeFramesChangeDetail[] = []
     element.addEventListener('fd-graph-node-frames-change', (event) => events.push(event.detail))
@@ -1310,6 +1277,7 @@ describe('fd-graph-canvas arrangement', () => {
     expect(element.snapshot.nodes[1]?.frame.y).toBe(80)
     expect(events.at(-1)?.kind).toBe('arrangement')
     expect(element.undoActionName).toBe('Arrange Nodes')
+    await element.updateComplete
     expect(await element.undo()).toBe(true)
     expect(element.snapshot.nodes[1]?.frame.y).toBe(220)
   })
@@ -1375,16 +1343,20 @@ describe('fd-graph-canvas accessibility', () => {
     element.style.width = '800px'
     element.style.height = '600px'
     element.snapshot = graphSnapshot()
-    element.accessibilityConfiguration = {
-      canvasLabel: 'Workflow surface',
-      maximumExposedElementCount: 2,
-      capabilities: { movement: false },
-      nodeRepresentation: (node) => ({
+    element.configuration = {
+      accessibility: {
+        maximumExposedElementCount: 2,
+        capabilities: { movement: false },
+      },
+    }
+    element.platformAdapter = {
+      accessibilityCanvasLabel: 'Workflow surface',
+      nodeAccessibilityRepresentation: (node) => ({
         kind: 'element',
         description: { label: `Step ${String(node.id)}`, hint: 'Consumer-provided hint' },
       }),
-      portRepresentation: () => ({ kind: 'hidden' }),
-      edgeRepresentation: () => ({ kind: 'hidden' }),
+      portAccessibilityRepresentation: () => ({ kind: 'hidden' }),
+      edgeAccessibilityRepresentation: () => ({ kind: 'hidden' }),
     }
     document.body.append(element)
     await element.updateComplete
@@ -1406,7 +1378,7 @@ describe('fd-graph-canvas accessibility', () => {
     const element = await mount()
     const surface = element.shadowRoot?.querySelector<HTMLElement>('.accessibility-surface')
     const actions: FdGraphAccessibilityActionDetail[] = []
-    element.interactionConfiguration = { frameUpdates: 'local' }
+    applyFrameIntents(element)
     element.addEventListener('fd-graph-accessibility-action', (event) => actions.push(event.detail))
     await element.updateComplete
 
@@ -1431,12 +1403,12 @@ describe('fd-graph-canvas accessibility', () => {
     element.style.height = '600px'
     element.snapshot = graphSnapshot()
     element.configuration = { renderingBackend: 'dom' }
-    element.accessibilityConfiguration = {
-      resolveCommand: (event) =>
+    element.platformAdapter = {
+      resolveAccessibilityCommand: (event) =>
         event.key === 'i'
           ? { kind: 'perform', actionID: 'inspect' }
           : defaultGraphAccessibilityCommandResolver(event),
-      nodeRepresentation: (node) => ({
+      nodeAccessibilityRepresentation: (node) => ({
         kind: 'element',
         description: {
           label: String(node.label),
@@ -1473,8 +1445,9 @@ describe('fd-graph-canvas accessibility', () => {
   it('lets consumers replace accessibility commands and opt out completely', async () => {
     const element = await mount()
     const surface = element.shadowRoot?.querySelector<HTMLElement>('.accessibility-surface')
-    element.accessibilityConfiguration = {
-      resolveCommand: (event) => (event.key === 'j' ? { kind: 'focusNext' } : undefined),
+    element.platformAdapter = {
+      resolveAccessibilityCommand: (event) =>
+        event.key === 'j' ? { kind: 'focusNext' } : undefined,
     }
     await element.updateComplete
     surface?.focus()
@@ -1485,7 +1458,17 @@ describe('fd-graph-canvas accessibility', () => {
     dispatchKey(surface ?? element, 'j')
     expect(surface?.getAttribute('aria-activedescendant')).not.toBe(first)
 
-    element.accessibilityConfiguration = { enabled: false }
+    element.configuration = {
+      accessibility: {
+        capabilities: {
+          focusNavigation: false,
+          selection: false,
+          movement: false,
+          connections: false,
+          elementActions: false,
+        },
+      },
+    }
     await element.updateComplete
     expect(surface?.tabIndex).toBe(-1)
     expect(
@@ -1503,7 +1486,7 @@ describe('fd-graph-canvas history', () => {
     const element = await mount()
     const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
     const states: FdGraphCanvasHistoryStateDetail[] = []
-    element.interactionConfiguration = { frameUpdates: 'local' }
+    applyFrameIntents(element)
     element.focusedNodeID = 'source'
     element.selectedNodeIDs = new Set(['source'])
     element.addEventListener('fd-graph-history-state-change', (event) => states.push(event.detail))
@@ -1514,9 +1497,11 @@ describe('fd-graph-canvas history', () => {
     expect(element.canUndo).toBe(true)
     expect(element.undoActionName).toBe('Move Nodes')
 
+    await element.updateComplete
     expect(await element.undo()).toBe(true)
     expect(element.snapshot.nodes[0]?.frame.x).toBe(40)
     expect(element.canRedo).toBe(true)
+    await element.updateComplete
     expect(await element.redo()).toBe(true)
     expect(element.snapshot.nodes[0]?.frame.x).toBe(41)
     expect(states.some(({ isApplying }) => isApplying)).toBe(true)
@@ -1525,7 +1510,7 @@ describe('fd-graph-canvas history', () => {
   it('uses rebindable platform shortcuts without claiming unavailable history', async () => {
     const element = await mount()
     const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
-    element.interactionConfiguration = { frameUpdates: 'local' }
+    applyFrameIntents(element)
     element.focusedNodeID = 'source'
     element.selectedNodeIDs = new Set(['source'])
     await element.updateComplete
@@ -1540,6 +1525,7 @@ describe('fd-graph-canvas history', () => {
     expect(unavailable.defaultPrevented).toBe(false)
 
     dispatchKey(canvas, 'ArrowRight')
+    await element.updateComplete
     const undo = new KeyboardEvent('keydown', {
       key: 'z',
       metaKey: true,
@@ -1552,6 +1538,7 @@ describe('fd-graph-canvas history', () => {
     expect(undo.defaultPrevented).toBe(true)
     expect(element.snapshot.nodes[0]?.frame.x).toBe(40)
 
+    await element.updateComplete
     dispatchKey(canvas, 'z', { metaKey: true, shiftKey: true })
     await nextFrame()
     expect(element.snapshot.nodes[0]?.frame.x).toBe(41)
@@ -1561,7 +1548,7 @@ describe('fd-graph-canvas history', () => {
     const element = await mount()
     const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
     const conflicts: FdGraphCanvasHistoryConflictDetail[] = []
-    element.interactionConfiguration = { frameUpdates: 'local' }
+    applyFrameIntents(element)
     element.focusedNodeID = 'source'
     element.selectedNodeIDs = new Set(['source'])
     element.addEventListener('fd-graph-history-conflict', (event) => conflicts.push(event.detail))

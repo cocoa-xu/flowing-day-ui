@@ -1,4 +1,5 @@
 import type { FdCanvasPoint, FdCanvasRect, FdCanvasViewport } from '../geometry.js'
+import type { FdGraphCanvasNodeCapabilities } from '../graph/interaction-policy.js'
 import type {
   FdAnyGraphEdge,
   FdAnyGraphNode,
@@ -20,6 +21,7 @@ export interface FdGraphRenderNode {
   readonly selected: boolean
   readonly focused: boolean
   readonly hovered: boolean
+  readonly capabilities?: Required<FdGraphCanvasNodeCapabilities>
 }
 
 export interface FdGraphRenderEdge {

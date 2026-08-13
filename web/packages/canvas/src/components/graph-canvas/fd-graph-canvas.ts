@@ -2,7 +2,6 @@ import { type CSSResultGroup, css, html, LitElement, nothing, type PropertyValue
 import { customElement, property, query } from 'lit/decorators.js'
 import {
   type FdGraphAccessibilityCommand,
-  type FdGraphCanvasAccessibilityConfiguration,
   type FdResolvedGraphCanvasAccessibilityConfiguration,
   resolveGraphCanvasAccessibilityConfiguration,
 } from '../../accessibility/configuration.js'
@@ -22,6 +21,11 @@ import {
   FdCanvasViewport,
   zeroCanvasInsets,
 } from '../../geometry.js'
+import {
+  type FdGraphCanvasConfiguration,
+  type FdResolvedGraphCanvasConfiguration,
+  resolveGraphCanvasConfiguration,
+} from '../../graph/configuration.js'
 import type {
   FdGraphConnectionCancelDetail,
   FdGraphConnectionCompleteDetail,
@@ -33,6 +37,12 @@ import type {
   FdGraphNodeFramesChangeDetail,
   FdGraphSelectionChangeDetail,
 } from '../../graph/events.js'
+import {
+  type FdGraphCanvasInteractionPolicy,
+  type FdGraphCanvasNodeCapabilities,
+  graphCanvasNodeCapabilities,
+  graphCanvasNodeSizeConstraints,
+} from '../../graph/interaction-policy.js'
 import type { FdGraphMiniMapNavigationDetail } from '../../graph/minimap-events.js'
 import type {
   FdAnyGraphEdge,
@@ -42,17 +52,6 @@ import type {
   FdGraphElementReference,
 } from '../../graph/model.js'
 import {
-  type FdGraphCanvasConfiguration,
-  type FdResolvedGraphCanvasConfiguration,
-  resolveGraphCanvasConfiguration,
-} from '../../graph/configuration.js'
-import {
-  type FdGraphCanvasInteractionPolicy,
-  type FdGraphCanvasNodeCapabilities,
-  graphCanvasNodeCapabilities,
-  graphCanvasNodeSizeConstraints,
-} from '../../graph/interaction-policy.js'
-import {
   graphEdgeReference,
   graphElementIDFromKey,
   graphElementKey,
@@ -61,6 +60,7 @@ import {
   graphPortPoint,
   graphPortReference,
 } from '../../graph/model.js'
+import type { FdGraphCanvasPlatformAdapter } from '../../graph/platform-adapter.js'
 import { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
 import { FdGraphHistoryDriver } from '../../history/driver.js'
 import type {
@@ -82,7 +82,6 @@ import {
   graphSelectionBounds,
 } from '../../interactions/arrangement.js'
 import type {
-  FdGraphCanvasInteractionConfiguration,
   FdGraphCanvasTool,
   FdResolvedGraphCanvasInteractionConfiguration,
 } from '../../interactions/configuration.js'
@@ -91,7 +90,6 @@ import {
   resolveGraphCanvasInteractionConfiguration,
 } from '../../interactions/configuration.js'
 import {
-  type FdGraphConnectionEditingConfiguration,
   type FdGraphConnectionOrigin,
   type FdGraphConnectionResolution,
   type FdGraphTransientConnection,
@@ -99,7 +97,6 @@ import {
   resolveGraphConnectionEditingConfiguration,
 } from '../../interactions/connection.js'
 import {
-  type FdGraphCanvasKeyboardConfiguration,
   type FdGraphKeyboardCommand,
   type FdGraphKeyboardNavigationCandidate,
   type FdGraphNavigationDirection,
@@ -713,15 +710,9 @@ export class FdGraphCanvas
   @property({ attribute: false }) edgeGeometryResolver: FdGraphEdgeGeometryResolver =
     defaultGraphEdgeGeometryResolver
   @property({ reflect: true }) tool: FdGraphCanvasTool = 'select'
-  @property({ attribute: false }) interactionConfiguration: FdGraphCanvasInteractionConfiguration =
-    {}
   @property({ attribute: false }) interactionPolicy: FdGraphCanvasInteractionPolicy = {}
-  @property({ attribute: false }) keyboardConfiguration: FdGraphCanvasKeyboardConfiguration = {}
-  @property({ attribute: false })
-  accessibilityConfiguration: FdGraphCanvasAccessibilityConfiguration = {}
+  @property({ attribute: false }) platformAdapter: FdGraphCanvasPlatformAdapter = {}
   @property({ attribute: false }) historyConfiguration: FdGraphCanvasHistoryConfiguration = {}
-  @property({ attribute: false })
-  connectionEditingConfiguration: FdGraphConnectionEditingConfiguration = {}
   @property({ attribute: false }) miniMapConfiguration: FdGraphMiniMapConfiguration | undefined
   @property({ attribute: false }) guideRenderer: FdGraphGuideRenderer =
     new FdGraphDefaultGuideRenderer()
@@ -1004,11 +995,8 @@ export class FdGraphCanvas
   protected override willUpdate(changed: PropertyValues<this>): void {
     if (
       changed.has('configuration') ||
-      changed.has('interactionConfiguration') ||
       changed.has('interactionPolicy') ||
-      changed.has('keyboardConfiguration') ||
-      changed.has('accessibilityConfiguration') ||
-      changed.has('connectionEditingConfiguration')
+      changed.has('platformAdapter')
     ) {
       this.resolveConfiguredBehavior()
     }
@@ -1040,26 +1028,18 @@ export class FdGraphCanvas
       this.localSnapshotSequence = 0
       this.rebuildSnapshot()
     }
-    if (
-      changed.has('configuration') ||
-      changed.has('interactionConfiguration') ||
-      changed.has('interactionPolicy')
-    ) {
+    if (changed.has('configuration') || changed.has('interactionPolicy')) {
       this.interactionController?.cancel()
       this.refreshResizeHandleVisibility()
       this.syncInteractionOverlay()
       this.syncAccessibilityBridge()
     }
-    if (
-      changed.has('configuration') ||
-      changed.has('connectionEditingConfiguration') ||
-      changed.has('interactionPolicy')
-    ) {
+    if (changed.has('configuration') || changed.has('interactionPolicy')) {
       this.connectionController?.cancel()
       this.syncPortHitPadding()
     }
     if (
-      (changed.has('configuration') || changed.has('accessibilityConfiguration')) &&
+      (changed.has('configuration') || changed.has('platformAdapter')) &&
       !changed.has('snapshot')
     ) {
       this.rebuildAccessibilitySnapshot()
@@ -1136,11 +1116,7 @@ export class FdGraphCanvas
     const node = this.index.nodes.get(nodeID)
     if (!node) return false
     const selection = options.selection ?? 'replace'
-    if (
-      selection !== 'preserve' &&
-      node.capabilities?.selectable !== false &&
-      this.resolvedInteractionConfiguration.selection !== 'none'
-    ) {
+    if (selection !== 'preserve' && this.resolvedInteractionConfiguration.selection !== 'none') {
       const selectedNodeIDs =
         selection === 'add' && this.resolvedInteractionConfiguration.selection === 'multiple'
           ? new Set(this.selectedNodeIDs)
@@ -1252,12 +1228,7 @@ export class FdGraphCanvas
     source: FdGraphSelectionChangeDetail['source'],
   ): boolean {
     const behavior = this.resolvedInteractionConfiguration.selection
-    if (
-      behavior === 'none' ||
-      !this.validElementReference(reference) ||
-      (reference.kind === 'node' &&
-        this.index.nodes.get(reference.nodeID)?.capabilities?.selectable === false)
-    ) {
+    if (behavior === 'none' || !this.validElementReference(reference)) {
       return false
     }
     const key = graphElementReferenceKey(reference)
@@ -1521,7 +1492,6 @@ export class FdGraphCanvas
     const subdivisions = grid?.subdivisions ?? {}
     this.resolvedGraphConfiguration = configuration
     this.resolvedInteractionConfiguration = resolveGraphCanvasInteractionConfiguration({
-      ...this.interactionConfiguration,
       nodeDragging: configuration.nodeDraggingMode !== 'disabled',
       multipleNodeDragging: configuration.nodeDraggingMode === 'multiple',
       nodeResizing: configuration.nodeResizing.isEnabled,
@@ -1575,7 +1545,6 @@ export class FdGraphCanvas
         }) ?? { kind: 'allowAll' },
     })
     this.connectionConfiguration = resolveGraphConnectionEditingConfiguration({
-      ...this.connectionEditingConfiguration,
       ...policy.connectionPolicy,
       enabled: configuration.connectionEditing.isEnabled,
       allowsReconnection: configuration.connectionEditing.allowsReconnection,
@@ -1587,7 +1556,6 @@ export class FdGraphCanvas
     const navigation = configuration.keyboardNavigation
     const nudging = configuration.keyboardNudging
     this.resolvedKeyboardConfiguration = resolveGraphCanvasKeyboardConfiguration({
-      ...this.keyboardConfiguration,
       enabled: navigation.isEnabled || nudging.isEnabled,
       navigation: navigation.isEnabled,
       nudging: nudging.isEnabled,
@@ -1595,11 +1563,14 @@ export class FdGraphCanvas
       largeNudgeStep: nudging.largeStep,
       selectionBehavior: navigation.selectionBehavior,
       keepsFocusedNodeVisible: navigation.keepsFocusedNodeVisible,
+      ...(this.platformAdapter.resolveKeyboardCommand
+        ? { resolveCommand: this.platformAdapter.resolveKeyboardCommand }
+        : {}),
     })
-    this.resolvedAccessibilityConfiguration = resolveGraphCanvasAccessibilityConfiguration({
-      ...this.accessibilityConfiguration,
-      ...configuration.accessibility,
-    })
+    this.resolvedAccessibilityConfiguration = resolveGraphCanvasAccessibilityConfiguration(
+      configuration.accessibility,
+      this.platformAdapter,
+    )
   }
 
   private activateBackend(): void {
@@ -1607,10 +1578,7 @@ export class FdGraphCanvas
     this.backend?.unmount()
     const source = this.renderingBackendSource
     if (typeof source === 'string') {
-      const kind = resolveGraphRenderingBackendKind(
-        source,
-        graphRenderingCapabilities(),
-      )
+      const kind = resolveGraphRenderingBackendKind(source, graphRenderingCapabilities())
       this.backend =
         kind === 'webgl2'
           ? new FdGraphWebGL2RenderingBackend(this.renderingConfiguration)
@@ -1621,7 +1589,9 @@ export class FdGraphCanvas
     this.scheduleRenderFrame()
   }
 
-  private get renderingBackendSource(): FdGraphRenderingBackendPreference | FdGraphRenderingBackend {
+  private get renderingBackendSource():
+    | FdGraphRenderingBackendPreference
+    | FdGraphRenderingBackend {
     return this.renderingAdapter ?? this.resolvedGraphConfiguration.renderingBackend
   }
 
@@ -1802,12 +1772,7 @@ export class FdGraphCanvas
   }
 
   private reconcileSelection(): void {
-    const valid = this.selectedElements.filter(
-      (reference) =>
-        this.validElementReference(reference) &&
-        (reference.kind !== 'node' ||
-          this.index.nodes.get(reference.nodeID)?.capabilities?.selectable !== false),
-    )
+    const valid = this.selectedElements.filter((reference) => this.validElementReference(reference))
     const next =
       this.resolvedInteractionConfiguration.selection === 'none'
         ? []
@@ -1822,8 +1787,7 @@ export class FdGraphCanvas
     if (!reference) return
     if (
       this.validElementReference(reference) &&
-      (reference.kind !== 'node' ||
-        this.nodeCapabilities(reference.nodeID).keyboardNavigable)
+      (reference.kind !== 'node' || this.nodeCapabilities(reference.nodeID).keyboardNavigable)
     ) {
       return
     }
@@ -1930,7 +1894,7 @@ export class FdGraphCanvas
   }
 
   private activateAccessibilityElement(key: string | undefined): boolean {
-    if (!key || !this.resolvedAccessibilityConfiguration.capabilities.activation) return false
+    if (!key || !this.resolvedAccessibilityConfiguration.capabilities.elementActions) return false
     const item = this.accessibilitySnapshot.item(key)
     if (!item) return false
     if (!this.dispatchAccessibilityAction(item.reference, { kind: 'activate' })) return true
@@ -2067,11 +2031,7 @@ export class FdGraphCanvas
   ): void {
     const node = this.index.nodes.get(nodeID)
     if (!node || !this.nodeCapabilities(node.id).keyboardNavigable) return
-    if (
-      updatesSelection &&
-      this.resolvedKeyboardConfiguration.selectionBehavior === 'replace' &&
-      node.capabilities?.selectable !== false
-    ) {
+    if (updatesSelection && this.resolvedKeyboardConfiguration.selectionBehavior === 'replace') {
       this.setSelection(new Set([nodeID]), 'replace', { phase: 'ended', source: 'keyboard' })
     }
     this.setFocusedElement(graphNodeReference(nodeID), source, keepsVisible)
@@ -2110,9 +2070,7 @@ export class FdGraphCanvas
 
   private toggleFocusedSelection(): boolean {
     const nodeID = this.focusedNodeID
-    if (nodeID === undefined || this.index.nodes.get(nodeID)?.capabilities?.selectable === false) {
-      return false
-    }
+    if (nodeID === undefined) return false
     const selection = new Set(this.selectedNodeIDs)
     if (this.resolvedInteractionConfiguration.selection === 'single') selection.clear()
     if (selection.has(nodeID)) selection.delete(nodeID)
@@ -2123,11 +2081,7 @@ export class FdGraphCanvas
 
   private selectAllKeyboardNodes(): boolean {
     if (this.resolvedInteractionConfiguration.selection !== 'multiple') return false
-    const selection = new Set(
-      this.keyboardCandidates.flatMap(({ id }) =>
-        this.index.nodes.get(id)?.capabilities?.selectable === false ? [] : [id],
-      ),
-    )
+    const selection = new Set(this.keyboardCandidates.map(({ id }) => id))
     this.setSelection(selection, 'replace', { phase: 'ended', source: 'keyboard' })
     return true
   }
@@ -2575,7 +2529,10 @@ export class FdGraphCanvas
       presentationRevision: this.presentationRevision,
       viewport: this.canvas.viewport,
       renderWorldRect: this.renderWorldRect,
-      nodes: geometry.nodes,
+      nodes: geometry.nodes.map((node) => ({
+        ...node,
+        capabilities: this.nodeCapabilities(node.node.id),
+      })),
       edges: geometry.edges,
       selectedElements: this.selectedElements,
       selectedNodeIDs: this.selectedNodeIDs,

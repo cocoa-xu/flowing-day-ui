@@ -44,7 +44,6 @@ export function resolveGraphMarqueeSelection(
 ): Set<FdGraphElementID> {
   if (behavior === 'none' || marqueeBehavior === 'disabled') return new Set(initialSelection)
   const matches = nodes
-    .filter((node) => node.capabilities?.selectable !== false)
     .filter((node) =>
       marqueeBehavior === 'contains'
         ? canvasRectContains(marquee, node.frame)

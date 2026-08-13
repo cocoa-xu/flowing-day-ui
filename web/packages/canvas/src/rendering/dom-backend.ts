@@ -131,9 +131,9 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
       element.toggleAttribute('data-selected', rendered.selected)
       element.toggleAttribute('data-focused', rendered.focused)
       element.toggleAttribute('data-hovered', rendered.hovered)
-      element.toggleAttribute('data-selectable', rendered.node.capabilities?.selectable !== false)
-      element.toggleAttribute('data-draggable', rendered.node.capabilities?.draggable !== false)
-      element.toggleAttribute('data-resizable', rendered.node.capabilities?.resizable !== false)
+      element.toggleAttribute('data-selectable', true)
+      element.toggleAttribute('data-draggable', rendered.capabilities?.draggable ?? true)
+      element.toggleAttribute('data-resizable', rendered.capabilities?.resizable ?? true)
       element.setAttribute(
         'aria-label',
         rendered.node.accessibilityLabel ?? rendered.node.label ?? String(rendered.node.id),

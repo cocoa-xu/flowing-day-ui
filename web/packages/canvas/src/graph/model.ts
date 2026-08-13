@@ -32,14 +32,6 @@ export interface FdGraphPort<PortID extends FdGraphElementID = FdGraphElementID>
   readonly label?: string
 }
 
-export interface FdGraphNodeCapabilities {
-  readonly selectable?: boolean
-  readonly draggable?: boolean
-  readonly resizable?: boolean
-  readonly keyboardNavigable?: boolean
-  readonly arrangementParticipant?: boolean
-}
-
 export interface FdGraphNodeStyle {
   readonly fill?: string
   readonly stroke?: string
@@ -57,7 +49,6 @@ export interface FdGraphNode<
   readonly subtitle?: string
   readonly accessibilityLabel?: string
   readonly ports?: readonly FdGraphPort[]
-  readonly capabilities?: FdGraphNodeCapabilities
   readonly style?: FdGraphNodeStyle
   readonly data?: NodeData
 }

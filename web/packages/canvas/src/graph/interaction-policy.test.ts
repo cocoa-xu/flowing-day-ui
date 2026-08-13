@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  type FdGraphCanvasInteractionPolicy,
   graphCanvasNodeCapabilities,
   graphCanvasNodeSizeConstraints,
-  type FdGraphCanvasInteractionPolicy,
 } from './interaction-policy.js'
 
 describe('graph canvas interaction policy', () => {

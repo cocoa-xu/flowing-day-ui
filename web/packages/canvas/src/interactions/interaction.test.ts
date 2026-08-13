@@ -24,11 +24,6 @@ import {
 const nodes: FdAnyGraphNode[] = [
   { id: 'one', frame: { x: 0, y: 0, width: 80, height: 60 } },
   { id: 'two', frame: { x: 120, y: 0, width: 80, height: 60 } },
-  {
-    id: 'locked',
-    frame: { x: 240, y: 0, width: 80, height: 60 },
-    capabilities: { selectable: false },
-  },
 ]
 
 describe('graph selection', () => {

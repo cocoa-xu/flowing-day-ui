@@ -4,9 +4,9 @@ import type {
   FdGraphNodeFrameChangeKind,
   FdGraphSelectionChangeDetail,
 } from '../../graph/events.js'
+import type { FdGraphCanvasNodeCapabilities } from '../../graph/interaction-policy.js'
 import type { FdGraphElementID } from '../../graph/model.js'
 import { graphElementIDFromKey } from '../../graph/model.js'
-import type { FdGraphCanvasNodeCapabilities } from '../../graph/interaction-policy.js'
 import type { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
 import {
   type FdGraphGuide,

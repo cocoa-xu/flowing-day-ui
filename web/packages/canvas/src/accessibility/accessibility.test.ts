@@ -34,13 +34,15 @@ const graph: FdAnyGraphSnapshot = {
 
 describe('graph accessibility configuration', () => {
   it('supports independent capabilities and consumer-owned semantics', () => {
-    const configuration = resolveGraphCanvasAccessibilityConfiguration({
-      capabilities: { movement: false },
-      nodeRepresentation: (node) => ({
-        kind: 'element',
-        description: { label: `Workflow ${String(node.id)}`, hint: 'Consumer hint' },
-      }),
-    })
+    const configuration = resolveGraphCanvasAccessibilityConfiguration(
+      { capabilities: { movement: false } },
+      {
+        nodeAccessibilityRepresentation: (node) => ({
+          kind: 'element',
+          description: { label: `Workflow ${String(node.id)}`, hint: 'Consumer hint' },
+        }),
+      },
+    )
     const snapshot = createGraphAccessibilitySnapshot(graph, configuration)
 
     expect(configuration.capabilities.movement).toBe(false)
@@ -58,10 +60,13 @@ describe('graph accessibility configuration', () => {
     )
     const nodesOnly = createGraphAccessibilitySnapshot(
       graph,
-      resolveGraphCanvasAccessibilityConfiguration({
-        portRepresentation: () => ({ kind: 'hidden' }),
-        edgeRepresentation: () => ({ kind: 'hidden' }),
-      }),
+      resolveGraphCanvasAccessibilityConfiguration(
+        {},
+        {
+          portAccessibilityRepresentation: () => ({ kind: 'hidden' }),
+          edgeAccessibilityRepresentation: () => ({ kind: 'hidden' }),
+        },
+      ),
     )
 
     expect(standard.items.map(({ kind }) => kind)).toEqual(['node', 'port', 'node', 'edge'])
@@ -77,18 +82,21 @@ describe('graph accessibility configuration', () => {
     expect(() =>
       createGraphAccessibilitySnapshot(
         graph,
-        resolveGraphCanvasAccessibilityConfiguration({
-          nodeRepresentation: () => ({
-            kind: 'element',
-            description: {
-              label: 'Node',
-              actions: [
-                { id: 'inspect', label: 'Inspect' },
-                { id: 'inspect', label: 'Inspect again' },
-              ],
-            },
-          }),
-        }),
+        resolveGraphCanvasAccessibilityConfiguration(
+          {},
+          {
+            nodeAccessibilityRepresentation: () => ({
+              kind: 'element',
+              description: {
+                label: 'Node',
+                actions: [
+                  { id: 'inspect', label: 'Inspect' },
+                  { id: 'inspect', label: 'Inspect again' },
+                ],
+              },
+            }),
+          },
+        ),
       ),
     ).toThrow('duplicate accessibility action ID inspect')
   })

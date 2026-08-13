@@ -1,15 +1,15 @@
 import type { FdCanvasRect } from '../geometry.js'
-import type { FdGraphSnappingStrategy, FdGraphResizeHandle } from '../interactions/arrangement.js'
+import type { FdGraphResizeHandle, FdGraphSnappingStrategy } from '../interactions/arrangement.js'
+import type {
+  FdGraphNodeInteractionAdmission,
+  FdGraphNodeSizeConstraints,
+} from '../interactions/configuration.js'
 import type {
   FdGraphConnectionOrigin,
   FdGraphConnectionValidation,
   FdGraphConnectionValidationRequest,
 } from '../interactions/connection.js'
-import type {
-  FdGraphNodeInteractionAdmission,
-  FdGraphNodeSizeConstraints,
-} from '../interactions/configuration.js'
-import type { FdGraphElementID, FdGraphNodeCapabilities } from './model.js'
+import type { FdGraphElementID } from './model.js'
 
 export type FdGraphCanvasInteractionModifier =
   | 'constrainDragAxis'
@@ -18,10 +18,12 @@ export type FdGraphCanvasInteractionModifier =
   | 'disableSnapping'
   | 'largeKeyboardNudge'
 
-export type FdGraphCanvasNodeCapabilities = Pick<
-  FdGraphNodeCapabilities,
-  'draggable' | 'arrangementParticipant' | 'keyboardNavigable' | 'resizable'
->
+export interface FdGraphCanvasNodeCapabilities {
+  readonly draggable?: boolean
+  readonly arrangementParticipant?: boolean
+  readonly keyboardNavigable?: boolean
+  readonly resizable?: boolean
+}
 
 export interface FdGraphCanvasNodeCapabilityMap {
   readonly defaultCapabilities?: FdGraphCanvasNodeCapabilities

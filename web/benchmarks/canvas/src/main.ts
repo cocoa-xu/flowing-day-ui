@@ -30,7 +30,6 @@ interface FdCanvasBenchmarkAPI {
   readonly buildDuration: number
   readonly initializationDuration: Promise<number>
   readonly backend: string
-  readonly frameUpdates: 'intent' | 'local'
   measure(scenario: FdBenchmarkScenario, duration: number): Promise<FdFrameMetrics>
 }
 
@@ -50,7 +49,6 @@ const parameters = new URLSearchParams(location.search)
 const nodeCount = Math.max(Number(parameters.get('nodes') ?? 1_000), 1)
 const requestedBackend = (parameters.get('backend') ??
   'automatic') as FdGraphRenderingBackendPreference
-const frameUpdates = parameters.get('frameUpdates') === 'local' ? 'local' : 'intent'
 const columnCount = Math.max(Math.ceil(Math.sqrt(nodeCount * 1.7)), 1)
 const horizontalSpacing = 132
 const verticalSpacing = 84
@@ -91,9 +89,6 @@ graph.configuration = {
   nodeResizing: { isEnabled: true },
 }
 graph.contentChangeBehavior = { kind: 'fit', padding: 48, maximumZoom: 1 }
-graph.interactionConfiguration = {
-  frameUpdates,
-}
 graph.miniMapConfiguration = {
   visibility: 'always',
   interaction: 'panAndZoom',
@@ -289,6 +284,5 @@ window.fdCanvasBenchmark = {
   get backend() {
     return graph.resolvedRenderingBackend?.kind ?? 'pending'
   },
-  frameUpdates,
   measure,
 }

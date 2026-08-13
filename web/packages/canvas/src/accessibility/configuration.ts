@@ -1,13 +1,23 @@
 import type { FdAnyGraphEdge, FdAnyGraphNode, FdGraphPort } from '../graph/model.js'
+import type { FdGraphCanvasPlatformAdapter } from '../graph/platform-adapter.js'
 import type { FdGraphNavigationDirection } from '../interactions/keyboard.js'
 
 export interface FdGraphAccessibilityCapabilities {
   readonly focusNavigation?: boolean
   readonly selection?: boolean
   readonly movement?: boolean
-  readonly activation?: boolean
   readonly connections?: boolean
   readonly elementActions?: boolean
+}
+
+export interface FdGraphCanvasAccessibilityActionLabels {
+  readonly nextElement?: string
+  readonly previousElement?: string
+  readonly nextRelatedElement?: string
+  readonly moveUp?: string
+  readonly moveDown?: string
+  readonly moveLeft?: string
+  readonly moveRight?: string
 }
 
 export interface FdGraphAccessibilityElementAction {
@@ -53,24 +63,16 @@ export type FdGraphAccessibilityCommandResolver = (
 ) => FdGraphAccessibilityCommand | undefined
 
 export interface FdGraphCanvasAccessibilityConfiguration {
-  readonly enabled?: boolean
-  readonly canvasLabel?: string
   readonly maximumExposedElementCount?: number
   readonly keepsFocusedElementVisible?: boolean
   readonly capabilities?: FdGraphAccessibilityCapabilities
-  readonly resolveCommand?: FdGraphAccessibilityCommandResolver
-  readonly nodeRepresentation?: (node: FdAnyGraphNode) => FdGraphAccessibilityRepresentation
-  readonly portRepresentation?: (
-    context: FdGraphAccessibilityPortContext,
-  ) => FdGraphAccessibilityRepresentation
-  readonly edgeRepresentation?: (edge: FdAnyGraphEdge) => FdGraphAccessibilityRepresentation
+  readonly actionLabels?: FdGraphCanvasAccessibilityActionLabels
 }
 
 export interface FdResolvedGraphAccessibilityCapabilities {
   readonly focusNavigation: boolean
   readonly selection: boolean
   readonly movement: boolean
-  readonly activation: boolean
   readonly connections: boolean
   readonly elementActions: boolean
 }
@@ -81,6 +83,7 @@ export interface FdResolvedGraphCanvasAccessibilityConfiguration {
   readonly maximumExposedElementCount: number
   readonly keepsFocusedElementVisible: boolean
   readonly capabilities: FdResolvedGraphAccessibilityCapabilities
+  readonly actionLabels: Required<FdGraphCanvasAccessibilityActionLabels>
   readonly resolveCommand: FdGraphAccessibilityCommandResolver
   readonly nodeRepresentation: (node: FdAnyGraphNode) => FdGraphAccessibilityRepresentation
   readonly portRepresentation: (
@@ -138,28 +141,43 @@ export const defaultGraphAccessibilityCommandResolver: FdGraphAccessibilityComma
 
 export function resolveGraphCanvasAccessibilityConfiguration(
   configuration: FdGraphCanvasAccessibilityConfiguration = {},
+  platformAdapter: FdGraphCanvasPlatformAdapter = {},
 ): FdResolvedGraphCanvasAccessibilityConfiguration {
   const maximumExposedElementCount = configuration.maximumExposedElementCount ?? 64
   if (!Number.isInteger(maximumExposedElementCount) || maximumExposedElementCount <= 0) {
     throw new RangeError('maximum exposed accessibility element count must be a positive integer')
   }
-  const canvasLabel = configuration.canvasLabel?.trim() || 'Graph Canvas'
+  const canvasLabel = platformAdapter.accessibilityCanvasLabel?.trim() || 'Graph Canvas'
+  const capabilities = {
+    focusNavigation: configuration.capabilities?.focusNavigation ?? true,
+    selection: configuration.capabilities?.selection ?? true,
+    movement: configuration.capabilities?.movement ?? true,
+    connections: configuration.capabilities?.connections ?? true,
+    elementActions: configuration.capabilities?.elementActions ?? true,
+  }
   return {
-    enabled: configuration.enabled ?? true,
+    enabled: Object.values(capabilities).some(Boolean),
     canvasLabel,
     maximumExposedElementCount,
     keepsFocusedElementVisible: configuration.keepsFocusedElementVisible ?? true,
-    capabilities: {
-      focusNavigation: configuration.capabilities?.focusNavigation ?? true,
-      selection: configuration.capabilities?.selection ?? true,
-      movement: configuration.capabilities?.movement ?? true,
-      activation: configuration.capabilities?.activation ?? true,
-      connections: configuration.capabilities?.connections ?? true,
-      elementActions: configuration.capabilities?.elementActions ?? true,
+    capabilities,
+    actionLabels: {
+      nextElement: configuration.actionLabels?.nextElement?.trim() || 'Next Element',
+      previousElement: configuration.actionLabels?.previousElement?.trim() || 'Previous Element',
+      nextRelatedElement:
+        configuration.actionLabels?.nextRelatedElement?.trim() || 'Next Connected Element',
+      moveUp: configuration.actionLabels?.moveUp?.trim() || 'Move Up',
+      moveDown: configuration.actionLabels?.moveDown?.trim() || 'Move Down',
+      moveLeft: configuration.actionLabels?.moveLeft?.trim() || 'Move Left',
+      moveRight: configuration.actionLabels?.moveRight?.trim() || 'Move Right',
     },
-    resolveCommand: configuration.resolveCommand ?? defaultGraphAccessibilityCommandResolver,
-    nodeRepresentation: configuration.nodeRepresentation ?? defaultNodeRepresentation,
-    portRepresentation: configuration.portRepresentation ?? defaultPortRepresentation,
-    edgeRepresentation: configuration.edgeRepresentation ?? defaultEdgeRepresentation,
+    resolveCommand:
+      platformAdapter.resolveAccessibilityCommand ?? defaultGraphAccessibilityCommandResolver,
+    nodeRepresentation:
+      platformAdapter.nodeAccessibilityRepresentation ?? defaultNodeRepresentation,
+    portRepresentation:
+      platformAdapter.portAccessibilityRepresentation ?? defaultPortRepresentation,
+    edgeRepresentation:
+      platformAdapter.edgeAccessibilityRepresentation ?? defaultEdgeRepresentation,
   }
 }
