@@ -28,6 +28,13 @@ final class PreferencesControlsTests: XCTestCase {
     XCTAssertEqual(
       PreferencesSectionSeparatorResolver.resolve(
         iconPresence: mixedRows,
+        mixedRows: .card
+      ),
+      .card
+    )
+    XCTAssertEqual(
+      PreferencesSectionSeparatorResolver.resolve(
+        iconPresence: mixedRows,
         mixedRows: .content
       ),
       .content
@@ -38,6 +45,23 @@ final class PreferencesControlsTests: XCTestCase {
         mixedRows: .iconText
       ),
       .iconText
+    )
+  }
+
+  func testSeparatorLeadingEdgesResolveToSemanticInsets() {
+    let rowInset: CGFloat = 18
+
+    XCTAssertEqual(
+      PreferencesRowSeparatorLeadingEdge.card.leadingInset(rowInset: rowInset),
+      0
+    )
+    XCTAssertEqual(
+      PreferencesRowSeparatorLeadingEdge.content.leadingInset(rowInset: rowInset),
+      rowInset
+    )
+    XCTAssertEqual(
+      PreferencesRowSeparatorLeadingEdge.iconText.leadingInset(rowInset: rowInset),
+      rowInset + PreferencesRowLayout.iconTextLeadingOffset
     )
   }
 

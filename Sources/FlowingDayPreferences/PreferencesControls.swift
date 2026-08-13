@@ -16,8 +16,17 @@ enum PreferencesRowLayout {
 }
 
 public enum PreferencesRowSeparatorLeadingEdge: Equatable, Sendable {
+  case card
   case content
   case iconText
+
+  func leadingInset(rowInset: CGFloat) -> CGFloat {
+    switch self {
+    case .card: 0
+    case .content: rowInset
+    case .iconText: rowInset + PreferencesRowLayout.iconTextLeadingOffset
+    }
+  }
 }
 
 private struct PreferencesRowSeparatorLeadingEdgeKey: EnvironmentKey {
@@ -139,14 +148,10 @@ public struct PreferencesRowSeparator: View {
     Rectangle()
       .fill(FlowingPalette.hairline)
       .frame(height: 1)
-      .padding(.leading, metrics.rowInset + additionalLeadingInset)
-  }
-
-  private var additionalLeadingInset: CGFloat {
-    switch leadingEdge ?? sectionLeadingEdge {
-    case .content: 0
-    case .iconText: PreferencesRowLayout.iconTextLeadingOffset
-    }
+      .padding(
+        .leading,
+        (leadingEdge ?? sectionLeadingEdge).leadingInset(rowInset: metrics.rowInset)
+      )
   }
 }
 
