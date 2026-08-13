@@ -17,10 +17,12 @@ export type FdGraphCanvasConnectionOrigin =
   | {
       readonly kind: 'reconnect'
       readonly edgeID: FdGraphElementID
-      readonly endpoint: 'source' | 'target'
+      readonly endpoint: FdGraphCanvasEdgeEndpoint
       readonly original: FdGraphCanvasConnectionEndpoint
       readonly fixed: FdGraphCanvasConnectionEndpoint
     }
+
+export type FdGraphCanvasEdgeEndpoint = 'first' | 'second'
 
 export interface FdGraphCanvasConnectionFeedback {
   readonly message?: string
@@ -33,7 +35,8 @@ export type FdGraphCanvasConnectionValidation =
 export interface FdGraphCanvasConnectionValidationRequest {
   readonly origin: FdGraphCanvasConnectionOrigin
   readonly target: FdGraphCanvasConnectionEndpoint
-  readonly snapshotID: string | number
+  readonly basePresentationSnapshotID: string | number
+  readonly baseLayoutInputID: string | number
 }
 
 export interface FdGraphConnectionEditingConfiguration {
@@ -68,9 +71,11 @@ export interface FdGraphCanvasConnectionTarget {
 }
 
 export interface FdGraphCanvasTransientConnection {
-  readonly snapshotID: string | number
   readonly origin: FdGraphCanvasConnectionOrigin
+  readonly basePresentationSnapshotID: string | number
+  readonly baseLayoutInputID: string | number
   readonly stationaryPoint: FdCanvasPoint
+  readonly originalMovingPoint: FdCanvasPoint
   readonly movingPoint: FdCanvasPoint
   readonly candidate?: FdGraphCanvasConnectionTarget
   readonly validation?: FdGraphCanvasConnectionValidation
@@ -85,22 +90,39 @@ export type FdGraphCanvasConnectionOperation =
   | {
       readonly kind: 'reconnect'
       readonly edgeID: FdGraphElementID
-      readonly endpoint: 'source' | 'target'
+      readonly endpoint: FdGraphCanvasEdgeEndpoint
       readonly target: FdGraphCanvasConnectionEndpoint
     }
 
 export type FdGraphCanvasConnectionCancellationReason =
   | { readonly kind: 'cancelled' }
   | { readonly kind: 'noTarget' }
-  | { readonly kind: 'staleSnapshot' }
   | { readonly kind: 'invalidTarget'; readonly feedback?: FdGraphCanvasConnectionFeedback }
 
+export interface FdGraphCanvasConnectionCompletionIntent {
+  readonly operation: FdGraphCanvasConnectionOperation
+  readonly basePresentationSnapshotID: string | number
+  readonly baseLayoutInputID: string | number
+}
+
+export interface FdGraphCanvasConnectionCancellationIntent {
+  readonly origin: FdGraphCanvasConnectionOrigin
+  readonly reason: FdGraphCanvasConnectionCancellationReason
+  readonly basePresentationSnapshotID: string | number
+  readonly baseLayoutInputID: string | number
+}
+
 export type FdGraphCanvasConnectionResolution =
-  | { readonly kind: 'completed'; readonly operation: FdGraphCanvasConnectionOperation }
-  | { readonly kind: 'cancelled'; readonly reason: FdGraphCanvasConnectionCancellationReason }
+  | { readonly kind: 'completed'; readonly intent: FdGraphCanvasConnectionCompletionIntent }
+  | { readonly kind: 'cancelled'; readonly intent: FdGraphCanvasConnectionCancellationIntent }
 
 const nonnegative = (value: number, name: string): number => {
   if (!Number.isFinite(value) || value < 0) throw new RangeError(`${name} must not be negative`)
+  return value
+}
+
+const positive = (value: number, name: string): number => {
+  if (!Number.isFinite(value) || value <= 0) throw new RangeError(`${name} must be positive`)
   return value
 }
 
@@ -118,10 +140,7 @@ export function resolveGraphConnectionEditingConfiguration(
       configuration.sourceHitPadding ?? 6,
       'connection source hit padding',
     ),
-    targetHitRadius: nonnegative(
-      configuration.targetHitRadius ?? 18,
-      'connection target hit radius',
-    ),
+    targetHitRadius: positive(configuration.targetHitRadius ?? 18, 'connection target hit radius'),
     rendersDefaultPreview: configuration.rendersDefaultPreview ?? true,
     canBegin: configuration.canBegin ?? (() => true),
     validate: configuration.validate ?? (() => ({ kind: 'valid' })),
@@ -137,10 +156,12 @@ export function graphConnectionEndpoint(
 
 export function graphConnectionOriginForEdge(
   edge: FdAnyGraphEdge,
-  endpoint: 'source' | 'target',
+  endpoint: FdGraphCanvasEdgeEndpoint,
 ): FdGraphCanvasConnectionOrigin | undefined {
-  const original = edge[endpoint]
-  const fixed = edge[endpoint === 'source' ? 'target' : 'source']
+  const originalKey = endpoint === 'first' ? 'source' : 'target'
+  const fixedKey = endpoint === 'first' ? 'target' : 'source'
+  const original = edge[originalKey]
+  const fixed = edge[fixedKey]
   if (original.portID === undefined || fixed.portID === undefined) return undefined
   return {
     kind: 'reconnect',
@@ -164,7 +185,14 @@ export function beginGraphConnection(
   const stationaryPoint = connectionEndpointPoint(index, stationaryEndpoint)
   const movingPoint = connectionEndpointPoint(index, movingEndpoint)
   if (!stationaryPoint || !movingPoint) return undefined
-  return { snapshotID, origin, stationaryPoint, movingPoint }
+  return {
+    origin,
+    basePresentationSnapshotID: snapshotID,
+    baseLayoutInputID: snapshotID,
+    stationaryPoint,
+    originalMovingPoint: movingPoint,
+    movingPoint,
+  }
 }
 
 export function updateGraphConnection(
@@ -175,7 +203,12 @@ export function updateGraphConnection(
   targetHitRadius: number,
   configuration: FdResolvedGraphConnectionEditingConfiguration,
 ): FdGraphCanvasTransientConnection {
-  if (connection.snapshotID !== snapshotID) return connection
+  if (
+    connection.basePresentationSnapshotID !== snapshotID ||
+    connection.baseLayoutInputID !== snapshotID
+  ) {
+    return connection
+  }
   const candidate = nearestGraphConnectionTarget(
     index,
     worldPoint,
@@ -184,9 +217,11 @@ export function updateGraphConnection(
   )
   if (!candidate) {
     return {
-      snapshotID: connection.snapshotID,
       origin: connection.origin,
+      basePresentationSnapshotID: connection.basePresentationSnapshotID,
+      baseLayoutInputID: connection.baseLayoutInputID,
       stationaryPoint: connection.stationaryPoint,
+      originalMovingPoint: connection.originalMovingPoint,
       movingPoint: worldPoint,
     }
   }
@@ -197,45 +232,49 @@ export function updateGraphConnection(
     validation: configuration.validate({
       origin: connection.origin,
       target: candidate.endpoint,
-      snapshotID,
+      basePresentationSnapshotID: connection.basePresentationSnapshotID,
+      baseLayoutInputID: connection.baseLayoutInputID,
     }),
   }
 }
 
 export function resolveGraphConnection(
   connection: FdGraphCanvasTransientConnection,
-  snapshotID: string | number,
 ): FdGraphCanvasConnectionResolution {
-  if (connection.snapshotID !== snapshotID) {
-    return { kind: 'cancelled', reason: { kind: 'staleSnapshot' } }
-  }
-  if (!connection.candidate) return { kind: 'cancelled', reason: { kind: 'noTarget' } }
+  if (!connection.candidate) return cancelGraphConnection(connection, { kind: 'noTarget' })
   if (connection.validation?.kind !== 'valid') {
-    return {
-      kind: 'cancelled',
-      reason: {
-        kind: 'invalidTarget',
-        ...(connection.validation?.feedback ? { feedback: connection.validation.feedback } : {}),
-      },
-    }
+    return cancelGraphConnection(connection, {
+      kind: 'invalidTarget',
+      ...(connection.validation?.feedback ? { feedback: connection.validation.feedback } : {}),
+    })
   }
-  if (connection.origin.kind === 'new') {
-    return {
-      kind: 'completed',
-      operation: {
-        kind: 'create',
-        source: connection.origin.source,
-        target: connection.candidate.endpoint,
-      },
-    }
-  }
+  const operation: FdGraphCanvasConnectionOperation =
+    connection.origin.kind === 'new'
+      ? {
+          kind: 'create',
+          source: connection.origin.source,
+          target: connection.candidate.endpoint,
+        }
+      : {
+          kind: 'reconnect',
+          edgeID: connection.origin.edgeID,
+          endpoint: connection.origin.endpoint,
+          target: connection.candidate.endpoint,
+        }
+  return completedGraphConnection(connection, operation)
+}
+
+export function cancelGraphConnection(
+  connection: FdGraphCanvasTransientConnection,
+  reason: FdGraphCanvasConnectionCancellationReason = { kind: 'cancelled' },
+): FdGraphCanvasConnectionResolution {
   return {
-    kind: 'completed',
-    operation: {
-      kind: 'reconnect',
-      edgeID: connection.origin.edgeID,
-      endpoint: connection.origin.endpoint,
-      target: connection.candidate.endpoint,
+    kind: 'cancelled',
+    intent: {
+      origin: connection.origin,
+      reason,
+      basePresentationSnapshotID: connection.basePresentationSnapshotID,
+      baseLayoutInputID: connection.baseLayoutInputID,
     },
   }
 }
@@ -281,6 +320,20 @@ export function connectionEndpointsEqual(
 
 function movingEndpoint(origin: FdGraphCanvasConnectionOrigin): FdGraphCanvasConnectionEndpoint {
   return origin.kind === 'new' ? origin.source : origin.original
+}
+
+function completedGraphConnection(
+  connection: FdGraphCanvasTransientConnection,
+  operation: FdGraphCanvasConnectionOperation,
+): FdGraphCanvasConnectionResolution {
+  return {
+    kind: 'completed',
+    intent: {
+      operation,
+      basePresentationSnapshotID: connection.basePresentationSnapshotID,
+      baseLayoutInputID: connection.baseLayoutInputID,
+    },
+  }
 }
 
 function connectionEndpointPoint(

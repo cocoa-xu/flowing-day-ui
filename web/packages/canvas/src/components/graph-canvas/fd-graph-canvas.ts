@@ -1642,9 +1642,9 @@ export class FdGraphCanvas
     this.interactionController?.cancel()
     if (
       this.connectionController?.activeConnection &&
-      this.connectionController.activeConnection.snapshotID !== this.snapshot.id
+      this.connectionController.activeConnection.basePresentationSnapshotID !== this.snapshot.id
     ) {
-      this.connectionController.cancel({ kind: 'staleSnapshot' })
+      this.connectionController.cancel()
     }
     this.index = new FdGraphSnapshotIndex(this.snapshot)
     this.indexedSnapshot = this.snapshot
@@ -2349,15 +2349,10 @@ export class FdGraphCanvas
     }
   }
 
-  emitConnectionResolution(
-    connection: FdGraphCanvasTransientConnection,
-    resolution: FdGraphCanvasConnectionResolution,
-  ): void {
+  emitConnectionResolution(resolution: FdGraphCanvasConnectionResolution): void {
     if (resolution.kind === 'completed') {
       const detail: FdGraphConnectionCompleteDetail = {
-        snapshotID: connection.snapshotID,
-        origin: connection.origin,
-        operation: resolution.operation,
+        ...resolution.intent,
       }
       this.dispatchEvent(
         new CustomEvent<FdGraphConnectionCompleteDetail>('fd-graph-connection-complete', {
@@ -2369,9 +2364,7 @@ export class FdGraphCanvas
       return
     }
     const detail: FdGraphConnectionCancelDetail = {
-      snapshotID: connection.snapshotID,
-      origin: connection.origin,
-      reason: resolution.reason,
+      ...resolution.intent,
     }
     this.dispatchEvent(
       new CustomEvent<FdGraphConnectionCancelDetail>('fd-graph-connection-cancel', {

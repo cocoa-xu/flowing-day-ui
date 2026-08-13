@@ -49,13 +49,14 @@ export interface FdGraphConnectionPreviewChangeDetail {
 }
 
 export interface FdGraphConnectionCompleteDetail {
-  readonly snapshotID: string | number
-  readonly origin: FdGraphCanvasConnectionOrigin
+  readonly basePresentationSnapshotID: string | number
+  readonly baseLayoutInputID: string | number
   readonly operation: FdGraphCanvasConnectionOperation
 }
 
 export interface FdGraphConnectionCancelDetail {
-  readonly snapshotID: string | number
+  readonly basePresentationSnapshotID: string | number
+  readonly baseLayoutInputID: string | number
   readonly origin: FdGraphCanvasConnectionOrigin
   readonly reason: FdGraphCanvasConnectionCancellationReason
 }

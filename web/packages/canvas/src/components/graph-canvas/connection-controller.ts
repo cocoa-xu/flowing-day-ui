@@ -3,6 +3,7 @@ import { graphElementIDFromKey } from '../../graph/model.js'
 import type { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
 import {
   beginGraphConnection,
+  cancelGraphConnection,
   type FdGraphCanvasConnectionCancellationReason,
   type FdGraphCanvasConnectionEndpoint,
   type FdGraphCanvasConnectionOrigin,
@@ -20,10 +21,7 @@ export interface FdGraphCanvasConnectionDelegate {
   readonly resolvedConnectionConfiguration: FdResolvedGraphConnectionEditingConfiguration
   viewportPoint(event: PointerEvent): FdCanvasPoint
   setConnectionPresentation(connection: FdGraphCanvasTransientConnection | undefined): void
-  emitConnectionResolution(
-    connection: FdGraphCanvasTransientConnection,
-    resolution: FdGraphCanvasConnectionResolution,
-  ): void
+  emitConnectionResolution(resolution: FdGraphCanvasConnectionResolution): void
 }
 
 interface FdGraphConnectionPointerSession {
@@ -125,10 +123,7 @@ export class FdGraphCanvasConnectionController {
     this.connection = undefined
     this.pointerSession = undefined
     this.delegate.setConnectionPresentation(undefined)
-    this.delegate.emitConnectionResolution(
-      connection,
-      resolveGraphConnection(connection, this.delegate.snapshotID),
-    )
+    this.delegate.emitConnectionResolution(resolveGraphConnection(connection))
     return true
   }
 
@@ -138,7 +133,7 @@ export class FdGraphCanvasConnectionController {
     this.connection = undefined
     this.pointerSession = undefined
     this.delegate.setConnectionPresentation(undefined)
-    this.delegate.emitConnectionResolution(connection, { kind: 'cancelled', reason })
+    this.delegate.emitConnectionResolution(cancelGraphConnection(connection, reason))
     return true
   }
 

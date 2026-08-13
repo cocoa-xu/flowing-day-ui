@@ -68,12 +68,16 @@ describe('graph connection editing', () => {
     )
 
     expect(updated.candidate?.endpoint).toEqual({ nodeID: 'target', portID: 'in' })
-    expect(resolveGraphConnection(updated, snapshot.id)).toEqual({
+    expect(resolveGraphConnection(updated)).toEqual({
       kind: 'completed',
-      operation: {
-        kind: 'create',
-        source: { nodeID: 'source', portID: 'out' },
-        target: { nodeID: 'target', portID: 'in' },
+      intent: {
+        operation: {
+          kind: 'create',
+          source: { nodeID: 'source', portID: 'out' },
+          target: { nodeID: 'target', portID: 'in' },
+        },
+        basePresentationSnapshotID: 'connections',
+        baseLayoutInputID: 'connections',
       },
     })
   })
@@ -100,17 +104,22 @@ describe('graph connection editing', () => {
       configuration,
     )
 
-    expect(resolveGraphConnection(updated, snapshot.id)).toEqual({
+    expect(resolveGraphConnection(updated)).toEqual({
       kind: 'cancelled',
-      reason: { kind: 'invalidTarget', feedback: { message: 'Type mismatch' } },
+      intent: {
+        origin: { kind: 'new', source: { nodeID: 'source', portID: 'out' } },
+        reason: { kind: 'invalidTarget', feedback: { message: 'Type mismatch' } },
+        basePresentationSnapshotID: 'connections',
+        baseLayoutInputID: 'connections',
+      },
     })
   })
 
-  it('supports endpoint reconnection and rejects stale completion', () => {
+  it('supports endpoint reconnection', () => {
     const index = new FdGraphSnapshotIndex(snapshot)
     const edge = snapshot.edges[0]
     if (!edge) throw new Error('edge fixture is missing')
-    const origin = graphConnectionOriginForEdge(edge, 'target')
+    const origin = graphConnectionOriginForEdge(edge, 'second')
     if (!origin) throw new Error('reconnection origin is missing')
     const configuration = resolveGraphConnectionEditingConfiguration({ enabled: true })
     const started = beginGraphConnection(origin, snapshot.id, index, configuration)
@@ -124,18 +133,18 @@ describe('graph connection editing', () => {
       configuration,
     )
 
-    expect(resolveGraphConnection(updated, snapshot.id)).toEqual({
+    expect(resolveGraphConnection(updated)).toEqual({
       kind: 'completed',
-      operation: {
-        kind: 'reconnect',
-        edgeID: 'edge',
-        endpoint: 'target',
-        target: { nodeID: 'target', portID: 'other' },
+      intent: {
+        operation: {
+          kind: 'reconnect',
+          edgeID: 'edge',
+          endpoint: 'second',
+          target: { nodeID: 'target', portID: 'other' },
+        },
+        basePresentationSnapshotID: 'connections',
+        baseLayoutInputID: 'connections',
       },
-    })
-    expect(resolveGraphConnection(updated, 'new-snapshot')).toEqual({
-      kind: 'cancelled',
-      reason: { kind: 'staleSnapshot' },
     })
   })
 

@@ -1076,8 +1076,9 @@ describe('fd-graph-canvas connection editing', () => {
 
     element.snapshot = { ...graphSnapshot(), id: 'graph-2' }
     await element.updateComplete
-    expect(cancellations[0]?.snapshotID).toBe('graph-1')
-    expect(cancellations[0]?.reason).toEqual({ kind: 'staleSnapshot' })
+    expect(cancellations[0]?.basePresentationSnapshotID).toBe('graph-1')
+    expect(cancellations[0]?.baseLayoutInputID).toBe('graph-1')
+    expect(cancellations[0]?.reason).toEqual({ kind: 'cancelled' })
   })
 
   it('supports programmatic endpoint reconnection and Escape cancellation', async () => {
@@ -1086,7 +1087,7 @@ describe('fd-graph-canvas connection editing', () => {
     await element.updateComplete
     const edge = element.snapshot.edges[0]
     if (!edge) throw new Error('missing edge fixture')
-    const origin = graphConnectionOriginForEdge(edge, 'target')
+    const origin = graphConnectionOriginForEdge(edge, 'second')
     if (!origin) throw new Error('missing reconnect origin')
     const completions: FdGraphConnectionCompleteDetail[] = []
     const cancellations: FdGraphConnectionCancelDetail[] = []
@@ -1103,7 +1104,7 @@ describe('fd-graph-canvas connection editing', () => {
     expect(completions[0]?.operation).toEqual({
       kind: 'reconnect',
       edgeID: 'connection',
-      endpoint: 'target',
+      endpoint: 'second',
       target: { nodeID: 'source', portID: 'output' },
     })
 
