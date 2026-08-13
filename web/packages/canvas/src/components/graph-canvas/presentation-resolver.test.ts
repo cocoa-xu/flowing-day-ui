@@ -28,6 +28,10 @@ import {
   FdGraphNodePlacement,
 } from '../../layout/pipeline.js'
 import {
+  FdGraphCanvasWebGL2VisualAdapter,
+  type FdGraphRenderingBackend,
+} from '../../rendering/backend.js'
+import {
   graphCanvasEngineEdgeGeometryResolver,
   graphCanvasEngineSnapshot,
 } from './engine-adapter.js'
@@ -202,6 +206,44 @@ describe('graph canvas presentation resolver', () => {
       portID: 'source-output',
     })
     expect(engine?.tool).toBe('pan')
+  })
+
+  it('provides the Swift-aligned backend context to a WebGL2 visual adapter', async () => {
+    const content = makeContent()
+    const sessionID = new FdGraphCanvasSessionID('backend-session')
+    const session = new FdGraphCanvasSessionState<string>()
+    const backend: FdGraphRenderingBackend = {
+      kind: 'test',
+      mount: () => {},
+      render: () => {},
+      unmount: () => {},
+    }
+    let receivedContent: FdGraphCanvasContent<string> | undefined
+    let receivedSessionID: FdGraphCanvasSessionID | undefined
+    let receivedSession: FdGraphCanvasSessionState<string> | undefined
+    const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
+    element.content = content
+    element.sessionID = sessionID
+    element.session = session
+    element.webGL2VisualAdapter = new FdGraphCanvasWebGL2VisualAdapter({
+      isAvailable: () => true,
+      content: (context) => {
+        receivedContent = context.content
+        receivedSessionID = context.sessionID
+        receivedSession = context.session
+        return backend
+      },
+    })
+    document.body.append(element)
+    await element.updateComplete
+    const engine = element.shadowRoot?.querySelector('fd-graph-canvas-engine') as
+      | FdGraphCanvasEngine
+      | undefined
+
+    expect(engine?.renderingAdapter).toBe(backend)
+    expect(receivedContent).toBe(content)
+    expect(receivedSessionID).toBe(sessionID)
+    expect(receivedSession).toBe(session)
   })
 
   it('maps private engine selection and focus changes back to canonical session IDs', async () => {

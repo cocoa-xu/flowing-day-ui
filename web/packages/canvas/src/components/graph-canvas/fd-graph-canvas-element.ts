@@ -47,6 +47,11 @@ import {
   FdGraphCanvasSessionState,
 } from '../../interactions/session.js'
 import { sameLayoutInputID } from '../../layout/model.js'
+import {
+  FdGraphCanvasBackendContext,
+  type FdGraphCanvasWebGL2VisualAdapter,
+  type FdGraphRenderingBackend,
+} from '../../rendering/backend.js'
 import type { FdGraphCanvasEngine } from './fd-graph-canvas.js'
 import './fd-graph-canvas.js'
 import {
@@ -85,6 +90,8 @@ export class FdGraphCanvas<
   @property({ attribute: false }) session = new FdGraphCanvasSessionState<ElementID>()
   @property({ attribute: false }) configuration: FdGraphCanvasConfiguration = {}
   @property({ attribute: false })
+  webGL2VisualAdapter: FdGraphCanvasWebGL2VisualAdapter<ElementID> | undefined
+  @property({ attribute: false })
   accessibilitySnapshot: FdGraphCanvasAccessibilitySnapshot | undefined
   @property({ attribute: false }) contentInsets: FdCanvasInsets = zeroCanvasInsets
   @property({ attribute: false }) contentChangeBehavior: FdCanvasContentChangeBehavior = {
@@ -118,6 +125,7 @@ export class FdGraphCanvas<
         .configuration=${this.configuration}
         .contentInsets=${this.contentInsets}
         .contentChangeBehavior=${this.contentChangeBehavior}
+        .renderingAdapter=${this.resolveVisualAdapter(content)}
         .edgeGeometryResolver=${graphCanvasEngineEdgeGeometryResolver}
         .interactionPolicy=${this.interactionPolicy}
         .tool=${this.session.tool}
@@ -136,6 +144,31 @@ export class FdGraphCanvas<
         <slot name="overlay" slot="overlay"></slot>
       </fd-graph-canvas-engine>
     `
+  }
+
+  private resolveVisualAdapter(
+    content: FdGraphCanvasContent<ElementID>,
+  ): FdGraphRenderingBackend | undefined {
+    const adapter = this.webGL2VisualAdapter
+    if (!adapter?.isAvailable) return undefined
+    return adapter.call(
+      new FdGraphCanvasBackendContext({
+        content,
+        sessionID: this.sessionID,
+        session: this.session,
+        configuration: this.configuration,
+        interactionPolicy: this.interactionPolicy,
+        ...(this.accessibilitySnapshot
+          ? { accessibilitySnapshot: this.accessibilitySnapshot }
+          : {}),
+        contentInsets: this.contentInsets,
+        contentChangeBehavior: this.contentChangeBehavior,
+        ...(this.command ? { command: this.command } : {}),
+        onSmartMagnify: this.onSmartMagnify,
+        onViewportChange: this.onViewportChange,
+        onIntent: this.onIntent,
+      }),
+    )
   }
 
   protected override updated(changed: PropertyValues<this>): void {
