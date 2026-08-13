@@ -78,7 +78,7 @@ export function dynamic(light: number, dark: number): TokenValue {
 }
 
 /** The nine cases of `FlowingFontWeight`. */
-export type FontWeightName =
+export type FdFontWeight =
   | 'ultraLight'
   | 'thin'
   | 'light'
@@ -92,16 +92,20 @@ export type FontWeightName =
 /** Mirrors `FlowingFontWeight`, mapped onto the CSS numeric scale. */
 export const fontWeights = Object.fromEntries(
   Object.entries(raw.fontWeights).filter(([name]) => !name.startsWith('$')),
-) as Readonly<Record<FontWeightName, number>>
+) as Readonly<Record<FdFontWeight, number>>
 
 /** Mirrors `FlowingFontDesign`. */
-export type FontDesignName = 'standard' | 'rounded' | 'serif' | 'monospaced'
+export type FdFontDesign = 'standard' | 'rounded' | 'serif' | 'monospaced'
 
 /** Mirrors `FlowingTextStyle`, less the AppKit-only `fontName`. */
-interface RawTextStyle {
+export interface FdTextStyle {
   readonly size: number
-  readonly weight?: FontWeightName
-  readonly design?: FontDesignName
+  readonly weight?: FdFontWeight
+  readonly design?: FdFontDesign
+  readonly usesMonospacedDigits?: boolean
+}
+
+interface RawTextStyle extends Omit<FdTextStyle, 'usesMonospacedDigits'> {
   readonly monospacedDigits?: boolean
   readonly swift?: string
 }
