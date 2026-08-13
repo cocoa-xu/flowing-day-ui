@@ -1,87 +1,162 @@
 import { describe, expect, it } from 'vitest'
-import type { FdAnyGraphSnapshot } from '../graph/model.js'
-import { FdLayeredGraphLayoutCycleError, layoutLayeredGraph } from './layered.js'
+import {
+  FdLayer,
+  FdLayerAssignment,
+  FdLayerAssignmentIssue,
+  FdLayeredComponent,
+  FdLayerOrdering,
+  FdLayerOrderingIssue,
+  FdLongestPathLayerAssignment,
+  FdStableLayerOrdering,
+} from './layered.js'
+import {
+  FdGraphLayoutInput,
+  FdGraphLayoutTopology,
+  FdLayoutComponentIdentity,
+  FdLayoutInputID,
+  FdLayoutPipelineIdentity,
+  FdLayoutRevision,
+} from './model.js'
 
-const snapshot: FdAnyGraphSnapshot = {
-  id: 'layout',
-  nodes: [
-    { id: 'root', frame: { x: 0, y: 0, width: 100, height: 50 } },
-    { id: 'wide', frame: { x: 0, y: 0, width: 180, height: 70 } },
-    { id: 'narrow', frame: { x: 0, y: 0, width: 80, height: 40 } },
-  ],
-  edges: [
-    { id: 'wide-edge', source: { nodeID: 'root' }, target: { nodeID: 'wide' } },
-    { id: 'narrow-edge', source: { nodeID: 'root' }, target: { nodeID: 'narrow' } },
-  ],
+const makeInput = (
+  nodeIDs: readonly string[],
+  edges: readonly { readonly id: string; readonly source: string; readonly target: string }[],
+): FdGraphLayoutInput<string> => {
+  const snapshotID = 'layered'
+  const topology = new FdGraphLayoutTopology({
+    snapshotID,
+    nodeIDs,
+    ports: [],
+    edges: edges.map(({ id, source, target }) => ({
+      id,
+      endpoints: {
+        kind: 'directed',
+        source: { kind: 'node', nodeID: source },
+        target: { kind: 'node', nodeID: target },
+      },
+    })),
+  })
+  return new FdGraphLayoutInput({
+    id: new FdLayoutInputID(
+      snapshotID,
+      new FdLayoutPipelineIdentity(new FdLayoutComponentIdentity('pipeline')),
+      new FdLayoutComponentIdentity('sizes'),
+      new FdLayoutComponentIdentity('anchors'),
+      new FdLayoutRevision(),
+    ),
+    topology,
+    nodeSizes: nodeIDs.map((nodeID) => ({ nodeID, size: { width: 10, height: 10 } })),
+    portAnchors: [],
+  })
 }
 
-const configuration = {
-  horizontalNodeSpacing: 30,
-  verticalNodeSpacing: 50,
-  componentSpacing: 70,
-  canvasInsets: { top: 20, right: 20, bottom: 20, left: 20 },
-  minimumCanvasSize: { width: 0, height: 0 },
-} as const
+const dagView = (input: FdGraphLayoutInput<string>) => {
+  const result = input.validateDAG()
+  if (result.kind !== 'valid') throw result.issue
+  return result.view
+}
 
-describe('layered graph layout', () => {
-  it('places descendants below their parents by default', () => {
-    const result = layoutLayeredGraph(snapshot, configuration)
-    const root = result.nodeFrames.get('root')!
-    const wide = result.nodeFrames.get('wide')!
-    const narrow = result.nodeFrames.get('narrow')!
-
-    expect(root.y + root.height).toBeLessThan(wide.y)
-    expect(root.y + root.height).toBeLessThan(narrow.y)
-    expect(wide).toMatchObject({ width: 180, height: 70 })
-  })
-
-  it('places descendants to the right when configured', () => {
-    const result = layoutLayeredGraph(snapshot, {
-      ...configuration,
-      direction: 'leftToRight',
-    })
-    const root = result.nodeFrames.get('root')!
-    const wide = result.nodeFrames.get('wide')!
-    const narrow = result.nodeFrames.get('narrow')!
-
-    expect(root.x + root.width).toBeLessThan(wide.x)
-    expect(root.x + root.width).toBeLessThan(narrow.x)
-    expect(narrow).toMatchObject({ width: 80, height: 40 })
-  })
-
-  it('rejects cyclic input with a specific error', () => {
-    expect(() =>
-      layoutLayeredGraph(
-        {
-          ...snapshot,
-          edges: [
-            ...snapshot.edges,
-            { id: 'return', source: { nodeID: 'wide' }, target: { nodeID: 'root' } },
-          ],
-        },
-        configuration,
-      ),
-    ).toThrow(FdLayeredGraphLayoutCycleError)
-  })
-
-  it('is stack safe for a ten-thousand-node path', () => {
-    const nodeCount = 10_000
-    const nodes = Array.from({ length: nodeCount }, (_, index) => ({
-      id: index,
-      frame: { x: 0, y: 0, width: 1, height: 1 },
-    }))
-    const edges = Array.from({ length: nodeCount - 1 }, (_, index) => ({
-      id: index,
-      source: { nodeID: index },
-      target: { nodeID: index + 1 },
-    }))
-
-    const result = layoutLayeredGraph(
-      { id: 'large-path', nodes, edges },
-      { ...configuration, direction: 'leftToRight' },
+describe('layered DAG strategies', () => {
+  it('assigns longest-path ranks in topological order', () => {
+    const input = makeInput(
+      ['a', 'b', 'c', 'd'],
+      [
+        { id: 'ac', source: 'a', target: 'c' },
+        { id: 'bc', source: 'b', target: 'c' },
+        { id: 'cd', source: 'c', target: 'd' },
+      ],
     )
 
-    expect(result.nodeFrames.size).toBe(nodeCount)
-    expect(result.nodeFrames.get(nodeCount - 1)!.x).toBeGreaterThan(result.nodeFrames.get(0)!.x)
+    const assignment = new FdLongestPathLayerAssignment().assignLayers(dagView(input))
+
+    expect([...assignment.ranks]).toEqual([
+      ['a', 0],
+      ['b', 0],
+      ['c', 1],
+      ['d', 2],
+    ])
+  })
+
+  it('validates complete nonnegative layer assignments', () => {
+    const input = makeInput(['a', 'b'], [])
+
+    expect(() => new FdLayerAssignment(input, [{ nodeID: 'a', rank: 0 }])).toThrowError(
+      expect.objectContaining({ kind: 'missingNode', nodeID: 'b' }),
+    )
+    expect(
+      () =>
+        new FdLayerAssignment(input, [
+          { nodeID: 'a', rank: 0 },
+          { nodeID: 'a', rank: 1 },
+          { nodeID: 'b', rank: 0 },
+        ]),
+    ).toThrow(FdLayerAssignmentIssue)
+    expect(
+      () =>
+        new FdLayerAssignment(input, [
+          { nodeID: 'a', rank: -1 },
+          { nodeID: 'b', rank: 0 },
+        ]),
+    ).toThrowError(expect.objectContaining({ kind: 'negativeRank', nodeID: 'a' }))
+    expect(
+      () =>
+        new FdLayerAssignment(input, [
+          { nodeID: 'a', rank: 0 },
+          { nodeID: 'b', rank: 0 },
+          { nodeID: 'unknown', rank: 0 },
+        ]),
+    ).toThrowError(expect.objectContaining({ kind: 'unknownNode', nodeID: 'unknown' }))
+  })
+
+  it('orders weak components and siblings stably', () => {
+    const input = makeInput(
+      ['first-root', 'second-root', 'late-child', 'early-child', 'isolated'],
+      [
+        { id: 'late', source: 'second-root', target: 'late-child' },
+        { id: 'early', source: 'first-root', target: 'early-child' },
+      ],
+    )
+    const view = dagView(input)
+    const assignment = new FdLongestPathLayerAssignment().assignLayers(view)
+
+    const ordering = new FdStableLayerOrdering().orderLayers(view, assignment)
+
+    expect(
+      ordering.components.map((component) =>
+        component.layers.map((layer) => ({ rank: layer.rank, nodeIDs: layer.nodeIDs })),
+      ),
+    ).toEqual([
+      [
+        { rank: 0, nodeIDs: ['first-root'] },
+        { rank: 1, nodeIDs: ['early-child'] },
+      ],
+      [
+        { rank: 0, nodeIDs: ['second-root'] },
+        { rank: 1, nodeIDs: ['late-child'] },
+      ],
+      [{ rank: 0, nodeIDs: ['isolated'] }],
+    ])
+  })
+
+  it('normalizes layers and rejects malformed ordering', () => {
+    const input = makeInput(['a', 'b'], [{ id: 'ab', source: 'a', target: 'b' }])
+    const assignment = new FdLayerAssignment(input, [
+      { nodeID: 'a', rank: 0 },
+      { nodeID: 'b', rank: 1 },
+    ])
+    const ordering = new FdLayerOrdering(input, assignment, [
+      new FdLayeredComponent([new FdLayer(1, ['b']), new FdLayer(0, ['a'])]),
+    ])
+
+    expect(ordering.components[0]?.layers.map(({ rank }) => rank)).toEqual([0, 1])
+    expect(
+      () =>
+        new FdLayerOrdering(input, assignment, [
+          new FdLayeredComponent([new FdLayer(0, ['a', 'b'])]),
+        ]),
+    ).toThrowError(expect.objectContaining({ kind: 'rankMismatch', nodeID: 'b' }))
+    expect(() => new FdLayerOrdering(input, assignment, [new FdLayeredComponent([])])).toThrow(
+      FdLayerOrderingIssue,
+    )
   })
 })

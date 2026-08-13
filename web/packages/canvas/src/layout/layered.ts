@@ -1,294 +1,271 @@
-import type { FdCanvasInsets, FdCanvasRect, FdCanvasSize } from '../geometry.js'
-import type { FdAnyGraphSnapshot, FdGraphElementID } from '../graph/model.js'
-import { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
+import type { FdGraphElementID } from '../graph/model.js'
+import {
+  type FdGraphLayoutDAGView,
+  type FdGraphLayoutInput,
+  FdLayoutComponentIdentity,
+} from './model.js'
 
-function mapValue<Key, Value>(map: ReadonlyMap<Key, Value>, key: Key): Value {
-  const value = map.get(key)
-  if (value === undefined) throw new Error('Layered layout invariant failed')
-  return value
-}
+export type FdLayerAssignmentIssueKind =
+  | 'duplicateNode'
+  | 'missingNode'
+  | 'unknownNode'
+  | 'negativeRank'
 
-function arrayValue<Value>(values: readonly Value[], index: number): Value {
-  const value = values[index]
-  if (value === undefined) throw new Error('Layered layout invariant failed')
-  return value
-}
+export class FdLayerAssignmentIssue<
+  NodeID extends FdGraphElementID = FdGraphElementID,
+> extends Error {
+  readonly kind: FdLayerAssignmentIssueKind
+  readonly nodeID: NodeID
 
-export type FdLayeredLayoutDirection = 'topToBottom' | 'leftToRight'
-
-export interface FdLayeredLayoutConfiguration {
-  readonly direction?: FdLayeredLayoutDirection
-  readonly horizontalNodeSpacing: number
-  readonly verticalNodeSpacing: number
-  readonly componentSpacing: number
-  readonly canvasInsets: FdCanvasInsets
-  readonly minimumCanvasSize: FdCanvasSize
-}
-
-export interface FdLayeredGraphLayoutResult {
-  readonly nodeFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
-  readonly contentBounds: FdCanvasRect
-}
-
-export class FdLayeredGraphLayoutCycleError extends Error {
-  constructor() {
-    super('Layered graph layout requires an acyclic directed graph')
-    this.name = 'FdLayeredGraphLayoutCycleError'
+  constructor(kind: FdLayerAssignmentIssueKind, nodeID: NodeID) {
+    super(kind)
+    this.name = 'FdLayerAssignmentIssue'
+    this.kind = kind
+    this.nodeID = nodeID
   }
 }
 
-export function layoutLayeredGraph(
-  snapshot: FdAnyGraphSnapshot,
-  configuration: FdLayeredLayoutConfiguration,
-): FdLayeredGraphLayoutResult {
-  new FdGraphSnapshotIndex(snapshot)
-  validateConfiguration(configuration)
-  const direction = configuration.direction ?? 'topToBottom'
-  const nodeByID = new Map(snapshot.nodes.map((node) => [node.id, node]))
-  if (snapshot.nodes.length === 0) {
-    return {
-      nodeFrames: new Map(),
-      contentBounds: {
-        x: 0,
-        y: 0,
-        width: configuration.minimumCanvasSize.width,
-        height: configuration.minimumCanvasSize.height,
-      },
-    }
-  }
+export interface FdLayerRank<NodeID extends FdGraphElementID = FdGraphElementID> {
+  readonly nodeID: NodeID
+  readonly rank: number
+}
 
-  const order = new Map(snapshot.nodes.map((node, index) => [node.id, index]))
-  const successors = new Map(snapshot.nodes.map((node) => [node.id, [] as FdGraphElementID[]]))
-  const predecessors = new Map(snapshot.nodes.map((node) => [node.id, [] as FdGraphElementID[]]))
-  const neighbors = new Map(snapshot.nodes.map((node) => [node.id, [] as FdGraphElementID[]]))
-  for (const edge of snapshot.edges) {
-    mapValue(successors, edge.source.nodeID).push(edge.target.nodeID)
-    mapValue(predecessors, edge.target.nodeID).push(edge.source.nodeID)
-    mapValue(neighbors, edge.source.nodeID).push(edge.target.nodeID)
-    mapValue(neighbors, edge.target.nodeID).push(edge.source.nodeID)
-  }
+export class FdLayerAssignment<NodeID extends FdGraphElementID = FdGraphElementID> {
+  readonly ranks: ReadonlyMap<NodeID, number>
 
-  const indegree = new Map(
-    snapshot.nodes.map((node) => [node.id, mapValue(predecessors, node.id).length]),
-  )
-  const queue = snapshot.nodes.filter((node) => indegree.get(node.id) === 0).map((node) => node.id)
-  const topologicalOrder: FdGraphElementID[] = []
-  for (let cursor = 0; cursor < queue.length; cursor += 1) {
-    const nodeID = arrayValue(queue, cursor)
-    topologicalOrder.push(nodeID)
-    for (const targetID of mapValue(successors, nodeID)) {
-      const next = mapValue(indegree, targetID) - 1
-      indegree.set(targetID, next)
-      if (next === 0) queue.push(targetID)
-    }
-  }
-  if (topologicalOrder.length !== snapshot.nodes.length) throw new FdLayeredGraphLayoutCycleError()
-
-  const ranks = new Map(snapshot.nodes.map((node) => [node.id, 0]))
-  for (const sourceID of topologicalOrder) {
-    for (const targetID of mapValue(successors, sourceID)) {
-      ranks.set(targetID, Math.max(mapValue(ranks, targetID), mapValue(ranks, sourceID) + 1))
-    }
-  }
-
-  const parentOrder = new Map<FdGraphElementID, number>()
-  for (const node of snapshot.nodes) {
-    let minimum = Number.MAX_SAFE_INTEGER
-    for (const parentID of mapValue(predecessors, node.id)) {
-      minimum = Math.min(minimum, mapValue(order, parentID))
-    }
-    parentOrder.set(node.id, minimum)
-  }
-  const components: FdGraphElementID[][] = []
-  const visited = new Set<FdGraphElementID>()
-  for (const node of snapshot.nodes) {
-    if (visited.has(node.id)) continue
-    const component: FdGraphElementID[] = []
-    const stack = [node.id]
-    visited.add(node.id)
-    while (stack.length > 0) {
-      const nodeID = stack.pop()
-      if (nodeID === undefined) break
-      component.push(nodeID)
-      for (const neighborID of mapValue(neighbors, nodeID)) {
-        if (visited.has(neighborID)) continue
-        visited.add(neighborID)
-        stack.push(neighborID)
+  constructor(
+    input: FdGraphLayoutInput<NodeID, FdGraphElementID, FdGraphElementID>,
+    ranks: readonly FdLayerRank<NodeID>[],
+  ) {
+    const knownNodeIDs = new Set(input.topology.nodeIDs)
+    const nextRanks = new Map<NodeID, number>()
+    for (const entry of ranks) {
+      if (!knownNodeIDs.has(entry.nodeID)) {
+        throw new FdLayerAssignmentIssue('unknownNode', entry.nodeID)
       }
+      if (!Number.isSafeInteger(entry.rank) || entry.rank < 0) {
+        throw new FdLayerAssignmentIssue('negativeRank', entry.nodeID)
+      }
+      if (nextRanks.has(entry.nodeID)) {
+        throw new FdLayerAssignmentIssue('duplicateNode', entry.nodeID)
+      }
+      nextRanks.set(entry.nodeID, entry.rank)
     }
-    components.push(component.sort((left, right) => mapValue(order, left) - mapValue(order, right)))
+    for (const nodeID of input.topology.nodeIDs) {
+      if (!nextRanks.has(nodeID)) throw new FdLayerAssignmentIssue('missingNode', nodeID)
+    }
+    this.ranks = nextRanks
   }
 
-  const primarySize = (id: FdGraphElementID) => {
-    const frame = mapValue(nodeByID, id).frame
-    return direction === 'topToBottom' ? frame.height : frame.width
+  rank(nodeID: NodeID): number | undefined {
+    return this.ranks.get(nodeID)
   }
-  const crossSize = (id: FdGraphElementID) => {
-    const frame = mapValue(nodeByID, id).frame
-    return direction === 'topToBottom' ? frame.width : frame.height
-  }
-  const primarySpacing =
-    direction === 'topToBottom'
-      ? configuration.verticalNodeSpacing
-      : configuration.horizontalNodeSpacing
-  const crossSpacing =
-    direction === 'topToBottom'
-      ? configuration.horizontalNodeSpacing
-      : configuration.verticalNodeSpacing
-  const primaryLeading =
-    direction === 'topToBottom' ? configuration.canvasInsets.top : configuration.canvasInsets.left
-  const primaryTrailing =
-    direction === 'topToBottom'
-      ? configuration.canvasInsets.bottom
-      : configuration.canvasInsets.right
-  const crossLeading =
-    direction === 'topToBottom' ? configuration.canvasInsets.left : configuration.canvasInsets.top
-  const crossTrailing =
-    direction === 'topToBottom'
-      ? configuration.canvasInsets.right
-      : configuration.canvasInsets.bottom
+}
 
-  const rankPrimarySizes = new Map<number, number>()
-  for (const node of snapshot.nodes) {
-    const rank = mapValue(ranks, node.id)
-    rankPrimarySizes.set(rank, Math.max(rankPrimarySizes.get(rank) ?? 0, primarySize(node.id)))
-  }
-  const occupiedRanks = [...rankPrimarySizes.keys()].sort((left, right) => left - right)
-  const rankPrimaryOrigins = new Map<number, number>()
-  let precedingPrimarySizes = 0
-  for (const rank of occupiedRanks) {
-    rankPrimaryOrigins.set(rank, primaryLeading + rank * primarySpacing + precedingPrimarySizes)
-    precedingPrimarySizes += mapValue(rankPrimarySizes, rank)
+export interface FdLayerAssignmentStrategy<
+  NodeID extends FdGraphElementID = FdGraphElementID,
+  PortID extends FdGraphElementID = FdGraphElementID,
+  EdgeID extends FdGraphElementID = FdGraphElementID,
+> {
+  readonly identity: FdLayoutComponentIdentity
+  assignLayers(view: FdGraphLayoutDAGView<NodeID, PortID, EdgeID>): FdLayerAssignment<NodeID>
+}
+
+export class FdLongestPathLayerAssignment<
+  NodeID extends FdGraphElementID = FdGraphElementID,
+  PortID extends FdGraphElementID = FdGraphElementID,
+  EdgeID extends FdGraphElementID = FdGraphElementID,
+> implements FdLayerAssignmentStrategy<NodeID, PortID, EdgeID>
+{
+  readonly identity: FdLayoutComponentIdentity
+
+  constructor(identity = new FdLayoutComponentIdentity()) {
+    this.identity = identity
   }
 
-  const frames = new Map<FdGraphElementID, FdCanvasRect>()
-  let componentCrossOrigin = crossLeading
-  for (const component of components) {
-    const layers = new Map<number, FdGraphElementID[]>()
-    for (const nodeID of component) {
-      const rank = mapValue(ranks, nodeID)
-      const layer = layers.get(rank) ?? []
-      layer.push(nodeID)
-      layers.set(rank, layer)
-    }
-    for (const layer of layers.values()) {
-      layer.sort((left, right) => {
-        const parentDifference = mapValue(parentOrder, left) - mapValue(parentOrder, right)
-        return parentDifference === 0
-          ? mapValue(order, left) - mapValue(order, right)
-          : parentDifference
-      })
-    }
-    const layerCrossSize = (ids: readonly FdGraphElementID[]) =>
-      ids.reduce<number>((total, id) => total + crossSize(id), 0) +
-      Math.max(ids.length - 1, 0) * crossSpacing
-    let componentCrossSize = 0
-    for (const layer of layers.values()) {
-      componentCrossSize = Math.max(componentCrossSize, layerCrossSize(layer))
-    }
-    for (const [rank, nodeIDs] of [...layers.entries()].sort(([left], [right]) => right - left)) {
-      const occupied = layerCrossSize(nodeIDs)
-      let cursor = componentCrossOrigin + (componentCrossSize - occupied) / 2
-      const defaultCenters = nodeIDs.map((nodeID) => {
-        const center = cursor + crossSize(nodeID) / 2
-        cursor += crossSize(nodeID) + crossSpacing
-        return center
-      })
-      let centers = nodeIDs.map((nodeID, index) => {
-        const childCenters = mapValue(successors, nodeID)
-          .map((childID) => frames.get(childID))
-          .filter((frame): frame is FdCanvasRect => frame !== undefined)
-          .map((frame) =>
-            direction === 'topToBottom' ? frame.x + frame.width / 2 : frame.y + frame.height / 2,
-          )
-        return childCenters.length === 0
-          ? arrayValue(defaultCenters, index)
-          : childCenters.reduce((sum, value) => sum + value, 0) / childCenters.length
-      })
-      for (let index = 1; index < centers.length; index += 1) {
-        const minimum =
-          arrayValue(centers, index - 1) +
-          (crossSize(arrayValue(nodeIDs, index - 1)) + crossSize(arrayValue(nodeIDs, index))) / 2 +
-          crossSpacing
-        centers[index] = Math.max(arrayValue(centers, index), minimum)
-      }
-      const firstNodeID = arrayValue(nodeIDs, 0)
-      const lastNodeID = arrayValue(nodeIDs, nodeIDs.length - 1)
-      const minimumCenter = componentCrossOrigin + crossSize(firstNodeID) / 2
-      const maximumCenter = componentCrossOrigin + componentCrossSize - crossSize(lastNodeID) / 2
-      if (arrayValue(centers, 0) < minimumCenter) {
-        const adjustment = minimumCenter - arrayValue(centers, 0)
-        centers = centers.map((center) => center + adjustment)
-      }
-      if (arrayValue(centers, centers.length - 1) > maximumCenter) {
-        const adjustment = arrayValue(centers, centers.length - 1) - maximumCenter
-        centers = centers.map((center) => center - adjustment)
-      }
-      if (arrayValue(centers, 0) < minimumCenter) centers = defaultCenters
-      for (const [index, nodeID] of nodeIDs.entries()) {
-        const node = mapValue(nodeByID, nodeID)
-        const crossOrigin = arrayValue(centers, index) - crossSize(nodeID) / 2
-        const primaryOrigin =
-          mapValue(rankPrimaryOrigins, rank) +
-          (mapValue(rankPrimarySizes, rank) - primarySize(nodeID)) / 2
-        frames.set(
-          nodeID,
-          direction === 'topToBottom'
-            ? {
-                x: crossOrigin,
-                y: primaryOrigin,
-                width: node.frame.width,
-                height: node.frame.height,
-              }
-            : {
-                x: primaryOrigin,
-                y: crossOrigin,
-                width: node.frame.width,
-                height: node.frame.height,
-              },
+  assignLayers(view: FdGraphLayoutDAGView<NodeID, PortID, EdgeID>): FdLayerAssignment<NodeID> {
+    const ranks = new Map(view.input.topology.nodeIDs.map((nodeID) => [nodeID, 0]))
+    for (const sourceID of view.topologicalNodeIDs) {
+      for (const targetID of view.input.topology.directedSuccessorNodeIDs(sourceID)) {
+        ranks.set(
+          targetID,
+          Math.max(resolvedRank(ranks, targetID), resolvedRank(ranks, sourceID) + 1),
         )
       }
     }
-    componentCrossOrigin += componentCrossSize + configuration.componentSpacing
-  }
-
-  const measuredCross = componentCrossOrigin - configuration.componentSpacing + crossTrailing
-  const lastRank = arrayValue(occupiedRanks, occupiedRanks.length - 1)
-  const measuredPrimary =
-    mapValue(rankPrimaryOrigins, lastRank) + mapValue(rankPrimarySizes, lastRank) + primaryTrailing
-  const measuredSize =
-    direction === 'topToBottom'
-      ? { width: measuredCross, height: measuredPrimary }
-      : { width: measuredPrimary, height: measuredCross }
-  let maximumX = 0
-  let maximumY = 0
-  for (const frame of frames.values()) {
-    maximumX = Math.max(maximumX, frame.x + frame.width)
-    maximumY = Math.max(maximumY, frame.y + frame.height)
-  }
-  return {
-    nodeFrames: frames,
-    contentBounds: {
-      x: 0,
-      y: 0,
-      width: Math.max(measuredSize.width, maximumX, configuration.minimumCanvasSize.width),
-      height: Math.max(measuredSize.height, maximumY, configuration.minimumCanvasSize.height),
-    },
+    return new FdLayerAssignment(
+      view.input,
+      view.input.topology.nodeIDs.map((nodeID) => ({ nodeID, rank: resolvedRank(ranks, nodeID) })),
+    )
   }
 }
 
-function validateConfiguration(configuration: FdLayeredLayoutConfiguration): void {
-  const values = [
-    configuration.horizontalNodeSpacing,
-    configuration.verticalNodeSpacing,
-    configuration.componentSpacing,
-    configuration.canvasInsets.top,
-    configuration.canvasInsets.right,
-    configuration.canvasInsets.bottom,
-    configuration.canvasInsets.left,
-    configuration.minimumCanvasSize.width,
-    configuration.minimumCanvasSize.height,
-  ]
-  if (values.some((value) => !Number.isFinite(value) || value < 0))
-    throw new RangeError('layered graph layout values must be finite and nonnegative')
+export class FdLayer<NodeID extends FdGraphElementID = FdGraphElementID> {
+  readonly rank: number
+  readonly nodeIDs: readonly NodeID[]
+
+  constructor(rank: number, nodeIDs: readonly NodeID[]) {
+    this.rank = rank
+    this.nodeIDs = nodeIDs
+  }
+}
+
+export class FdLayeredComponent<NodeID extends FdGraphElementID = FdGraphElementID> {
+  readonly layers: readonly FdLayer<NodeID>[]
+
+  constructor(layers: readonly FdLayer<NodeID>[]) {
+    this.layers = layers
+  }
+}
+
+export type FdLayerOrderingIssueKind =
+  | 'emptyComponent'
+  | 'emptyLayer'
+  | 'duplicateNode'
+  | 'missingNode'
+  | 'unknownNode'
+  | 'rankMismatch'
+  | 'duplicateRankInComponent'
+
+export class FdLayerOrderingIssue<
+  NodeID extends FdGraphElementID = FdGraphElementID,
+> extends Error {
+  readonly kind: FdLayerOrderingIssueKind
+  readonly nodeID: NodeID | undefined
+  readonly rank: number | undefined
+
+  constructor(kind: FdLayerOrderingIssueKind, details: { nodeID?: NodeID; rank?: number } = {}) {
+    super(kind)
+    this.name = 'FdLayerOrderingIssue'
+    this.kind = kind
+    this.nodeID = details.nodeID
+    this.rank = details.rank
+  }
+}
+
+export class FdLayerOrdering<NodeID extends FdGraphElementID = FdGraphElementID> {
+  readonly components: readonly FdLayeredComponent<NodeID>[]
+
+  constructor(
+    input: FdGraphLayoutInput<NodeID, FdGraphElementID, FdGraphElementID>,
+    assignment: FdLayerAssignment<NodeID>,
+    components: readonly FdLayeredComponent<NodeID>[],
+  ) {
+    const knownNodeIDs = new Set(input.topology.nodeIDs)
+    const includedNodeIDs = new Set<NodeID>()
+    const normalizedComponents: FdLayeredComponent<NodeID>[] = []
+    for (const component of components) {
+      if (component.layers.length === 0) throw new FdLayerOrderingIssue('emptyComponent')
+      const ranks = new Set<number>()
+      for (const layer of component.layers) {
+        if (layer.nodeIDs.length === 0) {
+          throw new FdLayerOrderingIssue('emptyLayer', { rank: layer.rank })
+        }
+        if (ranks.has(layer.rank)) {
+          throw new FdLayerOrderingIssue('duplicateRankInComponent', { rank: layer.rank })
+        }
+        ranks.add(layer.rank)
+        for (const nodeID of layer.nodeIDs) {
+          if (!knownNodeIDs.has(nodeID)) {
+            throw new FdLayerOrderingIssue('unknownNode', { nodeID })
+          }
+          if (assignment.rank(nodeID) !== layer.rank) {
+            throw new FdLayerOrderingIssue('rankMismatch', { nodeID })
+          }
+          if (includedNodeIDs.has(nodeID)) {
+            throw new FdLayerOrderingIssue('duplicateNode', { nodeID })
+          }
+          includedNodeIDs.add(nodeID)
+        }
+      }
+      normalizedComponents.push(
+        new FdLayeredComponent([...component.layers].sort((left, right) => left.rank - right.rank)),
+      )
+    }
+    for (const nodeID of input.topology.nodeIDs) {
+      if (!includedNodeIDs.has(nodeID)) {
+        throw new FdLayerOrderingIssue('missingNode', { nodeID })
+      }
+    }
+    this.components = normalizedComponents
+  }
+}
+
+export interface FdLayerOrderingStrategy<
+  NodeID extends FdGraphElementID = FdGraphElementID,
+  PortID extends FdGraphElementID = FdGraphElementID,
+  EdgeID extends FdGraphElementID = FdGraphElementID,
+> {
+  readonly identity: FdLayoutComponentIdentity
+  orderLayers(
+    view: FdGraphLayoutDAGView<NodeID, PortID, EdgeID>,
+    assignment: FdLayerAssignment<NodeID>,
+  ): FdLayerOrdering<NodeID>
+}
+
+export class FdStableLayerOrdering<
+  NodeID extends FdGraphElementID = FdGraphElementID,
+  PortID extends FdGraphElementID = FdGraphElementID,
+  EdgeID extends FdGraphElementID = FdGraphElementID,
+> implements FdLayerOrderingStrategy<NodeID, PortID, EdgeID>
+{
+  readonly identity: FdLayoutComponentIdentity
+
+  constructor(identity = new FdLayoutComponentIdentity()) {
+    this.identity = identity
+  }
+
+  orderLayers(
+    view: FdGraphLayoutDAGView<NodeID, PortID, EdgeID>,
+    assignment: FdLayerAssignment<NodeID>,
+  ): FdLayerOrdering<NodeID> {
+    const order = new Map(view.input.topology.nodeIDs.map((nodeID, index) => [nodeID, index]))
+    const parentOrder = new Map(
+      view.input.topology.nodeIDs.map((nodeID) => {
+        const parent = view.input.topology
+          .directedPredecessorNodeIDs(nodeID)
+          .reduce((minimum, parentID) => Math.min(minimum, resolvedRank(order, parentID)), Infinity)
+        return [nodeID, parent] as const
+      }),
+    )
+    const components = view.input.topology.weaklyConnectedComponents().map((nodeIDs) => {
+      const layers = new Map<number, NodeID[]>()
+      for (const nodeID of nodeIDs) {
+        const rank = resolvedAssignmentRank(assignment, nodeID)
+        const layer = layers.get(rank) ?? []
+        layer.push(nodeID)
+        layers.set(rank, layer)
+      }
+      return new FdLayeredComponent(
+        [...layers.entries()]
+          .sort(([left], [right]) => left - right)
+          .map(([rank, layerNodeIDs]) => {
+            const orderedNodeIDs = [...layerNodeIDs].sort((left, right) => {
+              const parentDifference =
+                resolvedRank(parentOrder, left) - resolvedRank(parentOrder, right)
+              return parentDifference === 0
+                ? resolvedRank(order, left) - resolvedRank(order, right)
+                : parentDifference
+            })
+            return new FdLayer(rank, orderedNodeIDs)
+          }),
+      )
+    })
+    return new FdLayerOrdering(view.input, assignment, components)
+  }
+}
+
+const resolvedAssignmentRank = <NodeID extends FdGraphElementID>(
+  assignment: FdLayerAssignment<NodeID>,
+  nodeID: NodeID,
+): number => {
+  const rank = assignment.rank(nodeID)
+  if (rank === undefined) throw new Error('layer assignment invariant failed')
+  return rank
+}
+
+const resolvedRank = <Key>(ranks: ReadonlyMap<Key, number>, key: Key): number => {
+  const rank = ranks.get(key)
+  if (rank === undefined) throw new Error('layered layout invariant failed')
+  return rank
 }
