@@ -14,6 +14,7 @@
   "devDependencies": {
     "@types/node": "^24.13.3",
     "playwright": "^1.62.1",
+    "selenium-webdriver": "^4.47.0",
     "typescript": "5.9.3",
     "vite": "^8.2.0"
   }
