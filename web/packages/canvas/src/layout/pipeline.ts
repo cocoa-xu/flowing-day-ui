@@ -7,6 +7,7 @@ import {
   type FdLayoutComponentIdentity,
   FdLayoutPipelineIdentity,
   FdLayoutPipelineStageRole,
+  sameLayoutPipelineIdentity,
 } from './model.js'
 
 export interface FdGraphNodeFrame<NodeID extends FdGraphElementID = FdGraphElementID> {
@@ -348,7 +349,7 @@ export class FdGraphLayoutPipeline<
   layout(
     input: FdGraphLayoutInput<NodeID, PortID, EdgeID>,
   ): FdGraphLayoutResult<NodeID, PortID, EdgeID> {
-    if (!samePipelineIdentity(input.id.pipelineIdentity, this.identity)) {
+    if (!sameLayoutPipelineIdentity(input.id.pipelineIdentity, this.identity)) {
       throw new FdGraphLayoutPipelineError()
     }
     let placement = this.placement.place(input)
@@ -378,29 +379,4 @@ const finiteRoute = (route: FdGraphEdgeRoute): boolean =>
       return finitePoint(segment.control1) && finitePoint(segment.control2)
     }
     return true
-  })
-
-const samePipelineIdentity = (
-  first: FdLayoutPipelineIdentity,
-  second: FdLayoutPipelineIdentity,
-): boolean => sameStages(first.stages, second.stages)
-
-const sameStages = (
-  first: FdLayoutPipelineIdentity['stages'],
-  second: FdLayoutPipelineIdentity['stages'],
-): boolean =>
-  first.length === second.length &&
-  first.every((stage, index) => {
-    const other = second[index]
-    if (!other || stage.kind !== other.kind || stage.role.rawValue !== other.role.rawValue)
-      return false
-    if (stage.kind === 'group' && other.kind === 'group')
-      return sameStages(stage.stages, other.stages)
-    if (stage.kind === 'component' && other.kind === 'component') {
-      return (
-        stage.identity.id === other.identity.id &&
-        stage.identity.revision === other.identity.revision
-      )
-    }
-    return false
   })

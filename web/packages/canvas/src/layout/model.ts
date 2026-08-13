@@ -4,7 +4,14 @@ import { graphElementKey } from '../graph/model.js'
 
 export type FdGraphPresentationSnapshotID = string | number
 
-export class FdLayoutRevision {}
+export class FdLayoutRevision {
+  readonly id: string
+
+  constructor(id: string = crypto.randomUUID()) {
+    if (id.length === 0) throw new RangeError('layout revision ID must not be empty')
+    this.id = id
+  }
+}
 
 export class FdLayoutComponentIdentity {
   readonly id: string
@@ -87,6 +94,43 @@ export class FdLayoutInputID {
     this.layoutStateRevision = layoutStateRevision
   }
 }
+
+export const sameLayoutComponentIdentity = (
+  first: FdLayoutComponentIdentity,
+  second: FdLayoutComponentIdentity,
+): boolean => first.id === second.id && first.revision === second.revision
+
+export const sameLayoutPipelineIdentity = (
+  first: FdLayoutPipelineIdentity,
+  second: FdLayoutPipelineIdentity,
+): boolean => sameLayoutPipelineStages(first.stages, second.stages)
+
+export const sameLayoutInputID = (first: FdLayoutInputID, second: FdLayoutInputID): boolean =>
+  first.presentationSnapshotID === second.presentationSnapshotID &&
+  sameLayoutPipelineIdentity(first.pipelineIdentity, second.pipelineIdentity) &&
+  sameLayoutComponentIdentity(first.nodeSizeRevision, second.nodeSizeRevision) &&
+  sameLayoutComponentIdentity(first.portAnchorRevision, second.portAnchorRevision) &&
+  first.layoutStateRevision.id === second.layoutStateRevision.id
+
+const sameLayoutPipelineStages = (
+  first: FdLayoutPipelineIdentity['stages'],
+  second: FdLayoutPipelineIdentity['stages'],
+): boolean =>
+  first.length === second.length &&
+  first.every((stage, index) => {
+    const other = second[index]
+    if (!other || stage.kind !== other.kind || stage.role.rawValue !== other.role.rawValue) {
+      return false
+    }
+    if (stage.kind === 'group' && other.kind === 'group') {
+      return sameLayoutPipelineStages(stage.stages, other.stages)
+    }
+    return (
+      stage.kind === 'component' &&
+      other.kind === 'component' &&
+      sameLayoutComponentIdentity(stage.identity, other.identity)
+    )
+  })
 
 export interface FdGraphLayoutPortKey<
   NodeID extends FdGraphElementID = FdGraphElementID,

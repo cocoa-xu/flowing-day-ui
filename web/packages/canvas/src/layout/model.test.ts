@@ -10,6 +10,7 @@ import {
   FdLayoutPipelineIdentity,
   FdLayoutPipelineStageRole,
   FdLayoutRevision,
+  sameLayoutInputID,
 } from './model.js'
 
 const inputID = (snapshotID: string): FdLayoutInputID =>
@@ -35,6 +36,31 @@ describe('graph layout model', () => {
     ])
     expect(() => new FdLayoutComponentIdentity('layout', -1)).toThrow(RangeError)
     expect(() => new FdLayoutPipelineStageRole('')).toThrow(RangeError)
+  })
+
+  it('compares layout input identity by value across object boundaries', () => {
+    const makeID = () =>
+      new FdLayoutInputID(
+        'snapshot',
+        new FdLayoutPipelineIdentity(new FdLayoutComponentIdentity('pipeline', 2)),
+        new FdLayoutComponentIdentity('node-size', 3),
+        new FdLayoutComponentIdentity('port-anchor', 4),
+        new FdLayoutRevision('layout-state'),
+      )
+
+    expect(sameLayoutInputID(makeID(), makeID())).toBe(true)
+    expect(
+      sameLayoutInputID(
+        makeID(),
+        new FdLayoutInputID(
+          'snapshot',
+          new FdLayoutPipelineIdentity(new FdLayoutComponentIdentity('pipeline', 2)),
+          new FdLayoutComponentIdentity('node-size', 3),
+          new FdLayoutComponentIdentity('port-anchor', 4),
+          new FdLayoutRevision('different-state'),
+        ),
+      ),
+    ).toBe(false)
   })
 
   it('indexes directed, undirected, port, and containment relationships', () => {
