@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { FdCanvasRect } from '../geometry.js'
 import type { FdAnyGraphNode } from '../graph/model.js'
 import {
-  graphArrangementTranslations,
+  FdGraphCanvasArrangement,
   graphSelectionBounds,
   resizeGraphBounds,
   scaleGraphFrames,
@@ -390,7 +390,12 @@ describe('graph arrangement actions', () => {
   ]
 
   it('aligns a selection to its shared bounds', () => {
-    expect(graphArrangementTranslations(geometries, { kind: 'align', alignment: 'right' })).toEqual(
+    expect(
+      FdGraphCanvasArrangement.translations(geometries, {
+        kind: 'align',
+        alignment: 'trailing',
+      }),
+    ).toEqual(
       new Map([
         ['one', { width: 100, height: 0 }],
         ['two', { width: 60, height: 0 }],
@@ -400,7 +405,7 @@ describe('graph arrangement actions', () => {
 
   it('distributes a selection while preserving its outer nodes', () => {
     expect(
-      graphArrangementTranslations(geometries, {
+      FdGraphCanvasArrangement.translations(geometries, {
         kind: 'distribute',
         distribution: 'horizontal',
       }),

@@ -9,7 +9,7 @@ import type { FdGraphElementID } from '../../graph/model.js'
 import { graphElementIDFromKey } from '../../graph/model.js'
 import type { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
 import {
-  type FdGraphGuide,
+  type FdGraphCanvasGuide,
   type FdGraphResizeHandle,
   type FdGraphSnapCandidate,
   type FdGraphSnapState,
@@ -35,7 +35,7 @@ import {
 
 export interface FdGraphInteractionPresentation {
   readonly frames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
-  readonly guides: readonly FdGraphGuide[]
+  readonly guides: readonly FdGraphCanvasGuide[]
   readonly marquee?: FdCanvasRect
   readonly selectionNodeIDs?: ReadonlySet<FdGraphElementID>
 }
@@ -361,7 +361,7 @@ export class FdGraphCanvasInteractionController {
       if (Math.abs(translation.width) >= Math.abs(translation.height)) translation.height = 0
       else translation.width = 0
     }
-    let guides: readonly FdGraphGuide[] = []
+    let guides: readonly FdGraphCanvasGuide[] = []
     const configuration = this.delegate.resolvedConfiguration
     if (!event.metaKey && !event.ctrlKey && configuration.snapping.enabled) {
       const request = {
@@ -435,7 +435,7 @@ export class FdGraphCanvasInteractionController {
       event.shiftKey,
       event.altKey,
     )
-    let guides: readonly FdGraphGuide[] = []
+    let guides: readonly FdGraphCanvasGuide[] = []
     if (!event.metaKey && !event.ctrlKey && configuration.snapping.enabled) {
       const request = {
         baseFrames: session.baseFrames,
@@ -612,7 +612,7 @@ export class FdGraphCanvasInteractionController {
 
   private validTranslationResult(result: {
     readonly translation: FdCanvasSize
-    readonly guides: readonly FdGraphGuide[]
+    readonly guides: readonly FdGraphCanvasGuide[]
     readonly state: FdGraphSnapState
   }): boolean {
     return (
@@ -629,7 +629,7 @@ export class FdGraphCanvasInteractionController {
     result: {
       readonly bounds: FdCanvasRect
       readonly frames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
-      readonly guides: readonly FdGraphGuide[]
+      readonly guides: readonly FdGraphCanvasGuide[]
       readonly state: FdGraphSnapState
     },
     baseFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>,

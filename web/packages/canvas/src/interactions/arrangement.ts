@@ -6,19 +6,19 @@ import type {
   FdResolvedGraphSnappingConfiguration,
 } from './configuration.js'
 
-export type FdGraphGuideAxis = 'horizontal' | 'vertical'
-export type FdGraphGuideKind = 'alignment' | 'equalSpacing' | 'equalSize' | 'grid' | 'resize'
-export type FdGraphAlignment =
-  | 'left'
+export type FdGraphCanvasGuideAxis = 'horizontal' | 'vertical'
+export type FdGraphCanvasGuideKind = 'alignment' | 'equalSpacing' | 'equalSize' | 'grid' | 'resize'
+export type FdGraphCanvasAlignment =
+  | 'leading'
   | 'horizontalCenter'
-  | 'right'
+  | 'trailing'
   | 'top'
   | 'verticalCenter'
   | 'bottom'
-export type FdGraphDistribution = 'horizontal' | 'vertical'
-export type FdGraphArrangementAction =
-  | { readonly kind: 'align'; readonly alignment: FdGraphAlignment }
-  | { readonly kind: 'distribute'; readonly distribution: FdGraphDistribution }
+export type FdGraphCanvasDistribution = 'horizontal' | 'vertical'
+export type FdGraphCanvasArrangementAction =
+  | { readonly kind: 'align'; readonly alignment: FdGraphCanvasAlignment }
+  | { readonly kind: 'distribute'; readonly distribution: FdGraphCanvasDistribution }
 export type FdGraphResizeHandle =
   | 'top'
   | 'topRight'
@@ -32,19 +32,19 @@ export type FdGraphResizeHandle =
 type FdGraphAnchor = 'minimum' | 'center' | 'maximum'
 const graphAnchors: readonly FdGraphAnchor[] = ['minimum', 'center', 'maximum']
 
-export interface FdGraphGuide {
-  readonly axis: FdGraphGuideAxis
+export interface FdGraphCanvasGuide {
+  readonly axis: FdGraphCanvasGuideAxis
   readonly position: number
   readonly lowerBound: number
   readonly upperBound: number
-  readonly kind: FdGraphGuideKind
+  readonly kind: FdGraphCanvasGuideKind
   readonly measurement?: number
 }
 
 interface FdGraphSnapAxisState {
   readonly anchor: FdGraphAnchor
   readonly target: number
-  readonly kind: FdGraphGuideKind
+  readonly kind: FdGraphCanvasGuideKind
   readonly candidateFrame?: FdCanvasRect
   readonly spacingReferenceFrames?: readonly FdCanvasRect[]
   readonly guideOffset?: number
@@ -62,7 +62,7 @@ export interface FdGraphSnapCandidate {
 
 export interface FdGraphTranslationSnapResult {
   readonly translation: FdCanvasSize
-  readonly guides: readonly FdGraphGuide[]
+  readonly guides: readonly FdGraphCanvasGuide[]
   readonly state: FdGraphSnapState
 }
 
@@ -92,7 +92,7 @@ export interface FdGraphResizeSnapRequest {
 }
 
 export interface FdGraphResizeSnapResult extends FdGraphResizeResult {
-  readonly guides: readonly FdGraphGuide[]
+  readonly guides: readonly FdGraphCanvasGuide[]
   readonly state: FdGraphSnapState
 }
 
@@ -106,7 +106,7 @@ export interface FdGraphResizeResult {
   readonly frames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
 }
 
-export interface FdGraphNodeGeometry {
+export interface FdGraphCanvasNodeGeometry {
   readonly id: FdGraphElementID
   readonly frame: FdCanvasRect
 }
@@ -142,7 +142,7 @@ const roundedGridValue = (
 interface AxisCandidate {
   readonly correction: number
   readonly state: FdGraphSnapAxisState
-  readonly guides: readonly FdGraphGuide[]
+  readonly guides: readonly FdGraphCanvasGuide[]
 }
 
 interface AxisCandidateSeed {
@@ -366,7 +366,7 @@ const guidesForState = (
   axis: 'x' | 'y',
   state: FdGraphSnapAxisState,
   movingFrame: FdCanvasRect,
-): readonly FdGraphGuide[] => {
+): readonly FdGraphCanvasGuide[] => {
   if (state.kind === 'equalSpacing') {
     return spacingGuides(
       axis,
@@ -391,7 +391,7 @@ const spacingGuides = (
   movingFrame: FdCanvasRect,
   referenceFrames: readonly FdCanvasRect[],
   guideOffset: number,
-): readonly FdGraphGuide[] => {
+): readonly FdGraphCanvasGuide[] => {
   const lower = (frame: FdCanvasRect): number => (axis === 'x' ? frame.x : frame.y)
   const length = (frame: FdCanvasRect): number => (axis === 'x' ? frame.width : frame.height)
   const upper = (frame: FdCanvasRect): number => lower(frame) + length(frame)
@@ -400,7 +400,7 @@ const spacingGuides = (
   const frames = [...referenceFrames, movingFrame].sort((a, b) => lower(a) - lower(b))
   if (frames.length < 2) return []
   const position = Math.max(...frames.map(crossUpper)) + guideOffset
-  const guides: FdGraphGuide[] = []
+  const guides: FdGraphCanvasGuide[] = []
   for (let index = 0; index < frames.length - 1; index += 1) {
     const first = frames[index]
     const second = frames[index + 1]
@@ -425,8 +425,8 @@ const guideFor = (
   position: number,
   movingBounds: FdCanvasRect,
   candidates: readonly FdGraphSnapCandidate[],
-  kind: FdGraphGuideKind,
-): FdGraphGuide => {
+  kind: FdGraphCanvasGuideKind,
+): FdGraphCanvasGuide => {
   let lower = axis === 'x' ? movingBounds.y : movingBounds.x
   let upper =
     axis === 'x' ? movingBounds.y + movingBounds.height : movingBounds.x + movingBounds.width
@@ -695,7 +695,11 @@ const resizeAxisCandidate = (
   return standard
 }
 
-const dimensionGuide = (axis: 'x' | 'y', frame: FdCanvasRect, offset: number): FdGraphGuide =>
+const dimensionGuide = (
+  axis: 'x' | 'y',
+  frame: FdCanvasRect,
+  offset: number,
+): FdGraphCanvasGuide =>
   axis === 'x'
     ? {
         axis: 'horizontal',
@@ -729,17 +733,28 @@ const resizeActivePoint = (bounds: FdCanvasRect, handle: FdGraphResizeHandle): F
   return { x, y }
 }
 
-export function graphArrangementTranslations(
-  nodes: readonly FdGraphNodeGeometry[],
-  action: FdGraphArrangementAction,
-): ReadonlyMap<FdGraphElementID, FdCanvasSize> {
+export class FdGraphCanvasArrangement {
+  private constructor() {}
+
+  static translations(
+    nodes: readonly FdGraphCanvasNodeGeometry[],
+    action: FdGraphCanvasArrangementAction,
+  ): ReadonlyMap<FdGraphElementID, FdCanvasSize> {
+    return arrangementTranslations(nodes, action)
+  }
+}
+
+const arrangementTranslations = (
+  nodes: readonly FdGraphCanvasNodeGeometry[],
+  action: FdGraphCanvasArrangementAction,
+): ReadonlyMap<FdGraphElementID, FdCanvasSize> => {
   if (action.kind === 'align') return alignedTranslations(nodes, action.alignment)
   return distributedTranslations(nodes, action.distribution)
 }
 
 const alignedTranslations = (
-  nodes: readonly FdGraphNodeGeometry[],
-  alignment: FdGraphAlignment,
+  nodes: readonly FdGraphCanvasNodeGeometry[],
+  alignment: FdGraphCanvasAlignment,
 ): ReadonlyMap<FdGraphElementID, FdCanvasSize> => {
   if (nodes.length < 2) return new Map()
   const bounds = nodes.reduce<FdCanvasRect | undefined>(
@@ -751,7 +766,7 @@ const alignedTranslations = (
   for (const node of nodes) {
     let translation: FdCanvasSize
     switch (alignment) {
-      case 'left':
+      case 'leading':
         translation = { width: bounds.x - node.frame.x, height: 0 }
         break
       case 'horizontalCenter':
@@ -760,7 +775,7 @@ const alignedTranslations = (
           height: 0,
         }
         break
-      case 'right':
+      case 'trailing':
         translation = {
           width: bounds.x + bounds.width - (node.frame.x + node.frame.width),
           height: 0,
@@ -788,8 +803,8 @@ const alignedTranslations = (
 }
 
 const distributedTranslations = (
-  nodes: readonly FdGraphNodeGeometry[],
-  distribution: FdGraphDistribution,
+  nodes: readonly FdGraphCanvasNodeGeometry[],
+  distribution: FdGraphCanvasDistribution,
 ): ReadonlyMap<FdGraphElementID, FdCanvasSize> => {
   if (nodes.length < 3) return new Map()
   const horizontal = distribution === 'horizontal'

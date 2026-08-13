@@ -1,7 +1,7 @@
-import type { FdGraphGuide } from '../interactions/arrangement.js'
+import type { FdGraphCanvasGuide } from '../interactions/arrangement.js'
 
 export interface FdGraphGuideRenderContext {
-  readonly guide: FdGraphGuide
+  readonly guide: FdGraphCanvasGuide
   readonly index: number
   readonly zoom: number
 }
@@ -12,7 +12,7 @@ export interface FdGraphGuideRenderer {
 }
 
 export interface FdGraphDefaultGuideRendererConfiguration {
-  readonly measurementFormatter?: (measurement: number, guide: FdGraphGuide) => string
+  readonly measurementFormatter?: (measurement: number, guide: FdGraphCanvasGuide) => string
   readonly minimumLabelLength?: number
 }
 
@@ -33,7 +33,7 @@ const guidePart = {
 } as const
 
 export class FdGraphDefaultGuideRenderer implements FdGraphGuideRenderer {
-  private readonly measurementFormatter: (measurement: number, guide: FdGraphGuide) => string
+  private readonly measurementFormatter: (measurement: number, guide: FdGraphCanvasGuide) => string
   private readonly minimumLabelLength: number
   private readonly elements = new WeakMap<HTMLElement, FdGraphDefaultGuideElements>()
 

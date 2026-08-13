@@ -81,10 +81,10 @@ import {
 } from '../../history/graph-canvas.js'
 import type { FdGraphHistoryApplyResult, FdGraphHistoryDirection } from '../../history/model.js'
 import {
-  type FdGraphArrangementAction,
-  type FdGraphGuide,
+  FdGraphCanvasArrangement,
+  type FdGraphCanvasArrangementAction,
+  type FdGraphCanvasGuide,
   type FdGraphResizeHandle,
-  graphArrangementTranslations,
   graphSelectionBounds,
 } from '../../interactions/arrangement.js'
 import type {
@@ -1202,13 +1202,13 @@ export class FdGraphCanvas
     return true
   }
 
-  arrangeSelectedNodes(action: FdGraphArrangementAction): boolean {
+  arrangeSelectedNodes(action: FdGraphCanvasArrangementAction): boolean {
     if (!this.resolvedGraphConfiguration.allowsArrangementCommands) return false
     const nodes = [...this.selectedNodeIDs].flatMap((id) => {
       const node = this.index.nodes.get(id)
       return node && this.nodeCapabilities(node.id).arrangementParticipant ? [node] : []
     })
-    const translations = graphArrangementTranslations(nodes, action)
+    const translations = FdGraphCanvasArrangement.translations(nodes, action)
     const changes = nodes.flatMap<FdGraphNodeFrameChange>((node) => {
       const translation = translations.get(node.id)
       if (!translation) return []
@@ -2532,7 +2532,7 @@ export class FdGraphCanvas
     this.marqueeElement.style.height = `${marquee.height}px`
   }
 
-  private syncGuides(guides: readonly FdGraphGuide[]): void {
+  private syncGuides(guides: readonly FdGraphCanvasGuide[]): void {
     const visibleGuides = this.resolvedGraphConfiguration.rendersDefaultGuides ? guides : []
     while (this.guideElements.length < visibleGuides.length) {
       const element = this.guideRenderer.createElement()
