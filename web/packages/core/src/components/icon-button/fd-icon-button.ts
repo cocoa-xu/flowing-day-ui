@@ -9,7 +9,6 @@ export type FdIconButtonEmphasis = 'quiet' | 'standard' | 'prominent'
  * A compact icon action matching `FlowingIconButton`.
  *
  * @fires fd-activate - Whenever the button is pressed.
- * @fires fd-change - `{ checked: boolean }` when `toggle` is enabled.
  * @csspart button - The native button.
  * @csspart icon - The button icon.
  */
@@ -60,16 +59,16 @@ export class FdIconButton extends FdElement {
       }
 
       :host(:not([emphasis='prominent'])) button:hover,
-      :host([selected]:not([emphasis='prominent'])) button {
+      :host([selected='true']:not([emphasis='prominent'])) button {
         background: var(--_fd-accent-veil);
         color: var(--_fd-accent-foreground);
       }
 
-      :host([emphasis='quiet'][selected]) button {
+      :host([emphasis='quiet'][selected='true']) button {
         border-color: color-mix(in srgb, var(--_fd-accent-fill) 18%, transparent);
       }
 
-      :host([emphasis='standard'][selected]) button {
+      :host([emphasis='standard'][selected='true']) button {
         border-color: color-mix(in srgb, var(--_fd-accent-fill) 24%, transparent);
       }
 
@@ -98,24 +97,21 @@ export class FdIconButton extends FdElement {
 
   @property({ reflect: true }) emphasis: FdIconButtonEmphasis = 'quiet'
 
-  @property({ type: Boolean, reflect: true }) toggle = false
+  @property({
+    reflect: true,
+    converter: {
+      fromAttribute: (value) => (value === null ? null : value !== 'false'),
+      toAttribute: (value: boolean | null) => (value === null ? null : String(value)),
+    },
+  })
+  selected: boolean | null = null
 
-  @property({ type: Boolean, reflect: true }) selected = false
+  @property({ attribute: false }) showsSystemHelp = true
 
   @property({ type: Boolean, reflect: true }) disabled = false
 
   #onClick = (): void => {
     if (this.disabled) return
-    if (this.toggle) {
-      this.selected = !this.selected
-      this.dispatchEvent(
-        new CustomEvent('fd-change', {
-          detail: { checked: this.selected },
-          bubbles: true,
-          composed: true,
-        }),
-      )
-    }
     this.dispatchEvent(new CustomEvent('fd-activate', { bubbles: true, composed: true }))
   }
 
@@ -124,9 +120,9 @@ export class FdIconButton extends FdElement {
       <button
         part="button"
         type="button"
-        title=${this.label}
+        title=${this.showsSystemHelp ? this.label : nothing}
         aria-label=${this.label}
-        aria-pressed=${this.toggle ? String(this.selected) : nothing}
+        aria-pressed=${this.selected === null ? nothing : String(this.selected)}
         ?disabled=${this.disabled}
         @click=${this.#onClick}
       >

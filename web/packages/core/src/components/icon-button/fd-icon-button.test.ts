@@ -42,21 +42,27 @@ describe('fd-icon-button', () => {
     expect(buttonOf(element).hasAttribute('aria-pressed')).toBe(false)
   })
 
-  it('toggles selection and reports both state and activation', async () => {
-    const element = await mount('<fd-icon-button label="Pin" symbol="pin" toggle></fd-icon-button>')
-    const changes: boolean[] = []
+  it('exposes controlled selection without mutating it', async () => {
+    const element = await mount(
+      '<fd-icon-button label="Pin" symbol="pin" selected="false"></fd-icon-button>',
+    )
     const activate = vi.fn()
-    element.addEventListener('fd-change', (event) => changes.push(event.detail.checked ?? false))
     element.addEventListener('fd-activate', activate)
 
     buttonOf(element).click()
     await element.updateComplete
-    expect(element.selected).toBe(true)
-    expect(buttonOf(element).getAttribute('aria-pressed')).toBe('true')
 
-    buttonOf(element).click()
-    expect(changes).toEqual([true, false])
-    expect(activate).toHaveBeenCalledTimes(2)
+    expect(element.selected).toBe(false)
+    expect(buttonOf(element).getAttribute('aria-pressed')).toBe('false')
+    expect(activate).toHaveBeenCalledOnce()
+  })
+
+  it('allows system help to be disabled independently', async () => {
+    const element = await mount('<fd-icon-button label="Refresh" symbol="arrow"></fd-icon-button>')
+    element.showsSystemHelp = false
+    await element.updateComplete
+
+    expect(buttonOf(element).hasAttribute('title')).toBe(false)
   })
 
   it('does not activate while disabled', async () => {
