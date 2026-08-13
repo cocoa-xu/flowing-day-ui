@@ -197,6 +197,10 @@ class RecordingBackend implements FdGraphRenderingBackend {
 }
 
 describe('fd-graph-canvas rendering boundary', () => {
+  it('registers its required canvas element', () => {
+    expect(customElements.get('fd-canvas')).toBeDefined()
+  })
+
   it('preserves the viewport when content changes by default', () => {
     const element = document.createElement('fd-graph-canvas-engine')
 
@@ -279,6 +283,27 @@ describe('fd-graph-canvas rendering boundary', () => {
     expect(backend.unmounts).toBe(1)
   })
 
+  it('reports node hover through the rendering boundary', async () => {
+    const backend = new RecordingBackend()
+    const element = await mount(graphSnapshot(), backend)
+    const canvas = preparePointerInput(element)
+    const source = clientPoint(element, { x: 130, y: 124 })
+
+    dispatchPointer(canvas, 'pointermove', source)
+    await nextFrame()
+
+    expect(backend.frames.at(-1)?.hoveredNodeID).toBe('source')
+    expect(backend.frames.at(-1)?.nodes.find(({ node }) => node.id === 'source')?.hovered).toBe(
+      true,
+    )
+
+    canvas.dispatchEvent(new PointerEvent('pointerleave'))
+    await nextFrame()
+
+    expect(backend.frames.at(-1)?.hoveredNodeID).toBeUndefined()
+    expect(backend.frames.at(-1)?.nodes.some(({ hovered }) => hovered)).toBe(false)
+  })
+
   it('supports standard DOM node content without coupling the graph model to Lit', async () => {
     const backend = new FdGraphDOMRenderingBackend({
       createNodeContent: ({ node }) => {
@@ -288,8 +313,74 @@ describe('fd-graph-canvas rendering boundary', () => {
       },
     })
     const element = await mount(graphSnapshot(), backend)
+    const node = element.shadowRoot?.querySelector<HTMLElement>('.graph-node')
+    const nodeLayer = element.shadowRoot?.querySelector<HTMLElement>('.graph-node-layer')
 
-    expect(element.shadowRoot?.querySelector('.graph-node')?.textContent).toContain('Custom Source')
+    expect(node?.textContent).toContain('Custom Source')
+    expect(node?.hasAttribute('data-custom-content')).toBe(true)
+    expect(nodeLayer?.parentElement).toBe(
+      element.shadowRoot?.querySelector<HTMLElement>('.render-world'),
+    )
+    expect(node).toBeInstanceOf(HTMLElement)
+    if (!(node instanceof HTMLElement)) return
+    expect(getComputedStyle(node).backgroundColor).toBe('rgba(0, 0, 0, 0)')
+    expect(getComputedStyle(node).boxShadow).toBe('none')
+
+    element.setZoom(2, { animated: false })
+    await nextFrame()
+    expect(Number.parseFloat(node?.style.width ?? '')).toBeCloseTo(180)
+  })
+
+  it('keeps custom node layout and DOM stable throughout viewport zoom', async () => {
+    const createNodeContent = vi.fn(({ node }: FdGraphRenderFrame['nodes'][number]) => {
+      const content = document.createElement('span')
+      content.textContent = `Custom ${node.label}`
+      return content
+    })
+    const backend = new FdGraphDOMRenderingBackend({ createNodeContent })
+    const element = await mount(graphSnapshot(), backend)
+    const canvas = element.shadowRoot?.querySelector('fd-canvas') as FdCanvas
+    const node = element.shadowRoot?.querySelector<HTMLElement>('.graph-node')
+    const originalContent = node?.firstChild
+    const initialBuildCount = createNodeContent.mock.calls.length
+
+    canvas.setZoom(1.5, { animated: false, phase: 'continuous' })
+    await nextFrame()
+
+    expect(createNodeContent).toHaveBeenCalledTimes(initialBuildCount)
+    expect(node?.firstChild).toBe(originalContent)
+    expect(node?.style.transform).not.toContain('scale(')
+    expect(Number.parseFloat(node?.style.width ?? '')).toBeCloseTo(180)
+
+    canvas.setZoom(1.5, { animated: false, phase: 'ended' })
+    await nextFrame()
+
+    expect(createNodeContent).toHaveBeenCalledTimes(initialBuildCount)
+    expect(node?.firstChild).toBe(originalContent)
+    expect(node?.style.transform).not.toContain('scale(')
+    expect(Number.parseFloat(node?.style.width ?? '')).toBeCloseTo(180)
+  })
+
+  it('updates only transiently positioned DOM nodes during a drag frame', async () => {
+    const element = await mount(graphSnapshot(), new FdGraphDOMRenderingBackend())
+    const source = element.shadowRoot?.querySelector<HTMLElement>('[data-fd-graph-node="s:source"]')
+    const target = element.shadowRoot?.querySelector<HTMLElement>('[data-fd-graph-node="s:target"]')
+    if (!source || !target) throw new Error('missing graph nodes')
+    const targetTransform = target.style.transform
+    const setAttribute = vi.spyOn(target, 'setAttribute')
+    const toggleAttribute = vi.spyOn(target, 'toggleAttribute')
+
+    element.setPresentation({
+      frames: new Map([['source', { x: 64, y: 96, width: 180, height: 88 }]]),
+      guides: [],
+    })
+    await nextFrame()
+
+    expect(source.style.transform).toContain('translate3d')
+    expect(source.style.willChange).toBe('transform')
+    expect(target.style.transform).toBe(targetTransform)
+    expect(setAttribute).not.toHaveBeenCalled()
+    expect(toggleAttribute).not.toHaveBeenCalled()
   })
 
   it('supports custom edge labels and endpoint decorations across the DOM boundary', async () => {
@@ -314,6 +405,34 @@ describe('fd-graph-canvas rendering boundary', () => {
     expect(label?.textContent).toBe('Custom Data')
     expect(label?.style.transform).toContain('translate3d')
     expect(element.shadowRoot?.querySelector('.graph-edge-arrow')).not.toBeNull()
+  })
+
+  it('gives custom edge content exclusive ownership of edge rendering', async () => {
+    const current = graphSnapshot()
+    const snapshot: FdAnyGraphSnapshot = {
+      ...current,
+      edges: current.edges.map((edge) => ({
+        ...edge,
+        style: { targetDecoration: { kind: 'arrow', length: 7, width: 6, gap: 3 } },
+      })),
+    }
+    const backend = new FdGraphDOMRenderingBackend({
+      createEdgeContent: () => {
+        const content = document.createElement('span')
+        content.textContent = 'Custom edge'
+        return content
+      },
+    })
+    const element = await mount(snapshot, backend)
+    const content = element.shadowRoot?.querySelector<HTMLElement>('.graph-edge-content')
+
+    expect(content?.textContent).toBe('Custom edge')
+    expect(content?.style.transform).toBe('')
+    expect(content?.style.left).not.toBe('')
+    expect(content?.style.top).not.toBe('')
+    expect(element.shadowRoot?.querySelector('.graph-edge')).toBeNull()
+    expect(element.shadowRoot?.querySelector('.graph-edge-arrow')).toBeNull()
+    expect(element.shadowRoot?.querySelector('.graph-edge-label')).toBeNull()
   })
 
   it('updates edge label visibility when zoom crosses the configured threshold', async () => {
@@ -345,6 +464,31 @@ describe('fd-graph-canvas rendering boundary', () => {
     dispatchPointer(canvas, 'pointerup', point)
 
     expect(element.selectedNodeIDs.has('source')).toBe(true)
+  })
+
+  it('does not draw WebGL node surfaces when node rendering is disabled', async () => {
+    const element = await mount(
+      graphSnapshot(),
+      new FdGraphWebGL2RenderingBackend({ rendersNodes: false }),
+    )
+    const canvas = element.shadowRoot?.querySelector<HTMLCanvasElement>('.graph-gpu-layer')
+    const context = canvas?.getContext('webgl2')
+
+    expect(element.shadowRoot?.querySelectorAll('.graph-node')).toHaveLength(0)
+    if (!canvas || !context) return
+    const nodeCenter = element.viewport.transform.applyPoint({ x: 100, y: 120 })
+    const pixelRatio = canvas.width / element.viewport.size.width
+    const pixel = new Uint8Array(4)
+    context.readPixels(
+      Math.round(nodeCenter.x * pixelRatio),
+      Math.round(canvas.height - nodeCenter.y * pixelRatio),
+      1,
+      1,
+      context.RGBA,
+      context.UNSIGNED_BYTE,
+      pixel,
+    )
+    expect(pixel[3]).toBe(0)
   })
 
   it('passes rendering configuration to the automatic GPU backend', async () => {
@@ -488,6 +632,26 @@ describe('fd-graph-canvas pointer editing', () => {
 
     dispatchPointer(canvas, 'pointerup', end)
     expect(changes.at(-1)?.phase).toBe('ended')
+    expect(element.shadowRoot?.querySelector<HTMLElement>('.selection-marquee')?.hidden).toBe(true)
+  })
+
+  it('does not start graph interactions through consumer overlays', async () => {
+    const element = await mount()
+    const canvas = preparePointerInput(element)
+    const overlay = document.createElement('aside')
+    overlay.slot = 'overlay'
+    element.append(overlay)
+    const selectionChanges = vi.fn()
+    element.addEventListener('fd-graph-selection-change', selectionChanges)
+    const start = clientPoint(element, { x: 20, y: 20 })
+    const end = clientPoint(element, { x: 300, y: 300 })
+
+    dispatchPointer(overlay, 'pointerdown', start)
+    dispatchPointer(canvas, 'pointermove', end)
+    dispatchPointer(canvas, 'pointerup', end)
+    overlay.dispatchEvent(new MouseEvent('click', { button: 0, bubbles: true, composed: true }))
+
+    expect(selectionChanges).not.toHaveBeenCalled()
     expect(element.shadowRoot?.querySelector<HTMLElement>('.selection-marquee')?.hidden).toBe(true)
   })
 
@@ -962,6 +1126,49 @@ describe('fd-graph-canvas pointer editing', () => {
       }),
     )
     expect(element.viewport.transform.zoom).toBeGreaterThan(initial.zoom)
+  })
+
+  it('does not upload unchanged WebGL geometry during viewport and hover updates', async () => {
+    const uploads = vi.spyOn(WebGL2RenderingContext.prototype, 'bufferData')
+    const incrementalUploads = vi.spyOn(WebGL2RenderingContext.prototype, 'bufferSubData')
+    const element = await mount(
+      graphSnapshot(),
+      new FdGraphWebGL2RenderingBackend({ maximumDOMNodeCount: 0 }),
+    )
+    const gpuCanvas = element.shadowRoot?.querySelector<HTMLCanvasElement>('.graph-gpu-layer')
+    if (!gpuCanvas?.getContext('webgl2')) return
+    const canvas = preparePointerInput(element)
+    const viewport = canvas.shadowRoot?.querySelector('.viewport') as HTMLElement
+    const uploadCount = uploads.mock.calls.length
+
+    viewport.dispatchEvent(
+      new WheelEvent('wheel', {
+        deltaX: 2,
+        deltaY: 2,
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+    await nextFrame()
+    await nextFrame()
+    expect(uploads.mock.calls.length).toBe(uploadCount)
+
+    dispatchPointer(canvas, 'pointermove', clientPoint(element, { x: 100, y: 120 }))
+    await nextFrame()
+    await nextFrame()
+    expect(uploads.mock.calls.length).toBe(uploadCount)
+
+    const incrementalUploadCount = incrementalUploads.mock.calls.length
+    element.selectedNodeIDs = new Set(['source'])
+    await element.updateComplete
+    await nextFrame()
+    await nextFrame()
+    expect(uploads.mock.calls.length).toBe(uploadCount)
+    expect(incrementalUploads.mock.calls.length).toBeGreaterThan(incrementalUploadCount)
+    const changedUploads = incrementalUploads.mock.calls.slice(incrementalUploadCount)
+    expect(
+      changedUploads.some(([, , data]) => data instanceof Float32Array && data.length < 24),
+    ).toBe(true)
   })
 
   it('selects and focuses ports and edges with typed identities', async () => {

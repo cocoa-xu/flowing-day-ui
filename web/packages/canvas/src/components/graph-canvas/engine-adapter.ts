@@ -7,6 +7,7 @@ import type {
   FdGraphSnapshotEndpoint,
   FdGraphSnapshotPort,
 } from '../../graph/model.js'
+import { graphPortPoint } from '../../graph/model.js'
 import type {
   FdGraphPresentationEdge,
   FdGraphPresentationLocalElementID,
@@ -34,6 +35,8 @@ export interface FdGraphCanvasEngineEdgeData<
   readonly localID: FdGraphPresentationLocalElementID
   readonly presentation: FdGraphPresentationEdge<ElementID>
   readonly route: FdGraphEdgeRoute
+  readonly sourcePosition: FdCanvasPoint
+  readonly targetPosition: FdCanvasPoint
   readonly isDirected: boolean
 }
 
@@ -82,7 +85,9 @@ export const graphCanvasEngineSnapshot = <ElementID extends FdGraphElementID>(
         : { first: edge.endpoints.first, second: edge.endpoints.second }
     const source = engineEndpoint(content, endpoints.first)
     const target = engineEndpoint(content, endpoints.second)
-    if (!source || !target) return []
+    const sourcePosition = engineEndpointPosition(content, endpoints.first)
+    const targetPosition = engineEndpointPosition(content, endpoints.second)
+    if (!source || !target || !sourcePosition || !targetPosition) return []
     return [
       {
         id: edge.id,
@@ -92,6 +97,8 @@ export const graphCanvasEngineSnapshot = <ElementID extends FdGraphElementID>(
           localID: edge.localID,
           presentation: edge,
           route,
+          sourcePosition,
+          targetPosition,
           isDirected: edge.endpoints.kind === 'directed',
         } satisfies FdGraphCanvasEngineEdgeData<ElementID>,
       },
@@ -102,16 +109,15 @@ export const graphCanvasEngineSnapshot = <ElementID extends FdGraphElementID>(
 export const graphCanvasEngineEdgeGeometryResolver: FdGraphEdgeGeometryResolver = (input) => {
   const data = input.edge.data as FdGraphCanvasEngineEdgeData | undefined
   if (!data?.route) return defaultGraphEdgeGeometryResolver(input)
-  const end = data.route.segments.at(-1)?.end ?? data.route.start
   const route = FdGraphCanvasTransientGeometry.deforming(
     data.route,
     {
-      width: input.source.x - data.route.start.x,
-      height: input.source.y - data.route.start.y,
+      width: input.source.x - data.sourcePosition.x,
+      height: input.source.y - data.sourcePosition.y,
     },
     {
-      width: input.target.x - end.x,
-      height: input.target.y - end.y,
+      width: input.target.x - data.targetPosition.x,
+      height: input.target.y - data.targetPosition.y,
     },
   )
   const targetArrow = data.isDirected ? graphEdgeArrowGeometry(route, 6, 6) : undefined
@@ -145,6 +151,25 @@ const engineEndpoint = <ElementID extends FdGraphElementID>(
   const nodeLocalID = localID ? content.nodeLocalID(localID) : undefined
   const nodeID = nodeLocalID ? content.elementID(nodeLocalID) : undefined
   return nodeID === undefined ? undefined : { nodeID, portID: endpoint.id }
+}
+
+const engineEndpointPosition = <ElementID extends FdGraphElementID>(
+  content: FdGraphCanvasContent<ElementID>,
+  endpoint: { readonly kind: 'node' | 'port'; readonly id: ElementID },
+): FdCanvasPoint | undefined => {
+  const localID = content.localID(endpoint.id)
+  if (!localID) return undefined
+  if (endpoint.kind === 'port') {
+    const nodeLocalID = content.nodeLocalID(localID)
+    const port = content.port(localID)
+    const anchor = content.anchor(localID)
+    const frame = nodeLocalID ? content.frame(nodeLocalID) : undefined
+    if (!port || !anchor || !frame) return undefined
+    const renderedPort = enginePort(port, localID, anchor.position, anchor.normal, frame)
+    return graphPortPoint({ id: endpoint.id, frame, ports: [renderedPort] }, endpoint.id)
+  }
+  const frame = content.frame(localID)
+  return frame ? { x: frame.x + frame.width / 2, y: frame.y + frame.height / 2 } : undefined
 }
 
 const portSide = (

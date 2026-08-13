@@ -4,6 +4,7 @@ import type {
   FdGraphCanvasNodeResizeActions,
   FdGraphCanvasSelectionResizeContext,
 } from '../../graph/contexts.js'
+import type { FdGraphSelectionChangeDetail } from '../../graph/events.js'
 import {
   FdGraphElementAddress,
   FdGraphInstanceHandle,
@@ -333,6 +334,9 @@ describe('graph canvas presentation resolver', () => {
     const engine = element.shadowRoot?.querySelector('fd-graph-canvas-engine')
     expect(engine?.shadowRoot?.querySelector('.graph-node')?.textContent).toContain('Node source')
     expect(engine?.shadowRoot?.querySelector('.graph-edge-content')?.textContent).toBe('Edge edge')
+    expect(engine?.shadowRoot?.querySelector('.graph-edge')).toBeNull()
+    expect(engine?.shadowRoot?.querySelector('.graph-edge-arrow')).toBeNull()
+    expect(engine?.shadowRoot?.querySelector('.graph-edge-label')).toBeNull()
     expect(engine?.shadowRoot?.querySelector('.builder-background')?.textContent).toBe('Background')
     expect(engine?.shadowRoot?.querySelector('.consumer-decorations')?.textContent).toBe(
       'Decorations',
@@ -416,6 +420,10 @@ describe('graph canvas presentation resolver', () => {
   it('maps private engine selection and focus changes back to canonical session IDs', async () => {
     const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
     element.content = makeContent()
+    const selectionEvents: FdGraphSelectionChangeDetail[] = []
+    element.addEventListener('fd-graph-selection-change', (event) => {
+      selectionEvents.push(event.detail)
+    })
     document.body.append(element)
     await element.updateComplete
     const engine = element.shadowRoot?.querySelector('fd-graph-canvas-engine')
@@ -448,6 +456,17 @@ describe('graph canvas presentation resolver', () => {
 
     expect(element.session.selection).toEqual(new Set(['target-input', 'edge']))
     expect(element.session.focusedElementID).toBe('edge')
+    expect(selectionEvents).toEqual([
+      {
+        selectedElements: [
+          { kind: 'port', nodeID: 'target', portID: 'target-input' },
+          { kind: 'edge', edgeID: 'edge' },
+        ],
+        selectedNodeIDs: new Set(),
+        phase: 'ended',
+        source: 'pointer',
+      },
+    ])
   })
 
   it('routes viewport and smart-magnify behavior through the source-aligned callbacks', async () => {
@@ -902,7 +921,12 @@ describe('graph canvas presentation resolver', () => {
         id: 'edge',
         source: { nodeID: 'source', portID: 'source-output' },
         target: { nodeID: 'target', portID: 'target-input' },
-        data: expect.objectContaining({ localID: edgeLocalID, isDirected: true }),
+        data: expect.objectContaining({
+          localID: edgeLocalID,
+          sourcePosition: { x: 100, y: 40 },
+          targetPosition: { x: 240, y: 40 },
+          isDirected: true,
+        }),
       }),
     ])
     const edge = snapshot.edges[0]
@@ -914,6 +938,40 @@ describe('graph canvas presentation resolver', () => {
         target: { x: 240, y: 40 },
       }).route,
     ).toEqual(new FdGraphEdgeRoute({ x: 100, y: 40 }, [{ kind: 'line', end: { x: 240, y: 40 } }]))
+  })
+
+  it('preserves consumer-routed node endpoints until their nodes move', () => {
+    const route = new FdGraphEdgeRoute({ x: 100, y: 80 }, [
+      { kind: 'line', end: { x: 100, y: 157 } },
+    ])
+    const edge = {
+      id: 'edge',
+      source: { nodeID: 'source' },
+      target: { nodeID: 'target' },
+      data: {
+        localID: edgeLocalID,
+        presentation: makeContent().presentation.edges[0],
+        route,
+        sourcePosition: { x: 50, y: 40 },
+        targetPosition: { x: 100, y: 200 },
+        isDirected: true,
+      },
+    }
+
+    expect(
+      graphCanvasEngineEdgeGeometryResolver({
+        edge,
+        source: { x: 50, y: 40 },
+        target: { x: 100, y: 200 },
+      }).route,
+    ).toEqual(route)
+    expect(
+      graphCanvasEngineEdgeGeometryResolver({
+        edge,
+        source: { x: 70, y: 50 },
+        target: { x: 100, y: 200 },
+      }).route.start,
+    ).toEqual({ x: 120, y: 90 })
   })
 
   it('applies matching transient drag geometry to nodes, ports, and edges', () => {

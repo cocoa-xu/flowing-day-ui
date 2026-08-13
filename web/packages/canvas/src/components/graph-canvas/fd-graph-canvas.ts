@@ -333,9 +333,26 @@ export class FdGraphCanvasEngine
         var(--fd-canvas-node-shadow, 0 12px 30px rgb(35 43 38 / 0.09));
     }
 
+    .graph-node[data-custom-content] {
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .graph-node[data-custom-content][data-selected] {
+      border-color: transparent;
+      box-shadow: none;
+    }
+
     .graph-node[data-focused] {
       outline: 2px solid var(--fd-graph-focus-color, var(--fd-canvas-focus-color, Highlight));
       outline-offset: 3px;
+    }
+
+    .graph-node[data-custom-content][data-focused] {
+      outline: none;
     }
 
     .graph-node-content {
@@ -856,7 +873,9 @@ export class FdGraphCanvasEngine
   private canvasContentRect: FdCanvasRect = { x: 0, y: 0, width: 1, height: 1 }
   private renderWorldRect: FdCanvasRect = { x: 0, y: 0, width: 1, height: 1 }
   private snapshotRevision = 0
+  private geometryRevision = 0
   private presentationRevision = 0
+  private hoveredNodeIDValue: FdGraphElementID | undefined
   private renderFrameRequest: number | undefined
   private interactionController: FdGraphCanvasInteractionController | undefined
   private connectionController: FdGraphCanvasConnectionController | undefined
@@ -1063,6 +1082,7 @@ export class FdGraphCanvasEngine
     )
     this.canvas.addEventListener('pointerdown', this.handleGraphPointerDown, { capture: true })
     this.canvas.addEventListener('pointermove', this.handleGraphPointerMove, { capture: true })
+    this.canvas.addEventListener('pointerleave', this.handleGraphPointerLeave, { capture: true })
     this.canvas.addEventListener('pointerup', this.handleGraphPointerEnd, { capture: true })
     this.canvas.addEventListener('pointercancel', this.handleGraphPointerCancel, { capture: true })
     this.canvas.addEventListener('click', this.handleGraphClick, { capture: true })
@@ -1102,6 +1122,7 @@ export class FdGraphCanvasEngine
     }
     if (changed.has('edgeGeometryResolver')) {
       this.renderGeometryCache.invalidate()
+      this.geometryRevision += 1
       this.presentationRevision += 1
       this.scheduleRenderFrame()
     }
@@ -1133,6 +1154,7 @@ export class FdGraphCanvasEngine
     if (changed.has('selectedElements') || changed.has('selectedNodeIDs')) {
       this.reconcileSelection()
       this.refreshResizeHandleVisibility()
+      this.geometryRevision += 1
       this.presentationRevision += 1
       this.syncInteractionOverlay()
       this.syncAccessibilityBridge()
@@ -1140,6 +1162,7 @@ export class FdGraphCanvasEngine
     }
     if (changed.has('focusedElement') || changed.has('focusedNodeID')) {
       this.reconcileKeyboardFocus()
+      this.geometryRevision += 1
       this.presentationRevision += 1
       this.syncAccessibilityBridge()
       this.scheduleRenderFrame()
@@ -1379,6 +1402,7 @@ export class FdGraphCanvasEngine
     const changed = !this.setsEqual(previousKeys, this.selectedElementKeys)
     if (changed) {
       this.refreshResizeHandleVisibility()
+      this.geometryRevision += 1
       this.presentationRevision += 1
       this.syncInteractionOverlay()
       this.syncAccessibilityBridge()
@@ -1400,6 +1424,7 @@ export class FdGraphCanvasEngine
 
   setPresentation(presentation: FdGraphInteractionPresentation): void {
     this.interactionPresentation = presentation
+    this.geometryRevision += 1
     this.presentationRevision += 1
     this.syncInteractionOverlay()
     this.scheduleRenderFrame()
@@ -1436,6 +1461,7 @@ export class FdGraphCanvasEngine
   }
 
   private handleGraphPointerDown = (event: PointerEvent): void => {
+    if (this.isConsumerOverlayEvent(event)) return
     if (this.connectionController?.pointerDown(event)) {
       if (this.resolvedAccessibilityConfiguration.enabled) {
         this.accessibilitySurface.focus({ preventScroll: true })
@@ -1463,6 +1489,7 @@ export class FdGraphCanvasEngine
   }
 
   private handleGraphPointerMove = (event: PointerEvent): void => {
+    this.updateHoveredNode(event)
     if (this.connectionController?.activePointerID === event.pointerId) {
       event.preventDefault()
       this.connectionController.pointerMove(event)
@@ -1471,6 +1498,24 @@ export class FdGraphCanvasEngine
     if (this.interactionController?.activePointerID !== event.pointerId) return
     event.preventDefault()
     this.interactionController.pointerMove(event)
+  }
+
+  private handleGraphPointerLeave = (): void => {
+    this.setHoveredNode(undefined)
+  }
+
+  private updateHoveredNode(event: PointerEvent): void {
+    const nodeID = this.isConsumerOverlayEvent(event)
+      ? undefined
+      : this.nodeIDAtViewportPoint(this.viewportPoint(event))
+    this.setHoveredNode(nodeID)
+  }
+
+  private setHoveredNode(nodeID: FdGraphElementID | undefined): void {
+    if (nodeID === this.hoveredNodeIDValue) return
+    this.hoveredNodeIDValue = nodeID
+    this.presentationRevision += 1
+    this.scheduleRenderFrame()
   }
 
   private handleGraphPointerEnd = (event: PointerEvent): void => {
@@ -1517,6 +1562,7 @@ export class FdGraphCanvasEngine
 
   private handleGraphClick = (event: MouseEvent): void => {
     if (this.tool !== 'select' || event.button !== 0) return
+    if (this.isConsumerOverlayEvent(event)) return
     const suppressed = this.suppressedConnectionClick
     this.suppressedConnectionClick = undefined
     if (
@@ -1573,6 +1619,12 @@ export class FdGraphCanvasEngine
       }
     }
     return undefined
+  }
+
+  private isConsumerOverlayEvent(event: Event): boolean {
+    return event
+      .composedPath()
+      .some((candidate) => candidate instanceof HTMLElement && candidate.slot === 'overlay')
   }
 
   private edgeReferenceAtViewportPoint(
@@ -2717,16 +2769,34 @@ export class FdGraphCanvasEngine
   private refreshVisibleElements(rect: FdCanvasRect): void {
     if (rect.width <= 0 || rect.height <= 0) return
     this.renderWorldRect = rect
-    this.visibleNodes = this.index.nodesIn(rect)
+    const visibleNodes = this.index.nodesIn(rect)
     const padding = this.resolvedGraphConfiguration.edgeRenderPadding
-    this.visibleEdges = this.index.edgesIn({
+    const visibleEdges = this.index.edgesIn({
       x: rect.x - padding,
       y: rect.y - padding,
       width: rect.width + padding * 2,
       height: rect.height + padding * 2,
     })
-    this.presentationRevision += 1
+    if (
+      !this.sameElementIDs(this.visibleNodes, visibleNodes) ||
+      !this.sameElementIDs(this.visibleEdges, visibleEdges)
+    ) {
+      this.geometryRevision += 1
+      this.presentationRevision += 1
+    }
+    this.visibleNodes = visibleNodes
+    this.visibleEdges = visibleEdges
     this.scheduleRenderFrame()
+  }
+
+  private sameElementIDs(
+    current: readonly { readonly id: FdGraphElementID }[],
+    next: readonly { readonly id: FdGraphElementID }[],
+  ): boolean {
+    return (
+      current.length === next.length &&
+      current.every((element, index) => element.id === next[index]?.id)
+    )
   }
 
   private scheduleRenderFrame(): void {
@@ -2741,11 +2811,12 @@ export class FdGraphCanvasEngine
     if (!this.backend || !this.canvas) return
     const geometry = this.renderGeometryCache.resolve({
       snapshotRevision: this.snapshotRevision,
-      presentationRevision: this.presentationRevision,
+      geometryRevision: this.geometryRevision,
       nodes: this.visibleNodes,
       edges: this.visibleEdges,
       selectedNodeIDs: this.selectedNodeIDs,
       selectedEdgeIDs: this.selectedEdgeIDsValue,
+      ...(this.hoveredNodeIDValue === undefined ? {} : { hoveredNodeID: this.hoveredNodeIDValue }),
       ...(this.focusedElement ? { focusedElement: this.focusedElement } : {}),
       nodeFrame: (node) => this.interactionPresentation.frames.get(node.id) ?? node.frame,
       edgeEndpoint: (edge, endpoint) => this.endpointPoint(edge, endpoint),
@@ -2754,11 +2825,13 @@ export class FdGraphCanvasEngine
     const frame: FdGraphRenderFrame = {
       snapshotID: this.snapshot.id,
       snapshotRevision: this.snapshotRevision,
+      geometryRevision: this.geometryRevision,
       presentationRevision: this.presentationRevision,
       viewport: this.canvas.viewport,
       renderWorldRect: this.renderWorldRect,
       nodes: geometry.nodes.map((node) => ({
         ...node,
+        hovered: node.node.id === this.hoveredNodeIDValue,
         capabilities: this.nodeCapabilities(node.node.id),
       })),
       edges: geometry.edges,
@@ -2768,6 +2841,7 @@ export class FdGraphCanvasEngine
       selectedPortIDsByNode: this.selectedPortIDsByNodeValue,
       ...(this.focusedElement ? { focusedElement: this.focusedElement } : {}),
       ...(this.focusedNodeID === undefined ? {} : { focusedNodeID: this.focusedNodeID }),
+      ...(this.hoveredNodeIDValue === undefined ? {} : { hoveredNodeID: this.hoveredNodeIDValue }),
       pixelRatio: window.devicePixelRatio,
     }
     this.backend.render(frame)
