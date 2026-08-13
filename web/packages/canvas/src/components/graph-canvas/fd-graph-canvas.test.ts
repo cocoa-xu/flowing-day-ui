@@ -32,6 +32,7 @@ import type {
 import { graphCanvasRenderingBackendCapabilities } from '../../rendering/backend.js'
 import { FdGraphDOMRenderingBackend } from '../../rendering/dom-backend.js'
 import { FdGraphWebGL2RenderingBackend } from '../../rendering/webgl2-backend.js'
+import type { FdCanvas } from '../canvas/fd-canvas.js'
 import type { FdGraphCanvas } from './fd-graph-canvas.js'
 import './fd-graph-canvas.js'
 
@@ -187,6 +188,8 @@ describe('fd-graph-canvas rendering boundary', () => {
 
   it('keeps keyed node elements while applying a new immutable snapshot', async () => {
     const element = await mount()
+    const canvas = element.shadowRoot?.querySelector('fd-canvas') as FdCanvas
+    expect(canvas.contentID).toBe('graph-1')
     const original = element.shadowRoot?.querySelector<HTMLElement>(
       '[data-fd-graph-node="s:source"]',
     )
@@ -204,6 +207,7 @@ describe('fd-graph-canvas rendering boundary', () => {
     await nextFrame()
     await nextFrame()
 
+    expect(canvas.contentID).toBe('graph-2')
     const updated = element.shadowRoot?.querySelector<HTMLElement>(
       '[data-fd-graph-node="s:source"]',
     )

@@ -937,6 +937,7 @@ export class FdGraphCanvas
         exportparts="viewport:canvas-viewport"
         interaction-mode=${this.tool === 'pan' ? 'pan' : 'content'}
         .configuration=${this.resolvedGraphConfiguration.canvas}
+        .contentID=${this.snapshot.id}
         .contentRect=${this.canvasContentRect}
         .contentInsets=${this.contentInsets}
         .contentChangeBehavior=${this.contentChangeBehavior}
