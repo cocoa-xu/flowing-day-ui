@@ -39,7 +39,7 @@ const xmark = svg`
  * ```html
  * <fd-preferences-window app-name="Afloat" page="general">
  *   <fd-page-group label="General">
- *     <fd-page page-id="general" label="General" symbol="gearshape">…</fd-page>
+ *     <fd-page page-id="general" label="General" icon="gearshape">…</fd-page>
  *   </fd-page-group>
  * </fd-preferences-window>
  * ```
@@ -477,7 +477,7 @@ export class FdPreferencesWindow extends FdElement {
         }
         @click=${() => this.#select(page)}
       >
-        ${page.symbol ? html`<fd-icon class="nav-icon" name=${page.symbol}></fd-icon>` : nothing}
+        ${page.icon ? html`<fd-icon class="nav-icon" name=${page.icon}></fd-icon>` : nothing}
         <span class="nav-label">${page.label}</span>
       </button>
     `
@@ -486,7 +486,7 @@ export class FdPreferencesWindow extends FdElement {
   override render() {
     const selected = this.selectedPage
     const strings = FdStringsRegistry.get()
-    const headerSymbol = selected?.headerSymbol ?? selected?.symbol
+    const headerIcon = selected?.headerIcon ?? selected?.icon
 
     return html`
       <div class="root" data-fd-accent-scope>
@@ -544,9 +544,9 @@ export class FdPreferencesWindow extends FdElement {
               ? html`
                 <div class="page-header" part="page-header">
                   ${
-                    headerSymbol
+                    headerIcon
                       ? html`<span class="page-icon"
-                        ><fd-icon name=${headerSymbol}></fd-icon
+                        ><fd-icon name=${headerIcon}></fd-icon
                       ></span>`
                       : nothing
                   }

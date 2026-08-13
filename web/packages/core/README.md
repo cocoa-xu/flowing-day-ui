@@ -31,7 +31,7 @@ Pages are light DOM, so a static page can build one with no JavaScript at all:
 ```html
 <fd-preferences-window app-name="Flowing Day" page="general">
   <fd-page-group label="Monitors">
-    <fd-page page-id="general" label="General" symbol="gearshape">
+    <fd-page page-id="general" label="General" icon="gearshape">
       <fd-pane-stack>…</fd-pane-stack>
     </fd-page>
   </fd-page-group>

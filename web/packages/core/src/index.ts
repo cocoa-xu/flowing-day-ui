@@ -128,7 +128,7 @@ export {
 } from './components/multi-select/fd-multi-select.js'
 export { FdMultiSelectRow } from './components/multi-select-row/fd-multi-select-row.js'
 export { FdOption } from './components/option/fd-option.js'
-export { FdPage } from './components/page/fd-page.js'
+export { FdPage, type FdPageIcon } from './components/page/fd-page.js'
 export { FdPageGroup } from './components/page/fd-page-group.js'
 export { FdPaneStack } from './components/pane-stack/fd-pane-stack.js'
 export { FdPopover } from './components/popover/fd-popover.js'

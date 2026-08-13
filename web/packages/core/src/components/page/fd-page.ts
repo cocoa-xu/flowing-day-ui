@@ -2,6 +2,8 @@ import { type CSSResultGroup, css, html, type PropertyValues } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { FdElement } from '../../internal/base-element.js'
 
+export type FdPageIcon = string
+
 /**
  * Mirrors `PreferencesPage`. Declared as a child of `fd-preferences-window`, which reads the
  * metadata to build the sidebar and shows only the active page's content.
@@ -28,10 +30,10 @@ export class FdPage extends FdElement {
   @property({ reflect: true }) subtitle: string | null = null
 
   /** Icon registry key for the sidebar row. */
-  @property({ reflect: true }) symbol: string | null = null
+  @property({ reflect: true }) icon: FdPageIcon | null = null
 
   /** Mirrors `headerIcon`, which falls back to `icon`. */
-  @property({ attribute: 'header-symbol', reflect: true }) headerSymbol: string | null = null
+  @property({ attribute: 'header-icon', reflect: true }) headerIcon: FdPageIcon | null = null
 
   /**
    * Mirrors `PreferencesPage(accent:)`. One colour: the fill, foreground, wash and veil all

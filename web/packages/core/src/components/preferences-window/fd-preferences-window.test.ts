@@ -6,13 +6,13 @@ import './fd-preferences-window.js'
 const MARKUP = `
   <fd-preferences-window app-name="Afloat" sidebar-footer="Version 1.6.0" page="general">
     <fd-page-group>
-      <fd-page page-id="general" label="General" subtitle="Behavior" symbol="gearshape">
+      <fd-page page-id="general" label="General" subtitle="Behavior" icon="gearshape">
         <p id="general-body">general body</p>
       </fd-page>
-      <fd-page page-id="appearance" label="Appearance" symbol="paintbrush"></fd-page>
+      <fd-page page-id="appearance" label="Appearance" icon="paintbrush"></fd-page>
     </fd-page-group>
     <fd-page-group label="Advanced" indented>
-      <fd-page page-id="usb" label="USB" symbol="cable" accent="#B4795E"></fd-page>
+      <fd-page page-id="usb" label="USB" icon="cable" accent="#B4795E"></fd-page>
       <fd-page page-id="privacy" label="Privacy" unavailable></fd-page>
     </fd-page-group>
   </fd-preferences-window>
@@ -183,6 +183,21 @@ describe('fd-preferences-window page header', () => {
     const element = await mount()
     expect(text(element, '.page-title')).toBe('General')
     expect(text(element, '.page-subtitle')).toBe('Behavior')
+    expect(element.shadowRoot?.querySelector('.page-icon fd-icon')?.getAttribute('name')).toBe(
+      'gearshape',
+    )
+  })
+
+  it('uses a distinct header icon when supplied', async () => {
+    const element = await mount()
+    const page = element.querySelector('fd-page')
+    page?.setAttribute('header-icon', 'gearshape.fill')
+    await Promise.resolve()
+    await element.updateComplete
+
+    expect(element.shadowRoot?.querySelector('.page-icon fd-icon')?.getAttribute('name')).toBe(
+      'gearshape.fill',
+    )
   })
 
   it('omits the subtitle when the page has none', async () => {
