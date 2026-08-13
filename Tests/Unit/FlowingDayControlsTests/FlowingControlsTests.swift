@@ -434,6 +434,29 @@ final class FlowingControlsTests: XCTestCase {
     XCTAssertGreaterThan(fittingHeight(symbols.frame(width: 220)), 20)
   }
 
+  @MainActor
+  func testSegmentedControlsComposeWithIconsAndText() {
+    let options = [
+      FlowingSegmentOption("vertical", label: "Vertical", systemImage: "arrow.down"),
+      FlowingSegmentOption("horizontal", label: "Horizontal", systemImage: "arrow.right"),
+    ]
+    let regular = FlowingSegmentedControl(
+      label: "Layout",
+      selection: .constant("horizontal"),
+      options: options,
+      labelStyle: .iconAndText
+    )
+    let connected = FlowingConnectedSegmentedControl(
+      label: "Layout",
+      selection: .constant("horizontal"),
+      options: options,
+      labelStyle: .iconAndText
+    )
+
+    XCTAssertGreaterThan(fittingHeight(regular.frame(width: 260)), 20)
+    XCTAssertGreaterThan(fittingHeight(connected.frame(width: 260)), 20)
+  }
+
   func testSegmentNavigationWrapsInBothDirections() {
     let values = ["first", "second", "third"]
 

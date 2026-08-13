@@ -10,6 +10,11 @@ const OPTIONS = `
   <fd-option value="large">Large</fd-option>
 `
 
+const SYMBOL_OPTIONS = `
+  <fd-option value="vertical" label="Vertical" symbol="vertical"></fd-option>
+  <fd-option value="horizontal" label="Horizontal" symbol="horizontal"></fd-option>
+`
+
 async function mount<T extends FdSegmentedControl | FdConnectedSegmentedControl>(
   tag: string,
   attributes = '',
@@ -84,6 +89,36 @@ describe('segmented control primitives', () => {
 
     expect(control.hasAttribute('data-connected')).toBe(true)
     expect(getComputedStyle(control).columnGap).toBe('0px')
+  })
+
+  it('can show an icon and label together', async () => {
+    const host = document.createElement('div')
+    host.innerHTML = `<fd-connected-segmented-control label="Layout" value="horizontal" label-style="icon-and-text">${SYMBOL_OPTIONS}</fd-connected-segmented-control>`
+    document.body.append(host)
+    const element = host.firstElementChild as FdConnectedSegmentedControl
+    await element.updateComplete
+    await element.updateComplete
+
+    expect(element.shadowRoot?.querySelectorAll('.segment-icon')).toHaveLength(2)
+    expect(element.shadowRoot?.querySelectorAll('.segment-label')).toHaveLength(2)
+  })
+
+  it('supports explicit text-only and icon-only labels', async () => {
+    const host = document.createElement('div')
+    host.innerHTML = `<fd-segmented-control label="Layout" value="horizontal" label-style="text-only">${SYMBOL_OPTIONS}</fd-segmented-control>`
+    document.body.append(host)
+    const element = host.firstElementChild as FdSegmentedControl
+    await element.updateComplete
+    await element.updateComplete
+
+    expect(element.shadowRoot?.querySelectorAll('.segment-icon')).toHaveLength(0)
+    expect(element.shadowRoot?.querySelectorAll('.segment-label')).toHaveLength(2)
+
+    element.labelStyle = 'icon-only'
+    await element.updateComplete
+
+    expect(element.shadowRoot?.querySelectorAll('.segment-icon')).toHaveLength(2)
+    expect(element.shadowRoot?.querySelectorAll('.segment-label')).toHaveLength(0)
   })
 
   it('participates in form submission', async () => {
