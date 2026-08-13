@@ -37,6 +37,17 @@ const snapshot: FdAnyGraphSnapshot = {
 }
 
 describe('graph connection editing', () => {
+  it('matches the Swift connection editing defaults', () => {
+    const configuration = resolveGraphConnectionEditingConfiguration()
+
+    expect(configuration.enabled).toBe(false)
+    expect(configuration.allowsReconnection).toBe(true)
+    expect(configuration.targetHitRadius).toBe(18)
+    expect(configuration.sourceHitPadding).toBe(6)
+    expect(configuration.minimumDragDistance).toBe(2)
+    expect(configuration.rendersDefaultPreview).toBe(true)
+  })
+
   it('creates a validated connection between node-scoped ports', () => {
     const index = new FdGraphSnapshotIndex(snapshot)
     const configuration = resolveGraphConnectionEditingConfiguration({ enabled: true })

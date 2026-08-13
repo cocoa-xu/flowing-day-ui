@@ -697,9 +697,7 @@ export class FdGraphCanvas
   @property({ attribute: false }) configuration: Partial<FdCanvasConfiguration> = {}
   @property({ attribute: false }) contentInsets: FdCanvasInsets = zeroCanvasInsets
   @property({ attribute: false }) contentChangeBehavior: FdCanvasContentChangeBehavior = {
-    kind: 'fit',
-    padding: 64,
-    maximumZoom: 1,
+    kind: 'preserveViewport',
   }
   @property({ attribute: false }) request: FdCanvasRequest | undefined
   @property({ attribute: false }) renderingBackend:

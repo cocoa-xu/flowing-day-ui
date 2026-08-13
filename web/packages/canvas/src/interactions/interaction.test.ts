@@ -80,6 +80,18 @@ describe('graph interaction policy', () => {
     snapshotID: 'policy',
   }
 
+  it('matches the Swift graph canvas interaction defaults', () => {
+    const configuration = resolveGraphCanvasInteractionConfiguration({})
+
+    expect(configuration.nodeDragging).toBe(true)
+    expect(configuration.multipleNodeDragging).toBe(false)
+    expect(configuration.nodeResizing).toBe(false)
+    expect(configuration.minimumNodeWidth).toBe(44)
+    expect(configuration.minimumNodeHeight).toBe(32)
+    expect(configuration.snapping.enabled).toBe(false)
+    expect(configuration.snapping.showsGuides).toBe(false)
+  })
+
   it('admits only candidate nodes while requiring the anchor', () => {
     expect([
       ...admittedGraphNodeIDs(request, {
@@ -122,7 +134,9 @@ describe('graph interaction policy', () => {
 })
 
 describe('graph snapping', () => {
-  const configuration = resolveGraphCanvasInteractionConfiguration({}).snapping
+  const configuration = resolveGraphCanvasInteractionConfiguration({
+    snapping: { enabled: true },
+  }).snapping
 
   it('aligns the closest pair of node anchors', () => {
     const result = snapGraphTranslation(
@@ -167,6 +181,7 @@ describe('graph snapping', () => {
   it('supports configurable grid origins and rounding', () => {
     const grid = resolveGraphCanvasInteractionConfiguration({
       snapping: {
+        enabled: true,
         alignment: false,
         grid: { enabled: true, width: 20, height: 20, originX: 5, originY: 5 },
       },
@@ -189,6 +204,7 @@ describe('graph snapping', () => {
       candidates: [],
       configuration: resolveGraphCanvasInteractionConfiguration({
         snapping: {
+          enabled: true,
           alignment: false,
           grid: { enabled: true, width: 20, height: 20, originX: 5, originY: 5 },
         },
@@ -219,7 +235,7 @@ describe('graph snapping', () => {
 
   it('recognizes and presents a longer equal-spacing chain', () => {
     const spacing = resolveGraphCanvasInteractionConfiguration({
-      snapping: { alignment: false, equalSpacing: true, guideOffset: 8 },
+      snapping: { enabled: true, alignment: false, equalSpacing: true, guideOffset: 8 },
     }).snapping
     const result = snapGraphTranslation(
       { x: 120, y: 0, width: 20, height: 20 },
@@ -315,6 +331,7 @@ describe('graph group resizing', () => {
       candidates: [],
       configuration: resolveGraphCanvasInteractionConfiguration({
         snapping: {
+          enabled: true,
           alignment: false,
           grid: { enabled: true, width: 50, height: 50 },
         },
@@ -340,7 +357,7 @@ describe('graph group resizing', () => {
       handle: 'right',
       candidates: [{ id: 'target', frame: { x: 300, y: 0, width: 150, height: 80 } }],
       configuration: resolveGraphCanvasInteractionConfiguration({
-        snapping: { alignment: false, equalSpacing: false, equalSize: true },
+        snapping: { enabled: true, alignment: false, equalSpacing: false, equalSize: true },
       }).snapping,
       minimumSize: { width: 40, height: 32 },
       zoom: 1,

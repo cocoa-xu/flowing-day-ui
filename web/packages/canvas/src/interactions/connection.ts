@@ -38,7 +38,6 @@ export interface FdGraphConnectionValidationRequest {
 
 export interface FdGraphConnectionEditingConfiguration {
   readonly enabled?: boolean
-  readonly allowsNewConnections?: boolean
   readonly allowsReconnection?: boolean
   readonly minimumDragDistance?: number
   readonly sourceHitPadding?: number
@@ -50,7 +49,6 @@ export interface FdGraphConnectionEditingConfiguration {
 
 export interface FdResolvedGraphConnectionEditingConfiguration {
   readonly enabled: boolean
-  readonly allowsNewConnections: boolean
   readonly allowsReconnection: boolean
   readonly minimumDragDistance: number
   readonly sourceHitPadding: number
@@ -107,14 +105,13 @@ export function resolveGraphConnectionEditingConfiguration(
 ): FdResolvedGraphConnectionEditingConfiguration {
   return {
     enabled: configuration.enabled ?? false,
-    allowsNewConnections: configuration.allowsNewConnections ?? true,
     allowsReconnection: configuration.allowsReconnection ?? true,
     minimumDragDistance: nonnegative(
       configuration.minimumDragDistance ?? 2,
       'connection minimum drag distance',
     ),
     sourceHitPadding: nonnegative(
-      configuration.sourceHitPadding ?? 4,
+      configuration.sourceHitPadding ?? 6,
       'connection source hit padding',
     ),
     targetHitRadius: nonnegative(
@@ -157,7 +154,6 @@ export function beginGraphConnection(
   configuration: FdResolvedGraphConnectionEditingConfiguration,
 ): FdGraphTransientConnection | undefined {
   if (!configuration.enabled || !configuration.canBegin(origin)) return undefined
-  if (origin.kind === 'new' && !configuration.allowsNewConnections) return undefined
   if (origin.kind === 'reconnect' && !configuration.allowsReconnection) return undefined
   const stationaryEndpoint = origin.kind === 'new' ? origin.source : origin.fixed
   const movingEndpoint = origin.kind === 'new' ? origin.source : origin.original

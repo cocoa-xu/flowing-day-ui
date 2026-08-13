@@ -171,17 +171,18 @@ export function resolveGraphCanvasInteractionConfiguration(
 ): FdResolvedGraphCanvasInteractionConfiguration {
   const acquisitionDistance = configuration.snapping?.acquisitionDistance ?? 6
   const releaseDistance = configuration.snapping?.releaseDistance ?? 10
+  const snappingEnabled = configuration.snapping?.enabled ?? false
   if (releaseDistance < acquisitionDistance) {
     throw new RangeError('snap release distance must not be smaller than acquisition distance')
   }
-  const minimumNodeWidth = positive(configuration.minimumNodeWidth ?? 40, 'minimum node width')
+  const minimumNodeWidth = positive(configuration.minimumNodeWidth ?? 44, 'minimum node width')
   const minimumNodeHeight = positive(configuration.minimumNodeHeight ?? 32, 'minimum node height')
   return {
     selection: configuration.selection ?? 'multiple',
     marquee: configuration.marquee ?? 'intersects',
     nodeDragging: configuration.nodeDragging ?? true,
-    multipleNodeDragging: configuration.multipleNodeDragging ?? true,
-    nodeResizing: configuration.nodeResizing ?? true,
+    multipleNodeDragging: configuration.multipleNodeDragging ?? false,
+    nodeResizing: configuration.nodeResizing ?? false,
     groupResizing: configuration.groupResizing ?? true,
     minimumNodeWidth,
     minimumNodeHeight,
@@ -215,7 +216,7 @@ export function resolveGraphCanvasInteractionConfiguration(
     frameUpdates: configuration.frameUpdates ?? 'intent',
     ...(configuration.snappingStrategy ? { snappingStrategy: configuration.snappingStrategy } : {}),
     snapping: {
-      enabled: configuration.snapping?.enabled ?? true,
+      enabled: snappingEnabled,
       alignment: configuration.snapping?.alignment ?? true,
       equalSpacing: configuration.snapping?.equalSpacing ?? true,
       equalSize: configuration.snapping?.equalSize ?? true,
@@ -236,7 +237,7 @@ export function resolveGraphCanvasInteractionConfiguration(
         configuration.snapping?.maximumCandidates ?? 512,
         'maximum snap candidates',
       ),
-      showsGuides: configuration.snapping?.showsGuides ?? true,
+      showsGuides: configuration.snapping?.showsGuides ?? snappingEnabled,
       guideOffset: nonnegative(configuration.snapping?.guideOffset ?? 8, 'guide offset'),
     },
     admitNodeDrag: configuration.admitNodeDrag ?? (() => ({ kind: 'allowAll' })),

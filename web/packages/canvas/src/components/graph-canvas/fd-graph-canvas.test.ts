@@ -151,6 +151,12 @@ class RecordingBackend implements FdGraphRenderingBackend {
 }
 
 describe('fd-graph-canvas rendering boundary', () => {
+  it('preserves the viewport when content changes by default', () => {
+    const element = document.createElement('fd-graph-canvas')
+
+    expect(element.contentChangeBehavior).toEqual({ kind: 'preserveViewport' })
+  })
+
   it('uses WebGL2 when available and otherwise falls back to complete DOM rendering', async () => {
     const element = await mount()
     const root = element.shadowRoot
@@ -443,6 +449,7 @@ describe('fd-graph-canvas pointer editing', () => {
     element.selectedNodeIDs = new Set(['source', 'target'])
     element.interactionConfiguration = {
       frameUpdates: 'local',
+      multipleNodeDragging: true,
       snapping: { enabled: false },
     }
     await element.updateComplete
@@ -479,6 +486,7 @@ describe('fd-graph-canvas pointer editing', () => {
     element.selectedNodeIDs = new Set(['source', 'target'])
     element.interactionConfiguration = {
       frameUpdates: 'local',
+      multipleNodeDragging: true,
       snapping: { enabled: false },
       admitNodeDrag: ({ anchorNode, selectedNodes, candidateNodes, snapshotID }) => {
         expect(anchorNode.id).toBe('source')
@@ -555,7 +563,7 @@ describe('fd-graph-canvas pointer editing', () => {
   it('snaps during ordinary dragging and bypasses snapping while Command is held', async () => {
     const first = await mount()
     const firstCanvas = preparePointerInput(first)
-    first.interactionConfiguration = { frameUpdates: 'local' }
+    first.interactionConfiguration = { frameUpdates: 'local', snapping: { enabled: true } }
     await first.updateComplete
     const firstSource = first.shadowRoot?.querySelector(
       '[data-fd-graph-node="s:source"]',
@@ -570,7 +578,7 @@ describe('fd-graph-canvas pointer editing', () => {
 
     const second = await mount()
     const secondCanvas = preparePointerInput(second)
-    second.interactionConfiguration = { frameUpdates: 'local' }
+    second.interactionConfiguration = { frameUpdates: 'local', snapping: { enabled: true } }
     await second.updateComplete
     const secondSource = second.shadowRoot?.querySelector(
       '[data-fd-graph-node="s:source"]',
@@ -589,7 +597,7 @@ describe('fd-graph-canvas pointer editing', () => {
     const canvas = preparePointerInput(element)
     element.interactionConfiguration = {
       frameUpdates: 'local',
-      snapping: { alignment: false },
+      snapping: { enabled: true, alignment: false },
       snappingStrategy: {
         translation: (request) => {
           const standard = snapGraphTranslationRequest(request)
@@ -624,6 +632,8 @@ describe('fd-graph-canvas pointer editing', () => {
     element.selectedNodeIDs = new Set(['source'])
     element.interactionConfiguration = {
       frameUpdates: 'local',
+      nodeResizing: true,
+      snapping: { enabled: true },
       snappingStrategy: {
         resize: () => {
           const bounds = { x: 40, y: 80, width: 240, height: 128 }
@@ -692,6 +702,7 @@ describe('fd-graph-canvas pointer editing', () => {
     element.selectedNodeIDs = new Set(['source'])
     element.interactionConfiguration = {
       frameUpdates: 'local',
+      nodeResizing: true,
       snapping: { enabled: false },
     }
     await element.updateComplete
@@ -720,6 +731,7 @@ describe('fd-graph-canvas pointer editing', () => {
     element.selectedNodeIDs = new Set(['source'])
     element.interactionConfiguration = {
       frameUpdates: 'local',
+      nodeResizing: true,
       snapping: { enabled: false },
       nodeSizeConstraints: ({ id }) =>
         id === 'source' ? { maximumWidth: 200, maximumHeight: 100 } : undefined,
@@ -748,6 +760,7 @@ describe('fd-graph-canvas pointer editing', () => {
     element.selectedNodeIDs = new Set(['source', 'target'])
     element.interactionConfiguration = {
       frameUpdates: 'local',
+      nodeResizing: true,
       snapping: { enabled: false },
       admitNodeResize: ({ anchorNode, candidateNodes, baseFrames, handle }) => {
         expect(anchorNode.id).toBe('source')
@@ -779,7 +792,8 @@ describe('fd-graph-canvas pointer editing', () => {
     const canvas = preparePointerInput(element)
     element.selectedNodeIDs = new Set(['source'])
     element.interactionConfiguration = {
-      snapping: { alignment: false, equalSpacing: false, equalSize: false },
+      nodeResizing: true,
+      snapping: { enabled: true, alignment: false, equalSpacing: false, equalSize: false },
     }
     await element.updateComplete
     const handle = element.shadowRoot?.querySelector<HTMLElement>(
@@ -812,7 +826,8 @@ describe('fd-graph-canvas pointer editing', () => {
     element.guideRenderer = { createElement, updateElement }
     element.selectedNodeIDs = new Set(['source'])
     element.interactionConfiguration = {
-      snapping: { alignment: false, equalSpacing: false, equalSize: false },
+      nodeResizing: true,
+      snapping: { enabled: true, alignment: false, equalSpacing: false, equalSize: false },
     }
     await element.updateComplete
     const handle = element.shadowRoot?.querySelector<HTMLElement>('[data-fd-resize-handle="right"]')
