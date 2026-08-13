@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test'
 import type { FdGraphCanvas } from '../packages/canvas/src/components/graph-canvas/fd-graph-canvas.js'
-import type { FdAnyGraphNode } from '../packages/canvas/src/graph/model.js'
 import {
   graphEdgeReference,
   graphElementReferenceKey,
@@ -248,11 +247,11 @@ test('multi-node dragging and constrained resize update the local snapshot', asy
   await graph.evaluate(async (element) => {
     const canvas = element as FdGraphCanvas
     canvas.selectedNodeIDs = new Set(['source'])
-    canvas.interactionConfiguration = {
-      frameUpdates: 'local',
-      snapping: { enabled: false },
-      nodeSizeConstraints: ({ id }: FdAnyGraphNode) =>
-        id === 'source' ? { maximumWidth: 220, maximumHeight: 120 } : undefined,
+    canvas.interactionPolicy = {
+      ...canvas.interactionPolicy,
+      nodeSizeConstraints: {
+        overrides: new Map([['source', { maximumWidth: 220, maximumHeight: 120 }]]),
+      },
     }
     await canvas.updateComplete
   })

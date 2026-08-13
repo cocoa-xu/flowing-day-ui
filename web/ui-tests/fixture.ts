@@ -1,7 +1,10 @@
 import { FdIcons } from '../packages/core/src/index.js'
 import '../packages/canvas/src/index.js'
 import type { FdGraphCanvas } from '../packages/canvas/src/components/graph-canvas/fd-graph-canvas.js'
-import type { FdGraphConnectionCompleteDetail } from '../packages/canvas/src/graph/events.js'
+import type {
+  FdGraphConnectionCompleteDetail,
+  FdGraphNodeFramesChangeDetail,
+} from '../packages/canvas/src/graph/events.js'
 
 const style = document.createElement('style')
 style.textContent = `
@@ -120,12 +123,28 @@ graph.snapshot = {
   ],
 }
 graph.contentChangeBehavior = { kind: 'preserveViewport' }
-graph.interactionConfiguration = {
-  frameUpdates: 'local',
-  snapping: { enabled: false },
+graph.configuration = {
+  nodeDraggingMode: 'multiple',
+  nodeResizing: { isEnabled: true },
+  connectionEditing: { isEnabled: true },
+  snapping: { isEnabled: false },
 }
-graph.connectionEditingConfiguration = { enabled: true }
 graph.miniMapConfiguration = { visibility: 'always' }
+
+let snapshotRevision = 0
+graph.addEventListener('fd-graph-node-frames-change', (event) => {
+  const detail = (event as CustomEvent<FdGraphNodeFramesChangeDetail>).detail
+  if (detail.phase !== 'ended') return
+  const frames = new Map(detail.changes.map((change) => [change.nodeID, change.after]))
+  graph.snapshot = {
+    ...graph.snapshot,
+    id: `ui-fixture-${++snapshotRevision}`,
+    nodes: graph.snapshot.nodes.map((node) => ({
+      ...node,
+      frame: frames.get(node.id) ?? node.frame,
+    })),
+  }
+})
 
 let completedConnection: FdGraphConnectionCompleteDetail | undefined
 graph.addEventListener('fd-graph-connection-complete', (event) => {
