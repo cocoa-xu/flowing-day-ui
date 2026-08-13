@@ -163,4 +163,153 @@ describe('graph layout model', () => {
       expect((error as FdGraphLayoutInputIssue).kind).toBe('missingNodeSize')
     }
   })
+
+  it('validates DAGs with stable topology order and snapshot identity', () => {
+    const topology = new FdGraphLayoutTopology({
+      snapshotID: 'dag',
+      nodeIDs: ['a', 'b', 'c', 'd'],
+      ports: [],
+      edges: [
+        {
+          id: 'ac',
+          endpoints: {
+            kind: 'directed',
+            source: { kind: 'node', nodeID: 'a' },
+            target: { kind: 'node', nodeID: 'c' },
+          },
+        },
+        {
+          id: 'bc',
+          endpoints: {
+            kind: 'directed',
+            source: { kind: 'node', nodeID: 'b' },
+            target: { kind: 'node', nodeID: 'c' },
+          },
+        },
+        {
+          id: 'cd',
+          endpoints: {
+            kind: 'directed',
+            source: { kind: 'node', nodeID: 'c' },
+            target: { kind: 'node', nodeID: 'd' },
+          },
+        },
+      ],
+    })
+    const input = new FdGraphLayoutInput({
+      id: inputID('dag'),
+      topology,
+      nodeSizes: topology.nodeIDs.map((nodeID) => ({
+        nodeID,
+        size: { width: 10, height: 10 },
+      })),
+      portAnchors: [],
+    })
+
+    const result = input.validateDAG()
+
+    expect(result.kind).toBe('valid')
+    if (result.kind !== 'valid') throw new Error('expected valid DAG')
+    expect(result.view.topologicalNodeIDs).toEqual(['a', 'b', 'c', 'd'])
+    expect(result.view.snapshotID).toBe('dag')
+    expect(result.view.input).toBe(input)
+  })
+
+  it('reports undirected edges before attempting DAG ordering', () => {
+    const topology = new FdGraphLayoutTopology({
+      snapshotID: 'undirected',
+      nodeIDs: ['a', 'b', 'c'],
+      ports: [],
+      edges: [
+        {
+          id: 'first',
+          endpoints: {
+            kind: 'undirected',
+            first: { kind: 'node', nodeID: 'a' },
+            second: { kind: 'node', nodeID: 'b' },
+          },
+        },
+        {
+          id: 'second',
+          endpoints: {
+            kind: 'undirected',
+            first: { kind: 'node', nodeID: 'b' },
+            second: { kind: 'node', nodeID: 'c' },
+          },
+        },
+      ],
+    })
+    const input = new FdGraphLayoutInput({
+      id: inputID('undirected'),
+      topology,
+      nodeSizes: topology.nodeIDs.map((nodeID) => ({
+        nodeID,
+        size: { width: 10, height: 10 },
+      })),
+      portAnchors: [],
+    })
+
+    const result = input.validateDAG()
+
+    expect(result.kind).toBe('invalid')
+    if (result.kind !== 'invalid') throw new Error('expected invalid DAG')
+    expect(result.issue).toMatchObject({ kind: 'undirectedEdges', edgeIDs: ['first', 'second'] })
+  })
+
+  it('reports the exact directed cycle edge path', () => {
+    const topology = new FdGraphLayoutTopology({
+      snapshotID: 'cycle',
+      nodeIDs: ['a', 'b', 'c'],
+      ports: [],
+      edges: [
+        {
+          id: 'ab',
+          endpoints: {
+            kind: 'directed',
+            source: { kind: 'node', nodeID: 'a' },
+            target: { kind: 'node', nodeID: 'b' },
+          },
+        },
+        {
+          id: 'bc',
+          endpoints: {
+            kind: 'directed',
+            source: { kind: 'node', nodeID: 'b' },
+            target: { kind: 'node', nodeID: 'c' },
+          },
+        },
+        {
+          id: 'ca',
+          endpoints: {
+            kind: 'directed',
+            source: { kind: 'node', nodeID: 'c' },
+            target: { kind: 'node', nodeID: 'a' },
+          },
+        },
+        {
+          id: 'ac',
+          endpoints: {
+            kind: 'directed',
+            source: { kind: 'node', nodeID: 'a' },
+            target: { kind: 'node', nodeID: 'c' },
+          },
+        },
+      ],
+    })
+    const input = new FdGraphLayoutInput({
+      id: inputID('cycle'),
+      topology,
+      nodeSizes: topology.nodeIDs.map((nodeID) => ({
+        nodeID,
+        size: { width: 10, height: 10 },
+      })),
+      portAnchors: [],
+    })
+
+    const result = input.validateDAG()
+
+    expect(result.kind).toBe('invalid')
+    if (result.kind !== 'invalid') throw new Error('expected invalid DAG')
+    expect(result.issue).toMatchObject({ kind: 'cycle', edgePath: ['ab', 'bc', 'ca'] })
+  })
 })

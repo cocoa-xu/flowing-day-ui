@@ -376,6 +376,61 @@ export interface FdGraphNodePlacementState<NodeID extends FdGraphElementID = FdG
   readonly offset: FdCanvasSize
 }
 
+export type FdGraphLayoutDAGValidationIssueKind = 'cycle' | 'undirectedEdges'
+
+export class FdGraphLayoutDAGValidationIssue<
+  EdgeID extends FdGraphElementID = FdGraphElementID,
+> extends Error {
+  readonly kind: FdGraphLayoutDAGValidationIssueKind
+  readonly edgePath?: readonly EdgeID[]
+  readonly edgeIDs?: readonly EdgeID[]
+
+  constructor(kind: 'cycle', edgePath: readonly EdgeID[])
+  constructor(kind: 'undirectedEdges', edgeIDs: readonly EdgeID[])
+  constructor(kind: FdGraphLayoutDAGValidationIssueKind, edgeIDs: readonly EdgeID[]) {
+    super(kind)
+    this.name = 'FdGraphLayoutDAGValidationIssue'
+    this.kind = kind
+    if (kind === 'cycle') this.edgePath = edgeIDs
+    else this.edgeIDs = edgeIDs
+  }
+}
+
+export class FdGraphLayoutDAGView<
+  NodeID extends FdGraphElementID = FdGraphElementID,
+  PortID extends FdGraphElementID = FdGraphElementID,
+  EdgeID extends FdGraphElementID = FdGraphElementID,
+> {
+  readonly input: FdGraphLayoutInput<NodeID, PortID, EdgeID>
+  readonly topologicalNodeIDs: readonly NodeID[]
+
+  constructor(
+    input: FdGraphLayoutInput<NodeID, PortID, EdgeID>,
+    topologicalNodeIDs: readonly NodeID[],
+  ) {
+    this.input = input
+    this.topologicalNodeIDs = topologicalNodeIDs
+  }
+
+  get snapshotID(): FdGraphPresentationSnapshotID {
+    return this.input.topology.snapshotID
+  }
+}
+
+export type FdGraphLayoutDAGValidationResult<
+  NodeID extends FdGraphElementID = FdGraphElementID,
+  PortID extends FdGraphElementID = FdGraphElementID,
+  EdgeID extends FdGraphElementID = FdGraphElementID,
+> =
+  | {
+      readonly kind: 'valid'
+      readonly view: FdGraphLayoutDAGView<NodeID, PortID, EdgeID>
+    }
+  | {
+      readonly kind: 'invalid'
+      readonly issue: FdGraphLayoutDAGValidationIssue<EdgeID>
+    }
+
 type FdGraphLayoutInputIssueKind =
   | 'presentationSnapshotIdentityMismatch'
   | 'duplicateNodeSize'
@@ -504,6 +559,49 @@ export class FdGraphLayoutInput<
     return this.#placementOffsetByID.get(nodeID) ?? { width: 0, height: 0 }
   }
 
+  validateDAG(): FdGraphLayoutDAGValidationResult<NodeID, PortID, EdgeID> {
+    const undirectedEdgeIDs = this.topology.edges.flatMap((edge) =>
+      edge.endpoints.kind === 'undirected' ? [edge.id] : [],
+    )
+    if (undirectedEdgeIDs.length > 0) {
+      return {
+        kind: 'invalid',
+        issue: new FdGraphLayoutDAGValidationIssue('undirectedEdges', undirectedEdgeIDs),
+      }
+    }
+
+    const incomingCount = new Map(this.topology.nodeIDs.map((nodeID) => [nodeID, 0]))
+    for (const edge of this.topology.edges) {
+      if (edge.endpoints.kind !== 'directed') continue
+      const targetID = endpointNodeID(edge.endpoints.target)
+      incomingCount.set(targetID, (incomingCount.get(targetID) ?? 0) + 1)
+    }
+    const ready = this.topology.nodeIDs.filter((nodeID) => incomingCount.get(nodeID) === 0)
+    const topologicalNodeIDs: NodeID[] = []
+    for (let index = 0; index < ready.length; index += 1) {
+      const nodeID = ready[index]
+      if (nodeID === undefined) break
+      topologicalNodeIDs.push(nodeID)
+      for (const successorID of this.topology.directedSuccessorNodeIDs(nodeID)) {
+        const nextCount = (incomingCount.get(successorID) ?? 0) - 1
+        incomingCount.set(successorID, nextCount)
+        if (nextCount === 0) ready.push(successorID)
+      }
+    }
+    if (topologicalNodeIDs.length !== this.topology.nodeIDs.length) {
+      const edgePath = firstDirectedCycleEdgeIDs(this.topology)
+      if (!edgePath) throw new Error('cyclic graph did not produce a cycle diagnostic')
+      return {
+        kind: 'invalid',
+        issue: new FdGraphLayoutDAGValidationIssue('cycle', edgePath),
+      }
+    }
+    return {
+      kind: 'valid',
+      view: new FdGraphLayoutDAGView(this, topologicalNodeIDs),
+    }
+  }
+
   private fail(kind: FdGraphLayoutInputIssueKind, details?: Record<string, unknown>): never {
     throw new FdGraphLayoutInputIssue(kind, details)
   }
@@ -519,6 +617,144 @@ const edgeEndpoints = <NodeID extends FdGraphElementID, PortID extends FdGraphEl
   endpoints.kind === 'directed'
     ? [endpoints.source, endpoints.target]
     : [endpoints.first, endpoints.second]
+
+const endpointNodeID = <NodeID extends FdGraphElementID, PortID extends FdGraphElementID>(
+  endpoint: FdGraphLayoutEndpoint<NodeID, PortID>,
+): NodeID => (endpoint.kind === 'node' ? endpoint.nodeID : endpoint.key.nodeID)
+
+const firstDirectedCycleEdgeIDs = <
+  NodeID extends FdGraphElementID,
+  PortID extends FdGraphElementID,
+  EdgeID extends FdGraphElementID,
+>(
+  topology: FdGraphLayoutTopology<NodeID, PortID, EdgeID>,
+): readonly EdgeID[] | undefined => {
+  const componentByNodeID = stronglyConnectedComponentIndex(topology)
+  const outgoingEdgesByNodeID = new Map<NodeID, FdGraphLayoutEdge<NodeID, PortID, EdgeID>[]>()
+  for (const edge of topology.edges) {
+    if (edge.endpoints.kind !== 'directed') continue
+    const sourceID = endpointNodeID(edge.endpoints.source)
+    const edges = outgoingEdgesByNodeID.get(sourceID) ?? []
+    edges.push(edge)
+    outgoingEdgesByNodeID.set(sourceID, edges)
+  }
+  for (const closingEdge of topology.edges) {
+    if (closingEdge.endpoints.kind !== 'directed') continue
+    const sourceID = endpointNodeID(closingEdge.endpoints.source)
+    const targetID = endpointNodeID(closingEdge.endpoints.target)
+    if (sourceID === targetID) return [closingEdge.id]
+    if (componentByNodeID.get(sourceID) !== componentByNodeID.get(targetID)) continue
+    const returnPath = shortestDirectedEdgePath(
+      outgoingEdgesByNodeID,
+      targetID,
+      sourceID,
+      closingEdge.id,
+    )
+    if (returnPath) return [closingEdge.id, ...returnPath]
+  }
+  return undefined
+}
+
+const shortestDirectedEdgePath = <
+  NodeID extends FdGraphElementID,
+  PortID extends FdGraphElementID,
+  EdgeID extends FdGraphElementID,
+>(
+  outgoingEdgesByNodeID: ReadonlyMap<NodeID, readonly FdGraphLayoutEdge<NodeID, PortID, EdgeID>[]>,
+  startID: NodeID,
+  destinationID: NodeID,
+  excludedEdgeID: EdgeID,
+): readonly EdgeID[] | undefined => {
+  const queue = [startID]
+  const visited = new Set<NodeID>([startID])
+  const predecessor = new Map<NodeID, { readonly nodeID: NodeID; readonly edgeID: EdgeID }>()
+  for (let index = 0; index < queue.length; index += 1) {
+    const nodeID = queue[index]
+    if (nodeID === undefined) break
+    for (const edge of outgoingEdgesByNodeID.get(nodeID) ?? []) {
+      if (edge.id === excludedEdgeID || edge.endpoints.kind !== 'directed') continue
+      const nextID = endpointNodeID(edge.endpoints.target)
+      if (visited.has(nextID)) continue
+      visited.add(nextID)
+      predecessor.set(nextID, { nodeID, edgeID: edge.id })
+      if (nextID === destinationID) {
+        const edgeIDs: EdgeID[] = []
+        let currentID = destinationID
+        while (currentID !== startID) {
+          const step = predecessor.get(currentID)
+          if (!step) return undefined
+          edgeIDs.push(step.edgeID)
+          currentID = step.nodeID
+        }
+        return edgeIDs.reverse()
+      }
+      queue.push(nextID)
+    }
+  }
+  return undefined
+}
+
+const stronglyConnectedComponentIndex = <
+  NodeID extends FdGraphElementID,
+  PortID extends FdGraphElementID,
+  EdgeID extends FdGraphElementID,
+>(
+  topology: FdGraphLayoutTopology<NodeID, PortID, EdgeID>,
+): ReadonlyMap<NodeID, number> => {
+  const successors = new Map(topology.nodeIDs.map((nodeID) => [nodeID, [] as NodeID[]]))
+  const predecessors = new Map(topology.nodeIDs.map((nodeID) => [nodeID, [] as NodeID[]]))
+  for (const edge of topology.edges) {
+    if (edge.endpoints.kind !== 'directed') continue
+    const sourceID = endpointNodeID(edge.endpoints.source)
+    const targetID = endpointNodeID(edge.endpoints.target)
+    successors.get(sourceID)?.push(targetID)
+    predecessors.get(targetID)?.push(sourceID)
+  }
+
+  const visited = new Set<NodeID>()
+  const finishOrder: NodeID[] = []
+  for (const rootID of topology.nodeIDs) {
+    if (visited.has(rootID)) continue
+    visited.add(rootID)
+    const stack = [{ nodeID: rootID, nextIndex: 0 }]
+    while (stack.length > 0) {
+      const frame = stack[stack.length - 1]
+      if (!frame) break
+      const adjacent = successors.get(frame.nodeID) ?? []
+      const nextID = adjacent[frame.nextIndex]
+      if (nextID !== undefined) {
+        frame.nextIndex += 1
+        if (!visited.has(nextID)) {
+          visited.add(nextID)
+          stack.push({ nodeID: nextID, nextIndex: 0 })
+        }
+        continue
+      }
+      finishOrder.push(frame.nodeID)
+      stack.pop()
+    }
+  }
+
+  const componentByNodeID = new Map<NodeID, number>()
+  let component = 0
+  for (let index = finishOrder.length - 1; index >= 0; index -= 1) {
+    const rootID = finishOrder[index]
+    if (rootID === undefined || componentByNodeID.has(rootID)) continue
+    componentByNodeID.set(rootID, component)
+    const stack = [rootID]
+    while (stack.length > 0) {
+      const nodeID = stack.pop()
+      if (nodeID === undefined) break
+      for (const predecessorID of predecessors.get(nodeID) ?? []) {
+        if (componentByNodeID.has(predecessorID)) continue
+        componentByNodeID.set(predecessorID, component)
+        stack.push(predecessorID)
+      }
+    }
+    component += 1
+  }
+  return componentByNodeID
+}
 
 const append = <ID>(map: Map<ID, ID[]>, key: ID, value: ID): void => {
   const values = map.get(key) ?? []
