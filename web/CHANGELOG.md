@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-14
+
+### @flowing-day/canvas 0.5.0
+
+- Adds focused graph, interaction, layout, minimap, rendering, and geometry package entries.
+- Preserves consumer-owned node and edge presentation across DOM and WebGL2 backends.
+- Reduces redundant DOM updates and WebGL2 uploads during viewport and interaction frames.
+- Adds headed Safari profiling to the opt-in canvas benchmark harness.
+
 ## 2026-08-13
 
 ### @flowing-day/ui 0.3.0
