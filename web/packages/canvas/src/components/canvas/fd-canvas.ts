@@ -126,6 +126,7 @@ export class FdCanvas extends LitElement {
     width: 1000,
     height: 800,
   }
+  @property({ attribute: false }) contentID: unknown = undefined
   @property({ attribute: false }) contentInsets: FdCanvasInsets = zeroCanvasInsets
   @property({ attribute: false }) contentChangeBehavior: FdCanvasContentChangeBehavior = {
     kind: 'preserveViewport',
@@ -147,6 +148,7 @@ export class FdCanvas extends LitElement {
   private restoreTransform: FdCanvasTransform | undefined
   private resizeObserver: ResizeObserver | undefined
   private handledRequestID: string | number | undefined
+  private handledRequestContentID: unknown
   private initialized = false
   private activePointer: number | undefined
   private dragStart: FdCanvasPoint | undefined
@@ -205,7 +207,9 @@ export class FdCanvas extends LitElement {
       }
     }
     if (changed.has('contentInsets') && this.initialized) this.updateGeometry()
-    if (changed.has('contentRect') && this.initialized) this.handleContentChange()
+    if ((changed.has('contentRect') || changed.has('contentID')) && this.initialized) {
+      this.handleContentChange()
+    }
     if (changed.has('request')) this.handleRequest(this.request)
     if (changed.has('interactionMode')) this.cancelPointerInteraction()
   }
@@ -355,10 +359,17 @@ export class FdCanvas extends LitElement {
   private handleRequest(request: FdCanvasRequest | undefined): void {
     if (!request) {
       this.handledRequestID = undefined
+      this.handledRequestContentID = undefined
       return
     }
-    if (!this.initialized || this.handledRequestID === request.id) return
+    if (
+      !this.initialized ||
+      (this.handledRequestID === request.id && this.handledRequestContentID === this.contentID)
+    ) {
+      return
+    }
     this.handledRequestID = request.id
+    this.handledRequestContentID = this.contentID
     this.restoreTransform = undefined
     this.performAction(request.action, {
       animated: request.animated ?? true,

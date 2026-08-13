@@ -82,6 +82,18 @@ describe('fd-canvas viewport', () => {
     expect(newWorldCenter.x).toBeCloseTo(oldWorldCenter.x)
     expect(newWorldCenter.y).toBeCloseTo(oldWorldCenter.y)
   })
+
+  it('applies the content change policy when content identity changes', async () => {
+    const element = await mount()
+    element.contentChangeBehavior = { kind: 'center' }
+    element.anchor({ x: 500, y: 500 }, { x: 300, y: 200 }, 2)
+    element.contentID = 'next'
+    await element.updateComplete
+
+    expect(element.viewport.transform.zoom).toBe(1)
+    expect(element.viewport.transform.offset.x).toBeCloseTo(200)
+    expect(element.viewport.transform.offset.y).toBeCloseTo(150)
+  })
 })
 
 describe('fd-canvas input and events', () => {
@@ -187,6 +199,28 @@ describe('fd-canvas input and events', () => {
     await element.updateComplete
 
     expect(element.viewport.transform).toEqual(focused)
+  })
+
+  it('handles the same request identity for new content', async () => {
+    const element = await mount()
+    element.contentID = 'first'
+    element.request = {
+      id: 'focus-node',
+      animated: false,
+      action: { kind: 'focus', rect: { x: 80, y: 40, width: 40, height: 20 }, zoom: 2 },
+    }
+    await element.updateComplete
+
+    element.contentID = 'second'
+    element.request = {
+      id: 'focus-node',
+      animated: false,
+      action: { kind: 'focus', rect: { x: 400, y: 400, width: 40, height: 20 }, zoom: 1 },
+    }
+    await element.updateComplete
+
+    expect(element.viewport.transform.zoom).toBe(1)
+    expect(element.viewport.transform.applyPoint({ x: 420, y: 410 })).toEqual({ x: 300, y: 200 })
   })
 
   it('lets consumers override smart magnification', async () => {
