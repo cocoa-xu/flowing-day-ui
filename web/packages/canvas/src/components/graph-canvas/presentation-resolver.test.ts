@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FdGraphCanvasContent, FdGraphCanvasLayoutAdapter } from '../../graph/content.js'
+import type {
+  FdGraphCanvasNodeResizeActions,
+  FdGraphCanvasSelectionResizeContext,
+} from '../../graph/contexts.js'
 import {
   FdGraphElementAddress,
   FdGraphInstanceHandle,
@@ -8,6 +12,7 @@ import {
   FdGraphPresentationLocalElementID,
 } from '../../graph/presentation.js'
 import { FdGraphCanvasSnapState } from '../../interactions/arrangement.js'
+import type { FdGraphCanvasEdgeReconnectionActions } from '../../interactions/connection-model.js'
 import {
   FdGraphCanvasSessionCommand,
   FdGraphCanvasSessionID,
@@ -251,13 +256,20 @@ describe('graph canvas presentation resolver', () => {
     const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
     element.style.cssText = 'width:800px;height:600px'
     element.content = makeContent()
-    element.configuration = { renderingBackend: 'dom' }
+    element.configuration = {
+      renderingBackend: 'dom',
+      connectionEditing: { isEnabled: true, allowsReconnection: true },
+      nodeResizing: { isEnabled: true },
+    }
     const renderedNodes: string[] = []
     const renderedPorts: string[] = []
     const renderedEdges: string[] = []
     const renderedLayers: string[] = []
     let selectSource: (() => void) | undefined
     let inspectSource: (() => void) | undefined
+    let resizeActions: FdGraphCanvasNodeResizeActions | undefined
+    let selectionResize: FdGraphCanvasSelectionResizeContext<string> | undefined
+    let reconnectionActions: FdGraphCanvasEdgeReconnectionActions | undefined
     const intents: unknown[] = []
     element.onIntent = (intent) => intents.push(intent)
     element.background = (context) => {
@@ -266,6 +278,7 @@ describe('graph canvas presentation resolver', () => {
     }
     element.decorations = (context) => {
       renderedLayers.push(`decorations:${context.content.presentation.nodes.length}`)
+      selectionResize = context.selectionResize
       return 'Decorations'
     }
     element.overlays = (context) => {
@@ -277,6 +290,7 @@ describe('graph canvas presentation resolver', () => {
       if (node.id === 'source') {
         selectSource = () => context.actions.select()
         inspectSource = () => context.actions.send('inspect')
+        resizeActions = context.resizeActions
       }
       return `Node ${node.id}`
     }
@@ -286,6 +300,7 @@ describe('graph canvas presentation resolver', () => {
     }
     element.edge = (edge, context) => {
       renderedEdges.push(`${edge.id}:${context.localID}:${context.worldRoute.segments.length}`)
+      reconnectionActions = context.reconnectionActions
       return `Edge ${edge.id}`
     }
     document.body.append(element)
@@ -313,13 +328,70 @@ describe('graph canvas presentation resolver', () => {
     )
     selectSource?.()
     inspectSource?.()
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     expect(element.session.selection).toEqual(new Set(['source']))
+    expect(selectionResize).toEqual(
+      expect.objectContaining({
+        anchorNodeID: 'source',
+        nodeIDs: new Set(['source']),
+        frame: { x: 0, y: 0, width: 100, height: 80 },
+        isResizing: false,
+      }),
+    )
     expect(intents).toEqual([
       expect.objectContaining({
         kind: 'elementAction',
         intent: expect.objectContaining({ action: 'inspect', elementID: 'source' }),
       }),
     ])
+    expect(resizeActions?.isEnabled).toBe(true)
+    resizeActions?.update(new Set(['trailing']), { width: 40, height: 0 })
+    expect(element.session.transientNodeResize).toEqual(
+      expect.objectContaining({
+        anchorNodeID: 'source',
+        nodeOrder: ['source'],
+        bounds: { x: 0, y: 0, width: 140, height: 80 },
+        edges: new Set(['trailing']),
+      }),
+    )
+    resizeActions?.end()
+    expect(intents.at(-1)).toEqual(
+      expect.objectContaining({
+        kind: 'nodeResizeCompleted',
+        intent: expect.objectContaining({
+          anchorNodeID: 'source',
+          changes: [
+            expect.objectContaining({
+              nodeID: 'source',
+              originTranslation: { width: 0, height: 0 },
+              sizeDelta: { width: 40, height: 0 },
+            }),
+          ],
+          edges: new Set(['trailing']),
+        }),
+      }),
+    )
+    expect(element.session.transientNodeResize).toBeUndefined()
+    const intentCount = intents.length
+    resizeActions?.update(new Set(['bottom']), { width: 0, height: 20 })
+    expect(element.session.transientNodeResize?.bounds).toEqual({
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+    })
+    resizeActions?.cancel()
+    expect(element.session.transientNodeResize).toBeUndefined()
+    expect(intents).toHaveLength(intentCount)
+    expect(reconnectionActions?.isEnabled).toBe(true)
+    reconnectionActions?.update('first', { width: 8, height: 0 })
+    expect(element.session.transientConnection?.origin).toMatchObject({
+      kind: 'reconnect',
+      edgeID: 'edge',
+      endpoint: 'first',
+    })
+    reconnectionActions?.cancel()
+    expect(element.session.transientConnection).toBeUndefined()
   })
 
   it('maps private engine selection and focus changes back to canonical session IDs', async () => {

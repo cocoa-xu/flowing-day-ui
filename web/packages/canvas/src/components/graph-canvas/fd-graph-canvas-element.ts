@@ -7,7 +7,12 @@ import type {
   FdCanvasViewportChangePhase,
 } from '../../configuration.js'
 import type { FdCanvasSmartMagnifyContext } from '../../events.js'
-import type { FdCanvasInsets, FdCanvasRenderSurface, FdCanvasViewport } from '../../geometry.js'
+import type {
+  FdCanvasInsets,
+  FdCanvasRect,
+  FdCanvasRenderSurface,
+  FdCanvasViewport,
+} from '../../geometry.js'
 import { insetCanvasRect, zeroCanvasInsets } from '../../geometry.js'
 import {
   type FdGraphCanvasConfiguration,
@@ -25,6 +30,7 @@ import {
   FdGraphCanvasNodeResizeActions,
   FdGraphCanvasOverlayContext,
   FdGraphCanvasPortContext,
+  FdGraphCanvasSelectionResizeContext,
   FdGraphCanvasSmartMagnifyContext,
   FdGraphCanvasWorldContext,
 } from '../../graph/contexts.js'
@@ -37,8 +43,12 @@ import type {
   FdGraphSelectionChangeDetail,
 } from '../../graph/events.js'
 import {
+  type FdGraphCanvasInteractionModifiers,
   FdGraphCanvasInteractionPolicy,
   FdGraphCanvasNodeCapabilities,
+  FdGraphCanvasNodeResizeAdmissionRequest,
+  FdGraphCanvasNodeResizeResolver,
+  type FdGraphCanvasResizeEdges,
 } from '../../graph/interaction-policy.js'
 import type { FdGraphElementID, FdGraphElementReference } from '../../graph/model.js'
 import { graphEdgeReference, graphNodeReference, graphPortReference } from '../../graph/model.js'
@@ -51,10 +61,15 @@ import {
   FdGraphCanvasArrangement,
   type FdGraphCanvasArrangementAction,
   type FdGraphCanvasGuide,
+  FdGraphCanvasResizeBehavior,
+  FdGraphCanvasResizeSnapRequest,
+  type FdGraphCanvasSnapCandidate,
 } from '../../interactions/arrangement.js'
 import {
   FdGraphCanvasConnectionPreview,
   FdGraphCanvasConnectionValidationRequest,
+  type FdGraphCanvasEdgeEndpoint,
+  FdGraphCanvasEdgeReconnectionActions,
   type FdGraphCanvasPortConnectionState,
   graphCanvasConnectionFixedElementID,
   graphCanvasConnectionMovingElementID,
@@ -68,10 +83,14 @@ import {
   type FdGraphCanvasFitScope,
   type FdGraphCanvasInteractionIntent,
   FdGraphCanvasNodeArrangementIntent,
+  FdGraphCanvasNodeResizeChange,
+  FdGraphCanvasNodeResizeIntent,
   type FdGraphCanvasSessionCommand,
   FdGraphCanvasSessionID,
   FdGraphCanvasSessionState,
+  FdGraphCanvasTransientNodeResize,
 } from '../../interactions/session.js'
+import { FdGraphCanvasTransientGeometry } from '../../interactions/transient-geometry.js'
 import { sameLayoutInputID } from '../../layout/model.js'
 import {
   FdGraphCanvasBackendContext,
@@ -253,6 +272,8 @@ export class FdGraphCanvas<
     const builder = this.decorations
     const content = this.content
     if (!builder || !content) return null
+    const selectionResize = this.selectionResizeContext(surface)
+    const connection = this.activeConnection()
     return builder(
       new FdGraphCanvasWorldContext({
         content,
@@ -260,11 +281,10 @@ export class FdGraphCanvas<
         renderContext,
         surface,
         guides,
-        ...(this.session.transientConnection
+        ...(selectionResize ? { selectionResize } : {}),
+        ...(connection
           ? {
-              connectionPreview: new FdGraphCanvasConnectionPreview(
-                this.session.transientConnection,
-              ),
+              connectionPreview: new FdGraphCanvasConnectionPreview(connection),
             }
           : {}),
       }),
@@ -305,12 +325,400 @@ export class FdGraphCanvas<
       isFocused: rendered.focused,
       isHovered: rendered.hovered,
       isBeingDragged: this.session.transientNodeDrag?.nodeIDs.has(data.presentation.id) === true,
-      isBeingResized: this.session.transientNodeResize?.nodeIDs.has(data.presentation.id) === true,
+      isBeingResized: this.activeNodeResize()?.nodeIDs.has(data.presentation.id) === true,
       capabilities: rendered.capabilities ?? FdGraphCanvasNodeCapabilities.standard,
       actions: this.elementActions(graphNodeReference(data.presentation.id), data.presentation.id),
-      resizeActions: FdGraphCanvasNodeResizeActions.disabled,
+      resizeActions: this.nodeResizeActions(
+        data.presentation.id,
+        rendered.capabilities ?? FdGraphCanvasNodeCapabilities.standard,
+      ),
     })
     return builder(data.presentation, context)
+  }
+
+  private nodeResizeActions(
+    elementID: ElementID,
+    capabilities: FdGraphCanvasNodeCapabilities,
+  ): FdGraphCanvasNodeResizeActions {
+    if (
+      !resolveGraphCanvasConfiguration(this.configuration).nodeResizing.isEnabled ||
+      !capabilities.contains(FdGraphCanvasNodeCapabilities.resizable)
+    ) {
+      return FdGraphCanvasNodeResizeActions.disabled
+    }
+    return new FdGraphCanvasNodeResizeActions({
+      isEnabled: true,
+      update: (edges, renderedTranslation) =>
+        this.updateNodeResize(elementID, edges, renderedTranslation),
+      end: () => this.endNodeResize(elementID),
+      cancel: () => this.cancelNodeResize(elementID),
+    })
+  }
+
+  private updateNodeResize(
+    elementID: ElementID,
+    edges: FdGraphCanvasResizeEdges,
+    renderedTranslation: { readonly width: number; readonly height: number },
+  ): void {
+    const content = this.content
+    if (
+      !content ||
+      this.session.tool !== 'select' ||
+      this.session.transientNodeDrag ||
+      this.session.transientConnection ||
+      !validResizeEdges(edges) ||
+      !this.interactionPolicy.nodeCapabilities
+        .capabilities(elementID)
+        .contains(FdGraphCanvasNodeCapabilities.resizable)
+    ) {
+      return
+    }
+    let resize = this.activeNodeResize()
+    if (resize?.anchorNodeID !== elementID || !sameResizeEdges(resize.edges, edges)) {
+      const candidateGeometry = this.resizeBaseGeometry(elementID)
+      if (!candidateGeometry.frames.has(elementID)) return
+      const request = new FdGraphCanvasNodeResizeAdmissionRequest({
+        anchorNodeID: elementID,
+        selectedNodeIDs: content.presentation.nodes
+          .map(({ id }) => id)
+          .filter((id) => this.session.selection.has(id)),
+        candidateNodeIDs: candidateGeometry.nodeOrder,
+        baseFrames: candidateGeometry.frames,
+        edges,
+        basePresentationSnapshotID: content.presentation.snapshotID,
+      })
+      const admittedNodeIDs = FdGraphCanvasNodeResizeResolver.admittedNodeIDs(
+        request,
+        this.interactionPolicy.admission(request),
+      )
+      if (admittedNodeIDs.size === 0) return
+      const baseGeometry = this.resizeBaseGeometry(elementID, admittedNodeIDs)
+      const constraints = this.resizeBoundsConstraints(baseGeometry.frames)
+      resize = new FdGraphCanvasTransientNodeResize({
+        anchorNodeID: elementID,
+        basePresentationSnapshotID: content.presentation.snapshotID,
+        baseLayoutInputID: content.id,
+        nodeOrder: baseGeometry.nodeOrder,
+        baseFrames: baseGeometry.frames,
+        minimumBoundsSize: constraints.minimumSize,
+        ...(constraints.maximumSize ? { maximumBoundsSize: constraints.maximumSize } : {}),
+        edges,
+      })
+      this.session.transientNodeResize = resize
+      if (!this.session.selection.has(elementID)) this.session.selection = new Set([elementID])
+      this.session.focusedElementID = elementID
+      this.syncEngineSession()
+    }
+    if (!resize) return
+    const modifiers = this.interactionPolicy.interactionModifiers
+    const zoom = this.session.viewport.transform.zoom
+    const worldTranslation = {
+      width: renderedTranslation.width / zoom,
+      height: renderedTranslation.height / zoom,
+    }
+    const behavior = resizeBehavior(
+      resize.baseBounds,
+      resize.edges,
+      worldTranslation,
+      modifiers,
+      resize.aspectRatioDrivingAxis,
+    )
+    resize.aspectRatioDrivingAxis = behavior.aspectRatioDrivingAxis
+    const proposedFrame = FdGraphCanvasTransientGeometry.resizing(
+      resize.baseBounds,
+      resize.edges,
+      worldTranslation,
+      behavior,
+    )
+    const configuration = resolveGraphCanvasConfiguration(this.configuration)
+    const searchRadius = configuration.snapping.searchRadius / zoom
+    const standardizedFrame = standardizedRect(proposedFrame)
+    const searchRect = {
+      x: standardizedFrame.x - searchRadius,
+      y: standardizedFrame.y - searchRadius,
+      width: standardizedFrame.width + searchRadius * 2,
+      height: standardizedFrame.height + searchRadius * 2,
+    }
+    const result = this.interactionPolicy.snappingStrategy.resize(
+      new FdGraphCanvasResizeSnapRequest({
+        baseFrame: resize.baseBounds,
+        proposedFrame,
+        edges: resize.edges,
+        candidates: configuration.snapping.isEnabled
+          ? this.snapCandidates(
+              searchRect,
+              resize.nodeIDs,
+              configuration.snapping.maximumCandidates,
+            )
+          : [],
+        configuration: configuration.snapping,
+        minimumSize: resize.minimumBoundsSize,
+        ...(resize.maximumBoundsSize ? { maximumSize: resize.maximumBoundsSize } : {}),
+        zoom,
+        snapState: resize.snapState,
+        allowsSnapping: !modifiers.has('disableSnapping'),
+        behavior,
+      }),
+    )
+    resize.bounds = result.frame
+    resize.guides = result.guides
+    resize.snapState = result.snapState
+    this.engine?.setPresentation({
+      frames: FdGraphCanvasTransientGeometry.scaling(
+        resize.baseFrames,
+        resize.baseBounds,
+        resize.bounds,
+      ),
+      guides: resize.guides,
+      selectionNodeIDs: resize.nodeIDs,
+    })
+  }
+
+  private resizeBaseGeometry(
+    anchorNodeID: ElementID,
+    admittedNodeIDs?: ReadonlySet<ElementID>,
+  ): {
+    readonly nodeOrder: readonly ElementID[]
+    readonly frames: ReadonlyMap<ElementID, FdCanvasRect>
+  } {
+    const content = this.content
+    if (!content) return { nodeOrder: [], frames: new Map() }
+    const selectedNodeIDs = this.session.selection.has(anchorNodeID)
+      ? this.session.selection
+      : new Set([anchorNodeID])
+    const effectiveNodeIDs = admittedNodeIDs
+      ? new Set([...selectedNodeIDs].filter((nodeID) => admittedNodeIDs.has(nodeID)))
+      : selectedNodeIDs
+    const geometry = [...this.resizableNodeGeometry(effectiveNodeIDs)]
+    const anchorIndex = geometry.findIndex(({ id }) => id === anchorNodeID)
+    if (anchorIndex > 0) geometry.unshift(...geometry.splice(anchorIndex, 1))
+    return {
+      nodeOrder: geometry.map(({ id }) => id),
+      frames: new Map(geometry.map(({ id, frame }) => [id, frame])),
+    }
+  }
+
+  private resizableNodeGeometry(
+    elementIDs: ReadonlySet<ElementID>,
+  ): readonly { readonly id: ElementID; readonly frame: FdCanvasRect }[] {
+    const content = this.content
+    if (!content) return []
+    return content.presentation.nodes.flatMap((node) => {
+      const frame = content.frame(node.localID)
+      return elementIDs.has(node.id) &&
+        frame &&
+        this.interactionPolicy.nodeCapabilities
+          .capabilities(node.id)
+          .contains(FdGraphCanvasNodeCapabilities.resizable)
+        ? [{ id: node.id, frame }]
+        : []
+    })
+  }
+
+  private resizeBoundsConstraints(baseFrames: ReadonlyMap<ElementID, FdCanvasRect>): {
+    readonly minimumSize: { readonly width: number; readonly height: number }
+    readonly maximumSize?: { readonly width: number; readonly height: number }
+  } {
+    let minimumHorizontalScale = 0
+    let minimumVerticalScale = 0
+    let maximumHorizontalScale = Number.MAX_VALUE
+    let maximumVerticalScale = Number.MAX_VALUE
+    let hasMaximumSize = false
+    let baseBounds: FdCanvasRect | undefined
+    const fallbackMinimumSize = resolveGraphCanvasConfiguration(this.configuration).nodeResizing
+      .minimumSize
+    for (const [nodeID, frame] of baseFrames) {
+      baseBounds = baseBounds ? unionRects(baseBounds, frame) : frame
+      const constraints = this.interactionPolicy.nodeSizeConstraints.constraints(
+        nodeID,
+        fallbackMinimumSize,
+      )
+      if (frame.width > 0) {
+        minimumHorizontalScale = Math.max(
+          minimumHorizontalScale,
+          constraints.minimumSize.width / frame.width,
+        )
+        if (constraints.maximumSize) {
+          maximumHorizontalScale = Math.min(
+            maximumHorizontalScale,
+            constraints.maximumSize.width / frame.width,
+          )
+          hasMaximumSize = true
+        }
+      }
+      if (frame.height > 0) {
+        minimumVerticalScale = Math.max(
+          minimumVerticalScale,
+          constraints.minimumSize.height / frame.height,
+        )
+        if (constraints.maximumSize) {
+          maximumVerticalScale = Math.min(
+            maximumVerticalScale,
+            constraints.maximumSize.height / frame.height,
+          )
+          hasMaximumSize = true
+        }
+      }
+    }
+    const bounds = baseBounds ?? { x: 0, y: 0, width: 0, height: 0 }
+    const minimumSize = {
+      width: bounds.width * minimumHorizontalScale,
+      height: bounds.height * minimumVerticalScale,
+    }
+    return {
+      minimumSize,
+      ...(hasMaximumSize
+        ? {
+            maximumSize: {
+              width: Math.max(minimumSize.width, bounds.width * maximumHorizontalScale),
+              height: Math.max(minimumSize.height, bounds.height * maximumVerticalScale),
+            },
+          }
+        : {}),
+    }
+  }
+
+  private snapCandidates(
+    searchRect: FdCanvasRect,
+    excludedIDs: ReadonlySet<ElementID>,
+    maximumCandidates: number,
+  ): readonly FdGraphCanvasSnapCandidate[] {
+    const content = this.content
+    if (!content) return []
+    const candidates: FdGraphCanvasSnapCandidate[] = []
+    for (const localID of content.nodeLocalIDs(searchRect)) {
+      const elementID = content.elementID(localID)
+      const frame = content.frame(localID)
+      if (
+        elementID === undefined ||
+        !frame ||
+        excludedIDs.has(elementID) ||
+        !this.interactionPolicy.nodeCapabilities
+          .capabilities(elementID)
+          .contains(FdGraphCanvasNodeCapabilities.arrangementParticipant)
+      ) {
+        continue
+      }
+      candidates.push({ id: elementID, frame })
+      if (candidates.length === maximumCandidates) break
+    }
+    return candidates
+  }
+
+  private activeNodeResize(): FdGraphCanvasTransientNodeResize<ElementID> | undefined {
+    const content = this.content
+    const resize = this.session.transientNodeResize
+    return content &&
+      !this.session.transientNodeDrag &&
+      resize &&
+      resize.basePresentationSnapshotID === content.presentation.snapshotID &&
+      sameLayoutInputID(resize.baseLayoutInputID, content.id)
+      ? resize
+      : undefined
+  }
+
+  private activeConnection() {
+    const content = this.content
+    const connection = this.session.transientConnection
+    return content &&
+      resolveGraphCanvasConfiguration(this.configuration).connectionEditing.isEnabled &&
+      !this.session.transientNodeDrag &&
+      !this.activeNodeResize() &&
+      connection &&
+      connection.basePresentationSnapshotID === content.presentation.snapshotID &&
+      sameLayoutInputID(connection.baseLayoutInputID, content.id)
+      ? connection
+      : undefined
+  }
+
+  private selectionResizeContext(
+    surface: FdCanvasRenderSurface,
+  ): FdGraphCanvasSelectionResizeContext<ElementID> | undefined {
+    const configuration = resolveGraphCanvasConfiguration(this.configuration)
+    if (
+      !configuration.nodeResizing.isEnabled ||
+      this.session.tool !== 'select' ||
+      this.session.transientNodeDrag ||
+      this.activeConnection()
+    ) {
+      return undefined
+    }
+    const resize = this.activeNodeResize()
+    let anchorNodeID: ElementID
+    let nodeIDs: ReadonlySet<ElementID>
+    let frame: FdCanvasRect
+    if (resize) {
+      anchorNodeID = resize.anchorNodeID
+      nodeIDs = resize.nodeIDs
+      frame = resize.bounds
+    } else {
+      const selectedNodes = this.resizableNodeGeometry(this.session.selection)
+      const firstNode = selectedNodes[0]
+      if (!firstNode) return undefined
+      anchorNodeID =
+        selectedNodes.find(({ id }) => id === this.session.focusedElementID)?.id ?? firstNode.id
+      nodeIDs = new Set(selectedNodes.map(({ id }) => id))
+      frame = selectedNodes
+        .slice(1)
+        .reduce((bounds, node) => unionRects(bounds, node.frame), firstNode.frame)
+    }
+    const actions = this.nodeResizeActions(
+      anchorNodeID,
+      this.interactionPolicy.nodeCapabilities.capabilities(anchorNodeID),
+    )
+    if (!actions.isEnabled) return undefined
+    return new FdGraphCanvasSelectionResizeContext({
+      anchorNodeID,
+      nodeIDs,
+      frame,
+      renderedFrame: surface.localTransform.applyRect(frame),
+      renderScale: surface.localTransform.zoom,
+      isResizing: resize !== undefined,
+      actions,
+    })
+  }
+
+  private endNodeResize(elementID: ElementID): void {
+    const resize = this.activeNodeResize()
+    if (!resize || resize.anchorNodeID !== elementID) return
+    if (!sameRect(resize.bounds, resize.baseBounds)) {
+      const frames = FdGraphCanvasTransientGeometry.scaling(
+        resize.baseFrames,
+        resize.baseBounds,
+        resize.bounds,
+      )
+      const changes = resize.nodeOrder.flatMap((nodeID) => {
+        const baseFrame = resize.baseFrames.get(nodeID)
+        const frame = frames.get(nodeID)
+        return baseFrame && frame
+          ? [
+              new FdGraphCanvasNodeResizeChange(
+                nodeID,
+                { width: frame.x - baseFrame.x, height: frame.y - baseFrame.y },
+                { width: frame.width - baseFrame.width, height: frame.height - baseFrame.height },
+              ),
+            ]
+          : []
+      })
+      this.onIntent({
+        kind: 'nodeResizeCompleted',
+        intent: new FdGraphCanvasNodeResizeIntent(
+          resize.anchorNodeID,
+          changes,
+          resize.edges,
+          resize.basePresentationSnapshotID,
+          resize.baseLayoutInputID,
+        ),
+      })
+    }
+    if (this.session.transientNodeResize === resize) this.session.transientNodeResize = undefined
+    this.engine?.setPresentation({ frames: new Map(), guides: [] })
+  }
+
+  private cancelNodeResize(elementID: ElementID): void {
+    if (this.session.transientNodeResize?.anchorNodeID !== elementID) return
+    this.session.transientNodeResize = undefined
+    this.engine?.setPresentation({ frames: new Map(), guides: [] })
   }
 
   private readonly renderPortContent = (
@@ -384,20 +792,22 @@ export class FdGraphCanvas<
       frame.viewport.transform.zoom
     const worldFrame = insetCanvasRect(worldRoute.conservativeBounds, -worldPadding)
     const renderedFrame = frame.viewport.transform.applyRect(worldFrame)
+    const renderedRoute = FdGraphCanvasRenderingGeometry.transformed(
+      worldRoute,
+      frame.viewport.transform,
+      renderedFrame,
+    )
+    const anchors = new FdGraphCanvasEdgeAnchors(
+      new FdGraphCanvasAnchor(rendered.source, baseAnchors.first.normal),
+      new FdGraphCanvasAnchor(rendered.target, baseAnchors.second.normal),
+      baseAnchors.isDirected,
+    )
     const context = new FdGraphCanvasEdgeContext({
       elementID: data.presentation.id,
       localID: data.localID,
       worldRoute,
-      renderedRoute: FdGraphCanvasRenderingGeometry.transformed(
-        worldRoute,
-        frame.viewport.transform,
-        renderedFrame,
-      ),
-      anchors: new FdGraphCanvasEdgeAnchors(
-        new FdGraphCanvasAnchor(rendered.source, baseAnchors.first.normal),
-        new FdGraphCanvasAnchor(rendered.target, baseAnchors.second.normal),
-        baseAnchors.isDirected,
-      ),
+      renderedRoute,
+      anchors,
       worldFrame,
       renderedFrame,
       renderScale: frame.viewport.transform.zoom,
@@ -409,8 +819,99 @@ export class FdGraphCanvas<
         rendered.target.x !== (data.route.segments.at(-1)?.end.x ?? data.route.start.x) ||
         rendered.target.y !== (data.route.segments.at(-1)?.end.y ?? data.route.start.y),
       actions: this.elementActions(graphEdgeReference(data.presentation.id), data.presentation.id),
+      reconnectionActions: this.edgeReconnectionActions(data.presentation, anchors, renderedRoute),
     })
     return builder(data.presentation, context)
+  }
+
+  private edgeReconnectionActions(
+    edge: FdGraphPresentationEdge<ElementID>,
+    anchors: FdGraphCanvasEdgeAnchors,
+    renderedRoute: ReturnType<typeof FdGraphCanvasRenderingGeometry.transformed>,
+  ): FdGraphCanvasEdgeReconnectionActions {
+    const configuration = resolveGraphCanvasConfiguration(this.configuration).connectionEditing
+    const endpointIDs =
+      edge.endpoints.kind === 'directed'
+        ? { first: edge.endpoints.source.id, second: edge.endpoints.target.id }
+        : { first: edge.endpoints.first.id, second: edge.endpoints.second.id }
+    if (!configuration.isEnabled || !configuration.allowsReconnection) {
+      return FdGraphCanvasEdgeReconnectionActions.disabled
+    }
+    const firstOrigin = {
+      kind: 'reconnect' as const,
+      edgeID: edge.id,
+      endpoint: 'first' as const,
+      originalEndpointID: endpointIDs.first,
+      fixedEndpointID: endpointIDs.second,
+    }
+    const secondOrigin = {
+      kind: 'reconnect' as const,
+      edgeID: edge.id,
+      endpoint: 'second' as const,
+      originalEndpointID: endpointIDs.second,
+      fixedEndpointID: endpointIDs.first,
+    }
+    return new FdGraphCanvasEdgeReconnectionActions({
+      canReconnectFirst: this.interactionPolicy.connectionPolicy.canBegin(firstOrigin),
+      canReconnectSecond: this.interactionPolicy.connectionPolicy.canBegin(secondOrigin),
+      firstRenderedPosition: renderedRoute.start,
+      secondRenderedPosition: renderedRoute.segments.at(-1)?.end ?? renderedRoute.start,
+      update: (endpoint, renderedTranslation) =>
+        this.updateReconnection(edge.id, endpointIDs, endpoint, anchors, renderedTranslation),
+      end: () => this.engine?.completeConnection(),
+      cancel: () => this.engine?.cancelConnection(),
+    })
+  }
+
+  private updateReconnection(
+    edgeID: ElementID,
+    endpointIDs: { readonly first: ElementID; readonly second: ElementID },
+    endpoint: FdGraphCanvasEdgeEndpoint,
+    anchors: FdGraphCanvasEdgeAnchors,
+    renderedTranslation: { readonly width: number; readonly height: number },
+  ): void {
+    const originalEndpointID = endpoint === 'first' ? endpointIDs.first : endpointIDs.second
+    const fixedEndpointID = endpoint === 'first' ? endpointIDs.second : endpointIDs.first
+    const origin = {
+      kind: 'reconnect' as const,
+      edgeID,
+      endpoint,
+      originalEndpointID,
+      fixedEndpointID,
+    }
+    const activeOrigin = this.session.transientConnection?.origin
+    if (
+      activeOrigin?.kind !== 'reconnect' ||
+      activeOrigin.edgeID !== edgeID ||
+      activeOrigin.endpoint !== endpoint
+    ) {
+      const original = this.engineConnectionEndpoint(originalEndpointID)
+      const fixed = this.engineConnectionEndpoint(fixedEndpointID)
+      if (
+        !original ||
+        !fixed ||
+        !this.interactionPolicy.connectionPolicy.canBegin(origin) ||
+        !this.engine?.beginConnection({ kind: 'reconnect', edgeID, endpoint, original, fixed })
+      ) {
+        return
+      }
+    }
+    const anchor = endpoint === 'first' ? anchors.first : anchors.second
+    const zoom = this.session.viewport.transform.zoom
+    this.engine?.updateConnection({
+      x: anchor.position.x + renderedTranslation.width / zoom,
+      y: anchor.position.y + renderedTranslation.height / zoom,
+    })
+  }
+
+  private engineConnectionEndpoint(
+    elementID: ElementID,
+  ): { readonly nodeID: ElementID; readonly portID: ElementID } | undefined {
+    const content = this.content
+    const localID = content?.localID(elementID)
+    const nodeLocalID = localID ? content?.nodeLocalID(localID) : undefined
+    const nodeID = nodeLocalID ? content?.elementID(nodeLocalID) : undefined
+    return nodeID === undefined ? undefined : { nodeID, portID: elementID }
   }
 
   private elementActions(
@@ -906,6 +1407,65 @@ export class FdGraphCanvas<
     return this.content?.contains(elementID as ElementID) ? (elementID as ElementID) : undefined
   }
 }
+
+const validResizeEdges = (edges: FdGraphCanvasResizeEdges): boolean =>
+  edges.size > 0 &&
+  !(edges.has('leading') && edges.has('trailing')) &&
+  !(edges.has('top') && edges.has('bottom'))
+
+const sameResizeEdges = (
+  first: FdGraphCanvasResizeEdges,
+  second: FdGraphCanvasResizeEdges,
+): boolean => first.size === second.size && [...first].every((edge) => second.has(edge))
+
+const resizeBehavior = (
+  baseFrame: FdCanvasRect,
+  edges: FdGraphCanvasResizeEdges,
+  translation: { readonly width: number; readonly height: number },
+  modifiers: FdGraphCanvasInteractionModifiers,
+  lockedAspectRatioAxis: 'horizontal' | 'vertical' | undefined,
+): FdGraphCanvasResizeBehavior => {
+  const preservesAspectRatio = modifiers.has('preserveResizeAspectRatio')
+  const horizontal = edges.has('leading') || edges.has('trailing')
+  const vertical = edges.has('top') || edges.has('bottom')
+  const aspectRatioDrivingAxis = !preservesAspectRatio
+    ? undefined
+    : horizontal && vertical
+      ? (lockedAspectRatioAxis ??
+        FdGraphCanvasTransientGeometry.dominantAxis(translation, {
+          width: baseFrame.width,
+          height: baseFrame.height,
+        }))
+      : horizontal
+        ? 'horizontal'
+        : 'vertical'
+  return new FdGraphCanvasResizeBehavior({
+    preservesAspectRatio,
+    resizesFromCenter: modifiers.has('resizeFromCenter'),
+    ...(aspectRatioDrivingAxis ? { aspectRatioDrivingAxis } : {}),
+  })
+}
+
+const unionRects = (first: FdCanvasRect, second: FdCanvasRect): FdCanvasRect => {
+  const x = Math.min(first.x, second.x)
+  const y = Math.min(first.y, second.y)
+  const maximumX = Math.max(first.x + first.width, second.x + second.width)
+  const maximumY = Math.max(first.y + first.height, second.y + second.height)
+  return { x, y, width: maximumX - x, height: maximumY - y }
+}
+
+const sameRect = (first: FdCanvasRect, second: FdCanvasRect): boolean =>
+  first.x === second.x &&
+  first.y === second.y &&
+  first.width === second.width &&
+  first.height === second.height
+
+const standardizedRect = (rect: FdCanvasRect): FdCanvasRect => ({
+  x: Math.min(rect.x, rect.x + rect.width),
+  y: Math.min(rect.y, rect.y + rect.height),
+  width: Math.abs(rect.width),
+  height: Math.abs(rect.height),
+})
 
 declare global {
   interface HTMLElementTagNameMap {
