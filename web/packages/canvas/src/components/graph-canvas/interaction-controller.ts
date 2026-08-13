@@ -6,6 +6,7 @@ import type {
 } from '../../graph/events.js'
 import type { FdGraphElementID } from '../../graph/model.js'
 import { graphElementIDFromKey } from '../../graph/model.js'
+import type { FdGraphCanvasNodeCapabilities } from '../../graph/interaction-policy.js'
 import type { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
 import {
   type FdGraphGuide,
@@ -46,6 +47,7 @@ export interface FdGraphCanvasInteractionDelegate {
   readonly snapshotID: string | number
   readonly resolvedConfiguration: FdResolvedGraphCanvasInteractionConfiguration
   readonly selectedNodeIDs: ReadonlySet<FdGraphElementID>
+  nodeCapabilities(nodeID: FdGraphElementID): Required<FdGraphCanvasNodeCapabilities>
   viewportPoint(event: PointerEvent): FdCanvasPoint
   nodeIDAtViewportPoint(point: FdCanvasPoint): FdGraphElementID | undefined
   setSelection(
@@ -208,7 +210,7 @@ export class FdGraphCanvasInteractionController {
 
   private beginNodeInteraction(event: PointerEvent, nodeID: FdGraphElementID): boolean {
     const node = this.delegate.graphIndex.nodes.get(nodeID)
-    if (!node || node.capabilities?.selectable === false) return false
+    if (!node) return false
     const configuration = this.delegate.resolvedConfiguration
     const mode = graphSelectionMode(event.shiftKey, event.metaKey, event.ctrlKey)
     const initial = this.delegate.selectedNodeIDs
@@ -226,7 +228,7 @@ export class FdGraphCanvasInteractionController {
       return selected ? [selected] : []
     })
     const candidateNodes = (configuration.multipleNodeDragging ? selectedNodes : [node]).filter(
-      ({ capabilities }) => capabilities?.draggable !== false,
+      ({ id }) => this.delegate.nodeCapabilities(id).draggable,
     )
     const request: FdGraphNodeDragAdmissionRequest = {
       anchorNode: node,
@@ -274,9 +276,9 @@ export class FdGraphCanvasInteractionController {
     })
     if (selectedNodes.length === 0) return false
     const anchorNode = selectedNodes[0]
-    if (!anchorNode || anchorNode.capabilities?.resizable === false) return false
+    if (!anchorNode || !this.delegate.nodeCapabilities(anchorNode.id).resizable) return false
     const candidateNodes = (configuration.groupResizing ? selectedNodes : [anchorNode]).filter(
-      ({ capabilities }) => capabilities?.resizable !== false,
+      ({ id }) => this.delegate.nodeCapabilities(id).resizable,
     )
     const candidateFrames = new Map(candidateNodes.map(({ id, frame }) => [id, frame]))
     const request = {

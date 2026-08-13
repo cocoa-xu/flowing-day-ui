@@ -490,11 +490,18 @@ describe('fd-graph-canvas pointer editing', () => {
       frameUpdates: 'local',
       multipleNodeDragging: true,
       snapping: { enabled: false },
-      admitNodeDrag: ({ anchorNode, selectedNodes, candidateNodes, snapshotID }) => {
-        expect(anchorNode.id).toBe('source')
-        expect(selectedNodes.map(({ id }) => id)).toEqual(['source', 'target'])
-        expect(candidateNodes.map(({ id }) => id)).toEqual(['source', 'target'])
-        expect(snapshotID).toBe('graph-1')
+    }
+    element.interactionPolicy = {
+      admitNodeDrag: ({
+        anchorNodeID,
+        selectedNodeIDs,
+        candidateNodeIDs,
+        basePresentationSnapshotID,
+      }) => {
+        expect(anchorNodeID).toBe('source')
+        expect(selectedNodeIDs).toEqual(['source', 'target'])
+        expect(candidateNodeIDs).toEqual(['source', 'target'])
+        expect(basePresentationSnapshotID).toBe('graph-1')
         return { kind: 'allowOnly', nodeIDs: new Set(['source']) }
       },
     }
@@ -538,13 +545,13 @@ describe('fd-graph-canvas pointer editing', () => {
   })
 
   it('honors node capabilities and consumer drag policy', async () => {
-    const snapshot = graphSnapshot()
-    const element = await mount({
-      ...snapshot,
-      nodes: snapshot.nodes.map((node) =>
-        node.id === 'source' ? { ...node, capabilities: { draggable: false } } : node,
-      ),
-    })
+    const element = await mount()
+    element.interactionPolicy = {
+      nodeCapabilities: {
+        overrides: new Map([['source', { draggable: false }]]),
+      },
+    }
+    await element.updateComplete
     const canvas = preparePointerInput(element)
     const events: FdGraphNodeFramesChangeDetail[] = []
     element.addEventListener('fd-graph-node-frames-change', (event) => events.push(event.detail))
@@ -749,8 +756,11 @@ describe('fd-graph-canvas pointer editing', () => {
       frameUpdates: 'local',
       nodeResizing: true,
       snapping: { enabled: false },
-      nodeSizeConstraints: ({ id }) =>
-        id === 'source' ? { maximumWidth: 200, maximumHeight: 100 } : undefined,
+    }
+    element.interactionPolicy = {
+      nodeSizeConstraints: {
+        overrides: new Map([['source', { maximumWidth: 200, maximumHeight: 100 }]]),
+      },
     }
     await element.updateComplete
     const handle = element.shadowRoot?.querySelector<HTMLElement>(
@@ -779,11 +789,13 @@ describe('fd-graph-canvas pointer editing', () => {
       frameUpdates: 'local',
       nodeResizing: true,
       snapping: { enabled: false },
-      admitNodeResize: ({ anchorNode, candidateNodes, baseFrames, handle }) => {
-        expect(anchorNode.id).toBe('source')
-        expect(candidateNodes.map(({ id }) => id)).toEqual(['source', 'target'])
+    }
+    element.interactionPolicy = {
+      admitNodeResize: ({ anchorNodeID, candidateNodeIDs, baseFrames, edges }) => {
+        expect(anchorNodeID).toBe('source')
+        expect(candidateNodeIDs).toEqual(['source', 'target'])
         expect([...baseFrames.keys()]).toEqual(['source', 'target'])
-        expect(handle).toBe('bottomRight')
+        expect(edges).toBe('bottomRight')
         return { kind: 'allowOnly', nodeIDs: new Set(['source']) }
       },
     }
@@ -1213,15 +1225,12 @@ describe('fd-graph-canvas keyboard editing', () => {
   })
 
   it('respects keyboard navigation and dragging capabilities independently', async () => {
-    const snapshot = graphSnapshot()
-    const element = await mount({
-      ...snapshot,
-      nodes: snapshot.nodes.map((node) =>
-        node.id === 'target'
-          ? { ...node, capabilities: { ...node.capabilities, keyboardNavigable: false } }
-          : node,
-      ),
-    })
+    const element = await mount()
+    element.interactionPolicy = {
+      nodeCapabilities: {
+        overrides: new Map([['target', { keyboardNavigable: false }]]),
+      },
+    }
     const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
     element.focusedNodeID = 'source'
     await element.updateComplete
@@ -1306,15 +1315,12 @@ describe('fd-graph-canvas arrangement', () => {
   })
 
   it('excludes nodes that opt out of arrangement actions', async () => {
-    const snapshot = graphSnapshot()
-    const element = await mount({
-      ...snapshot,
-      nodes: snapshot.nodes.map((node) =>
-        node.id === 'target'
-          ? { ...node, capabilities: { ...node.capabilities, arrangementParticipant: false } }
-          : node,
-      ),
-    })
+    const element = await mount()
+    element.interactionPolicy = {
+      nodeCapabilities: {
+        overrides: new Map([['target', { arrangementParticipant: false }]]),
+      },
+    }
     element.selectedNodeIDs = new Set(['source', 'target'])
     await element.updateComplete
 
