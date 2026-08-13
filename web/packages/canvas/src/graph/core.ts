@@ -123,7 +123,7 @@ export class FdGraphEdge<Schema extends FdGraphSchema = FdGraphSchema> {
   }
 }
 
-export type FdGraphOrderPosition<ID extends FdGraphElementID = FdGraphElementID> =
+export type FdGraphOrderPosition<ID = FdGraphElementID> =
   | { readonly kind: 'first' }
   | { readonly kind: 'last' }
   | { readonly kind: 'before'; readonly id: ID }
@@ -132,10 +132,10 @@ export type FdGraphOrderPosition<ID extends FdGraphElementID = FdGraphElementID>
 export const FdGraphOrderPosition = Object.freeze({
   first: { kind: 'first' } as const,
   last: { kind: 'last' } as const,
-  before<ID extends FdGraphElementID>(id: ID): FdGraphOrderPosition<ID> {
+  before<ID>(id: ID): FdGraphOrderPosition<ID> {
     return { kind: 'before', id }
   },
-  after<ID extends FdGraphElementID>(id: ID): FdGraphOrderPosition<ID> {
+  after<ID>(id: ID): FdGraphOrderPosition<ID> {
     return { kind: 'after', id }
   },
 })
