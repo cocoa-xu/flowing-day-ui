@@ -21,6 +21,7 @@ import {
   type FdCanvasInsets,
   type FdCanvasPoint,
   type FdCanvasRect,
+  type FdCanvasRenderSurface,
   FdCanvasTransform,
   FdCanvasViewport,
   zeroCanvasInsets,
@@ -148,6 +149,7 @@ import {
   FdGraphWebGL2RenderingBackend,
   type FdGraphWebGL2RenderingBackendConfiguration,
 } from '../../rendering/webgl2-backend.js'
+import { FdCanvasProxy, FdCanvasRenderContext } from '../../rendering-context.js'
 import type { FdCanvas, FdCanvasTransformOptions } from '../canvas/fd-canvas.js'
 import '../canvas/fd-canvas.js'
 import type { FdGraphMiniMap } from '../graph-minimap/fd-graph-minimap.js'
@@ -687,13 +689,16 @@ export class FdGraphCanvasEngine
     }
 
     .consumer-background,
-    .consumer-overlay {
+    .consumer-overlay,
+    .consumer-decorations {
       position: absolute;
       inset: 0;
       pointer-events: none;
     }
 
-    .consumer-overlay ::slotted(*) {
+    .consumer-overlay ::slotted(*),
+    .consumer-overlay > :not(slot),
+    .consumer-decorations > * {
       pointer-events: auto;
     }
 
@@ -752,6 +757,18 @@ export class FdGraphCanvasEngine
     () => 0
   @property({ attribute: false }) guideRenderer: FdGraphGuideRenderer =
     new FdGraphDefaultGuideRenderer()
+  @property({ attribute: false })
+  background: ((context: FdCanvasRenderContext) => Node | string | null) | undefined
+  @property({ attribute: false })
+  decorations:
+    | ((
+        context: FdCanvasRenderContext,
+        surface: FdCanvasRenderSurface,
+        guides: readonly FdGraphCanvasGuide[],
+      ) => Node | string | null)
+    | undefined
+  @property({ attribute: false })
+  overlays: ((proxy: FdCanvasProxy) => Node | string | null) | undefined
 
   @property({ attribute: false })
   get selectedElements(): readonly FdGraphElementReference[] {
@@ -816,6 +833,9 @@ export class FdGraphCanvasEngine
   @query('fd-canvas') private canvas!: FdCanvas
   @query('.render-viewport') private renderViewport!: HTMLElement
   @query('.render-world') private renderWorld!: HTMLElement
+  @query('.builder-background') private builderBackground!: HTMLElement
+  @query('.consumer-decorations') private consumerDecorations!: HTMLElement
+  @query('.builder-overlay') private builderOverlay!: HTMLElement
   @query('.interaction-world') private interactionWorld!: HTMLElement
   @query('.selection-bounds') private selectionBoundsElement!: HTMLElement
   @query('.selection-marquee') private marqueeElement!: HTMLElement
@@ -971,9 +991,14 @@ export class FdGraphCanvasEngine
         @focusin=${this.handleKeyboardFocusIn}
         @keydown=${this.handleKeyDown}
       >
-        <div class="consumer-background" slot="background"><slot name="background"></slot></div>
+        <div class="consumer-background" slot="background">
+          <div class="builder-background"></div>
+          <slot name="background"></slot>
+        </div>
         <div class="render-viewport" slot="background"></div>
-        <div class="render-world" slot="world"></div>
+        <div class="render-world" slot="world">
+          <div class="consumer-decorations"></div>
+        </div>
         <div class="interaction-world" slot="world">
           <svg class="connection-preview-layer" aria-hidden="true">
             <path class="connection-preview" hidden></path>
@@ -996,7 +1021,10 @@ export class FdGraphCanvasEngine
             )}
           </div>
         </div>
-        <div class="consumer-overlay" slot="overlay"><slot name="overlay"></slot></div>
+        <div class="consumer-overlay" slot="overlay">
+          <div class="builder-overlay"></div>
+          <slot name="overlay"></slot>
+        </div>
         ${
           this.miniMapConfiguration
             ? html`
@@ -1040,6 +1068,7 @@ export class FdGraphCanvasEngine
     this.canvas.addEventListener('click', this.handleGraphClick, { capture: true })
     this.activateBackend()
     this.rebuildSnapshot()
+    this.syncRenderBuilders()
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -1067,6 +1096,9 @@ export class FdGraphCanvasEngine
     }
     if (changed.has('renderingConfiguration') && !this.renderingAdapter) {
       this.activateBackend()
+    }
+    if (changed.has('background') || changed.has('decorations') || changed.has('overlays')) {
+      this.syncRenderBuilders()
     }
     if (changed.has('edgeGeometryResolver')) {
       this.renderGeometryCache.invalidate()
@@ -1304,6 +1336,13 @@ export class FdGraphCanvasEngine
         ? this.selectedElements.filter((reference) => reference.kind !== 'node')
         : []
     this.setElementSelection([...nonNodes, ...[...selection].map(graphNodeReference)], detail)
+  }
+
+  selectElement(
+    reference: FdGraphElementReference,
+    mode: FdGraphCanvasSelectionMode = 'replace',
+  ): boolean {
+    return this.selectElementReference(reference, mode, 'programmatic')
   }
 
   private selectElementReference(
@@ -2732,6 +2771,43 @@ export class FdGraphCanvasEngine
       pixelRatio: window.devicePixelRatio,
     }
     this.backend.render(frame)
+    this.syncRenderBuilders()
+  }
+
+  private syncRenderBuilders(): void {
+    if (
+      !this.canvas ||
+      !this.builderBackground ||
+      !this.consumerDecorations ||
+      !this.builderOverlay
+    ) {
+      return
+    }
+    const context = new FdCanvasRenderContext(this.canvas.viewport, this.renderWorldRect)
+    this.replaceBuilderContent(this.builderBackground, this.background?.(context) ?? null)
+    if (this.decorations) {
+      this.renderWorld.append(this.consumerDecorations)
+      this.replaceBuilderContent(
+        this.consumerDecorations,
+        this.decorations(context, context.renderSurface(), this.interactionPresentation.guides),
+      )
+    } else this.consumerDecorations.replaceChildren()
+    const proxy = new FdCanvasProxy({
+      context,
+      setZoom: (zoom, phase, animated) => this.setZoom(zoom, { phase, animated }),
+      anchor: (worldPoint, viewportPoint, zoom, phase, animated) =>
+        this.anchor(worldPoint, viewportPoint, zoom, { phase, animated }),
+      focus: (rect, zoom, animated) => this.focusRect(rect, zoom, { animated }),
+      fit: (rect, padding, maximumZoom, animated) =>
+        this.fitRect(rect, padding, maximumZoom, { animated }),
+    })
+    this.replaceBuilderContent(this.builderOverlay, this.overlays?.(proxy) ?? null)
+  }
+
+  private replaceBuilderContent(container: HTMLElement, content: Node | string | null): void {
+    if (content instanceof Node) container.replaceChildren(content)
+    else if (typeof content === 'string') container.textContent = content
+    else container.replaceChildren()
   }
 
   private endpointPoint(edge: FdAnyGraphEdge, endpoint: 'source' | 'target'): FdCanvasPoint {

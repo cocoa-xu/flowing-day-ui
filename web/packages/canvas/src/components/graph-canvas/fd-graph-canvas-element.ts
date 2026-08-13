@@ -7,14 +7,27 @@ import type {
   FdCanvasViewportChangePhase,
 } from '../../configuration.js'
 import type { FdCanvasSmartMagnifyContext } from '../../events.js'
-import type { FdCanvasInsets, FdCanvasViewport } from '../../geometry.js'
-import { zeroCanvasInsets } from '../../geometry.js'
+import type { FdCanvasInsets, FdCanvasRenderSurface, FdCanvasViewport } from '../../geometry.js'
+import { insetCanvasRect, zeroCanvasInsets } from '../../geometry.js'
 import {
   type FdGraphCanvasConfiguration,
   resolveGraphCanvasConfiguration,
 } from '../../graph/configuration.js'
-import type { FdGraphCanvasContent } from '../../graph/content.js'
-import { FdGraphCanvasSmartMagnifyContext } from '../../graph/contexts.js'
+import {
+  FdGraphCanvasAnchor,
+  type FdGraphCanvasContent,
+  FdGraphCanvasEdgeAnchors,
+} from '../../graph/content.js'
+import {
+  FdGraphCanvasEdgeContext,
+  FdGraphCanvasElementActions,
+  FdGraphCanvasNodeContext,
+  FdGraphCanvasNodeResizeActions,
+  FdGraphCanvasOverlayContext,
+  FdGraphCanvasPortContext,
+  FdGraphCanvasSmartMagnifyContext,
+  FdGraphCanvasWorldContext,
+} from '../../graph/contexts.js'
 import type {
   FdGraphConnectionCancelDetail,
   FdGraphConnectionCompleteDetail,
@@ -29,10 +42,23 @@ import {
 } from '../../graph/interaction-policy.js'
 import type { FdGraphElementID, FdGraphElementReference } from '../../graph/model.js'
 import { graphEdgeReference, graphNodeReference, graphPortReference } from '../../graph/model.js'
+import type {
+  FdGraphPresentationEdge,
+  FdGraphPresentationNode,
+  FdGraphPresentationPort,
+} from '../../graph/presentation.js'
 import {
   FdGraphCanvasArrangement,
   type FdGraphCanvasArrangementAction,
+  type FdGraphCanvasGuide,
 } from '../../interactions/arrangement.js'
+import {
+  FdGraphCanvasConnectionPreview,
+  FdGraphCanvasConnectionValidationRequest,
+  type FdGraphCanvasPortConnectionState,
+  graphCanvasConnectionFixedElementID,
+  graphCanvasConnectionMovingElementID,
+} from '../../interactions/connection-model.js'
 import {
   type FdGraphCanvasSelectionCommand,
   FdGraphCanvasSessionReducer,
@@ -50,11 +76,21 @@ import { sameLayoutInputID } from '../../layout/model.js'
 import {
   FdGraphCanvasBackendContext,
   type FdGraphCanvasWebGL2VisualAdapter,
+  type FdGraphRenderEdge,
+  type FdGraphRenderFrame,
   type FdGraphRenderingBackend,
+  type FdGraphRenderPort,
 } from '../../rendering/backend.js'
+import { FdGraphCanvasRenderingGeometry } from '../../rendering/geometry.js'
+import type { FdGraphWebGL2RenderingBackendConfiguration } from '../../rendering/webgl2-backend.js'
+import type { FdCanvasProxy, FdCanvasRenderContext } from '../../rendering-context.js'
 import type { FdGraphCanvasEngine } from './fd-graph-canvas.js'
 import './fd-graph-canvas.js'
 import {
+  type FdGraphCanvasEngineEdgeData,
+  type FdGraphCanvasEngineNodeData,
+  type FdGraphCanvasEnginePort,
+  type FdGraphCanvasEnginePortData,
   graphCanvasEngineEdgeGeometryResolver,
   graphCanvasEngineSnapshot,
 } from './engine-adapter.js'
@@ -67,6 +103,32 @@ import {
   graphCanvasTransientNodeDrag,
   graphCanvasTransientNodeResize,
 } from './engine-interaction-adapter.js'
+
+export type FdGraphCanvasNodeBuilder<ElementID extends FdGraphElementID = FdGraphElementID> = (
+  node: FdGraphPresentationNode<ElementID>,
+  context: FdGraphCanvasNodeContext<ElementID>,
+) => Node | string | null
+
+export type FdGraphCanvasEdgeBuilder<ElementID extends FdGraphElementID = FdGraphElementID> = (
+  edge: FdGraphPresentationEdge<ElementID>,
+  context: FdGraphCanvasEdgeContext<ElementID>,
+) => Node | string | null
+
+export type FdGraphCanvasPortBuilder<ElementID extends FdGraphElementID = FdGraphElementID> = (
+  port: FdGraphPresentationPort<ElementID>,
+  context: FdGraphCanvasPortContext<ElementID>,
+) => Node | string | null
+
+export type FdGraphCanvasBackgroundBuilder = (
+  context: FdCanvasRenderContext,
+) => Node | string | null
+
+export type FdGraphCanvasDecorationsBuilder<ElementID extends FdGraphElementID = FdGraphElementID> =
+  (context: FdGraphCanvasWorldContext<ElementID>) => Node | string | null
+
+export type FdGraphCanvasOverlaysBuilder<ElementID extends FdGraphElementID = FdGraphElementID> = (
+  context: FdGraphCanvasOverlayContext<ElementID>,
+) => Node | string | null
 
 @customElement('fd-graph-canvas')
 export class FdGraphCanvas<
@@ -91,6 +153,13 @@ export class FdGraphCanvas<
   @property({ attribute: false }) configuration: FdGraphCanvasConfiguration = {}
   @property({ attribute: false })
   webGL2VisualAdapter: FdGraphCanvasWebGL2VisualAdapter<ElementID> | undefined
+  @property({ attribute: false }) node: FdGraphCanvasNodeBuilder<ElementID> | undefined
+  @property({ attribute: false }) edge: FdGraphCanvasEdgeBuilder<ElementID> | undefined
+  @property({ attribute: false }) port: FdGraphCanvasPortBuilder<ElementID> | undefined
+  @property({ attribute: false }) background: FdGraphCanvasBackgroundBuilder | undefined
+  @property({ attribute: false })
+  decorations: FdGraphCanvasDecorationsBuilder<ElementID> | undefined
+  @property({ attribute: false }) overlays: FdGraphCanvasOverlaysBuilder<ElementID> | undefined
   @property({ attribute: false })
   accessibilitySnapshot: FdGraphCanvasAccessibilitySnapshot | undefined
   @property({ attribute: false }) contentInsets: FdCanvasInsets = zeroCanvasInsets
@@ -113,6 +182,14 @@ export class FdGraphCanvas<
 
   @query('fd-graph-canvas-engine') private engine: FdGraphCanvasEngine | undefined
   private handledCommandID: string | undefined
+  private engineConfigurationSource: FdGraphCanvasConfiguration | undefined
+  private engineConfigurationUsesVisualAdapter = false
+  private engineConfigurationValue: FdGraphCanvasConfiguration = {}
+  private renderingConfigurationKey = ''
+  private renderingConfigurationValue: FdGraphWebGL2RenderingBackendConfiguration = {}
+  private visualAdapterSource: FdGraphCanvasWebGL2VisualAdapter<ElementID> | undefined
+  private visualAdapterContent: FdGraphCanvasContent<ElementID> | undefined
+  private visualAdapterBackend: FdGraphRenderingBackend | undefined
 
   override render() {
     const content = this.content
@@ -122,10 +199,14 @@ export class FdGraphCanvas<
         .snapshot=${graphCanvasEngineSnapshot(content)}
         .layoutInputID=${content.id}
         .accessibilitySnapshot=${this.accessibilitySnapshot}
-        .configuration=${this.configuration}
+        .configuration=${this.resolveEngineConfiguration()}
         .contentInsets=${this.contentInsets}
         .contentChangeBehavior=${this.contentChangeBehavior}
         .renderingAdapter=${this.resolveVisualAdapter(content)}
+        .renderingConfiguration=${this.resolveRenderingConfiguration()}
+        .background=${this.background}
+        .decorations=${this.decorations ? this.renderDecorations : undefined}
+        .overlays=${this.overlays ? this.renderOverlays : undefined}
         .edgeGeometryResolver=${graphCanvasEngineEdgeGeometryResolver}
         .interactionPolicy=${this.interactionPolicy}
         .tool=${this.session.tool}
@@ -146,12 +227,250 @@ export class FdGraphCanvas<
     `
   }
 
+  private resolveRenderingConfiguration(): FdGraphWebGL2RenderingBackendConfiguration {
+    const edgeContentPadding = resolveGraphCanvasConfiguration(this.configuration).edgeRenderPadding
+    const key = `${this.node !== undefined}:${this.edge !== undefined}:${this.port !== undefined}:${edgeContentPadding}`
+    if (key === this.renderingConfigurationKey) return this.renderingConfigurationValue
+    this.renderingConfigurationKey = key
+    this.renderingConfigurationValue = {
+      ...(this.node ? { createNodeContent: this.renderNodeContent } : {}),
+      ...(this.edge
+        ? {
+            createEdgeContent: this.renderEdgeContent,
+            edgeContentPadding,
+          }
+        : {}),
+      ...(this.port ? { createPortContent: this.renderPortContent } : {}),
+    }
+    return this.renderingConfigurationValue
+  }
+
+  private readonly renderDecorations = (
+    renderContext: FdCanvasRenderContext,
+    surface: FdCanvasRenderSurface,
+    guides: readonly FdGraphCanvasGuide[],
+  ): Node | string | null => {
+    const builder = this.decorations
+    const content = this.content
+    if (!builder || !content) return null
+    return builder(
+      new FdGraphCanvasWorldContext({
+        content,
+        session: this.session,
+        renderContext,
+        surface,
+        guides,
+        ...(this.session.transientConnection
+          ? {
+              connectionPreview: new FdGraphCanvasConnectionPreview(
+                this.session.transientConnection,
+              ),
+            }
+          : {}),
+      }),
+    )
+  }
+
+  private readonly renderOverlays = (proxy: FdCanvasProxy): Node | string | null => {
+    const builder = this.overlays
+    const content = this.content
+    if (!builder || !content) return null
+    return builder(
+      new FdGraphCanvasOverlayContext({
+        sessionID: this.sessionID,
+        content,
+        session: this.session,
+        proxy,
+      }),
+    )
+  }
+
+  private readonly renderNodeContent = (
+    rendered: FdGraphRenderFrame['nodes'][number],
+    frame: FdGraphRenderFrame,
+  ): Node | string | null => {
+    const builder = this.node
+    const content = this.content
+    const data = rendered.node.data as FdGraphCanvasEngineNodeData<ElementID> | undefined
+    const baseFrame = data ? content?.frame(data.localID) : undefined
+    if (!builder || !content || !data || !baseFrame) return null
+    const context = new FdGraphCanvasNodeContext({
+      elementID: data.presentation.id,
+      localID: data.localID,
+      baseFrame,
+      frame: rendered.frame,
+      renderedFrame: frame.viewport.transform.applyRect(rendered.frame),
+      renderScale: frame.viewport.transform.zoom,
+      isSelected: rendered.selected,
+      isFocused: rendered.focused,
+      isHovered: rendered.hovered,
+      isBeingDragged: this.session.transientNodeDrag?.nodeIDs.has(data.presentation.id) === true,
+      isBeingResized: this.session.transientNodeResize?.nodeIDs.has(data.presentation.id) === true,
+      capabilities: rendered.capabilities ?? FdGraphCanvasNodeCapabilities.standard,
+      actions: this.elementActions(graphNodeReference(data.presentation.id), data.presentation.id),
+      resizeActions: FdGraphCanvasNodeResizeActions.disabled,
+    })
+    return builder(data.presentation, context)
+  }
+
+  private readonly renderPortContent = (
+    rendered: FdGraphRenderPort,
+    frame: FdGraphRenderFrame,
+  ): Node | string | null => {
+    const builder = this.port
+    const content = this.content
+    const data = (rendered.port as FdGraphCanvasEnginePort<ElementID>).data as
+      | FdGraphCanvasEnginePortData<ElementID>
+      | undefined
+    const nodeData = rendered.node.data as FdGraphCanvasEngineNodeData<ElementID> | undefined
+    const anchor = data ? content?.anchor(data.localID) : undefined
+    if (!builder || !content || !data || !nodeData || !anchor) return null
+    const context = new FdGraphCanvasPortContext({
+      elementID: data.presentation.id,
+      localID: data.localID,
+      nodeLocalID: nodeData.localID,
+      anchor,
+      renderedPosition: frame.viewport.transform.applyPoint(rendered.position),
+      renderScale: frame.viewport.transform.zoom,
+      isSelected: rendered.selected,
+      isHovered: rendered.hovered,
+      connectionState: this.portConnectionState(data.presentation.id),
+      actions: this.elementActions(
+        graphPortReference(rendered.node.id, data.presentation.id),
+        data.presentation.id,
+      ),
+    })
+    return builder(data.presentation, context)
+  }
+
+  private portConnectionState(elementID: ElementID): FdGraphCanvasPortConnectionState {
+    const connection = this.session.transientConnection
+    if (!connection) return { kind: 'idle' }
+    if (connection.candidatePortID === elementID && connection.validation) {
+      return { kind: 'target', validation: connection.validation, isCandidate: true }
+    }
+    if (
+      graphCanvasConnectionFixedElementID(connection.origin) === elementID ||
+      graphCanvasConnectionMovingElementID(connection.origin) === elementID
+    ) {
+      return { kind: 'source' }
+    }
+    return {
+      kind: 'target',
+      validation: this.interactionPolicy.connectionPolicy.validate(
+        new FdGraphCanvasConnectionValidationRequest({
+          origin: connection.origin,
+          targetPortID: elementID,
+          basePresentationSnapshotID: connection.basePresentationSnapshotID,
+          baseLayoutInputID: connection.baseLayoutInputID,
+        }),
+      ),
+      isCandidate: false,
+    }
+  }
+
+  private readonly renderEdgeContent = (
+    rendered: FdGraphRenderEdge,
+    frame: FdGraphRenderFrame,
+  ): Node | string | null => {
+    const builder = this.edge
+    const content = this.content
+    const data = rendered.edge.data as FdGraphCanvasEngineEdgeData<ElementID> | undefined
+    const baseAnchors = data ? content?.edgeAnchors(data.localID) : undefined
+    if (!builder || !content || !data || !baseAnchors) return null
+    const worldRoute = rendered.geometry.route
+    const worldPadding =
+      resolveGraphCanvasConfiguration(this.configuration).edgeRenderPadding /
+      frame.viewport.transform.zoom
+    const worldFrame = insetCanvasRect(worldRoute.conservativeBounds, -worldPadding)
+    const renderedFrame = frame.viewport.transform.applyRect(worldFrame)
+    const context = new FdGraphCanvasEdgeContext({
+      elementID: data.presentation.id,
+      localID: data.localID,
+      worldRoute,
+      renderedRoute: FdGraphCanvasRenderingGeometry.transformed(
+        worldRoute,
+        frame.viewport.transform,
+        renderedFrame,
+      ),
+      anchors: new FdGraphCanvasEdgeAnchors(
+        new FdGraphCanvasAnchor(rendered.source, baseAnchors.first.normal),
+        new FdGraphCanvasAnchor(rendered.target, baseAnchors.second.normal),
+        baseAnchors.isDirected,
+      ),
+      worldFrame,
+      renderedFrame,
+      renderScale: frame.viewport.transform.zoom,
+      isSelected: rendered.selected,
+      isHovered: rendered.hovered,
+      isTransient:
+        rendered.source.x !== data.route.start.x ||
+        rendered.source.y !== data.route.start.y ||
+        rendered.target.x !== (data.route.segments.at(-1)?.end.x ?? data.route.start.x) ||
+        rendered.target.y !== (data.route.segments.at(-1)?.end.y ?? data.route.start.y),
+      actions: this.elementActions(graphEdgeReference(data.presentation.id), data.presentation.id),
+    })
+    return builder(data.presentation, context)
+  }
+
+  private elementActions(
+    reference: FdGraphElementReference,
+    elementID: ElementID,
+  ): FdGraphCanvasElementActions {
+    return new FdGraphCanvasElementActions({
+      select: (mode) => this.engine?.selectElement(reference, mode ?? 'replace'),
+      send: (action) => {
+        const content = this.content
+        if (!content) return
+        if (resolveGraphCanvasConfiguration(this.configuration).connectionEditing.isEnabled) {
+          if (action === 'beginConnection' && reference.kind === 'port') {
+            this.engine?.beginConnection({ kind: 'new', source: reference })
+            return
+          }
+          if (action === 'completeConnection' && reference.kind === 'port') {
+            const localID = content.localID(elementID)
+            const anchor = localID ? content.anchor(localID) : undefined
+            if (anchor) this.engine?.updateConnection(anchor.position)
+            this.engine?.completeConnection()
+            return
+          }
+          if (action === 'cancelConnection') {
+            this.engine?.cancelConnection()
+            return
+          }
+        }
+        this.onIntent({
+          kind: 'elementAction',
+          intent: new FdGraphCanvasElementActionIntent(
+            action,
+            elementID,
+            content.presentation.snapshotID,
+          ),
+        })
+      },
+    })
+  }
+
   private resolveVisualAdapter(
     content: FdGraphCanvasContent<ElementID>,
   ): FdGraphRenderingBackend | undefined {
     const adapter = this.webGL2VisualAdapter
-    if (!adapter?.isAvailable) return undefined
-    return adapter.call(
+    if (this.configuration.renderingBackend === 'dom' || !adapter?.isAvailable) {
+      this.visualAdapterSource = undefined
+      this.visualAdapterContent = undefined
+      this.visualAdapterBackend = undefined
+      return undefined
+    }
+    if (
+      this.visualAdapterSource === adapter &&
+      this.visualAdapterContent === content &&
+      this.visualAdapterBackend
+    ) {
+      return this.visualAdapterBackend
+    }
+    this.visualAdapterSource = adapter
+    this.visualAdapterContent = content
+    this.visualAdapterBackend = adapter.call(
       new FdGraphCanvasBackendContext({
         content,
         sessionID: this.sessionID,
@@ -169,6 +488,25 @@ export class FdGraphCanvas<
         onIntent: this.onIntent,
       }),
     )
+    return this.visualAdapterBackend
+  }
+
+  private resolveEngineConfiguration(): FdGraphCanvasConfiguration {
+    const usesVisualAdapter =
+      this.configuration.renderingBackend !== 'dom' &&
+      this.webGL2VisualAdapter?.isAvailable === true
+    if (
+      this.engineConfigurationSource === this.configuration &&
+      this.engineConfigurationUsesVisualAdapter === usesVisualAdapter
+    ) {
+      return this.engineConfigurationValue
+    }
+    this.engineConfigurationSource = this.configuration
+    this.engineConfigurationUsesVisualAdapter = usesVisualAdapter
+    this.engineConfigurationValue = usesVisualAdapter
+      ? this.configuration
+      : { ...this.configuration, renderingBackend: 'dom' }
+    return this.engineConfigurationValue
   }
 
   protected override updated(changed: PropertyValues<this>): void {

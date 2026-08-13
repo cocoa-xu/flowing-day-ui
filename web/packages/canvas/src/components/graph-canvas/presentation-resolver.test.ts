@@ -206,6 +206,7 @@ describe('graph canvas presentation resolver', () => {
       portID: 'source-output',
     })
     expect(engine?.tool).toBe('pan')
+    expect(engine?.configuration.renderingBackend).toBe('dom')
   })
 
   it('provides the Swift-aligned backend context to a WebGL2 visual adapter', async () => {
@@ -244,6 +245,81 @@ describe('graph canvas presentation resolver', () => {
     expect(receivedContent).toBe(content)
     expect(receivedSessionID).toBe(sessionID)
     expect(receivedSession).toBe(session)
+  })
+
+  it('provides presentation values and Swift-aligned contexts to render builders', async () => {
+    const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
+    element.style.cssText = 'width:800px;height:600px'
+    element.content = makeContent()
+    element.configuration = { renderingBackend: 'dom' }
+    const renderedNodes: string[] = []
+    const renderedPorts: string[] = []
+    const renderedEdges: string[] = []
+    const renderedLayers: string[] = []
+    let selectSource: (() => void) | undefined
+    let inspectSource: (() => void) | undefined
+    const intents: unknown[] = []
+    element.onIntent = (intent) => intents.push(intent)
+    element.background = (context) => {
+      renderedLayers.push(`background:${context.zoom}`)
+      return 'Background'
+    }
+    element.decorations = (context) => {
+      renderedLayers.push(`decorations:${context.content.presentation.nodes.length}`)
+      return 'Decorations'
+    }
+    element.overlays = (context) => {
+      renderedLayers.push(`overlays:${context.sessionID.rawValue}`)
+      return 'Overlays'
+    }
+    element.node = (node, context) => {
+      renderedNodes.push(`${node.id}:${context.localID}:${context.renderScale}`)
+      if (node.id === 'source') {
+        selectSource = () => context.actions.select()
+        inspectSource = () => context.actions.send('inspect')
+      }
+      return `Node ${node.id}`
+    }
+    element.port = (port, context) => {
+      renderedPorts.push(`${port.id}:${context.localID}:${context.nodeLocalID}`)
+      return `Port ${port.id}`
+    }
+    element.edge = (edge, context) => {
+      renderedEdges.push(`${edge.id}:${context.localID}:${context.worldRoute.segments.length}`)
+      return `Edge ${edge.id}`
+    }
+    document.body.append(element)
+    await element.updateComplete
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+    expect(renderedNodes).toHaveLength(2)
+    expect(renderedPorts).toHaveLength(2)
+    expect(renderedEdges).toEqual([`edge:${edgeLocalID}:1`])
+    const engine = element.shadowRoot?.querySelector('fd-graph-canvas-engine')
+    expect(engine?.shadowRoot?.querySelector('.graph-node')?.textContent).toContain('Node source')
+    expect(engine?.shadowRoot?.querySelector('.graph-edge-content')?.textContent).toBe('Edge edge')
+    expect(engine?.shadowRoot?.querySelector('.builder-background')?.textContent).toBe('Background')
+    expect(engine?.shadowRoot?.querySelector('.consumer-decorations')?.textContent).toBe(
+      'Decorations',
+    )
+    expect(engine?.shadowRoot?.querySelector('.builder-overlay')?.textContent).toBe('Overlays')
+    expect(renderedLayers).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^background:/),
+        'decorations:2',
+        expect.stringMatching(/^overlays:/),
+      ]),
+    )
+    selectSource?.()
+    inspectSource?.()
+    expect(element.session.selection).toEqual(new Set(['source']))
+    expect(intents).toEqual([
+      expect.objectContaining({
+        kind: 'elementAction',
+        intent: expect.objectContaining({ action: 'inspect', elementID: 'source' }),
+      }),
+    ])
   })
 
   it('maps private engine selection and focus changes back to canonical session IDs', async () => {

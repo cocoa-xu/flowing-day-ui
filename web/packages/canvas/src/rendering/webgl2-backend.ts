@@ -242,6 +242,7 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
   private readonly maximumDOMNodeCount: number
   private readonly minimumDOMNodeZoom: number
   private readonly maximumEdgeLabelCount: number
+  private readonly rendersCustomEdges: boolean
   private surface: FdGraphRenderingSurface | undefined
   private context: WebGL2RenderingContext | undefined
   private programs: FdGraphWebGL2Programs | undefined
@@ -271,6 +272,7 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
       configuration.maximumEdgeLabelCount ?? 500,
       'maximum edge label count',
     )
+    this.rendersCustomEdges = configuration.createEdgeContent !== undefined
     this.nodeBackend = new FdGraphDOMRenderingBackend({
       ...(configuration.createNodeContent
         ? { createNodeContent: configuration.createNodeContent }
@@ -278,12 +280,21 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
       ...(configuration.createEdgeLabelContent
         ? { createEdgeLabelContent: configuration.createEdgeLabelContent }
         : {}),
+      ...(configuration.createEdgeContent
+        ? { createEdgeContent: configuration.createEdgeContent }
+        : {}),
+      ...(configuration.createPortContent
+        ? { createPortContent: configuration.createPortContent }
+        : {}),
+      ...(configuration.edgeContentPadding === undefined
+        ? {}
+        : { edgeContentPadding: configuration.edgeContentPadding }),
       ...(configuration.minimumEdgeLabelZoom === undefined
         ? {}
         : { minimumEdgeLabelZoom: configuration.minimumEdgeLabelZoom }),
       rendersEdgeDecorations: false,
       rendersEdgePaths: false,
-      rendersEdgeLabels: true,
+      rendersEdgeLabels: !this.rendersCustomEdges,
     })
     this.fallbackBackend = new FdGraphDOMRenderingBackend({
       ...(configuration.createNodeContent
@@ -292,9 +303,25 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
       ...(configuration.createEdgeLabelContent
         ? { createEdgeLabelContent: configuration.createEdgeLabelContent }
         : {}),
+      ...(configuration.createEdgeContent
+        ? { createEdgeContent: configuration.createEdgeContent }
+        : {}),
+      ...(configuration.createPortContent
+        ? { createPortContent: configuration.createPortContent }
+        : {}),
+      ...(configuration.edgeContentPadding === undefined
+        ? {}
+        : { edgeContentPadding: configuration.edgeContentPadding }),
       ...(configuration.minimumEdgeLabelZoom === undefined
         ? {}
         : { minimumEdgeLabelZoom: configuration.minimumEdgeLabelZoom }),
+      ...(this.rendersCustomEdges
+        ? {
+            rendersEdgeDecorations: false,
+            rendersEdgePaths: false,
+            rendersEdgeLabels: false,
+          }
+        : {}),
     })
   }
 
@@ -325,7 +352,7 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
       frame.nodes.length <= this.maximumDOMNodeCount &&
       frame.viewport.transform.zoom >= this.minimumDOMNodeZoom
     const labelEdges =
-      frame.edges.length <= this.maximumEdgeLabelCount
+      this.rendersCustomEdges || frame.edges.length <= this.maximumEdgeLabelCount
         ? frame.edges
         : frame.edges.filter(({ focused, hovered, selected }) => focused || hovered || selected)
     this.nodeBackend.render({
@@ -448,11 +475,15 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
     const context = this.context
     const buffers = this.buffers
     if (!context || !buffers) return
-    const edgeSegments = frame.edges.flatMap((rendered) =>
-      graphEdgeCubicSegments(rendered.geometry).map((segment) => ({ rendered, segment })),
-    )
+    const edgeSegments = this.rendersCustomEdges
+      ? []
+      : frame.edges.flatMap((rendered) =>
+          graphEdgeCubicSegments(rendered.geometry).map((segment) => ({ rendered, segment })),
+        )
     const edgeData = new Float32Array(edgeSegments.length * edgeStride)
-    const arrows = frame.edges.filter(({ geometry }) => geometry.targetArrow !== undefined)
+    const arrows = this.rendersCustomEdges
+      ? []
+      : frame.edges.filter(({ geometry }) => geometry.targetArrow !== undefined)
     const arrowData = new Float32Array(arrows.length * arrowStride)
     const nodeData = new Float32Array(frame.nodes.length * nodeStride)
     const defaultEdge = this.cssColor('--fd-canvas-edge-color', '#aeb5af')

@@ -17,6 +17,7 @@ import type {
   FdAnyGraphNode,
   FdGraphElementID,
   FdGraphElementReference,
+  FdGraphPort,
 } from '../graph/model.js'
 import type {
   FdGraphCanvasInteractionIntent,
@@ -47,6 +48,15 @@ export interface FdGraphRenderEdge {
   readonly source: FdCanvasPoint
   readonly target: FdCanvasPoint
   readonly geometry: FdGraphEdgeGeometry
+  readonly selected: boolean
+  readonly focused: boolean
+  readonly hovered: boolean
+}
+
+export interface FdGraphRenderPort {
+  readonly node: FdAnyGraphNode
+  readonly port: FdGraphPort
+  readonly position: FdCanvasPoint
   readonly selected: boolean
   readonly focused: boolean
   readonly hovered: boolean

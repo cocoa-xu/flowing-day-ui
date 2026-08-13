@@ -1,17 +1,33 @@
 import { FdGraphCanvasNodeCapabilities } from '../graph/interaction-policy.js'
 import type { FdGraphPort } from '../graph/model.js'
-import { graphElementKey } from '../graph/model.js'
+import { graphElementKey, graphPortPoint } from '../graph/model.js'
 import type {
   FdGraphRenderEdge,
   FdGraphRenderFrame,
   FdGraphRenderingBackend,
   FdGraphRenderingSurface,
+  FdGraphRenderPort,
 } from './backend.js'
 import { type FdGraphArrowGeometry, graphEdgePath, graphEdgePoint } from './edge-geometry.js'
 
 export interface FdGraphDOMRenderingBackendConfiguration {
-  readonly createNodeContent?: (node: FdGraphRenderFrame['nodes'][number]) => Node | string | null
-  readonly createEdgeLabelContent?: (edge: FdGraphRenderEdge) => Node | string | null
+  readonly createNodeContent?: (
+    node: FdGraphRenderFrame['nodes'][number],
+    frame: FdGraphRenderFrame,
+  ) => Node | string | null
+  readonly createEdgeContent?: (
+    edge: FdGraphRenderEdge,
+    frame: FdGraphRenderFrame,
+  ) => Node | string | null
+  readonly createEdgeLabelContent?: (
+    edge: FdGraphRenderEdge,
+    frame: FdGraphRenderFrame,
+  ) => Node | string | null
+  readonly createPortContent?: (
+    port: FdGraphRenderPort,
+    frame: FdGraphRenderFrame,
+  ) => Node | string | null
+  readonly edgeContentPadding?: number
   readonly minimumEdgeLabelZoom?: number
   readonly rendersEdgeDecorations?: boolean
   readonly rendersEdgePaths?: boolean
@@ -27,8 +43,10 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
   private readonly portElementsByNode = new Map<string, readonly HTMLElement[]>()
   private readonly edgeElements = new Map<string, SVGPathElement>()
   private readonly edgeArrowElements = new Map<string, SVGPathElement>()
+  private readonly edgeContentElements = new Map<string, HTMLElement>()
   private readonly edgeLabelElements = new Map<string, HTMLElement>()
   private readonly edgeLayer = document.createElementNS(svgNamespace, 'svg')
+  private readonly edgeContentLayer = document.createElement('div')
   private readonly edgeLabelLayer = document.createElement('div')
   private readonly nodeLayer = document.createElement('div')
   private surface: FdGraphRenderingSurface | undefined
@@ -44,9 +62,19 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     ) {
       throw new RangeError('minimum edge label zoom must be nonnegative')
     }
+    if (
+      configuration.edgeContentPadding !== undefined &&
+      (!Number.isFinite(configuration.edgeContentPadding) || configuration.edgeContentPadding < 0)
+    ) {
+      throw new RangeError('edge content padding must be nonnegative')
+    }
     this.edgeLayer.classList.add('graph-edge-layer')
     this.edgeLayer.setAttribute('part', 'edge-layer')
     this.edgeLayer.setAttribute('aria-hidden', 'true')
+    this.edgeContentLayer.classList.add('graph-edge-content-layer')
+    this.edgeContentLayer.setAttribute('part', 'edge-content-layer')
+    this.edgeContentLayer.style.cssText =
+      'position:absolute;inset:0;pointer-events:none;overflow:hidden'
     this.edgeLabelLayer.classList.add('graph-edge-label-layer')
     this.edgeLabelLayer.setAttribute('part', 'edge-label-layer')
     this.edgeLabelLayer.setAttribute('aria-hidden', 'true')
@@ -60,6 +88,7 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     this.unmount()
     this.surface = surface
     surface.world.append(this.edgeLayer, this.edgeLabelLayer, this.nodeLayer)
+    surface.viewport.append(this.edgeContentLayer)
   }
 
   render(frame: FdGraphRenderFrame): void {
@@ -69,7 +98,10 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     if (
       frame.snapshotRevision === this.renderedSnapshotRevision &&
       frame.presentationRevision === this.renderedPresentationRevision &&
-      edgeLabelsVisible === this.renderedEdgeLabelVisibility
+      edgeLabelsVisible === this.renderedEdgeLabelVisibility &&
+      !this.configuration.createNodeContent &&
+      !this.configuration.createPortContent &&
+      !this.configuration.createEdgeContent
     ) {
       return
     }
@@ -82,15 +114,18 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
 
   unmount(): void {
     this.edgeLayer.remove()
+    this.edgeContentLayer.remove()
     this.edgeLabelLayer.remove()
     this.nodeLayer.remove()
     this.edgeLayer.replaceChildren()
+    this.edgeContentLayer.replaceChildren()
     this.edgeLabelLayer.replaceChildren()
     this.nodeLayer.replaceChildren()
     this.nodeElements.clear()
     this.portElementsByNode.clear()
     this.edgeElements.clear()
     this.edgeArrowElements.clear()
+    this.edgeContentElements.clear()
     this.edgeLabelElements.clear()
     this.surface = undefined
     this.renderedSnapshotRevision = -1
@@ -141,9 +176,13 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
         'aria-label',
         rendered.node.accessibilityLabel ?? rendered.node.label ?? String(rendered.node.id),
       )
-      if (element.dataset.fdSnapshotRevision !== String(frame.snapshotRevision)) {
-        const ports = this.portElements(rendered.node)
-        element.replaceChildren(this.nodeContent(rendered), ...ports)
+      if (
+        element.dataset.fdSnapshotRevision !== String(frame.snapshotRevision) ||
+        this.configuration.createNodeContent ||
+        this.configuration.createPortContent
+      ) {
+        const ports = this.portElements(rendered, frame)
+        element.replaceChildren(this.nodeContent(rendered, frame), ...ports)
         this.portElementsByNode.set(key, ports)
         element.dataset.fdSnapshotRevision = String(frame.snapshotRevision)
       }
@@ -157,8 +196,11 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     }
   }
 
-  private nodeContent(rendered: FdGraphRenderFrame['nodes'][number]): Node {
-    const custom = this.configuration.createNodeContent?.(rendered)
+  private nodeContent(
+    rendered: FdGraphRenderFrame['nodes'][number],
+    frame: FdGraphRenderFrame,
+  ): Node {
+    const custom = this.configuration.createNodeContent?.(rendered, frame)
     if (custom instanceof Node) return custom
     if (typeof custom === 'string') return document.createTextNode(custom)
     const content = document.createElement('span')
@@ -179,7 +221,11 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     return content
   }
 
-  private portElements(node: FdGraphRenderFrame['nodes'][number]['node']): HTMLElement[] {
+  private portElements(
+    renderedNode: FdGraphRenderFrame['nodes'][number],
+    frame: FdGraphRenderFrame,
+  ): HTMLElement[] {
+    const node = renderedNode.node
     return (node.ports ?? []).map((port: FdGraphPort) => {
       const element = document.createElement('span')
       element.className = 'graph-port'
@@ -190,6 +236,20 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
       element.style.setProperty('--fd-graph-port-offset', `${(port.offset ?? 0.5) * 100}%`)
       element.setAttribute('aria-hidden', 'true')
       if (port.label) element.title = port.label
+      const rendered: FdGraphRenderPort = {
+        node,
+        port,
+        position: graphPortPoint({ ...node, frame: renderedNode.frame }, port.id),
+        selected: frame.selectedPortIDsByNode.get(node.id)?.has(port.id) === true,
+        focused:
+          frame.focusedElement?.kind === 'port' &&
+          frame.focusedElement.nodeID === node.id &&
+          frame.focusedElement.portID === port.id,
+        hovered: false,
+      }
+      const custom = this.configuration.createPortContent?.(rendered, frame)
+      if (custom instanceof Node) element.append(custom)
+      else if (typeof custom === 'string') element.textContent = custom
       return element
     })
   }
@@ -248,8 +308,10 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
         rendered.edge.label &&
         edgeLabelsVisible
       )
-        this.updateEdgeLabel(key, rendered, frame.snapshotRevision)
+        this.updateEdgeLabel(key, rendered, frame)
       else this.removeEdgeLabel(key)
+      if (this.configuration.createEdgeContent) this.updateEdgeContent(key, rendered, frame)
+      else this.removeEdgeContent(key)
     }
     for (const [key, path] of this.edgeElements) {
       if (visibleKeys.has(key)) continue
@@ -260,12 +322,14 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
       if (!visibleKeys.has(key)) this.removeEdgeArrow(key)
     for (const key of this.edgeLabelElements.keys())
       if (!visibleKeys.has(key)) this.removeEdgeLabel(key)
+    for (const key of this.edgeContentElements.keys())
+      if (!visibleKeys.has(key)) this.removeEdgeContent(key)
   }
 
   private updateEdgeLabel(
     key: string,
     rendered: FdGraphRenderEdge,
-    snapshotRevision: number,
+    frame: FdGraphRenderFrame,
   ): void {
     let label = this.edgeLabelElements.get(key)
     if (!label) {
@@ -276,8 +340,8 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
       this.edgeLabelElements.set(key, label)
       this.edgeLabelLayer.append(label)
     }
-    if (label.dataset.fdSnapshotRevision !== String(snapshotRevision)) {
-      const custom = this.configuration.createEdgeLabelContent?.(rendered)
+    if (label.dataset.fdSnapshotRevision !== String(frame.snapshotRevision)) {
+      const custom = this.configuration.createEdgeLabelContent?.(rendered, frame)
       label.replaceChildren(
         custom instanceof Node
           ? custom
@@ -285,7 +349,7 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
               typeof custom === 'string' ? custom : (rendered.edge.label ?? ''),
             ),
       )
-      label.dataset.fdSnapshotRevision = String(snapshotRevision)
+      label.dataset.fdSnapshotRevision = String(frame.snapshotRevision)
     }
     const position = graphEdgePoint(rendered.geometry, 0.5)
     label.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) translate(-50%, -50%)`
@@ -293,6 +357,39 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     label.toggleAttribute('data-selected', rendered.selected)
     label.toggleAttribute('data-focused', rendered.focused)
     label.toggleAttribute('data-hovered', rendered.hovered)
+  }
+
+  private updateEdgeContent(
+    key: string,
+    rendered: FdGraphRenderEdge,
+    frame: FdGraphRenderFrame,
+  ): void {
+    let element = this.edgeContentElements.get(key)
+    if (!element) {
+      element = document.createElement('div')
+      element.className = 'graph-edge-content'
+      element.setAttribute('part', 'edge-content')
+      element.dataset.fdGraphEdge = key
+      element.style.cssText = 'position:absolute;pointer-events:auto'
+      this.edgeContentElements.set(key, element)
+      this.edgeContentLayer.append(element)
+    }
+    const padding = this.configuration.edgeContentPadding ?? 0
+    const bounds = frame.viewport.transform.applyRect(rendered.geometry.route.conservativeBounds)
+    element.style.transform = `translate3d(${bounds.x - padding}px, ${bounds.y - padding}px, 0)`
+    element.style.width = `${bounds.width + padding * 2}px`
+    element.style.height = `${bounds.height + padding * 2}px`
+    const custom = this.configuration.createEdgeContent?.(rendered, frame)
+    element.replaceChildren(
+      custom instanceof Node
+        ? custom
+        : document.createTextNode(typeof custom === 'string' ? custom : ''),
+    )
+  }
+
+  private removeEdgeContent(key: string): void {
+    this.edgeContentElements.get(key)?.remove()
+    this.edgeContentElements.delete(key)
   }
 
   private updateEdgeArrow(key: string, rendered: FdGraphRenderEdge): void {
