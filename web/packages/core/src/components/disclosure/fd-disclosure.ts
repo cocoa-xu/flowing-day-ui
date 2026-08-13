@@ -1,7 +1,9 @@
 import { type CSSResultGroup, css, html, type PropertyValues } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
+import { styleMap } from 'lit/directives/style-map.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { chevronDown } from '../../internal/glyphs.js'
+import type { FdEdgeInsets } from '../../internal/overlay-position.js'
 import { textRole } from '../../internal/typography.js'
 
 /**
@@ -29,8 +31,9 @@ export class FdDisclosure extends FdElement {
         gap: 10px;
         width: 100%;
         min-height: var(--_minimum-header-height, 0px);
-        padding: var(--fd-disclosure-header-inset, 8px 10px);
         border: 0;
+        border-radius: 8px;
+        outline: 0;
         background: transparent;
         color: var(--_fd-palette-ink);
         font: inherit;
@@ -61,8 +64,7 @@ export class FdDisclosure extends FdElement {
       }
 
       .header:focus-visible {
-        outline: 2px solid var(--_fd-accent-fill);
-        outline-offset: -2px;
+        background: color-mix(in srgb, var(--_fd-accent-veil) 58%, transparent);
       }
 
       :host([disabled]) .header {
@@ -120,6 +122,13 @@ export class FdDisclosure extends FdElement {
     | number
     | null = null
 
+  @property({ attribute: false }) contentInsets: FdEdgeInsets = {
+    top: 8,
+    leading: 10,
+    bottom: 8,
+    trailing: 10,
+  }
+
   override updated(changed: PropertyValues<this>): void {
     super.updated(changed)
     const height = this.minimumHeaderHeight
@@ -142,12 +151,19 @@ export class FdDisclosure extends FdElement {
   }
 
   override render() {
+    const inset = (value: number): number => (Number.isFinite(value) ? Math.max(0, value) : 0)
     return html`
       <button
         class="header"
         part="header"
         type="button"
         aria-expanded=${this.expanded}
+        style=${styleMap({
+          'padding-block-start': `${inset(this.contentInsets.top)}px`,
+          'padding-inline-start': `${inset(this.contentInsets.leading)}px`,
+          'padding-block-end': `${inset(this.contentInsets.bottom)}px`,
+          'padding-inline-end': `${inset(this.contentInsets.trailing)}px`,
+        })}
         ?disabled=${this.disabled}
         @click=${this.#toggle}
       >

@@ -46,6 +46,32 @@ describe('fd-disclosure', () => {
     expect(headerOf(element).getBoundingClientRect().height).toBeGreaterThanOrEqual(52)
   })
 
+  it('uses Swift content insets and accepts custom values', async () => {
+    const element = await mount()
+    const header = headerOf(element)
+
+    expect(getComputedStyle(header).padding).toBe('8px 10px')
+
+    element.contentInsets = { top: 4, leading: 6, bottom: 8, trailing: 10 }
+    await element.updateComplete
+    const style = getComputedStyle(header)
+    expect([style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft]).toEqual([
+      '4px',
+      '10px',
+      '8px',
+      '6px',
+    ])
+  })
+
+  it('uses the Swift veil focus treatment without an outline', async () => {
+    const element = await mount()
+    const header = headerOf(element)
+    header.focus()
+
+    expect(getComputedStyle(header).outlineStyle).toBe('none')
+    expect(getComputedStyle(header).backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+  })
+
   it('does not open while disabled', async () => {
     const element = await mount('disabled')
     headerOf(element).click()

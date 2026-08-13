@@ -70,6 +70,15 @@ describe('fd-expandable-row', () => {
     expect(getComputedStyle(chevron).height).toBe('10px')
   })
 
+  it('uses the Swift veil focus treatment without an outline', async () => {
+    const element = await mount('<fd-expandable-row label="Advanced"></fd-expandable-row>')
+    const row = rowOf(element)
+    row.focus()
+
+    expect(getComputedStyle(row).outlineStyle).toBe('none')
+    expect(getComputedStyle(row).backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+  })
+
   /**
    * An inline SVG rides the text baseline of its own line box and drops out the bottom
    * of a box sized to the glyph — it sat five pixels low on a mark ten tall.

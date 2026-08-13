@@ -26,6 +26,8 @@ export class FdExpandableRow extends FdElement {
       .row {
         width: 100%;
         border: 0;
+        border-radius: 8px;
+        outline: 0;
         background: transparent;
         font: inherit;
         text-align: start;
@@ -33,8 +35,7 @@ export class FdExpandableRow extends FdElement {
       }
 
       .row:focus-visible {
-        outline: 2px solid var(--_fd-accent-fill);
-        outline-offset: -2px;
+        background: color-mix(in srgb, var(--_fd-accent-veil) 58%, transparent);
       }
 
       :host([disabled]) .row {
