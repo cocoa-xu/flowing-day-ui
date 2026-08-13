@@ -11,11 +11,7 @@ import {
   createGraphAccessibilitySnapshot,
   FdGraphAccessibilitySnapshot,
 } from '../../accessibility/snapshot.js'
-import type {
-  FdCanvasConfiguration,
-  FdCanvasContentChangeBehavior,
-  FdCanvasRequest,
-} from '../../configuration.js'
+import type { FdCanvasContentChangeBehavior, FdCanvasRequest } from '../../configuration.js'
 import type { FdCanvasViewportChangeDetail } from '../../events.js'
 import {
   canvasRectContains,
@@ -45,6 +41,11 @@ import type {
   FdGraphElementID,
   FdGraphElementReference,
 } from '../../graph/model.js'
+import {
+  type FdGraphCanvasConfiguration,
+  type FdResolvedGraphCanvasConfiguration,
+  resolveGraphCanvasConfiguration,
+} from '../../graph/configuration.js'
 import {
   graphEdgeReference,
   graphElementIDFromKey,
@@ -694,15 +695,13 @@ export class FdGraphCanvas
   `
 
   @property({ attribute: false }) snapshot: FdAnyGraphSnapshot = emptySnapshot
-  @property({ attribute: false }) configuration: Partial<FdCanvasConfiguration> = {}
+  @property({ attribute: false }) configuration: FdGraphCanvasConfiguration = {}
   @property({ attribute: false }) contentInsets: FdCanvasInsets = zeroCanvasInsets
   @property({ attribute: false }) contentChangeBehavior: FdCanvasContentChangeBehavior = {
     kind: 'preserveViewport',
   }
   @property({ attribute: false }) request: FdCanvasRequest | undefined
-  @property({ attribute: false }) renderingBackend:
-    | FdGraphRenderingBackendPreference
-    | FdGraphRenderingBackend = 'automatic'
+  @property({ attribute: false }) renderingAdapter: FdGraphRenderingBackend | undefined
   @property({ attribute: false })
   renderingConfiguration: FdGraphWebGL2RenderingBackendConfiguration = {}
   @property({ attribute: false }) edgeGeometryResolver: FdGraphEdgeGeometryResolver =
@@ -806,6 +805,8 @@ export class FdGraphCanvas
     guides: [],
   }
   private resolvedInteractionConfiguration = resolveGraphCanvasInteractionConfiguration({})
+  private resolvedGraphConfiguration: FdResolvedGraphCanvasConfiguration =
+    resolveGraphCanvasConfiguration()
   private resolvedKeyboardConfiguration: FdResolvedGraphCanvasKeyboardConfiguration =
     resolveGraphCanvasKeyboardConfiguration()
   private resolvedAccessibilityConfiguration: FdResolvedGraphCanvasAccessibilityConfiguration =
@@ -910,7 +911,7 @@ export class FdGraphCanvas
       <fd-canvas
         exportparts="viewport:canvas-viewport"
         interaction-mode=${this.tool === 'pan' ? 'pan' : 'content'}
-        .configuration=${this.configuration}
+        .configuration=${this.resolvedGraphConfiguration.canvas}
         .contentRect=${this.canvasContentRect}
         .contentInsets=${this.contentInsets}
         .contentChangeBehavior=${this.contentChangeBehavior}
@@ -990,15 +991,14 @@ export class FdGraphCanvas
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
-    if (changed.has('keyboardConfiguration')) {
-      this.resolvedKeyboardConfiguration = resolveGraphCanvasKeyboardConfiguration(
-        this.keyboardConfiguration,
-      )
-    }
-    if (changed.has('accessibilityConfiguration')) {
-      this.resolvedAccessibilityConfiguration = resolveGraphCanvasAccessibilityConfiguration(
-        this.accessibilityConfiguration,
-      )
+    if (
+      changed.has('configuration') ||
+      changed.has('interactionConfiguration') ||
+      changed.has('keyboardConfiguration') ||
+      changed.has('accessibilityConfiguration') ||
+      changed.has('connectionEditingConfiguration')
+    ) {
+      this.resolveConfiguredBehavior()
     }
     if (changed.has('historyConfiguration')) {
       this.resolvedHistoryConfiguration = resolveGraphCanvasHistoryConfiguration(
@@ -1006,18 +1006,16 @@ export class FdGraphCanvas
       )
       this.historyDriver = this.createHistoryDriver()
     }
-    if (changed.has('connectionEditingConfiguration')) {
-      this.connectionConfiguration = resolveGraphConnectionEditingConfiguration(
-        this.connectionEditingConfiguration,
-      )
-    }
   }
 
   protected override updated(changed: PropertyValues<this>): void {
-    if (changed.has('renderingBackend') && this.activeBackendSource !== this.renderingBackend) {
+    if (
+      (changed.has('configuration') || changed.has('renderingAdapter')) &&
+      this.activeBackendSource !== this.renderingBackendSource
+    ) {
       this.activateBackend()
     }
-    if (changed.has('renderingConfiguration') && typeof this.renderingBackend === 'string') {
+    if (changed.has('renderingConfiguration') && !this.renderingAdapter) {
       this.activateBackend()
     }
     if (changed.has('edgeGeometryResolver')) {
@@ -1030,20 +1028,20 @@ export class FdGraphCanvas
       this.localSnapshotSequence = 0
       this.rebuildSnapshot()
     }
-    if (changed.has('interactionConfiguration')) {
-      this.resolvedInteractionConfiguration = resolveGraphCanvasInteractionConfiguration(
-        this.interactionConfiguration,
-      )
+    if (changed.has('configuration') || changed.has('interactionConfiguration')) {
       this.interactionController?.cancel()
       this.refreshResizeHandleVisibility()
       this.syncInteractionOverlay()
       this.syncAccessibilityBridge()
     }
-    if (changed.has('connectionEditingConfiguration')) {
+    if (changed.has('configuration') || changed.has('connectionEditingConfiguration')) {
       this.connectionController?.cancel()
       this.syncPortHitPadding()
     }
-    if (changed.has('accessibilityConfiguration') && !changed.has('snapshot')) {
+    if (
+      (changed.has('configuration') || changed.has('accessibilityConfiguration')) &&
+      !changed.has('snapshot')
+    ) {
       this.rebuildAccessibilitySnapshot()
     }
     if (changed.has('selectedElements') || changed.has('selectedNodeIDs')) {
@@ -1139,6 +1137,7 @@ export class FdGraphCanvas
   }
 
   arrangeSelectedNodes(action: FdGraphArrangementAction): boolean {
+    if (!this.resolvedGraphConfiguration.allowsArrangementCommands) return false
     const nodes = [...this.selectedNodeIDs].flatMap((id) => {
       const node = this.index.nodes.get(id)
       return node && node.capabilities?.arrangementParticipant !== false ? [node] : []
@@ -1494,22 +1493,96 @@ export class FdGraphCanvas
     return nearest ? graphEdgeReference(nearest.edgeID) : undefined
   }
 
+  private resolveConfiguredBehavior(): void {
+    const configuration = resolveGraphCanvasConfiguration(this.configuration)
+    const targets = configuration.snapping.targets
+    const grid = configuration.snapping.grid
+    const subdivisions = grid?.subdivisions ?? {}
+    this.resolvedGraphConfiguration = configuration
+    this.resolvedInteractionConfiguration = resolveGraphCanvasInteractionConfiguration({
+      ...this.interactionConfiguration,
+      nodeDragging: configuration.nodeDraggingMode !== 'disabled',
+      multipleNodeDragging: configuration.nodeDraggingMode === 'multiple',
+      nodeResizing: configuration.nodeResizing.isEnabled,
+      groupResizing: true,
+      minimumNodeWidth: configuration.nodeResizing.minimumSize.width,
+      minimumNodeHeight: configuration.nodeResizing.minimumSize.height,
+      marqueeMinimumDistance: configuration.marqueeMinimumDistance,
+      snapping: {
+        enabled: configuration.snapping.isEnabled,
+        alignment: targets.has('alignment'),
+        equalSpacing: targets.has('equalSpacing'),
+        equalSize: targets.has('equalSize'),
+        ...(grid
+          ? {
+              grid: {
+                enabled: targets.has('grid'),
+                width: grid.majorCellSize.width / (subdivisions.x ?? 1),
+                height: grid.majorCellSize.height / (subdivisions.y ?? 1),
+                originX: grid.origin?.x ?? 0,
+                originY: grid.origin?.y ?? 0,
+                snapsX: grid.enabledAxes?.has('x') ?? true,
+                snapsY: grid.enabledAxes?.has('y') ?? true,
+                rounding: grid.roundingPolicy ?? 'nearest',
+              },
+            }
+          : {}),
+        acquisitionDistance: configuration.snapping.tolerance,
+        releaseDistance: configuration.snapping.releaseTolerance,
+        searchRadius: configuration.snapping.searchRadius,
+        maximumCandidates: configuration.snapping.maximumCandidates,
+        showsGuides: configuration.snapping.showsGuides,
+        guideOffset: configuration.snapping.guideOffset,
+      },
+    })
+    this.connectionConfiguration = resolveGraphConnectionEditingConfiguration({
+      ...this.connectionEditingConfiguration,
+      enabled: configuration.connectionEditing.isEnabled,
+      allowsReconnection: configuration.connectionEditing.allowsReconnection,
+      targetHitRadius: configuration.connectionEditing.targetHitRadius,
+      sourceHitPadding: configuration.connectionEditing.sourceHitPadding,
+      minimumDragDistance: configuration.connectionEditing.minimumDragDistance,
+      rendersDefaultPreview: configuration.connectionEditing.rendersDefaultPreview,
+    })
+    const navigation = configuration.keyboardNavigation
+    const nudging = configuration.keyboardNudging
+    this.resolvedKeyboardConfiguration = resolveGraphCanvasKeyboardConfiguration({
+      ...this.keyboardConfiguration,
+      enabled: navigation.isEnabled || nudging.isEnabled,
+      navigation: navigation.isEnabled,
+      nudging: nudging.isEnabled,
+      nudgeStep: nudging.step,
+      largeNudgeStep: nudging.largeStep,
+      selectionBehavior: navigation.selectionBehavior,
+      keepsFocusedNodeVisible: navigation.keepsFocusedNodeVisible,
+    })
+    this.resolvedAccessibilityConfiguration = resolveGraphCanvasAccessibilityConfiguration({
+      ...this.accessibilityConfiguration,
+      ...configuration.accessibility,
+    })
+  }
+
   private activateBackend(): void {
     if (!this.renderViewport || !this.renderWorld) return
     this.backend?.unmount()
-    if (typeof this.renderingBackend === 'string') {
+    const source = this.renderingBackendSource
+    if (typeof source === 'string') {
       const kind = resolveGraphRenderingBackendKind(
-        this.renderingBackend,
+        source,
         graphRenderingCapabilities(),
       )
       this.backend =
         kind === 'webgl2'
           ? new FdGraphWebGL2RenderingBackend(this.renderingConfiguration)
           : new FdGraphDOMRenderingBackend(this.renderingConfiguration)
-    } else this.backend = this.renderingBackend
-    this.activeBackendSource = this.renderingBackend
+    } else this.backend = source
+    this.activeBackendSource = source
     this.backend.mount({ viewport: this.renderViewport, world: this.renderWorld })
     this.scheduleRenderFrame()
+  }
+
+  private get renderingBackendSource(): FdGraphRenderingBackendPreference | FdGraphRenderingBackend {
+    return this.renderingAdapter ?? this.resolvedGraphConfiguration.renderingBackend
   }
 
   private rebuildSnapshot(): void {
@@ -2367,14 +2440,15 @@ export class FdGraphCanvas
   }
 
   private syncGuides(guides: readonly FdGraphGuide[]): void {
-    while (this.guideElements.length < guides.length) {
+    const visibleGuides = this.resolvedGraphConfiguration.rendersDefaultGuides ? guides : []
+    while (this.guideElements.length < visibleGuides.length) {
       const element = this.guideRenderer.createElement()
       this.guideElements.push(element)
       this.guideLayer.append(element)
     }
     const zoom = this.canvas.viewport.transform.zoom
     for (const [index, element] of this.guideElements.entries()) {
-      const guide = guides[index]
+      const guide = visibleGuides[index]
       if (!guide) {
         element.hidden = true
         continue
@@ -2420,7 +2494,13 @@ export class FdGraphCanvas
     if (rect.width <= 0 || rect.height <= 0) return
     this.renderWorldRect = rect
     this.visibleNodes = this.index.nodesIn(rect)
-    this.visibleEdges = this.index.edgesIn(rect)
+    const padding = this.resolvedGraphConfiguration.edgeRenderPadding
+    this.visibleEdges = this.index.edgesIn({
+      x: rect.x - padding,
+      y: rect.y - padding,
+      width: rect.width + padding * 2,
+      height: rect.height + padding * 2,
+    })
     this.presentationRevision += 1
     this.scheduleRenderFrame()
   }

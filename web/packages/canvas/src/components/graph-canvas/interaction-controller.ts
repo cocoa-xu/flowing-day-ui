@@ -146,12 +146,14 @@ export class FdGraphCanvasInteractionController {
     const session = this.session
     if (!session || event.pointerId !== session.pointerID) return
     const viewportPoint = this.delegate.viewportPoint(event)
+    const minimumDistance =
+      session.kind === 'marquee' ? this.delegate.resolvedConfiguration.marqueeMinimumDistance : 2
     if (
       !session.moved &&
       Math.hypot(
         viewportPoint.x - session.startViewportPoint.x,
         viewportPoint.y - session.startViewportPoint.y,
-      ) < 2
+      ) < minimumDistance
     ) {
       return
     }

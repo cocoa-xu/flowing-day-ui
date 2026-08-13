@@ -75,6 +75,7 @@ export interface FdGraphCanvasInteractionConfiguration {
   readonly minimumNodeHeight?: number
   readonly nodeSizeConstraints?: (node: FdAnyGraphNode) => FdGraphNodeSizeConstraints | undefined
   readonly frameUpdates?: FdGraphFrameUpdateBehavior
+  readonly marqueeMinimumDistance?: number
   readonly snapping?: FdGraphSnappingConfiguration
   readonly snappingStrategy?: FdGraphSnappingStrategy
   readonly admitNodeDrag?: (
@@ -121,6 +122,7 @@ export interface FdResolvedGraphCanvasInteractionConfiguration {
   readonly minimumNodeHeight: number
   readonly nodeSizeConstraints: (node: FdAnyGraphNode) => FdResolvedGraphNodeSizeConstraints
   readonly frameUpdates: FdGraphFrameUpdateBehavior
+  readonly marqueeMinimumDistance: number
   readonly snapping: FdResolvedGraphSnappingConfiguration
   readonly snappingStrategy?: FdGraphSnappingStrategy
   readonly admitNodeDrag: (
@@ -214,6 +216,10 @@ export function resolveGraphCanvasInteractionConfiguration(
       }
     },
     frameUpdates: configuration.frameUpdates ?? 'intent',
+    marqueeMinimumDistance: nonnegative(
+      configuration.marqueeMinimumDistance ?? 2,
+      'marquee minimum distance',
+    ),
     ...(configuration.snappingStrategy ? { snappingStrategy: configuration.snappingStrategy } : {}),
     snapping: {
       enabled: snappingEnabled,

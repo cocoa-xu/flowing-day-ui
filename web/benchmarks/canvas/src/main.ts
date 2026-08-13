@@ -78,21 +78,20 @@ function makeSnapshot(count: number): FdAnyGraphSnapshot {
 const buildStartedAt = performance.now()
 const snapshot = makeSnapshot(nodeCount)
 graph.configuration = {
-  initialZoom: 1,
-  focusedZoom: 1,
-  minimumZoom: 0.001,
-  maximumZoom: 8,
-  renderOverscan: 240,
-  renderRetentionRatio: 0.4,
+  renderingBackend: requestedBackend,
+  canvas: {
+    initialZoom: 1,
+    focusedZoom: 1,
+    minimumZoom: 0.001,
+    maximumZoom: 8,
+    renderOverscan: 240,
+    renderRetentionRatio: 0.4,
+  },
+  nodeDraggingMode: 'multiple',
+  nodeResizing: { isEnabled: true },
 }
 graph.contentChangeBehavior = { kind: 'fit', padding: 48, maximumZoom: 1 }
-graph.renderingBackend = requestedBackend
 graph.interactionConfiguration = {
-  selection: 'multiple',
-  nodeDragging: true,
-  multipleNodeDragging: true,
-  nodeResizing: true,
-  groupResizing: true,
   frameUpdates,
 }
 graph.miniMapConfiguration = {
