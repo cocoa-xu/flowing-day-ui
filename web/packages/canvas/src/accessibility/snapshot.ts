@@ -57,14 +57,13 @@ const validatedDescription = (
   description: FdGraphAccessibilityDescription,
 ): FdGraphAccessibilityDescription => {
   if (!description.label.trim()) throw new RangeError('accessibility label must not be empty')
-  const actionIDs = new Set<string>()
+  const actions = new Set<string>()
   for (const action of description.actions ?? []) {
-    if (!action.id.trim()) throw new RangeError('accessibility action ID must not be empty')
     if (!action.label.trim()) throw new RangeError('accessibility action label must not be empty')
-    if (actionIDs.has(action.id)) {
-      throw new RangeError(`duplicate accessibility action ID ${action.id}`)
+    if (actions.has(action.action)) {
+      throw new RangeError(`duplicate accessibility action ${action.action}`)
     }
-    actionIDs.add(action.id)
+    actions.add(action.action)
   }
   return description
 }

@@ -2,6 +2,7 @@ import { type CSSResultGroup, css, html, LitElement, nothing, type PropertyValue
 import { customElement, property, query } from 'lit/decorators.js'
 import {
   type FdGraphAccessibilityCommand,
+  type FdGraphCanvasElementAction,
   type FdResolvedGraphCanvasAccessibilityConfiguration,
   resolveGraphCanvasAccessibilityConfiguration,
 } from '../../accessibility/configuration.js'
@@ -954,8 +955,8 @@ export class FdGraphCanvas
     this.historyDriver.clear()
   }
 
-  performFocusedAccessibilityAction(actionID: string): boolean {
-    return this.performAccessibilityElementAction(this.accessibilityFocusedElementKey, actionID)
+  performFocusedAccessibilityAction(action: FdGraphCanvasElementAction): boolean {
+    return this.performAccessibilityElementAction(this.accessibilityFocusedElementKey, action)
   }
 
   override render() {
@@ -1941,7 +1942,7 @@ export class FdGraphCanvas
       case 'activate':
         return this.activateAccessibilityElement(currentKey)
       case 'perform':
-        return this.performAccessibilityElementAction(currentKey, command.actionID)
+        return this.performAccessibilityElementAction(currentKey, command.action)
       case 'move':
         return this.moveAccessibilityElement(currentKey, command.direction, command.large)
     }
@@ -1984,11 +1985,14 @@ export class FdGraphCanvas
     return item.kind !== 'node' || this.activateFocusedNode('accessibility')
   }
 
-  private performAccessibilityElementAction(key: string | undefined, actionID: string): boolean {
+  private performAccessibilityElementAction(
+    key: string | undefined,
+    action: FdGraphCanvasElementAction,
+  ): boolean {
     if (!key || !this.resolvedAccessibilityConfiguration.capabilities.elementActions) return false
     const item = this.accessibilitySnapshot.item(key)
-    if (!item?.description.actions?.some(({ id }) => id === actionID)) return false
-    this.dispatchAccessibilityAction(item.reference, { kind: 'perform', actionID })
+    if (!item?.description.actions?.some((candidate) => candidate.action === action)) return false
+    this.dispatchAccessibilityAction(item.reference, { kind: 'perform', action })
     return true
   }
 

@@ -20,8 +20,17 @@ export interface FdGraphCanvasAccessibilityActionLabels {
   readonly moveRight?: string
 }
 
-export interface FdGraphAccessibilityElementAction {
-  readonly id: string
+export type FdGraphCanvasElementAction =
+  | 'collapse'
+  | 'expand'
+  | 'drillIn'
+  | 'inspect'
+  | 'beginConnection'
+  | 'completeConnection'
+  | 'cancelConnection'
+
+export interface FdGraphCanvasAccessibilityAction {
+  readonly action: FdGraphCanvasElementAction
   readonly label: string
 }
 
@@ -31,7 +40,7 @@ export interface FdGraphAccessibilityDescription {
   readonly hint?: string
   readonly roleDescription?: string
   readonly identifier?: string
-  readonly actions?: readonly FdGraphAccessibilityElementAction[]
+  readonly actions?: readonly FdGraphCanvasAccessibilityAction[]
 }
 
 export type FdGraphAccessibilityRepresentation =
@@ -51,7 +60,7 @@ export type FdGraphAccessibilityCommand =
   | { readonly kind: 'focusNextRelated' }
   | { readonly kind: 'select' }
   | { readonly kind: 'activate' }
-  | { readonly kind: 'perform'; readonly actionID: string }
+  | { readonly kind: 'perform'; readonly action: FdGraphCanvasElementAction }
   | {
       readonly kind: 'move'
       readonly direction: FdGraphNavigationDirection
@@ -155,6 +164,11 @@ export function resolveGraphCanvasAccessibilityConfiguration(
     connections: configuration.capabilities?.connections ?? true,
     elementActions: configuration.capabilities?.elementActions ?? true,
   }
+  const actionLabel = (value: string | undefined, fallback: string, name: string): string => {
+    const resolved = value ?? fallback
+    if (!resolved.trim()) throw new RangeError(`${name} must not be empty`)
+    return resolved
+  }
   return {
     enabled: Object.values(capabilities).some(Boolean),
     canvasLabel,
@@ -162,14 +176,41 @@ export function resolveGraphCanvasAccessibilityConfiguration(
     keepsFocusedElementVisible: configuration.keepsFocusedElementVisible ?? true,
     capabilities,
     actionLabels: {
-      nextElement: configuration.actionLabels?.nextElement?.trim() || 'Next Element',
-      previousElement: configuration.actionLabels?.previousElement?.trim() || 'Previous Element',
-      nextRelatedElement:
-        configuration.actionLabels?.nextRelatedElement?.trim() || 'Next Connected Element',
-      moveUp: configuration.actionLabels?.moveUp?.trim() || 'Move Up',
-      moveDown: configuration.actionLabels?.moveDown?.trim() || 'Move Down',
-      moveLeft: configuration.actionLabels?.moveLeft?.trim() || 'Move Left',
-      moveRight: configuration.actionLabels?.moveRight?.trim() || 'Move Right',
+      nextElement: actionLabel(
+        configuration.actionLabels?.nextElement,
+        'Next Element',
+        'next element accessibility action label',
+      ),
+      previousElement: actionLabel(
+        configuration.actionLabels?.previousElement,
+        'Previous Element',
+        'previous element accessibility action label',
+      ),
+      nextRelatedElement: actionLabel(
+        configuration.actionLabels?.nextRelatedElement,
+        'Next Connected Element',
+        'next related element accessibility action label',
+      ),
+      moveUp: actionLabel(
+        configuration.actionLabels?.moveUp,
+        'Move Up',
+        'move up accessibility action label',
+      ),
+      moveDown: actionLabel(
+        configuration.actionLabels?.moveDown,
+        'Move Down',
+        'move down accessibility action label',
+      ),
+      moveLeft: actionLabel(
+        configuration.actionLabels?.moveLeft,
+        'Move Left',
+        'move left accessibility action label',
+      ),
+      moveRight: actionLabel(
+        configuration.actionLabels?.moveRight,
+        'Move Right',
+        'move right accessibility action label',
+      ),
     },
     resolveCommand:
       platformAdapter.resolveAccessibilityCommand ?? defaultGraphAccessibilityCommandResolver,

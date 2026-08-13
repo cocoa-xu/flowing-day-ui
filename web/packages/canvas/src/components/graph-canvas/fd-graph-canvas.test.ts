@@ -1411,14 +1411,14 @@ describe('fd-graph-canvas accessibility', () => {
     element.platformAdapter = {
       resolveAccessibilityCommand: (event) =>
         event.key === 'i'
-          ? { kind: 'perform', actionID: 'inspect' }
+          ? { kind: 'perform', action: 'inspect' }
           : defaultGraphAccessibilityCommandResolver(event),
       nodeAccessibilityRepresentation: (node) => ({
         kind: 'element',
         description: {
           label: String(node.label),
           identifier: `node-${String(node.id)}`,
-          actions: [{ id: 'inspect', label: 'Inspect node' }],
+          actions: [{ action: 'inspect', label: 'Inspect node' }],
         },
       }),
     }
@@ -1439,7 +1439,7 @@ describe('fd-graph-canvas accessibility', () => {
 
     expect(actions.at(-1)).toEqual({
       element: { kind: 'node', nodeID: 'target' },
-      action: { kind: 'perform', actionID: 'inspect' },
+      action: { kind: 'perform', action: 'inspect' },
     })
     const targetRow = element.shadowRoot?.querySelector<HTMLElement>(
       '[data-fd-graph-accessibility-identifier="node-target"]',

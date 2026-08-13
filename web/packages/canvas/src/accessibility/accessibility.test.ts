@@ -90,15 +90,23 @@ describe('graph accessibility configuration', () => {
               description: {
                 label: 'Node',
                 actions: [
-                  { id: 'inspect', label: 'Inspect' },
-                  { id: 'inspect', label: 'Inspect again' },
+                  { action: 'inspect', label: 'Inspect' },
+                  { action: 'inspect', label: 'Inspect again' },
                 ],
               },
             }),
           },
         ),
       ),
-    ).toThrow('duplicate accessibility action ID inspect')
+    ).toThrow('duplicate accessibility action inspect')
+  })
+
+  it('rejects empty Swift accessibility action labels', () => {
+    expect(() =>
+      resolveGraphCanvasAccessibilityConfiguration({
+        actionLabels: { nextElement: '   ' },
+      }),
+    ).toThrow('next element accessibility action label must not be empty')
   })
 })
 
