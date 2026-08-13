@@ -25,6 +25,7 @@ import './components/icon-selection-button/fd-icon-selection-button.js'
 import './components/icon-button/fd-icon-button.js'
 import './components/icon/fd-icon.js'
 import './components/link-row/fd-link-row.js'
+import './components/menu/fd-menu.js'
 import './components/multi-select-row/fd-multi-select-row.js'
 import './components/multi-select/fd-multi-select.js'
 import './components/option/fd-option.js'
@@ -108,6 +109,7 @@ export { FdIcon } from './components/icon/fd-icon.js'
 export { FdIconButton, type FdIconButtonEmphasis } from './components/icon-button/fd-icon-button.js'
 export { FdIconSelectionButton } from './components/icon-selection-button/fd-icon-selection-button.js'
 export { FdLinkRow } from './components/link-row/fd-link-row.js'
+export { FdMenu } from './components/menu/fd-menu.js'
 export {
   FdMultiSelect,
   type FdMultiSelectAxis,
