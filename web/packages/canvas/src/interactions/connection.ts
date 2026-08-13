@@ -3,13 +3,13 @@ import type { FdGraphCanvasConnectionEditingConfiguration } from '../graph/confi
 import type {
   FdAnyGraphEdge,
   FdGraphElementID,
-  FdGraphEndpoint,
-  FdGraphPort,
+  FdGraphSnapshotEndpoint,
+  FdGraphSnapshotPort,
 } from '../graph/model.js'
 import { graphPortPoint } from '../graph/model.js'
 import type { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
 
-export type FdGraphCanvasConnectionEndpoint = FdGraphEndpoint<FdGraphElementID> & {
+export type FdGraphCanvasConnectionEndpoint = FdGraphSnapshotEndpoint<FdGraphElementID> & {
   readonly portID: FdGraphElementID
 }
 
@@ -165,7 +165,7 @@ export function resolveGraphConnectionEditingConfiguration(
 
 export function graphConnectionEndpoint(
   nodeID: FdGraphElementID,
-  port: FdGraphPort,
+  port: FdGraphSnapshotPort,
 ): FdGraphCanvasConnectionEndpoint {
   return { nodeID, portID: port.id }
 }

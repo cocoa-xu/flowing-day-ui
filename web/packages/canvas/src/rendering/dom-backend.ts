@@ -1,5 +1,5 @@
 import { FdGraphCanvasNodeCapabilities } from '../graph/interaction-policy.js'
-import type { FdGraphPort } from '../graph/model.js'
+import type { FdGraphSnapshotPort } from '../graph/model.js'
 import { graphElementKey, graphPortPoint } from '../graph/model.js'
 import type {
   FdGraphRenderEdge,
@@ -226,7 +226,7 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     frame: FdGraphRenderFrame,
   ): HTMLElement[] {
     const node = renderedNode.node
-    return (node.ports ?? []).map((port: FdGraphPort) => {
+    return (node.ports ?? []).map((port: FdGraphSnapshotPort) => {
       const element = document.createElement('span')
       element.className = 'graph-port'
       element.setAttribute('part', 'port')

@@ -3,7 +3,7 @@ import type {
   FdAnyGraphSnapshot,
   FdGraphElementID,
   FdGraphElementReference,
-  FdGraphPort,
+  FdGraphSnapshotPort,
 } from '../graph/model.js'
 import {
   graphEdgeReference,
@@ -40,7 +40,10 @@ const edgeKey = (edgeID: FdGraphElementID): string =>
 const portKey = (nodeID: FdGraphElementID, portID: FdGraphElementID): string =>
   graphElementReferenceKey(graphPortReference(nodeID, portID))
 
-const portFrame = (node: FdAnyGraphSnapshot['nodes'][number], port: FdGraphPort): FdCanvasRect => {
+const portFrame = (
+  node: FdAnyGraphSnapshot['nodes'][number],
+  port: FdGraphSnapshotPort,
+): FdCanvasRect => {
   const point = graphPortPoint(node, port.id)
   return { x: point.x - 11, y: point.y - 11, width: 22, height: 22 }
 }

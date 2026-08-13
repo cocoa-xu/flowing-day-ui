@@ -17,7 +17,7 @@ import type {
   FdAnyGraphNode,
   FdGraphElementID,
   FdGraphElementReference,
-  FdGraphPort,
+  FdGraphSnapshotPort,
 } from '../graph/model.js'
 import type {
   FdGraphCanvasInteractionIntent,
@@ -55,7 +55,7 @@ export interface FdGraphRenderEdge {
 
 export interface FdGraphRenderPort {
   readonly node: FdAnyGraphNode
-  readonly port: FdGraphPort
+  readonly port: FdGraphSnapshotPort
   readonly position: FdCanvasPoint
   readonly selected: boolean
   readonly focused: boolean

@@ -25,7 +25,7 @@ export type FdGraphElementReference =
 
 export type FdGraphPortSide = 'top' | 'right' | 'bottom' | 'left'
 
-export interface FdGraphPort<PortID extends FdGraphElementID = FdGraphElementID> {
+export interface FdGraphSnapshotPort<PortID extends FdGraphElementID = FdGraphElementID> {
   readonly id: PortID
   readonly side: FdGraphPortSide
   readonly offset?: number
@@ -39,7 +39,7 @@ export interface FdGraphNodeStyle {
   readonly accent?: string
 }
 
-export interface FdGraphNode<
+export interface FdGraphSnapshotNode<
   NodeID extends FdGraphElementID = FdGraphElementID,
   NodeData = unknown,
 > {
@@ -48,12 +48,12 @@ export interface FdGraphNode<
   readonly label?: string
   readonly subtitle?: string
   readonly accessibilityLabel?: string
-  readonly ports?: readonly FdGraphPort[]
+  readonly ports?: readonly FdGraphSnapshotPort[]
   readonly style?: FdGraphNodeStyle
   readonly data?: NodeData
 }
 
-export interface FdGraphEndpoint<NodeID extends FdGraphElementID = FdGraphElementID> {
+export interface FdGraphSnapshotEndpoint<NodeID extends FdGraphElementID = FdGraphElementID> {
   readonly nodeID: NodeID
   readonly portID?: FdGraphElementID
 }
@@ -70,14 +70,14 @@ export interface FdGraphEdgeStyle {
   }
 }
 
-export interface FdGraphEdge<
+export interface FdGraphSnapshotEdge<
   NodeID extends FdGraphElementID = FdGraphElementID,
   EdgeID extends FdGraphElementID = FdGraphElementID,
   EdgeData = unknown,
 > {
   readonly id: EdgeID
-  readonly source: FdGraphEndpoint<NodeID>
-  readonly target: FdGraphEndpoint<NodeID>
+  readonly source: FdGraphSnapshotEndpoint<NodeID>
+  readonly target: FdGraphSnapshotEndpoint<NodeID>
   readonly label?: string
   readonly accessibilityLabel?: string
   readonly style?: FdGraphEdgeStyle
@@ -91,12 +91,12 @@ export interface FdGraphSnapshot<
   EdgeData = unknown,
 > {
   readonly id: string | number
-  readonly nodes: readonly FdGraphNode<NodeID, NodeData>[]
-  readonly edges: readonly FdGraphEdge<NodeID, EdgeID, EdgeData>[]
+  readonly nodes: readonly FdGraphSnapshotNode<NodeID, NodeData>[]
+  readonly edges: readonly FdGraphSnapshotEdge<NodeID, EdgeID, EdgeData>[]
 }
 
-export type FdAnyGraphNode = FdGraphNode<FdGraphElementID, unknown>
-export type FdAnyGraphEdge = FdGraphEdge<FdGraphElementID, FdGraphElementID, unknown>
+export type FdAnyGraphNode = FdGraphSnapshotNode<FdGraphElementID, unknown>
+export type FdAnyGraphEdge = FdGraphSnapshotEdge<FdGraphElementID, FdGraphElementID, unknown>
 export type FdAnyGraphSnapshot = FdGraphSnapshot<
   FdGraphElementID,
   FdGraphElementID,

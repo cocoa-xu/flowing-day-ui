@@ -1,4 +1,4 @@
-import type { FdAnyGraphEdge, FdAnyGraphNode, FdGraphPort } from '../graph/model.js'
+import type { FdAnyGraphEdge, FdAnyGraphNode, FdGraphSnapshotPort } from '../graph/model.js'
 import type { FdGraphCanvasPlatformAdapter } from '../graph/platform-adapter.js'
 import type { FdGraphCanvasNavigationDirection } from '../interactions/keyboard.js'
 import type { FdGraphCanvasElementAction } from '../interactions/session.js'
@@ -43,7 +43,7 @@ export type FdGraphCanvasAccessibilityRepresentation =
 
 export interface FdGraphCanvasAccessibilityPortContext {
   readonly node: FdAnyGraphNode
-  readonly port: FdGraphPort
+  readonly port: FdGraphSnapshotPort
 }
 
 export type FdGraphCanvasAccessibilityCommand =

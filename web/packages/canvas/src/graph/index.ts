@@ -1,6 +1,7 @@
 export * from './configuration.js'
 export * from './content.js'
 export * from './contexts.js'
+export * from './core.js'
 export type * from './events.js'
 export * from './interaction-policy.js'
 export type * from './minimap-events.js'

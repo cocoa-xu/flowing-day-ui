@@ -3,9 +3,9 @@ import type { FdGraphCanvasContent } from '../../graph/content.js'
 import type {
   FdAnyGraphSnapshot,
   FdGraphElementID,
-  FdGraphEndpoint,
-  FdGraphPort,
   FdGraphPortSide,
+  FdGraphSnapshotEndpoint,
+  FdGraphSnapshotPort,
 } from '../../graph/model.js'
 import type {
   FdGraphPresentationEdge,
@@ -45,7 +45,7 @@ export interface FdGraphCanvasEnginePortData<
 }
 
 export interface FdGraphCanvasEnginePort<ElementID extends FdGraphElementID = FdGraphElementID>
-  extends FdGraphPort<ElementID> {
+  extends FdGraphSnapshotPort<ElementID> {
   readonly data: FdGraphCanvasEnginePortData<ElementID>
 }
 
@@ -139,7 +139,7 @@ const enginePort = <ElementID extends FdGraphElementID>(
 const engineEndpoint = <ElementID extends FdGraphElementID>(
   content: FdGraphCanvasContent<ElementID>,
   endpoint: { readonly kind: 'node' | 'port'; readonly id: ElementID },
-): FdGraphEndpoint | undefined => {
+): FdGraphSnapshotEndpoint | undefined => {
   if (endpoint.kind === 'node') return { nodeID: endpoint.id }
   const localID = content.localID(endpoint.id)
   const nodeLocalID = localID ? content.nodeLocalID(localID) : undefined
