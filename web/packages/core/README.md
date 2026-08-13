@@ -125,7 +125,7 @@ Icons already on the page pick up a later registration.
 
 **Overlays** — `fd-dialog`, `fd-dialog-action`, `fd-popover`, `fd-tooltip`.
 
-**Pills and layout** — `fd-chip`, `fd-tag`, `fd-selectable-tag`, `fd-flow-grid`, `fd-grid`.
+**Pills and layout** — `fd-chip`, `fd-tag`, `fd-selectable-tag`, `fd-wrapping-grid`, `fd-adaptive-grid`, `fd-flow-grid`, `fd-grid`.
 
 **Icons** — `fd-icon`.
 

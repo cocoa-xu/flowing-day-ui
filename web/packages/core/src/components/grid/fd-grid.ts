@@ -30,15 +30,12 @@ export class FdGrid extends FdElement {
   /** `GridItem(.adaptive(minimum:))`, which defaults to 96. */
   @property({ type: Number, attribute: 'minimum-width' }) minimumWidth = 96
 
-  /** Spacing between columns and between rows, both 7 in the SwiftUI original. */
-  @property({ type: Number }) spacing = 7
-
   override render() {
     return html`
       <div
         class="grid"
         part="grid"
-        style="--_minimum-width: ${this.minimumWidth}px; gap: ${this.spacing}px"
+        style="--_minimum-width: ${this.minimumWidth}px; gap: 7px"
       >
         <slot></slot>
       </div>

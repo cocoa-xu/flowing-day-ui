@@ -1,4 +1,5 @@
 import './internal/events.js'
+import './components/adaptive-grid/fd-adaptive-grid.js'
 import './components/button-row/fd-button-row.js'
 import './components/button/fd-button.js'
 import './components/badge/fd-badge.js'
@@ -60,9 +61,11 @@ import './components/tabs/fd-tabs.js'
 import './components/text-area/fd-text-area.js'
 import './components/text-field/fd-text-field.js'
 import './components/tooltip/fd-tooltip.js'
+import './components/wrapping-grid/fd-wrapping-grid.js'
 import './components/value-row/fd-value-row.js'
 import './components/value-text/fd-value-text.js'
 
+export { FdAdaptiveGrid } from './components/adaptive-grid/fd-adaptive-grid.js'
 export {
   FdBadge,
   type FdBadgeEmphasis,
@@ -74,7 +77,7 @@ export {
   FdCallout,
   type FdCalloutPresentation,
 } from './components/callout/fd-callout.js'
-export { FdCard } from './components/card/fd-card.js'
+export { FdCard, type FdHorizontalAlignment } from './components/card/fd-card.js'
 export { FdCheckToggle } from './components/check-toggle/fd-check-toggle.js'
 export {
   FdCheckbox,
@@ -174,6 +177,7 @@ export { FdTextField } from './components/text-field/fd-text-field.js'
 export { FdTooltip } from './components/tooltip/fd-tooltip.js'
 export { FdValueRow } from './components/value-row/fd-value-row.js'
 export { FdValueText, type FdValueTextTruncation } from './components/value-text/fd-value-text.js'
+export { FdWrappingGrid } from './components/wrapping-grid/fd-wrapping-grid.js'
 export type { FdActivateDetail, FdChangeDetail } from './internal/events.js'
 export type { FdFieldValidation } from './internal/field-validation.js'
 export { FdIcons } from './internal/icon-registry.js'
