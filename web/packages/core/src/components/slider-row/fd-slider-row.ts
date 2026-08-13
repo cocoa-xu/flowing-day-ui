@@ -105,12 +105,13 @@ export class FdSliderRow extends FdElement {
         <fd-slider
           part="slider"
           exportparts="track, progress, knob"
-          aria-label=${this.label}
           name=${this.name}
+          .label=${this.label}
           .value=${this.value}
           .min=${this.min}
           .max=${this.max}
           .step=${this.step}
+          .formatValue=${this.format}
           ?disabled=${this.disabled}
           @fd-change=${this.#onSliderChange}
         ></fd-slider>

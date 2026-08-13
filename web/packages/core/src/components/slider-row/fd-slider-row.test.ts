@@ -54,8 +54,10 @@ describe('fd-slider-row', () => {
     element.format = (value) => `${Math.round(value * 100)}%`
     element.value = 0.42
     await element.updateComplete
+    await sliderOf(element).updateComplete
 
     expect(partOf(element, '.value').textContent).toBe('42%')
+    expect(sliderOf(element).getAttribute('aria-valuetext')).toBe('42%')
   })
 
   it('hands the range and step down to the slider', async () => {
