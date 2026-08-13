@@ -2,10 +2,10 @@ import type { FdCanvasInsets, FdCanvasRect, FdCanvasSize } from '../geometry.js'
 import type { FdAnyGraphSnapshot, FdGraphElementID } from '../graph/model.js'
 import { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
 
-export type FdLayeredGraphLayoutDirection = 'topToBottom' | 'leftToRight'
+export type FdLayeredLayoutDirection = 'topToBottom' | 'leftToRight'
 
-export interface FdLayeredGraphLayoutConfiguration {
-  readonly direction?: FdLayeredGraphLayoutDirection
+export interface FdLayeredLayoutConfiguration {
+  readonly direction?: FdLayeredLayoutDirection
   readonly horizontalNodeSpacing: number
   readonly verticalNodeSpacing: number
   readonly componentSpacing: number
@@ -27,7 +27,7 @@ export class FdLayeredGraphLayoutCycleError extends Error {
 
 export function layoutLayeredGraph(
   snapshot: FdAnyGraphSnapshot,
-  configuration: FdLayeredGraphLayoutConfiguration,
+  configuration: FdLayeredLayoutConfiguration,
 ): FdLayeredGraphLayoutResult {
   new FdGraphSnapshotIndex(snapshot)
   validateConfiguration(configuration)
@@ -261,7 +261,7 @@ export function layoutLayeredGraph(
   }
 }
 
-function validateConfiguration(configuration: FdLayeredGraphLayoutConfiguration): void {
+function validateConfiguration(configuration: FdLayeredLayoutConfiguration): void {
   const values = [
     configuration.horizontalNodeSpacing,
     configuration.verticalNodeSpacing,
