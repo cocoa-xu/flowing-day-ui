@@ -119,10 +119,7 @@ import type {
   FdGraphMiniMapPlacement,
   FdGraphMiniMapStyle,
 } from '../../minimap/configuration.js'
-import type {
-  FdAnyGraphMiniMapNode,
-  FdAnyGraphMiniMapSnapshot,
-} from '../../minimap/model.js'
+import type { FdAnyGraphMiniMapNode, FdAnyGraphMiniMapSnapshot } from '../../minimap/model.js'
 import type {
   FdGraphCanvasRenderingBackendPreference,
   FdGraphRenderFrame,
@@ -736,6 +733,7 @@ export class FdGraphCanvas
   `
 
   @property({ attribute: false }) snapshot: FdAnyGraphSnapshot = emptySnapshot
+  @property({ attribute: false }) accessibilitySnapshot: FdGraphAccessibilitySnapshot | undefined
   @property({ attribute: false }) configuration: FdGraphCanvasConfiguration = {}
   @property({ attribute: false }) contentInsets: FdCanvasInsets = zeroCanvasInsets
   @property({ attribute: false }) contentChangeBehavior: FdCanvasContentChangeBehavior = {
@@ -760,9 +758,8 @@ export class FdGraphCanvas
     bottom: 16,
     left: 16,
   }
-  @property({ attribute: false }) miniMapNodeStyleIndex: (
-    node: FdAnyGraphMiniMapNode,
-  ) => number = () => 0
+  @property({ attribute: false }) miniMapNodeStyleIndex: (node: FdAnyGraphMiniMapNode) => number =
+    () => 0
   @property({ attribute: false }) guideRenderer: FdGraphGuideRenderer =
     new FdGraphDefaultGuideRenderer()
 
@@ -809,7 +806,7 @@ export class FdGraphCanvas
     this.focusedNodeValue = value?.kind === 'node' ? value.nodeID : undefined
     if (value) {
       const key = graphElementReferenceKey(value)
-      if (this.accessibilitySnapshot.contains(key)) this.accessibilityFocusedElementKey = key
+      if (this.activeAccessibilitySnapshot.contains(key)) this.accessibilityFocusedElementKey = key
     }
     this.requestUpdate('focusedElement', previousElement)
     if (previousNodeID !== this.focusedNodeValue) {
@@ -868,7 +865,10 @@ export class FdGraphCanvas
     resolveGraphCanvasHistoryConfiguration()
   private connectionConfiguration = resolveGraphConnectionEditingConfiguration()
   private historyDriver = this.createHistoryDriver()
-  private accessibilitySnapshot = new FdGraphAccessibilitySnapshot([])
+  private activeAccessibilitySnapshot = new FdGraphAccessibilitySnapshot({
+    canvasDescription: { label: 'Graph Canvas' },
+    items: [],
+  })
   private accessibilityBridge: FdGraphCanvasAccessibilityBridge | undefined
   private accessibilityFocusedElementKey: string | undefined
   private keyboardCandidates: FdGraphKeyboardNavigationCandidate[] = []
@@ -1095,8 +1095,12 @@ export class FdGraphCanvas
     }
     if (
       (changed.has('configuration') || changed.has('platformAdapter')) &&
-      !changed.has('snapshot')
+      !changed.has('snapshot') &&
+      !changed.has('accessibilitySnapshot')
     ) {
+      this.rebuildAccessibilitySnapshot()
+    }
+    if (changed.has('accessibilitySnapshot') && !changed.has('snapshot')) {
       this.rebuildAccessibilitySnapshot()
     }
     if (changed.has('selectedElements') || changed.has('selectedNodeIDs')) {
@@ -1723,7 +1727,9 @@ export class FdGraphCanvas
         this.keyboardCandidates[candidateIndex] = { ...candidate, frame: after }
       }
     }
-    this.accessibilitySnapshot.updateGeometry(this.index, changedNodeIDs)
+    if (!this.accessibilitySnapshot) {
+      this.activeAccessibilitySnapshot.updateGeometry(this.index, changedNodeIDs)
+    }
     this.refreshResizeHandleVisibility()
     this.syncInteractionOverlay()
     this.syncMiniMap()
@@ -1880,11 +1886,10 @@ export class FdGraphCanvas
   }
 
   private rebuildAccessibilitySnapshot(): void {
-    this.accessibilitySnapshot = createGraphAccessibilitySnapshot(
-      this.snapshot,
-      this.resolvedAccessibilityConfiguration,
-    )
-    this.accessibilityFocusedElementKey = this.accessibilitySnapshot.reconciledFocus(
+    this.activeAccessibilitySnapshot =
+      this.accessibilitySnapshot ??
+      createGraphAccessibilitySnapshot(this.snapshot, this.resolvedAccessibilityConfiguration)
+    this.accessibilityFocusedElementKey = this.activeAccessibilitySnapshot.reconciledFocus(
       (this.focusedElement && graphElementReferenceKey(this.focusedElement)) ??
         this.accessibilityFocusedElementKey,
     )
@@ -1893,7 +1898,7 @@ export class FdGraphCanvas
 
   private syncAccessibilityBridge(): void {
     this.accessibilityBridge?.update({
-      snapshot: this.accessibilitySnapshot,
+      snapshot: this.activeAccessibilitySnapshot,
       configuration: this.resolvedAccessibilityConfiguration,
       selectedElementKeys: this.selectedElementKeys,
       allowsMultipleSelection: this.resolvedInteractionConfiguration.selection === 'multiple',
@@ -1905,7 +1910,7 @@ export class FdGraphCanvas
 
   private handleAccessibilityFocusIn = (): void => {
     if (!this.resolvedAccessibilityConfiguration.enabled) return
-    const key = this.accessibilitySnapshot.reconciledFocus(
+    const key = this.activeAccessibilitySnapshot.reconciledFocus(
       this.accessibilityFocusedElementKey ??
         (this.focusedElement ? graphElementReferenceKey(this.focusedElement) : undefined),
     )
@@ -1925,16 +1930,20 @@ export class FdGraphCanvas
     switch (command.kind) {
       case 'focusPrevious':
         return currentKey
-          ? this.focusAccessibilityElement(this.accessibilitySnapshot.elementKeyBefore(currentKey))
-          : this.focusAccessibilityElement(this.accessibilitySnapshot.firstElementKey)
+          ? this.focusAccessibilityElement(
+              this.activeAccessibilitySnapshot.elementKeyBefore(currentKey),
+            )
+          : this.focusAccessibilityElement(this.activeAccessibilitySnapshot.firstElementKey)
       case 'focusNext':
         return currentKey
-          ? this.focusAccessibilityElement(this.accessibilitySnapshot.elementKeyAfter(currentKey))
-          : this.focusAccessibilityElement(this.accessibilitySnapshot.firstElementKey)
+          ? this.focusAccessibilityElement(
+              this.activeAccessibilitySnapshot.elementKeyAfter(currentKey),
+            )
+          : this.focusAccessibilityElement(this.activeAccessibilitySnapshot.firstElementKey)
       case 'focusFirst':
-        return this.focusAccessibilityElement(this.accessibilitySnapshot.firstElementKey)
+        return this.focusAccessibilityElement(this.activeAccessibilitySnapshot.firstElementKey)
       case 'focusLast':
-        return this.focusAccessibilityElement(this.accessibilitySnapshot.lastElementKey)
+        return this.focusAccessibilityElement(this.activeAccessibilitySnapshot.lastElementKey)
       case 'focusNextRelated':
         return this.focusNextRelatedAccessibilityElement(currentKey)
       case 'select':
@@ -1950,12 +1959,14 @@ export class FdGraphCanvas
 
   private focusNextRelatedAccessibilityElement(key: string | undefined): boolean {
     if (!key || !this.resolvedAccessibilityConfiguration.capabilities.connections) return false
-    return this.focusAccessibilityElement(this.accessibilitySnapshot.relatedElementKeys(key)[0])
+    return this.focusAccessibilityElement(
+      this.activeAccessibilitySnapshot.relatedElementKeys(key)[0],
+    )
   }
 
   private focusAccessibilityElement(key: string | undefined): boolean {
     if (!key || !this.resolvedAccessibilityConfiguration.capabilities.focusNavigation) return false
-    const item = this.accessibilitySnapshot.item(key)
+    const item = this.activeAccessibilitySnapshot.item(key)
     if (!item) return false
     if (!this.dispatchAccessibilityAction(item.reference, { kind: 'focus' })) return true
     this.accessibilityFocusedElementKey = key
@@ -1971,7 +1982,7 @@ export class FdGraphCanvas
 
   private selectAccessibilityElement(key: string | undefined): boolean {
     if (!key || !this.resolvedAccessibilityConfiguration.capabilities.selection) return false
-    const item = this.accessibilitySnapshot.item(key)
+    const item = this.activeAccessibilitySnapshot.item(key)
     if (!item) return false
     if (!this.dispatchAccessibilityAction(item.reference, { kind: 'select' })) return true
     return this.selectElementReference(item.reference, 'replace', 'accessibility')
@@ -1979,7 +1990,7 @@ export class FdGraphCanvas
 
   private activateAccessibilityElement(key: string | undefined): boolean {
     if (!key || !this.resolvedAccessibilityConfiguration.capabilities.elementActions) return false
-    const item = this.accessibilitySnapshot.item(key)
+    const item = this.activeAccessibilitySnapshot.item(key)
     if (!item) return false
     if (!this.dispatchAccessibilityAction(item.reference, { kind: 'activate' })) return true
     return item.kind !== 'node' || this.activateFocusedNode('accessibility')
@@ -1990,7 +2001,7 @@ export class FdGraphCanvas
     action: FdGraphCanvasElementAction,
   ): boolean {
     if (!key || !this.resolvedAccessibilityConfiguration.capabilities.elementActions) return false
-    const item = this.accessibilitySnapshot.item(key)
+    const item = this.activeAccessibilitySnapshot.item(key)
     if (!item?.description.actions?.some((candidate) => candidate.action === action)) return false
     this.dispatchAccessibilityAction(item.reference, { kind: 'perform', action })
     return true
@@ -2002,7 +2013,7 @@ export class FdGraphCanvas
     large: boolean,
   ): boolean {
     if (!key || !this.resolvedAccessibilityConfiguration.capabilities.movement) return false
-    const item = this.accessibilitySnapshot.item(key)
+    const item = this.activeAccessibilitySnapshot.item(key)
     if (item?.reference.kind !== 'node') return false
     const nodeID = item.reference.nodeID
     if (!this.dispatchAccessibilityAction(item.reference, { kind: 'move', direction, large })) {
@@ -2575,10 +2586,10 @@ export class FdGraphCanvas
       id: this.snapshot.id,
       contentBounds: this.index.contentBounds,
       nodes: this.snapshot.nodes.map(({ id, frame }) => ({ id, frame })),
-      edges: this.snapshot.edges.map(({ id, source, target }) => ({
-        id,
-        start: graphPortPoint(this.index.nodes.get(source.nodeID)!, source.portID),
-        end: graphPortPoint(this.index.nodes.get(target.nodeID)!, target.portID),
+      edges: this.snapshot.edges.map((edge) => ({
+        id: edge.id,
+        start: this.index.endpointPoint(edge, 'source'),
+        end: this.index.endpointPoint(edge, 'target'),
       })),
     }
     this.miniMapSnapshotSource = this.snapshot

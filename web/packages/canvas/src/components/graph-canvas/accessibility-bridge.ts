@@ -25,8 +25,24 @@ export class FdGraphCanvasAccessibilityBridge {
 
   update(update: FdGraphCanvasAccessibilityBridgeUpdate): void {
     const { configuration, snapshot } = update
+    const canvasDescription = snapshot.canvasDescription
     this.surface.tabIndex = configuration.enabled ? 0 : -1
-    this.surface.setAttribute('aria-label', configuration.canvasLabel)
+    this.surface.setAttribute('aria-label', canvasDescription.label)
+    this.setOptionalAttribute(
+      this.surface,
+      'aria-description',
+      [canvasDescription.value, canvasDescription.hint].filter(Boolean).join('. ') || undefined,
+    )
+    this.setOptionalAttribute(
+      this.surface,
+      'aria-roledescription',
+      canvasDescription.roleDescription,
+    )
+    this.setOptionalAttribute(
+      this.surface,
+      'data-fd-graph-accessibility-identifier',
+      canvasDescription.identifier,
+    )
     this.surface.setAttribute('aria-rowcount', String(snapshot.items.length))
     this.surface.setAttribute('aria-multiselectable', String(update.allowsMultipleSelection))
     this.surface.setAttribute('aria-readonly', String(!configuration.capabilities.movement))

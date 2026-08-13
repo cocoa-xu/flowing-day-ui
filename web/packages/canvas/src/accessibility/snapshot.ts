@@ -31,6 +31,8 @@ export interface FdGraphAccessibilityItem {
   readonly relatedElementKeys: readonly string[]
 }
 
+export type FdGraphAccessibilitySnapshotID = string | number
+
 const nodeKey = (nodeID: FdGraphElementID): string =>
   graphElementReferenceKey(graphNodeReference(nodeID))
 const edgeKey = (edgeID: FdGraphElementID): string =>
@@ -68,18 +70,52 @@ const validatedDescription = (
   return description
 }
 
+const isFiniteRect = (frame: FdCanvasRect): boolean =>
+  Number.isFinite(frame.x) &&
+  Number.isFinite(frame.y) &&
+  Number.isFinite(frame.width) &&
+  Number.isFinite(frame.height)
+
+let snapshotSequence = 0
+
 export class FdGraphAccessibilitySnapshot {
+  readonly id: FdGraphAccessibilitySnapshotID
+  readonly canvasDescription: FdGraphAccessibilityDescription
   private readonly itemValues: FdGraphAccessibilityItem[]
   private readonly indexByKey = new Map<string, number>()
+  private readonly relationshipGraph: ReadonlyMap<string, readonly string[]>
 
-  constructor(items: readonly FdGraphAccessibilityItem[]) {
+  constructor(configuration: {
+    readonly id?: FdGraphAccessibilitySnapshotID
+    readonly canvasDescription: FdGraphAccessibilityDescription
+    readonly items: readonly FdGraphAccessibilityItem[]
+    readonly relationships?: ReadonlyMap<string, readonly string[]>
+  }) {
+    const { items } = configuration
     for (const [index, item] of items.entries()) {
       if (this.indexByKey.has(item.key)) {
         throw new RangeError(`duplicate accessibility element key ${item.key}`)
       }
+      if (!isFiniteRect(item.frame)) {
+        throw new RangeError(`invalid accessibility element frame ${item.key}`)
+      }
       this.indexByKey.set(item.key, index)
     }
-    this.itemValues = [...items]
+    const knownKeys = new Set(this.indexByKey.keys())
+    const relationships = new Map(configuration.relationships ?? [])
+    for (const item of items) {
+      if (!relationships.has(item.key) && item.relatedElementKeys.length > 0) {
+        relationships.set(item.key, item.relatedElementKeys)
+      }
+    }
+    this.id = configuration.id ?? `accessibility-${++snapshotSequence}`
+    this.canvasDescription = validatedDescription(configuration.canvasDescription)
+    this.itemValues = items.map((item) => ({
+      ...item,
+      description: validatedDescription(item.description),
+      relatedElementKeys: item.relatedElementKeys.filter((key) => knownKeys.has(key)),
+    }))
+    this.relationshipGraph = relationships
   }
 
   get items(): readonly FdGraphAccessibilityItem[] {
@@ -122,7 +158,18 @@ export class FdGraphAccessibilitySnapshot {
   }
 
   relatedElementKeys(key: string): readonly string[] {
-    return this.item(key)?.relatedElementKeys.filter((related) => this.contains(related)) ?? []
+    if (!this.contains(key)) return []
+    const result: string[] = []
+    const discovered = new Set([key])
+    const queue = [...(this.relationshipGraph.get(key) ?? [])]
+    for (let index = 0; index < queue.length; index += 1) {
+      const candidate = queue[index]
+      if (candidate === undefined || discovered.has(candidate)) continue
+      discovered.add(candidate)
+      if (this.contains(candidate)) result.push(candidate)
+      else queue.push(...(this.relationshipGraph.get(candidate) ?? []))
+    }
+    return result
   }
 
   exposedItems(
@@ -173,18 +220,39 @@ export function createGraphAccessibilitySnapshot(
   graph: FdAnyGraphSnapshot,
   configuration: FdResolvedGraphCanvasAccessibilityConfiguration,
 ): FdGraphAccessibilitySnapshot {
-  if (!configuration.enabled) return new FdGraphAccessibilitySnapshot([])
+  const canvasDescription = { label: configuration.canvasLabel }
+  if (!configuration.enabled) {
+    return new FdGraphAccessibilitySnapshot({ canvasDescription, items: [] })
+  }
   const items: FdGraphAccessibilityItem[] = []
   const nodes = new Map(graph.nodes.map((node) => [node.id, node]))
-  const relatedNodes = new Map<FdGraphElementID, string[]>()
-  const appendRelatedNode = (nodeID: FdGraphElementID, relatedNodeID: FdGraphElementID): void => {
-    const related = relatedNodes.get(nodeID) ?? []
-    related.push(nodeKey(relatedNodeID))
-    relatedNodes.set(nodeID, related)
+  const relationships = new Map<string, string[]>()
+  const appendRelationship = (source: string, target: string): void => {
+    const related = relationships.get(source) ?? []
+    related.push(target)
+    relationships.set(source, related)
   }
   for (const edge of graph.edges) {
-    appendRelatedNode(edge.source.nodeID, edge.target.nodeID)
-    appendRelatedNode(edge.target.nodeID, edge.source.nodeID)
+    const edgeElementKey = edgeKey(edge.id)
+    const sourceKey =
+      edge.source.portID === undefined
+        ? nodeKey(edge.source.nodeID)
+        : portKey(edge.source.nodeID, edge.source.portID)
+    const targetKey =
+      edge.target.portID === undefined
+        ? nodeKey(edge.target.nodeID)
+        : portKey(edge.target.nodeID, edge.target.portID)
+    relationships.set(edgeElementKey, [sourceKey, targetKey])
+    appendRelationship(sourceKey, edgeElementKey)
+    appendRelationship(targetKey, edgeElementKey)
+  }
+  for (const node of graph.nodes) {
+    for (const port of node.ports ?? []) {
+      const nodeElementKey = nodeKey(node.id)
+      const portElementKey = portKey(node.id, port.id)
+      appendRelationship(portElementKey, nodeElementKey)
+      appendRelationship(nodeElementKey, portElementKey)
+    }
   }
   for (const node of graph.nodes) {
     const representation = configuration.nodeRepresentation(node)
@@ -195,7 +263,7 @@ export function createGraphAccessibilitySnapshot(
         reference: { kind: 'node', nodeID: node.id },
         frame: node.frame,
         description: validatedDescription(representation.description),
-        relatedElementKeys: relatedNodes.get(node.id) ?? [],
+        relatedElementKeys: relationships.get(nodeKey(node.id)) ?? [],
       })
     }
     for (const port of node.ports ?? []) {
@@ -207,7 +275,7 @@ export function createGraphAccessibilitySnapshot(
         reference: { kind: 'port', nodeID: node.id, portID: port.id },
         frame: portFrame(node, port),
         description: validatedDescription(portRepresentation.description),
-        relatedElementKeys: [nodeKey(node.id)],
+        relatedElementKeys: relationships.get(portKey(node.id, port.id)) ?? [],
       })
     }
   }
@@ -226,10 +294,10 @@ export function createGraphAccessibilitySnapshot(
         graphPortPoint(targetNode, edge.target.portID),
       ),
       description: validatedDescription(representation.description),
-      relatedElementKeys: [nodeKey(edge.source.nodeID), nodeKey(edge.target.nodeID)],
+      relatedElementKeys: relationships.get(edgeKey(edge.id)) ?? [],
     })
   }
-  return new FdGraphAccessibilitySnapshot(items)
+  return new FdGraphAccessibilitySnapshot({ canvasDescription, items, relationships })
 }
 
 export const graphNodeAccessibilityKey = nodeKey

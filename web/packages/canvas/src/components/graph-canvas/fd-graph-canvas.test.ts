@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defaultGraphAccessibilityCommandResolver } from '../../accessibility/configuration.js'
 import type { FdGraphAccessibilityActionDetail } from '../../accessibility/events.js'
+import { FdGraphAccessibilitySnapshot } from '../../accessibility/snapshot.js'
 import type { FdCanvasPoint } from '../../geometry.js'
 import type {
   FdGraphConnectionCancelDetail,
@@ -1379,6 +1380,40 @@ describe('fd-graph-canvas accessibility', () => {
     ).toBe('Consumer-provided hint')
   })
 
+  it('uses a consumer-provided accessibility snapshot', async () => {
+    const element = document.createElement('fd-graph-canvas')
+    element.style.width = '800px'
+    element.style.height = '600px'
+    element.snapshot = graphSnapshot()
+    element.accessibilitySnapshot = new FdGraphAccessibilitySnapshot({
+      canvasDescription: {
+        label: 'Reviewed Workflow',
+        hint: 'Consumer-provided canvas hint',
+      },
+      items: [
+        {
+          key: graphElementReferenceKey(graphNodeReference('target')),
+          kind: 'node',
+          reference: graphNodeReference('target'),
+          frame: { x: 220, y: 80, width: 140, height: 80 },
+          description: { label: 'Only Target' },
+          relatedElementKeys: [],
+        },
+      ],
+    })
+    document.body.append(element)
+    await element.updateComplete
+    await nextFrame()
+    const surface = element.shadowRoot?.querySelector('.accessibility-surface')
+
+    expect(surface?.getAttribute('aria-label')).toBe('Reviewed Workflow')
+    expect(surface?.getAttribute('aria-description')).toBe('Consumer-provided canvas hint')
+    expect(element.shadowRoot?.querySelectorAll('.accessibility-item')).toHaveLength(1)
+    expect(
+      element.shadowRoot?.querySelector('.accessibility-item')?.getAttribute('aria-label'),
+    ).toBe('Only Target')
+  })
+
   it('supports selection, activation, and keyboard movement without a pointer', async () => {
     const element = await mount()
     const surface = element.shadowRoot?.querySelector<HTMLElement>('.accessibility-surface')
@@ -1421,6 +1456,7 @@ describe('fd-graph-canvas accessibility', () => {
           actions: [{ action: 'inspect', label: 'Inspect node' }],
         },
       }),
+      edgeAccessibilityRepresentation: () => ({ kind: 'hidden' }),
     }
     const actions: FdGraphAccessibilityActionDetail[] = []
     element.addEventListener('fd-graph-accessibility-action', (event) => actions.push(event.detail))

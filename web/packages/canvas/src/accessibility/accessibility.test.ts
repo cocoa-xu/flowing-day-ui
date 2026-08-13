@@ -121,8 +121,61 @@ describe('graph accessibility snapshot', () => {
 
     expect(snapshot.reconciledFocus(target)).toBe(target)
     expect(snapshot.reconciledFocus('missing')).toBe(source)
-    expect(snapshot.relatedElementKeys(source)).toContain(target)
+    expect(snapshot.relatedElementKeys(source)).toHaveLength(1)
     expect(snapshot.elementKeyAfter(source)).toBeDefined()
+  })
+
+  it('traverses hidden relationship elements to the next exposed item', () => {
+    const snapshot = createGraphAccessibilitySnapshot(
+      graph,
+      resolveGraphCanvasAccessibilityConfiguration(
+        {},
+        {
+          portAccessibilityRepresentation: () => ({ kind: 'hidden' }),
+          edgeAccessibilityRepresentation: () => ({ kind: 'hidden' }),
+        },
+      ),
+    )
+
+    expect(snapshot.relatedElementKeys(graphNodeAccessibilityKey('source'))).toEqual([
+      graphNodeAccessibilityKey('target'),
+    ])
+  })
+
+  it('preserves snapshot identity and canvas semantics', () => {
+    const snapshot = new FdGraphAccessibilitySnapshot({
+      id: 'snapshot-1',
+      canvasDescription: {
+        label: 'Workflow Canvas',
+        hint: 'Review the current workflow',
+      },
+      items: [],
+    })
+
+    expect(snapshot.id).toBe('snapshot-1')
+    expect(snapshot.canvasDescription).toEqual({
+      label: 'Workflow Canvas',
+      hint: 'Review the current workflow',
+    })
+  })
+
+  it('rejects invalid item geometry', () => {
+    expect(
+      () =>
+        new FdGraphAccessibilitySnapshot({
+          canvasDescription: { label: 'Graph Canvas' },
+          items: [
+            {
+              key: 'node',
+              kind: 'node',
+              reference: { kind: 'node', nodeID: 'node' },
+              frame: { x: Number.NaN, y: 0, width: 10, height: 10 },
+              description: { label: 'Node' },
+              relatedElementKeys: [],
+            },
+          ],
+        }),
+    ).toThrow('invalid accessibility element frame node')
   })
 
   it('materializes only a bounded window around the focused item', () => {
@@ -134,7 +187,10 @@ describe('graph accessibility snapshot', () => {
       description: { label: `Node ${index}` },
       relatedElementKeys: [],
     }))
-    const snapshot = new FdGraphAccessibilitySnapshot(items)
+    const snapshot = new FdGraphAccessibilitySnapshot({
+      canvasDescription: { label: 'Graph Canvas' },
+      items,
+    })
     const exposed = snapshot.exposedItems('node:50000', 64)
 
     expect(exposed).toHaveLength(64)
