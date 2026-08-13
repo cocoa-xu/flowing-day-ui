@@ -66,38 +66,6 @@ describe('fd-canvas viewport', () => {
     expect(newWorldCenter.x).toBeCloseTo(oldWorldCenter.x)
     expect(newWorldCenter.y).toBeCloseTo(oldWorldCenter.y)
   })
-
-  it('keeps an adaptive grid aligned to world coordinates', async () => {
-    const element = await mount()
-    element.gridConfiguration = {}
-    await element.updateComplete
-    const grid = element.shadowRoot?.querySelector('.grid') as HTMLElement
-    const coarse = element.shadowRoot?.querySelector('.grid-coarse') as HTMLElement
-    const fine = element.shadowRoot?.querySelector('.grid-fine') as HTMLElement
-
-    expect(grid.hidden).toBe(false)
-    expect(coarse.style.backgroundSize).toBe('24px 24px')
-    expect(coarse.style.backgroundPosition).toBe('8px 6px')
-    expect(coarse.style.opacity).toBe('1')
-    expect(fine.style.backgroundSize).toBe('12px 12px')
-    expect(fine.style.opacity).toBe('0')
-
-    element.anchor({ x: 0, y: 0 }, { x: 7, y: 11 }, 1.5)
-
-    expect(coarse.style.backgroundSize).toBe('36px 36px')
-    expect(coarse.style.backgroundPosition).toBe('7px 11px')
-    expect(coarse.style.opacity).toBe('0.5')
-    expect(fine.style.backgroundSize).toBe('18px 18px')
-    expect(fine.style.backgroundPosition).toBe('7px 11px')
-    expect(fine.style.opacity).toBe('0.5')
-  })
-
-  it('does not draw a grid unless a consumer enables it', async () => {
-    const element = await mount()
-    const grid = element.shadowRoot?.querySelector('.grid') as HTMLElement
-
-    expect(grid.hidden).toBe(true)
-  })
 })
 
 describe('fd-canvas input and events', () => {

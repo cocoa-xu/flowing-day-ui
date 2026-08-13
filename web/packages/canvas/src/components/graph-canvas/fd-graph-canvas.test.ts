@@ -396,6 +396,21 @@ describe('fd-graph-canvas rendering boundary', () => {
 })
 
 describe('fd-graph-canvas pointer editing', () => {
+  it('keeps node selection visible without resize bounds when resizing is disabled', async () => {
+    const element = await mount()
+    element.interactionConfiguration = { nodeResizing: false }
+    element.selectedNodeIDs = new Set(['source'])
+    await element.updateComplete
+    await nextFrame()
+
+    expect(element.shadowRoot?.querySelector<HTMLElement>('.selection-bounds')?.hidden).toBe(true)
+    expect(
+      element.shadowRoot
+        ?.querySelector('[data-fd-graph-node="s:source"]')
+        ?.hasAttribute('data-selected'),
+    ).toBe(true)
+  })
+
   it('shows live marquee selection before the pointer is released', async () => {
     const element = await mount()
     const canvas = preparePointerInput(element)
