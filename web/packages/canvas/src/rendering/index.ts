@@ -1,3 +1,4 @@
+export * from '../rendering-context.js'
 export * from './backend.js'
 export * from './dom-backend.js'
 export * from './edge-geometry.js'

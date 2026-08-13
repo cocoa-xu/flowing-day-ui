@@ -11,6 +11,19 @@ npm install @flowing-day/canvas
 import '@flowing-day/canvas'
 ```
 
+The root entry registers every canvas component and exposes the complete toolkit. Apps
+that need a smaller feature boundary can import the component and model layers directly:
+
+```js
+import '@flowing-day/canvas/components/graph-canvas'
+import { FdGraphCanvasContent } from '@flowing-day/canvas/graph'
+import { FdGraphCanvasSessionState } from '@flowing-day/canvas/interactions'
+```
+
+The public domain entries are `graph`, `interactions`, `layout`, `minimap`, `rendering`,
+and `geometry`. They expose the same API layers as the root entry without registering
+unrelated components.
+
 Use `fd-canvas` for a pannable and zoomable world surface. Use `fd-graph-canvas`
 when the application already has graph presentation, layout, and session state:
 
