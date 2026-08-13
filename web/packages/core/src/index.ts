@@ -96,9 +96,12 @@ export { FdDependentRows } from './components/dependent-rows/fd-dependent-rows.j
 export {
   type FdConfirmationKind,
   FdDialog,
-  type FdDialogTone,
 } from './components/dialog/fd-dialog.js'
-export { FdDialogAction } from './components/dialog/fd-dialog-action.js'
+export {
+  FdDialogAction,
+  type FdDialogActionEmphasis,
+  type FdDialogActionRole,
+} from './components/dialog/fd-dialog-action.js'
 export { FdDisclosure } from './components/disclosure/fd-disclosure.js'
 export { FdEmptyRow } from './components/empty-row/fd-empty-row.js'
 export { FdEmptyState, type FdEmptyStateLayout } from './components/empty-state/fd-empty-state.js'

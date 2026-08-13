@@ -3,17 +3,12 @@ import { customElement, property, query } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { dialogActionStyles } from '../../internal/dialog-action.js'
 import { trash, warningTriangle } from '../../internal/glyphs.js'
+import { defaultStatusGlyph } from '../../internal/status-glyph.js'
 import { textRole } from '../../internal/typography.js'
+import type { FdStatusTone } from '../badge/fd-badge.js'
 import '../icon/fd-icon.js'
 
 export type FdConfirmationKind = 'confirmation' | 'warning' | 'destructive'
-export type FdDialogTone =
-  | 'neutral'
-  | 'accent'
-  | 'informational'
-  | 'success'
-  | 'warning'
-  | 'critical'
 
 const DIALOG_MINIMUM_WIDTH = 380
 const DIALOG_IDEAL_WIDTH = 440
@@ -22,7 +17,7 @@ const DIALOG_MAXIMUM_WIDTH = 560
 /**
  * A native dialog lifecycle with FlowingDayUI's visual hierarchy.
  *
- * Set `confirm-label` for a confirmation dialog, or provide `actions` slot content for
+ * Set `confirmation-title` for a confirmation dialog, or provide `actions` slot content for
  * a custom sheet. `showModal`, `show`, and `close` delegate to the native dialog.
  *
  * @slot - Dialog content.
@@ -163,26 +158,24 @@ export class FdDialog extends FdElement {
     `,
   ]
 
-  @property({ reflect: true }) heading = ''
+  @property({ reflect: true, attribute: 'title-text' }) override title = ''
 
   @property({ reflect: true }) message: string | null = null
 
   @property({ reflect: true }) symbol: string | null = null
 
-  @property({ reflect: true }) tone: FdDialogTone = 'accent'
+  @property({ reflect: true }) tone: FdStatusTone = 'accent'
 
-  @property({ attribute: 'confirmation-kind', reflect: true })
-  confirmationKind: FdConfirmationKind = 'confirmation'
+  @property({ reflect: true }) kind: FdConfirmationKind = 'confirmation'
 
-  @property({ attribute: 'confirm-label', reflect: true }) confirmLabel = ''
+  @property({ attribute: 'confirmation-title', reflect: true }) confirmationTitle = ''
 
-  @property({ attribute: 'cancel-label', reflect: true }) cancelLabel = 'Cancel'
+  @property({ attribute: 'cancellation-title', reflect: true }) cancellationTitle = 'Cancel'
+
+  @property({ type: Boolean, attribute: 'confirmation-is-default', reflect: true })
+  confirmationIsDefault = true
 
   @property({ type: Boolean, reflect: true }) open = false
-
-  @property({ type: Boolean, reflect: true }) modal = true
-
-  @property({ type: Boolean, reflect: true }) dismissible = true
 
   @query('dialog') private dialog!: HTMLDialogElement
 
@@ -193,16 +186,10 @@ export class FdDialog extends FdElement {
 
   override updated(changed: PropertyValues<this>): void {
     super.updated(changed)
-    if (changed.has('open') || changed.has('modal')) this.#synchronizePresentation()
+    if (changed.has('open')) this.#synchronizePresentation()
   }
 
   showModal(): void {
-    this.modal = true
-    this.open = true
-  }
-
-  show(): void {
-    this.modal = false
     this.open = true
   }
 
@@ -221,7 +208,7 @@ export class FdDialog extends FdElement {
       return
     }
     if (this.dialog.open) return
-    this.modal ? this.dialog.showModal() : this.dialog.show()
+    this.dialog.showModal()
   }
 
   #onNativeCancel = (event: Event): void => {
@@ -230,7 +217,7 @@ export class FdDialog extends FdElement {
       composed: true,
       cancelable: true,
     })
-    if (!this.dismissible || !this.dispatchEvent(cancellation)) event.preventDefault()
+    if (!this.dispatchEvent(cancellation)) event.preventDefault()
   }
 
   #onNativeClose = (): void => {
@@ -262,26 +249,18 @@ export class FdDialog extends FdElement {
     if (this.dispatchEvent(event)) this.close('confirm')
   }
 
-  get #resolvedTone(): FdDialogTone {
-    if (!this.confirmLabel) return this.tone
-    if (this.confirmationKind === 'warning') return 'warning'
-    if (this.confirmationKind === 'destructive') return 'critical'
+  get #resolvedTone(): FdStatusTone {
+    if (!this.confirmationTitle) return this.tone
+    if (this.kind === 'warning') return 'warning'
+    if (this.kind === 'destructive') return 'critical'
     return this.tone
   }
 
   get #symbolContent() {
     if (this.symbol) return html`<fd-icon name=${this.symbol}></fd-icon>`
-    if (this.confirmLabel && this.confirmationKind === 'warning') return warningTriangle
-    if (this.confirmLabel && this.confirmationKind === 'destructive') return trash
-    return nothing
-  }
-
-  get #showsSymbol(): boolean {
-    return Boolean(
-      this.symbol ||
-        (this.confirmLabel &&
-          (this.confirmationKind === 'warning' || this.confirmationKind === 'destructive')),
-    )
+    if (this.confirmationTitle && this.kind === 'warning') return warningTriangle
+    if (this.confirmationTitle && this.kind === 'destructive') return trash
+    return defaultStatusGlyph(this.tone)
   }
 
   override render() {
@@ -297,9 +276,9 @@ export class FdDialog extends FdElement {
         @close=${this.#onNativeClose}
       >
         <header class="header">
-          ${this.#showsSymbol ? html`<span class="symbol" aria-hidden="true">${symbol}</span>` : nothing}
+          <span class="symbol" aria-hidden="true">${symbol}</span>
           <div class="titles">
-            <h2 class="heading" id="heading">${this.heading}</h2>
+            <h2 class="heading" id="heading">${this.title}</h2>
             ${this.message ? html`<p class="message" id="message">${this.message}</p>` : nothing}
           </div>
         </header>
@@ -308,19 +287,20 @@ export class FdDialog extends FdElement {
         <div class="separator"></div>
         <footer class="actions" part="actions">
           ${
-            this.confirmLabel
+            this.confirmationTitle
               ? html`
                   <button class="dialog-action" type="button" @click=${this.#cancel}>
-                    ${this.cancelLabel}
+                    ${this.cancellationTitle}
                   </button>
                   <button
                     class="dialog-action"
                     type="button"
-                    ?data-prominent=${this.confirmationKind !== 'destructive'}
-                    ?data-destructive=${this.confirmationKind === 'destructive'}
+                    ?data-prominent=${this.confirmationIsDefault}
+                    ?data-destructive=${this.kind === 'destructive'}
+                    ?autofocus=${this.confirmationIsDefault}
                     @click=${this.#confirm}
                   >
-                    ${this.confirmLabel}
+                    ${this.confirmationTitle}
                   </button>
                 `
               : html`<slot name="actions"></slot>`

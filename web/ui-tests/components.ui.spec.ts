@@ -159,7 +159,7 @@ test('dialog uses native modal focus, cancellation, and focus restoration', asyn
   await page.keyboard.press('Enter')
   await expect.poll(() => dialog.evaluate((element) => (element as FdDialog).open)).toBe(true)
   await expect(dialog.getByRole('dialog')).toBeVisible()
-  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused()
+  await expect(dialog.getByRole('button', { name: 'Remove' })).toBeFocused()
 
   await page.keyboard.press('Escape')
   await expect.poll(() => dialog.evaluate((element) => (element as FdDialog).open)).toBe(false)

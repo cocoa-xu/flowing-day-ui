@@ -4,6 +4,9 @@ import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { dialogActionStyles } from '../../internal/dialog-action.js'
 import '../icon/fd-icon.js'
 
+export type FdDialogActionEmphasis = 'standard' | 'prominent'
+export type FdDialogActionRole = 'destructive'
+
 /**
  * An action styled for the footer of `fd-dialog`.
  *
@@ -14,13 +17,14 @@ import '../icon/fd-icon.js'
 export class FdDialogAction extends FdElement {
   static override styles: CSSResultGroup = [baseStyles, dialogActionStyles]
 
-  @property({ reflect: true }) label = ''
+  @property({ reflect: true, attribute: 'title-text' }) override title = ''
 
   @property({ reflect: true }) symbol: string | null = null
 
-  @property({ type: Boolean, reflect: true }) prominent = false
+  @property({ reflect: true }) emphasis: FdDialogActionEmphasis = 'standard'
 
-  @property({ type: Boolean, reflect: true }) destructive = false
+  @property({ reflect: true, attribute: 'button-role' })
+  buttonRole: FdDialogActionRole | null = null
 
   @property({ type: Boolean, reflect: true }) disabled = false
 
@@ -35,13 +39,13 @@ export class FdDialogAction extends FdElement {
         class="dialog-action"
         part="button"
         type="button"
-        ?data-prominent=${this.prominent}
-        ?data-destructive=${this.destructive}
+        ?data-prominent=${this.emphasis === 'prominent'}
+        ?data-destructive=${this.buttonRole === 'destructive'}
         ?disabled=${this.disabled}
         @click=${this.#activate}
       >
         ${this.symbol ? html`<fd-icon name=${this.symbol}></fd-icon>` : null}
-        <slot>${this.label}</slot>
+        <slot>${this.title}</slot>
       </button>
     `
   }

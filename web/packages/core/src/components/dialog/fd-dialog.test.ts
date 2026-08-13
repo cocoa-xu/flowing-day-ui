@@ -22,7 +22,7 @@ afterEach(() => {
 
 describe('fd-dialog lifecycle', () => {
   it('delegates modal presentation and close state to a native dialog', async () => {
-    const element = await mount(`<fd-dialog heading="Edit Preview">Content</fd-dialog>`)
+    const element = await mount(`<fd-dialog title-text="Edit Preview">Content</fd-dialog>`)
 
     element.showModal()
     await element.updateComplete
@@ -34,18 +34,8 @@ describe('fd-dialog lifecycle', () => {
     expect(nativeDialog(element).returnValue).toBe('saved')
   })
 
-  it('supports modeless presentation without a second visual implementation', async () => {
-    const element = await mount(`<fd-dialog heading="Inspector">Content</fd-dialog>`)
-
-    element.show()
-    await element.updateComplete
-
-    expect(element.modal).toBe(false)
-    expect(nativeDialog(element).open).toBe(true)
-  })
-
   it('reports the native return value after closing', async () => {
-    const element = await mount(`<fd-dialog heading="Edit Preview">Content</fd-dialog>`)
+    const element = await mount(`<fd-dialog title-text="Edit Preview">Content</fd-dialog>`)
     const onClose = vi.fn()
     element.addEventListener('fd-close', onClose)
 
@@ -62,10 +52,10 @@ describe('fd-dialog confirmation', () => {
   it('renders built-in confirmation actions with destructive semantics', async () => {
     const element = await mount(`
       <fd-dialog
-        heading="Remove preview?"
+        title-text="Remove preview?"
         message="This cannot be undone."
-        confirmation-kind="destructive"
-        confirm-label="Remove"
+        kind="destructive"
+        confirmation-title="Remove"
       ></fd-dialog>
     `)
     const buttons = [
@@ -74,12 +64,13 @@ describe('fd-dialog confirmation', () => {
 
     expect(buttons.map((button) => button.textContent?.trim())).toEqual(['Cancel', 'Remove'])
     expect(buttons[1]?.hasAttribute('data-destructive')).toBe(true)
+    expect(buttons[1]?.hasAttribute('autofocus')).toBe(true)
     expect(nativeDialog(element).getAttribute('aria-describedby')).toBe('message')
   })
 
   it('emits a cancelable confirmation before closing', async () => {
     const element = await mount(`
-      <fd-dialog heading="Apply changes?" confirm-label="Apply"></fd-dialog>
+      <fd-dialog title-text="Apply changes?" confirmation-title="Apply"></fd-dialog>
     `)
     const onConfirm = vi.fn((event: Event) => event.preventDefault())
     element.addEventListener('fd-confirm', onConfirm)
@@ -94,9 +85,9 @@ describe('fd-dialog confirmation', () => {
     expect(element.open).toBe(true)
   })
 
-  it('prevents native cancellation when dismissal is disabled', async () => {
-    const element = await mount(`<fd-dialog heading="Required" dismissible="false"></fd-dialog>`)
-    element.dismissible = false
+  it('lets the application prevent native cancellation', async () => {
+    const element = await mount(`<fd-dialog title-text="Required"></fd-dialog>`)
+    element.addEventListener('fd-cancel', (event) => event.preventDefault())
     element.showModal()
     await element.updateComplete
     const event = new Event('cancel', { cancelable: true })
@@ -107,11 +98,10 @@ describe('fd-dialog confirmation', () => {
     expect(element.open).toBe(true)
   })
 
-  it('keeps the explicit cancel action available when implicit dismissal is disabled', async () => {
+  it('keeps the explicit cancellation action available', async () => {
     const element = await mount(`
-      <fd-dialog heading="Required" confirm-label="Continue" dismissible="false"></fd-dialog>
+      <fd-dialog title-text="Required" confirmation-title="Continue"></fd-dialog>
     `)
-    element.dismissible = false
     element.showModal()
     await element.updateComplete
 
@@ -125,10 +115,10 @@ describe('fd-dialog confirmation', () => {
 describe('fd-dialog composition', () => {
   it('keeps custom body and action content application-owned', async () => {
     const element = await mount(`
-      <fd-dialog heading="Edit Preview" message="Adjust this presentation.">
+      <fd-dialog title-text="Edit Preview" message="Adjust this presentation.">
         <label>Name <input value="Morning Review" /></label>
-        <fd-dialog-action slot="actions" label="Cancel"></fd-dialog-action>
-        <fd-dialog-action slot="actions" label="Save" prominent></fd-dialog-action>
+        <fd-dialog-action slot="actions" title-text="Cancel"></fd-dialog-action>
+        <fd-dialog-action slot="actions" title-text="Save" emphasis="prominent"></fd-dialog-action>
       </fd-dialog>
     `)
     const actionSlot = element.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="actions"]')
@@ -138,12 +128,18 @@ describe('fd-dialog composition', () => {
   })
 
   it('uses the same intrinsic width range as the SwiftUI dialog', async () => {
-    const element = await mount(`<fd-dialog heading="Edit Preview">Content</fd-dialog>`)
+    const element = await mount(`<fd-dialog title-text="Edit Preview">Content</fd-dialog>`)
     element.showModal()
     await element.updateComplete
 
     const width = nativeDialog(element).getBoundingClientRect().width
     expect(width).toBeGreaterThanOrEqual(Math.min(380, document.documentElement.clientWidth - 32))
     expect(width).toBeLessThanOrEqual(560)
+  })
+
+  it('uses the status tone default symbol when none is supplied', async () => {
+    const element = await mount(`<fd-dialog title-text="Edit Preview">Content</fd-dialog>`)
+
+    expect(element.shadowRoot?.querySelector('.symbol svg')).not.toBeNull()
   })
 })
