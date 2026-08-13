@@ -1,9 +1,5 @@
-import type { FdCanvasRect } from '../geometry.js'
-import type { FdGraphResizeHandle, FdGraphSnappingStrategy } from '../interactions/arrangement.js'
-import type {
-  FdGraphNodeInteractionAdmission,
-  FdGraphNodeSizeConstraints,
-} from '../interactions/configuration.js'
+import type { FdCanvasRect, FdCanvasSize } from '../geometry.js'
+import type { FdGraphSnappingStrategy } from '../interactions/arrangement.js'
 import type {
   FdGraphConnectionOrigin,
   FdGraphConnectionValidation,
@@ -30,9 +26,14 @@ export interface FdGraphCanvasNodeCapabilityMap {
   readonly overrides?: ReadonlyMap<FdGraphElementID, FdGraphCanvasNodeCapabilities>
 }
 
+export interface FdGraphCanvasNodeSizeConstraints {
+  readonly minimumSize?: FdCanvasSize
+  readonly maximumSize?: FdCanvasSize
+}
+
 export interface FdGraphCanvasNodeSizeConstraintMap {
-  readonly defaultConstraints?: FdGraphNodeSizeConstraints
-  readonly overrides?: ReadonlyMap<FdGraphElementID, FdGraphNodeSizeConstraints>
+  readonly defaultConstraints?: FdGraphCanvasNodeSizeConstraints
+  readonly overrides?: ReadonlyMap<FdGraphElementID, FdGraphCanvasNodeSizeConstraints>
 }
 
 export interface FdGraphCanvasNodeDragAdmissionRequest {
@@ -45,8 +46,21 @@ export interface FdGraphCanvasNodeDragAdmissionRequest {
 export interface FdGraphCanvasNodeResizeAdmissionRequest
   extends FdGraphCanvasNodeDragAdmissionRequest {
   readonly baseFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
-  readonly edges: FdGraphResizeHandle
+  readonly edges: FdGraphCanvasResizeEdges
 }
+
+export type FdGraphCanvasNodeDragAdmission =
+  | { readonly kind: 'deny' }
+  | { readonly kind: 'allowAll' }
+  | { readonly kind: 'allowOnly'; readonly nodeIDs: ReadonlySet<FdGraphElementID> }
+
+export type FdGraphCanvasNodeResizeAdmission =
+  | { readonly kind: 'deny' }
+  | { readonly kind: 'allowAll' }
+  | { readonly kind: 'allowOnly'; readonly nodeIDs: ReadonlySet<FdGraphElementID> }
+
+export type FdGraphCanvasResizeEdge = 'leading' | 'trailing' | 'top' | 'bottom'
+export type FdGraphCanvasResizeEdges = ReadonlySet<FdGraphCanvasResizeEdge>
 
 export interface FdGraphCanvasConnectionPolicy {
   readonly canBegin?: (origin: FdGraphConnectionOrigin) => boolean
@@ -60,10 +74,10 @@ export interface FdGraphCanvasInteractionPolicy {
   readonly connectionPolicy?: FdGraphCanvasConnectionPolicy
   readonly admitNodeDrag?: (
     request: FdGraphCanvasNodeDragAdmissionRequest,
-  ) => FdGraphNodeInteractionAdmission
+  ) => FdGraphCanvasNodeDragAdmission
   readonly admitNodeResize?: (
     request: FdGraphCanvasNodeResizeAdmissionRequest,
-  ) => FdGraphNodeInteractionAdmission
+  ) => FdGraphCanvasNodeResizeAdmission
   readonly isAdditiveSelectionActive?: () => boolean
   readonly interactionModifiers?: () => ReadonlySet<FdGraphCanvasInteractionModifier>
 }
@@ -87,7 +101,7 @@ export function graphCanvasNodeCapabilities(
 export function graphCanvasNodeSizeConstraints(
   policy: FdGraphCanvasInteractionPolicy,
   nodeID: FdGraphElementID,
-): FdGraphNodeSizeConstraints | undefined {
+): FdGraphCanvasNodeSizeConstraints | undefined {
   return (
     policy.nodeSizeConstraints?.overrides?.get(nodeID) ??
     policy.nodeSizeConstraints?.defaultConstraints

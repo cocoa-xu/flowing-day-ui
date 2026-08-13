@@ -22,8 +22,8 @@ describe('graph canvas interaction policy', () => {
         overrides: new Map([['movable', { draggable: true, resizable: false }]]),
       },
       nodeSizeConstraints: {
-        defaultConstraints: { minimumWidth: 44, minimumHeight: 32 },
-        overrides: new Map([['large', { minimumWidth: 120, minimumHeight: 80 }]]),
+        defaultConstraints: { minimumSize: { width: 44, height: 32 } },
+        overrides: new Map([['large', { minimumSize: { width: 120, height: 80 } }]]),
       },
     }
 
@@ -35,12 +35,10 @@ describe('graph canvas interaction policy', () => {
       resizable: false,
     })
     expect(graphCanvasNodeSizeConstraints(policy, 'default')).toEqual({
-      minimumWidth: 44,
-      minimumHeight: 32,
+      minimumSize: { width: 44, height: 32 },
     })
     expect(graphCanvasNodeSizeConstraints(policy, 'large')).toEqual({
-      minimumWidth: 120,
-      minimumHeight: 80,
+      minimumSize: { width: 120, height: 80 },
     })
   })
 })

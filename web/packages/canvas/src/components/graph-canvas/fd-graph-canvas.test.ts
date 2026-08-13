@@ -750,7 +750,7 @@ describe('fd-graph-canvas pointer editing', () => {
     applyFrameIntents(element)
     element.interactionPolicy = {
       nodeSizeConstraints: {
-        overrides: new Map([['source', { maximumWidth: 200, maximumHeight: 100 }]]),
+        overrides: new Map([['source', { maximumSize: { width: 200, height: 100 } }]]),
       },
     }
     await element.updateComplete
@@ -782,7 +782,7 @@ describe('fd-graph-canvas pointer editing', () => {
         expect(anchorNodeID).toBe('source')
         expect(candidateNodeIDs).toEqual(['source', 'target'])
         expect([...baseFrames.keys()]).toEqual(['source', 'target'])
-        expect(edges).toBe('bottomRight')
+        expect(edges).toEqual(new Set(['bottom', 'trailing']))
         return { kind: 'allowOnly', nodeIDs: new Set(['source']) }
       },
     }

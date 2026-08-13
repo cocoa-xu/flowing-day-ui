@@ -40,6 +40,7 @@ import type {
 import {
   type FdGraphCanvasInteractionPolicy,
   type FdGraphCanvasNodeCapabilities,
+  type FdGraphCanvasResizeEdges,
   graphCanvasNodeCapabilities,
   graphCanvasNodeSizeConstraints,
 } from '../../graph/interaction-policy.js'
@@ -78,6 +79,7 @@ import type { FdGraphHistoryApplyResult, FdGraphHistoryDirection } from '../../h
 import {
   type FdGraphArrangementAction,
   type FdGraphGuide,
+  type FdGraphResizeHandle,
   graphArrangementTranslations,
   graphSelectionBounds,
 } from '../../interactions/arrangement.js'
@@ -155,6 +157,27 @@ const edgeHitTestMaximumCandidates = 512
 const edgeHitTestViewportTolerance = 8
 const edgeHitTestMinimumTolerance = 6
 const edgeHitTestPadding = 4
+
+const graphCanvasResizeEdges = (handle: FdGraphResizeHandle): FdGraphCanvasResizeEdges => {
+  switch (handle) {
+    case 'top':
+      return new Set(['top'])
+    case 'topRight':
+      return new Set(['top', 'trailing'])
+    case 'right':
+      return new Set(['trailing'])
+    case 'bottomRight':
+      return new Set(['bottom', 'trailing'])
+    case 'bottom':
+      return new Set(['bottom'])
+    case 'bottomLeft':
+      return new Set(['bottom', 'leading'])
+    case 'left':
+      return new Set(['leading'])
+    case 'topLeft':
+      return new Set(['top', 'leading'])
+  }
+}
 const minimumElementFocusFrameSize = 22
 const suppressedConnectionClickDuration = 500
 const suppressedConnectionClickTolerance = 4
@@ -1498,7 +1521,24 @@ export class FdGraphCanvas
       groupResizing: true,
       minimumNodeWidth: configuration.nodeResizing.minimumSize.width,
       minimumNodeHeight: configuration.nodeResizing.minimumSize.height,
-      nodeSizeConstraints: (node) => graphCanvasNodeSizeConstraints(policy, node.id),
+      nodeSizeConstraints: (node) => {
+        const constraints = graphCanvasNodeSizeConstraints(policy, node.id)
+        if (!constraints) return undefined
+        return {
+          ...(constraints.minimumSize
+            ? {
+                minimumWidth: constraints.minimumSize.width,
+                minimumHeight: constraints.minimumSize.height,
+              }
+            : {}),
+          ...(constraints.maximumSize
+            ? {
+                maximumWidth: constraints.maximumSize.width,
+                maximumHeight: constraints.maximumSize.height,
+              }
+            : {}),
+        }
+      },
       marqueeMinimumDistance: configuration.marqueeMinimumDistance,
       snapping: {
         enabled: configuration.snapping.isEnabled,
@@ -1540,7 +1580,7 @@ export class FdGraphCanvas
           selectedNodeIDs: request.selectedNodes.map(({ id }) => id),
           candidateNodeIDs: request.candidateNodes.map(({ id }) => id),
           baseFrames: request.baseFrames,
-          edges: request.handle,
+          edges: graphCanvasResizeEdges(request.handle),
           basePresentationSnapshotID: request.snapshotID,
         }) ?? { kind: 'allowAll' },
     })

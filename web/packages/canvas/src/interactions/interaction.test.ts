@@ -120,6 +120,21 @@ describe('graph interaction policy', () => {
       minimumWidth: 44,
       minimumHeight: 32,
     })
+    expect(
+      resolveGraphCanvasInteractionConfiguration({
+        nodeSizeConstraints: () => ({
+          minimumWidth: 0,
+          minimumHeight: 0,
+          maximumWidth: 0,
+          maximumHeight: 0,
+        }),
+      }).nodeSizeConstraints(nodes[0] as FdAnyGraphNode),
+    ).toEqual({
+      minimumWidth: 0,
+      minimumHeight: 0,
+      maximumWidth: 0,
+      maximumHeight: 0,
+    })
     expect(() =>
       resolveGraphCanvasInteractionConfiguration({
         nodeSizeConstraints: () => ({ minimumWidth: 80, maximumWidth: 40 }),

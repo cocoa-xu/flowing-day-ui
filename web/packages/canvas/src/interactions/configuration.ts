@@ -150,7 +150,7 @@ const positiveInteger = (value: number, name: string): number => {
 
 const resolvedMaximum = (value: number | undefined, minimum: number, name: string) => {
   if (value === undefined) return undefined
-  const maximum = positive(value, name)
+  const maximum = nonnegative(value, name)
   if (maximum < minimum) throw new RangeError(`${name} must not be smaller than its minimum`)
   return maximum
 }
@@ -190,11 +190,11 @@ export function resolveGraphCanvasInteractionConfiguration(
     minimumNodeHeight,
     nodeSizeConstraints: (node) => {
       const constraints = configuration.nodeSizeConstraints?.(node)
-      const resolvedMinimumWidth = positive(
+      const resolvedMinimumWidth = nonnegative(
         constraints?.minimumWidth ?? minimumNodeWidth,
         'minimum node width',
       )
-      const resolvedMinimumHeight = positive(
+      const resolvedMinimumHeight = nonnegative(
         constraints?.minimumHeight ?? minimumNodeHeight,
         'minimum node height',
       )
