@@ -94,12 +94,15 @@ import {
   resolveGraphCanvasInteractionConfiguration,
 } from '../../interactions/configuration.js'
 import {
+  FdGraphCanvasConnectionPolicy as FdGraphCanvasEngineConnectionPolicy,
   type FdGraphCanvasConnectionOrigin,
   type FdGraphCanvasConnectionResolution,
   type FdGraphCanvasTransientConnection,
   type FdResolvedGraphCanvasConnectionEditingConfiguration,
   resolveGraphConnectionEditingConfiguration,
 } from '../../interactions/connection.js'
+import type { FdGraphCanvasConnectionOrigin as FdGraphCanvasSourceConnectionOrigin } from '../../interactions/connection-model.js'
+import type { FdLayoutInputID } from '../../layout/model.js'
 import {
   defaultGraphCanvasKeyboardCommandResolver,
   type FdGraphCanvasKeyboardCommand,
@@ -176,8 +179,8 @@ const minimumElementFocusFrameSize = 22
 const suppressedConnectionClickDuration = 500
 const suppressedConnectionClickTolerance = 4
 
-@customElement('fd-graph-canvas')
-export class FdGraphCanvas
+@customElement('fd-graph-canvas-engine')
+export class FdGraphCanvasEngine
   extends LitElement
   implements FdGraphCanvasInteractionDelegate, FdGraphCanvasConnectionDelegate
 {
@@ -715,6 +718,7 @@ export class FdGraphCanvas
   `
 
   @property({ attribute: false }) snapshot: FdAnyGraphSnapshot = emptySnapshot
+  @property({ attribute: false }) layoutInputID: FdLayoutInputID | undefined
   @property({ attribute: false })
   accessibilitySnapshot: FdGraphCanvasAccessibilitySnapshot | undefined
   @property({ attribute: false }) configuration: FdGraphCanvasConfiguration = {}
@@ -1146,6 +1150,15 @@ export class FdGraphCanvas
     this.canvas.setZoom(zoom, options)
   }
 
+  anchor(
+    worldPoint: FdCanvasPoint,
+    viewportPoint: FdCanvasPoint,
+    zoom = this.canvas.viewport.transform.zoom,
+    options: FdCanvasTransformOptions = {},
+  ): void {
+    this.canvas.anchor(worldPoint, viewportPoint, zoom, options)
+  }
+
   center(
     worldPoint: FdCanvasPoint,
     zoom = this.canvas.viewport.transform.zoom,
@@ -1156,6 +1169,15 @@ export class FdGraphCanvas
 
   focusRect(rect: FdCanvasRect, zoom?: number, options: FdCanvasTransformOptions = {}): void {
     this.canvas.focusRect(rect, zoom, options)
+  }
+
+  fitRect(
+    rect: FdCanvasRect,
+    padding: number,
+    maximumZoom?: number,
+    options: FdCanvasTransformOptions = {},
+  ): void {
+    this.canvas.fitRect(rect, padding, maximumZoom, options)
   }
 
   focusNode(nodeID: string | number, zoom?: number, options: FdCanvasTransformOptions = {}): void {
@@ -1627,7 +1649,28 @@ export class FdGraphCanvas
         minimumDragDistance: configuration.connectionEditing.minimumDragDistance,
         rendersDefaultPreview: configuration.connectionEditing.rendersDefaultPreview,
       },
-      policy.connectionPolicy,
+      new FdGraphCanvasEngineConnectionPolicy({
+        canBegin: (origin) => policy.connectionPolicy.canBegin(this.connectionOrigin(origin)),
+        validate: (request) => {
+          const layoutInputID = this.layoutInputID
+          if (!layoutInputID) return { kind: 'invalid' }
+          const validation = policy.connectionPolicy.validate({
+            origin: this.connectionOrigin(request.origin),
+            targetPortID: request.target.portID,
+            basePresentationSnapshotID: request.basePresentationSnapshotID,
+            baseLayoutInputID: layoutInputID,
+          })
+          return validation.kind === 'valid'
+            ? validation
+            : {
+                kind: 'invalid',
+                feedback:
+                  validation.feedback.message === undefined
+                    ? {}
+                    : { message: validation.feedback.message },
+              }
+        },
+      }),
     )
     this.keyboardCommandResolver =
       this.platformAdapter.resolveKeyboardCommand ?? defaultGraphCanvasKeyboardCommandResolver
@@ -1635,6 +1678,20 @@ export class FdGraphCanvas
       configuration.accessibility,
       this.platformAdapter,
     )
+  }
+
+  private connectionOrigin(
+    origin: FdGraphCanvasConnectionOrigin,
+  ): FdGraphCanvasSourceConnectionOrigin {
+    return origin.kind === 'new'
+      ? { kind: 'new', sourcePortID: origin.source.portID }
+      : {
+          kind: 'reconnect',
+          edgeID: origin.edgeID,
+          endpoint: origin.endpoint,
+          originalEndpointID: origin.original.portID,
+          fixedEndpointID: origin.fixed.portID,
+        }
   }
 
   private activateBackend(): void {
@@ -2681,6 +2738,6 @@ export class FdGraphCanvas
 
 declare global {
   interface HTMLElementTagNameMap {
-    'fd-graph-canvas': FdGraphCanvas
+    'fd-graph-canvas-engine': FdGraphCanvasEngine
   }
 }

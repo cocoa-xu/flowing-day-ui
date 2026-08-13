@@ -33,10 +33,14 @@ import {
   FdGraphCanvasSnappingStrategy,
   FdGraphCanvasSnapState,
 } from '../../interactions/arrangement.js'
+import { graphConnectionOriginForEdge } from '../../interactions/connection.js'
+import { FdGraphCanvasConnectionPolicy } from '../../interactions/connection-model.js'
 import {
-  FdGraphCanvasConnectionPolicy,
-  graphConnectionOriginForEdge,
-} from '../../interactions/connection.js'
+  FdLayoutComponentIdentity,
+  FdLayoutInputID,
+  FdLayoutPipelineIdentity,
+  FdLayoutRevision,
+} from '../../layout/model.js'
 import type {
   FdGraphCanvasRenderingBackendPreference,
   FdGraphRenderFrame,
@@ -47,7 +51,7 @@ import { graphCanvasRenderingBackendCapabilities } from '../../rendering/backend
 import { FdGraphDOMRenderingBackend } from '../../rendering/dom-backend.js'
 import { FdGraphWebGL2RenderingBackend } from '../../rendering/webgl2-backend.js'
 import type { FdCanvas } from '../canvas/fd-canvas.js'
-import type { FdGraphCanvas } from './fd-graph-canvas.js'
+import type { FdGraphCanvasEngine } from './fd-graph-canvas.js'
 import './fd-graph-canvas.js'
 
 const graphSnapshot = (): FdAnyGraphSnapshot => ({
@@ -79,14 +83,26 @@ const graphSnapshot = (): FdAnyGraphSnapshot => ({
 
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
 
+const layoutInputID = (snapshotID: string | number): FdLayoutInputID => {
+  const component = new FdLayoutComponentIdentity('engine-test')
+  return new FdLayoutInputID(
+    snapshotID,
+    new FdLayoutPipelineIdentity(component),
+    component,
+    component,
+    new FdLayoutRevision('state'),
+  )
+}
+
 async function mount(
   snapshot: FdAnyGraphSnapshot = graphSnapshot(),
   backend?: FdGraphRenderingBackend | FdGraphCanvasRenderingBackendPreference,
-): Promise<FdGraphCanvas> {
-  const element = document.createElement('fd-graph-canvas')
+): Promise<FdGraphCanvasEngine> {
+  const element = document.createElement('fd-graph-canvas-engine')
   element.style.width = '800px'
   element.style.height = '600px'
   element.snapshot = snapshot
+  element.layoutInputID = layoutInputID(snapshot.id)
   if (typeof backend === 'string') element.configuration = { renderingBackend: backend }
   else if (backend) element.renderingAdapter = backend
   document.body.append(element)
@@ -96,19 +112,19 @@ async function mount(
   return element
 }
 
-function preparePointerInput(element: FdGraphCanvas): HTMLElement {
+function preparePointerInput(element: FdGraphCanvasEngine): HTMLElement {
   const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
   canvas.setPointerCapture = () => undefined
   return canvas
 }
 
-function clientPoint(element: FdGraphCanvas, worldPoint: FdCanvasPoint): FdCanvasPoint {
+function clientPoint(element: FdGraphCanvasEngine, worldPoint: FdCanvasPoint): FdCanvasPoint {
   const point = element.viewport.transform.applyPoint(worldPoint)
   const bounds = element.getBoundingClientRect()
   return { x: bounds.left + point.x, y: bounds.top + point.y }
 }
 
-function applyFrameIntents(element: FdGraphCanvas): void {
+function applyFrameIntents(element: FdGraphCanvasEngine): void {
   element.addEventListener('fd-graph-node-frames-change', ({ detail }) => {
     if (detail.phase !== 'ended') return
     const frames = new Map(detail.changes.map(({ nodeID, after }) => [nodeID, after]))
@@ -182,7 +198,7 @@ class RecordingBackend implements FdGraphRenderingBackend {
 
 describe('fd-graph-canvas rendering boundary', () => {
   it('preserves the viewport when content changes by default', () => {
-    const element = document.createElement('fd-graph-canvas')
+    const element = document.createElement('fd-graph-canvas-engine')
 
     expect(element.contentChangeBehavior).toEqual({ kind: 'preserveViewport' })
   })
@@ -332,7 +348,7 @@ describe('fd-graph-canvas rendering boundary', () => {
   })
 
   it('passes rendering configuration to the automatic GPU backend', async () => {
-    const element = document.createElement('fd-graph-canvas')
+    const element = document.createElement('fd-graph-canvas-engine')
     element.style.width = '800px'
     element.style.height = '600px'
     element.snapshot = graphSnapshot()
@@ -1421,7 +1437,7 @@ describe('fd-graph-canvas accessibility', () => {
   })
 
   it('keeps consumer semantics and capabilities independent from mechanics', async () => {
-    const element = document.createElement('fd-graph-canvas')
+    const element = document.createElement('fd-graph-canvas-engine')
     element.style.width = '800px'
     element.style.height = '600px'
     element.snapshot = graphSnapshot()
@@ -1457,7 +1473,7 @@ describe('fd-graph-canvas accessibility', () => {
   })
 
   it('uses a consumer-provided accessibility snapshot', async () => {
-    const element = document.createElement('fd-graph-canvas')
+    const element = document.createElement('fd-graph-canvas-engine')
     element.style.width = '800px'
     element.style.height = '600px'
     element.snapshot = graphSnapshot()
@@ -1511,7 +1527,7 @@ describe('fd-graph-canvas accessibility', () => {
   })
 
   it('navigates connected elements and dispatches consumer-defined accessibility actions', async () => {
-    const element = document.createElement('fd-graph-canvas')
+    const element = document.createElement('fd-graph-canvas-engine')
     element.style.width = '800px'
     element.style.height = '600px'
     element.snapshot = graphSnapshot()

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FdGraphCanvasContent, FdGraphCanvasLayoutAdapter } from '../../graph/content.js'
 import {
   FdGraphElementAddress,
@@ -24,7 +24,12 @@ import {
   FdGraphLayoutResult,
   FdGraphNodePlacement,
 } from '../../layout/pipeline.js'
+import { graphCanvasEngineSnapshot } from './engine-adapter.js'
+import { FdGraphCanvas } from './fd-graph-canvas-element.js'
+import type { FdGraphCanvasEngine } from './fd-graph-canvas.js'
 import { FdGraphCanvasPresentationResolver } from './presentation-resolver.js'
+
+afterEach(() => document.body.replaceChildren())
 
 const root = new FdGraphInstanceHandle(0)
 const sourceNodeLocalID = FdGraphPresentationLocalElementID.source({
@@ -164,6 +169,144 @@ const makeContent = () => {
 }
 
 describe('graph canvas presentation resolver', () => {
+  it('feeds source-aligned content and session state into the private engine', async () => {
+    const content = makeContent()
+    const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
+    element.content = content
+    element.session = new FdGraphCanvasSessionState({
+      selection: new Set(['source', 'source-output']),
+      focusedElementID: 'source-output',
+      tool: 'pan',
+    })
+    document.body.append(element)
+    await element.updateComplete
+    const engine = element.shadowRoot?.querySelector('fd-graph-canvas-engine') as
+      | FdGraphCanvasEngine
+      | undefined
+
+    expect(engine?.snapshot.nodes.map(({ id }) => id)).toEqual(['source', 'target'])
+    expect(engine?.selectedElements).toEqual([
+      { kind: 'node', nodeID: 'source' },
+      { kind: 'port', nodeID: 'source', portID: 'source-output' },
+    ])
+    expect(engine?.focusedElement).toEqual({
+      kind: 'port',
+      nodeID: 'source',
+      portID: 'source-output',
+    })
+    expect(engine?.tool).toBe('pan')
+  })
+
+  it('maps private engine selection and focus changes back to canonical session IDs', async () => {
+    const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
+    element.content = makeContent()
+    document.body.append(element)
+    await element.updateComplete
+    const engine = element.shadowRoot?.querySelector('fd-graph-canvas-engine')
+
+    engine?.dispatchEvent(
+      new CustomEvent('fd-graph-selection-change', {
+        detail: {
+          selectedElements: [
+            { kind: 'port', nodeID: 'target', portID: 'target-input' },
+            { kind: 'edge', edgeID: 'edge' },
+          ],
+          selectedNodeIDs: new Set(),
+          phase: 'ended',
+          source: 'pointer',
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+    engine?.dispatchEvent(
+      new CustomEvent('fd-graph-focus-change', {
+        detail: {
+          focusedElement: { kind: 'edge', edgeID: 'edge' },
+          source: 'pointer',
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+
+    expect(element.session.selection).toEqual(new Set(['target-input', 'edge']))
+    expect(element.session.focusedElementID).toBe('edge')
+  })
+
+  it('routes viewport and smart-magnify behavior through the source-aligned callbacks', async () => {
+    const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
+    element.content = makeContent()
+    const onViewportChange = vi.fn()
+    const onSmartMagnify = vi.fn(() => ({
+      kind: 'focus' as const,
+      rect: { x: 0, y: 0, width: 100, height: 80 },
+      zoom: 1.5,
+    }))
+    element.onViewportChange = onViewportChange
+    element.onSmartMagnify = onSmartMagnify
+    document.body.append(element)
+    await element.updateComplete
+    const engine = element.shadowRoot?.querySelector(
+      'fd-graph-canvas-engine',
+    ) as FdGraphCanvasEngine
+    const focusRect = vi.spyOn(engine, 'focusRect').mockImplementation(() => {})
+    const viewport = engine.viewport
+    const smartMagnify = new CustomEvent('fd-smart-magnify', {
+      detail: {
+        location: { x: 40, y: 40 },
+        worldLocation: { x: 40, y: 40 },
+        viewport,
+        initialZoom: 1,
+        zoomTolerance: 0.01,
+        canRestoreViewport: false,
+        isZoomedIn: false,
+      },
+      cancelable: true,
+    })
+
+    engine.dispatchEvent(smartMagnify)
+    engine.dispatchEvent(
+      new CustomEvent('fd-viewport-change', {
+        detail: { viewport, phase: 'continuous' },
+      }),
+    )
+
+    expect(smartMagnify.defaultPrevented).toBe(true)
+    expect(onSmartMagnify).toHaveBeenCalledWith(
+      expect.objectContaining({ nearestNodeID: 'source' }),
+    )
+    expect(focusRect).toHaveBeenCalledWith({ x: 0, y: 0, width: 100, height: 80 }, 1.5)
+    expect(element.session.viewport).toBe(viewport)
+    expect(onViewportChange).toHaveBeenCalledWith(viewport, 'continuous')
+  })
+
+  it('preserves canonical identities at the private rendering-engine boundary', () => {
+    const content = makeContent()
+    const snapshot = graphCanvasEngineSnapshot(content)
+
+    expect(snapshot.nodes).toEqual([
+      expect.objectContaining({
+        id: 'source',
+        frame: { x: 0, y: 0, width: 100, height: 80 },
+        ports: [expect.objectContaining({ id: 'source-output', side: 'right', offset: 0.5 })],
+      }),
+      expect.objectContaining({
+        id: 'target',
+        frame: { x: 240, y: 0, width: 100, height: 80 },
+        ports: [expect.objectContaining({ id: 'target-input', side: 'left', offset: 0.5 })],
+      }),
+    ])
+    expect(snapshot.edges).toEqual([
+      expect.objectContaining({
+        id: 'edge',
+        source: { nodeID: 'source', portID: 'source-output' },
+        target: { nodeID: 'target', portID: 'target-input' },
+        data: expect.objectContaining({ localID: edgeLocalID, isDirected: true }),
+      }),
+    ])
+  })
+
   it('applies matching transient drag geometry to nodes, ports, and edges', () => {
     const content = makeContent()
     const session = new FdGraphCanvasSessionState({

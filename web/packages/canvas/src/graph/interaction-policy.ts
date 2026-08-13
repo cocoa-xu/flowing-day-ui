@@ -1,6 +1,6 @@
 import type { FdCanvasRect, FdCanvasSize } from '../geometry.js'
 import { FdGraphCanvasSnappingStrategy } from '../interactions/arrangement.js'
-import { FdGraphCanvasConnectionPolicy } from '../interactions/connection.js'
+import { FdGraphCanvasConnectionPolicy } from '../interactions/connection-model.js'
 import type { FdAnyGraphSnapshot, FdGraphElementID } from './model.js'
 
 export type FdGraphCanvasInteractionModifier =
@@ -236,7 +236,7 @@ export interface FdGraphCanvasInteractionPolicyOptions<
   readonly nodeCapabilities?: FdGraphCanvasNodeCapabilityMap<ElementID>
   readonly nodeSizeConstraints?: FdGraphCanvasNodeSizeConstraintMap<ElementID>
   readonly snappingStrategy?: FdGraphCanvasSnappingStrategy
-  readonly connectionPolicy?: FdGraphCanvasConnectionPolicy
+  readonly connectionPolicy?: FdGraphCanvasConnectionPolicy<ElementID>
   readonly admitNodeDrag?: (
     request: FdGraphCanvasNodeDragAdmissionRequest<ElementID>,
   ) => FdGraphCanvasNodeDragAdmission<ElementID>
@@ -251,7 +251,7 @@ export class FdGraphCanvasInteractionPolicy<ElementID extends FdGraphElementID =
   readonly nodeCapabilities: FdGraphCanvasNodeCapabilityMap<ElementID>
   readonly nodeSizeConstraints: FdGraphCanvasNodeSizeConstraintMap<ElementID>
   readonly snappingStrategy: FdGraphCanvasSnappingStrategy
-  readonly connectionPolicy: FdGraphCanvasConnectionPolicy
+  readonly connectionPolicy: FdGraphCanvasConnectionPolicy<ElementID>
   readonly #nodeDragAdmission: (
     request: FdGraphCanvasNodeDragAdmissionRequest<ElementID>,
   ) => FdGraphCanvasNodeDragAdmission<ElementID>
