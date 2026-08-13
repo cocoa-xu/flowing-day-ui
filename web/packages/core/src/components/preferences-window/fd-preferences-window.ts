@@ -15,7 +15,7 @@ interface ResolvedGroup {
   pages: FdPage[]
 }
 
-export type FdPreferencesContentLayout = 'centered' | 'fluid'
+export type FdContentWidthPolicy = 'centered' | 'fluid'
 
 const xmark = svg`
   <svg viewBox="0 0 12 12" aria-hidden="true">
@@ -302,7 +302,7 @@ export class FdPreferencesWindow extends FdElement {
         padding: 38px 34px 40px;
       }
 
-      :host([content-layout='fluid']) .content-inner {
+      :host([content-width-policy='fluid']) .content-inner {
         max-width: none;
       }
 
@@ -355,8 +355,8 @@ export class FdPreferencesWindow extends FdElement {
   @property({ attribute: 'sidebar-footer', reflect: true }) sidebarFooter: string | null = null
 
   /** Mirrors `PreferencesContentWidthPolicy`; centered is the default. */
-  @property({ attribute: 'content-layout', reflect: true })
-  contentLayout: FdPreferencesContentLayout = 'centered'
+  @property({ attribute: 'content-width-policy', reflect: true })
+  contentWidthPolicy: FdContentWidthPolicy = 'centered'
 
   /** The selected `fd-page`'s `page-id`. */
   @property({ reflect: true }) page: string | null = null

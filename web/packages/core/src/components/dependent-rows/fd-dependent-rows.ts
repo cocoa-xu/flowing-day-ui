@@ -1,7 +1,7 @@
 import { type CSSResultGroup, css, html, nothing } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
-import type { FdSeparatorLeadingEdge } from '../separator/fd-separator.js'
+import type { FdRowSeparatorLeadingEdge } from '../separator/fd-separator.js'
 import '../separator/fd-separator.js'
 
 /**
@@ -59,7 +59,7 @@ export class FdDependentRows extends FdElement {
 
   /** Overrides the section separator alignment when set. */
   @property({ attribute: 'separator-leading-edge', reflect: true })
-  separatorLeadingEdge: FdSeparatorLeadingEdge | null = null
+  separatorLeadingEdge: FdRowSeparatorLeadingEdge | null = null
 
   override render() {
     return html`

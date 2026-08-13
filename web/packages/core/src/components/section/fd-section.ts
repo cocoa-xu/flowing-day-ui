@@ -3,8 +3,7 @@ import { customElement, property, state } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { textRole } from '../../internal/typography.js'
 import '../card/fd-card.js'
-
-export type FdMixedRowSeparatorLeadingEdge = 'content' | 'icon-text'
+import type { FdRowSeparatorLeadingEdge } from '../separator/fd-separator.js'
 
 type RowIconPresence = 'empty' | 'icons' | 'text' | 'mixed'
 
@@ -68,7 +67,7 @@ export class FdSection extends FdElement {
 
   /** Alignment used only when the section mixes rows with and without symbols. */
   @property({ attribute: 'mixed-row-separator-leading-edge', reflect: true })
-  mixedRowSeparatorLeadingEdge: FdMixedRowSeparatorLeadingEdge = 'content'
+  mixedRowSeparatorLeadingEdge: FdRowSeparatorLeadingEdge = 'content'
 
   @state() private rowIconPresence: RowIconPresence = 'empty'
 
@@ -95,7 +94,7 @@ export class FdSection extends FdElement {
   private get separatorLeadingInset(): string {
     if (this.rowIconPresence === 'icons') return '34px'
     if (this.rowIconPresence === 'text') return '0px'
-    return this.mixedRowSeparatorLeadingEdge === 'icon-text' ? '34px' : '0px'
+    return this.mixedRowSeparatorLeadingEdge === 'iconText' ? '34px' : '0px'
   }
 
   #collectRowIconPresence(): void {

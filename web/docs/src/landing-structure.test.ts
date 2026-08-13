@@ -138,7 +138,7 @@ describe('landing page structure', () => {
     const end = landing.indexOf('id="start"')
     const preferences = landing.slice(start, end)
 
-    expect(preferences).not.toContain('leading-edge="icon-text"')
+    expect(preferences).not.toContain('leading-edge="iconText"')
 
     for (const marker of [
       'label="Switch Group"',
@@ -149,7 +149,7 @@ describe('landing page structure', () => {
       const section = landing.slice(sectionStart, landing.indexOf('</fd-section>', sectionStart))
 
       expect(sectionStart).toBeGreaterThan(-1)
-      expect(section).not.toContain('leading-edge="icon-text"')
+      expect(section).not.toContain('leading-edge="iconText"')
     }
   })
 })

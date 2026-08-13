@@ -1,7 +1,7 @@
 import { type CSSResultGroup, css, html, nothing } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
-import type { FdSeparatorLeadingEdge } from '../separator/fd-separator.js'
+import type { FdRowSeparatorLeadingEdge } from '../separator/fd-separator.js'
 import '../dependent-rows/fd-dependent-rows.js'
 import '../switch-row/fd-switch-row.js'
 
@@ -39,7 +39,7 @@ export class FdSwitchGroup extends FdElement {
   @property({ type: Boolean, attribute: 'no-separator', reflect: true }) noSeparator = false
 
   @property({ attribute: 'separator-leading-edge', reflect: true })
-  separatorLeadingEdge: FdSeparatorLeadingEdge | null = null
+  separatorLeadingEdge: FdRowSeparatorLeadingEdge | null = null
 
   #onSwitchChange = (event: CustomEvent<{ checked: boolean }>): void => {
     this.checked = event.detail.checked

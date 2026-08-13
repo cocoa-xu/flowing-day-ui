@@ -1,1 +1,1 @@
-export { FdSeparator, type FdSeparatorLeadingEdge } from './fd-separator.js'
+export { type FdRowSeparatorLeadingEdge, FdSeparator } from './fd-separator.js'

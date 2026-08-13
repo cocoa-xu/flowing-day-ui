@@ -53,7 +53,7 @@ describe('fd-dependent-rows', () => {
 
   it('can drop the separator or override its leading edge', async () => {
     const iconText = await mount<FdDependentRows>(
-      `<fd-dependent-rows visible separator-leading-edge="icon-text">${BODY}</fd-dependent-rows>`,
+      `<fd-dependent-rows visible separator-leading-edge="iconText">${BODY}</fd-dependent-rows>`,
     )
     expect(
       getComputedStyle(iconText.shadowRoot?.querySelector('fd-separator') as Element).paddingLeft,
@@ -126,12 +126,12 @@ describe('fd-switch-group', () => {
 
   it('passes an explicit separator leading edge through', async () => {
     const element = await mount<FdSwitchGroup>(
-      `<fd-switch-group label="Show USB devices" checked separator-leading-edge="icon-text">${BODY}</fd-switch-group>`,
+      `<fd-switch-group label="Show USB devices" checked separator-leading-edge="iconText">${BODY}</fd-switch-group>`,
     )
     const rows = element.shadowRoot?.querySelector('fd-dependent-rows') as FdDependentRows
     const separator = rows.shadowRoot?.querySelector('fd-separator') as HTMLElement
 
-    expect(rows.separatorLeadingEdge).toBe('icon-text')
+    expect(rows.separatorLeadingEdge).toBe('iconText')
     expect(getComputedStyle(separator).paddingLeft).toBe('52px')
   })
 })

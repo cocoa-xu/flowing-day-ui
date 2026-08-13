@@ -10,7 +10,7 @@ Angular, Astro, Rails, Django or a CodePen — with no build step required of yo
 
 <fd-section label="Startup" footer="Applies the next time the app launches.">
   <fd-switch-row symbol="power" label="Launch at login" checked></fd-switch-row>
-  <fd-separator leading-edge="icon-text"></fd-separator>
+  <fd-separator leading-edge="iconText"></fd-separator>
   <fd-switch-row symbol="eye" label="Show in menu bar"></fd-switch-row>
 </fd-section>
 ```
@@ -51,7 +51,7 @@ fd-preferences-window {
 }
 ```
 
-Content is centered at `720px` by default. Use `content-layout="fluid"` to fill the pane,
+Content is centered at `720px` by default. Use `content-width-policy="fluid"` to fill the pane,
 or set `--fd-preferences-content-max-width` to choose another centered measure.
 
 Component chrome is nonselectable by default, matching desktop controls. Editable fields

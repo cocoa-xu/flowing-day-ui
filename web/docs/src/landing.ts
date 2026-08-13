@@ -208,9 +208,9 @@ onSegment('density', (value) => {
 
 onSegment('content-layout', (value) => {
   if (!preferencesWindow) return
-  preferencesWindow.contentLayout = value === 'fluid' ? 'fluid' : 'centered'
+  preferencesWindow.contentWidthPolicy = value === 'fluid' ? 'fluid' : 'centered'
   const maximumWidth = document.querySelector<FdDependentRows>('#content-maximum-width')
-  if (maximumWidth) maximumWidth.visible = preferencesWindow.contentLayout === 'centered'
+  if (maximumWidth) maximumWidth.visible = preferencesWindow.contentWidthPolicy === 'centered'
 })
 
 onSegment('content-width', (value) => set('--fd-preferences-content-max-width', `${value}px`))

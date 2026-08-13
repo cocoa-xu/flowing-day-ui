@@ -214,7 +214,7 @@ describe('fd-preferences-window page header', () => {
     const contentRect = content.getBoundingClientRect()
     const innerRect = inner.getBoundingClientRect()
 
-    expect(element.contentLayout).toBe('centered')
+    expect(element.contentWidthPolicy).toBe('centered')
     expect(innerRect.left - contentRect.left).toBeCloseTo(
       (contentRect.width - innerRect.width) / 2,
       1,
@@ -223,13 +223,13 @@ describe('fd-preferences-window page header', () => {
 
   it('can let the content column fill the available width', async () => {
     const element = await mount(
-      MARKUP.replace('app-name="Afloat"', 'app-name="Afloat" content-layout="fluid"'),
+      MARKUP.replace('app-name="Afloat"', 'app-name="Afloat" content-width-policy="fluid"'),
     )
     element.style.width = '1160px'
     const content = element.shadowRoot?.querySelector('.content') as HTMLElement
     const inner = element.shadowRoot?.querySelector('.content-inner') as HTMLElement
 
-    expect(element.contentLayout).toBe('fluid')
+    expect(element.contentWidthPolicy).toBe('fluid')
     expect(inner.getBoundingClientRect().width).toBeCloseTo(
       content.getBoundingClientRect().width,
       1,

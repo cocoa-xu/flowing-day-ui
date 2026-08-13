@@ -90,7 +90,7 @@ describe('fd-section', () => {
       </fd-section>
     `)
     const iconText = await mount<FdSection>(`
-      <fd-section mixed-row-separator-leading-edge="icon-text">
+      <fd-section mixed-row-separator-leading-edge="iconText">
         <fd-row symbol="gearshape" label="First"></fd-row>
         <fd-separator></fd-separator>
         <fd-row label="Second"></fd-row>
@@ -149,7 +149,7 @@ describe('fd-separator', () => {
 
   it('can align explicitly with the icon text edge', async () => {
     const element = await mount<FdSeparator>(
-      '<fd-separator leading-edge="icon-text"></fd-separator>',
+      '<fd-separator leading-edge="iconText"></fd-separator>',
     )
     expect(getComputedStyle(element).paddingLeft).toBe('52px')
   })

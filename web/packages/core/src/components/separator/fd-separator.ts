@@ -2,7 +2,7 @@ import { type CSSResultGroup, css, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 
-export type FdSeparatorLeadingEdge = 'content' | 'icon-text'
+export type FdRowSeparatorLeadingEdge = 'content' | 'iconText'
 
 /**
  * Mirrors `PreferencesRowSeparator`: a 1px hairline aligned with either the section's
@@ -22,7 +22,7 @@ export class FdSeparator extends FdElement {
         --_leading-inset: 0px;
       }
 
-      :host([leading-edge='icon-text']) {
+      :host([leading-edge='iconText']) {
         --_leading-inset: 34px;
       }
 
@@ -35,7 +35,7 @@ export class FdSeparator extends FdElement {
 
   /** Overrides the containing section's separator alignment. */
   @property({ attribute: 'leading-edge', reflect: true })
-  leadingEdge: FdSeparatorLeadingEdge | null = null
+  leadingEdge: FdRowSeparatorLeadingEdge | null = null
 
   override render() {
     return html`<div class="rule" role="separator"></div>`

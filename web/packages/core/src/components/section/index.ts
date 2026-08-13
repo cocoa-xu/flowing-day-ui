@@ -1,1 +1,1 @@
-export { type FdMixedRowSeparatorLeadingEdge, FdSection } from './fd-section.js'
+export { FdSection } from './fd-section.js'
