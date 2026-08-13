@@ -1,7 +1,9 @@
 import './internal/events.js'
 import './components/button-row/fd-button-row.js'
 import './components/button/fd-button.js'
+import './components/badge/fd-badge.js'
 import './components/card/fd-card.js'
+import './components/callout/fd-callout.js'
 import './components/check-toggle/fd-check-toggle.js'
 import './components/checkbox/fd-checkbox.js'
 import './components/chip/fd-chip.js'
@@ -60,8 +62,17 @@ import './components/tooltip/fd-tooltip.js'
 import './components/value-row/fd-value-row.js'
 import './components/value-text/fd-value-text.js'
 
+export {
+  FdBadge,
+  type FdBadgeEmphasis,
+  type FdStatusTone,
+} from './components/badge/fd-badge.js'
 export { FdButton } from './components/button/fd-button.js'
 export { FdButtonRow } from './components/button-row/fd-button-row.js'
+export {
+  FdCallout,
+  type FdCalloutPresentation,
+} from './components/callout/fd-callout.js'
 export { FdCard } from './components/card/fd-card.js'
 export { FdCheckToggle } from './components/check-toggle/fd-check-toggle.js'
 export {
