@@ -125,10 +125,10 @@ describe('fd-search-picker-row', () => {
   })
 
   it('honours a custom maximum, floored at one', async () => {
-    const element = await mount('expanded max-visible-options="3"')
+    const element = await mount('expanded maximum-visible-options="3"')
     expect(partOf(element, '.list').style.height).toBe('102px')
 
-    element.maxVisibleOptions = 0
+    element.maximumVisibleOptions = 0
     await element.updateComplete
     expect(partOf(element, '.list').style.height).toBe('34px')
   })

@@ -41,6 +41,17 @@ afterEach(() => {
 })
 
 describe('fd-search-picker', () => {
+  it('accepts Swift-style option values directly', async () => {
+    const element = await mount()
+    element.options = [
+      { value: 'tokyo', label: 'Tokyo' },
+      { value: 'kyoto', label: 'Kyoto' },
+    ]
+    await element.updateComplete
+
+    expect(element.filteredOptions.map((option) => option.label)).toEqual(['Tokyo', 'Kyoto'])
+  })
+
   it('renders and filters options', async () => {
     const element = await mount()
     expect(optionsOf(element)).toHaveLength(7)
@@ -84,13 +95,13 @@ describe('fd-search-picker', () => {
   })
 
   it('limits the visible list height', async () => {
-    const element = await mount('max-visible-options="3"')
+    const element = await mount('maximum-visible-options="3"')
     const list = element.shadowRoot?.querySelector('.list') as HTMLElement
     expect(list.style.height).toBe('102px')
   })
 
   it('reveals the selected option without moving an outer scroller', async () => {
-    const element = await mount('value="geneva" max-visible-options="3"')
+    const element = await mount('value="geneva" maximum-visible-options="3"')
     const list = element.shadowRoot?.querySelector('.list') as HTMLElement
 
     expect(list.scrollTop).toBeGreaterThan(0)

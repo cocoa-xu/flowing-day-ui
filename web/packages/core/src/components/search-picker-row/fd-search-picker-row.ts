@@ -8,12 +8,19 @@ import { type CollectedOption, collectOptions } from '../../internal/options.js'
 import { rowLayoutStyles } from '../../internal/row-layout.js'
 import { FdStringsRegistry } from '../../internal/strings.js'
 import { textRole } from '../../internal/typography.js'
+import type { FdSelectOption } from '../select/fd-select.js'
 import '../icon/fd-icon.js'
 import '../option/fd-option.js'
 import '../separator/fd-separator.js'
 
 /** `PreferencesSearchPickerRow.optionListHeight` counts 34 per visible option. */
 const OPTION_SLOT = 34
+
+interface SearchPickerRowOption {
+  readonly value: string
+  readonly label: string
+  readonly disabled: boolean
+}
 
 /**
  * Mirrors `PreferencesSearchPickerRow`: a row that expands into a search field over a
@@ -218,8 +225,9 @@ export class FdSearchPickerRow extends FdElement {
 
   @property({ type: Boolean, reflect: true }) expanded = false
 
-  /** `PreferencesSearchPickerRow.maximumVisibleOptions`, floored at 1 as the SwiftUI init is. */
-  @property({ type: Number, attribute: 'max-visible-options' }) maxVisibleOptions = 6
+  @property({ attribute: false }) options: readonly FdSelectOption[] = []
+
+  @property({ type: Number, attribute: 'maximum-visible-options' }) maximumVisibleOptions = 6
 
   @property({ type: Boolean, reflect: true }) disabled = false
 
@@ -227,7 +235,7 @@ export class FdSearchPickerRow extends FdElement {
 
   @state() private query = ''
 
-  @state() private options: CollectedOption[] = []
+  @state() private slottedOptions: CollectedOption[] = []
 
   readonly #internals: ElementInternals
 
@@ -247,13 +255,13 @@ export class FdSearchPickerRow extends FdElement {
   }
 
   /** The options left after the query, as `filteredOptions` computes them. */
-  get filteredOptions(): CollectedOption[] {
-    return this.options.filter((option) => optionMatches(option.label, this.query))
+  get filteredOptions(): SearchPickerRowOption[] {
+    return this.#resolvedOptions.filter((option) => optionMatches(option.label, this.query))
   }
 
   /** `selectedLabel`, which falls back to an em dash. */
   get selectedLabel(): string {
-    return this.options.find((option) => option.value === this.value)?.label ?? '—'
+    return this.#resolvedOptions.find((option) => option.value === this.value)?.label ?? '—'
   }
 
   override connectedCallback(): void {
@@ -291,7 +299,7 @@ export class FdSearchPickerRow extends FdElement {
   }
 
   #onSlotChange = (event: Event): void => {
-    this.options = collectOptions(event.target as HTMLSlotElement)
+    this.slottedOptions = collectOptions(event.target as HTMLSlotElement)
   }
 
   /** The header clears the query on the way closed, as the SwiftUI button does. */
@@ -305,7 +313,7 @@ export class FdSearchPickerRow extends FdElement {
     this.query = (event.target as HTMLInputElement).value
   }
 
-  #select(option: CollectedOption): void {
+  #select(option: SearchPickerRowOption): void {
     this.value = option.value
     this.query = ''
     this.expanded = false
@@ -318,7 +326,7 @@ export class FdSearchPickerRow extends FdElement {
     )
   }
 
-  #renderOption(option: CollectedOption) {
+  #renderOption(option: SearchPickerRowOption) {
     const isSelected = option.value === this.value
 
     return html`
@@ -341,7 +349,7 @@ export class FdSearchPickerRow extends FdElement {
   override render() {
     const strings = FdStringsRegistry.get()
     const filtered = this.filteredOptions
-    const visible = Math.max(this.maxVisibleOptions, 1)
+    const visible = Math.max(this.maximumVisibleOptions, 1)
     const listHeight = Math.min(filtered.length, visible) * OPTION_SLOT
 
     return html`
@@ -401,6 +409,12 @@ export class FdSearchPickerRow extends FdElement {
 
       <slot hidden @slotchange=${this.#onSlotChange}></slot>
     `
+  }
+
+  get #resolvedOptions(): SearchPickerRowOption[] {
+    return this.options.length > 0
+      ? this.options.map((option) => ({ ...option, disabled: false }))
+      : this.slottedOptions
   }
 }
 

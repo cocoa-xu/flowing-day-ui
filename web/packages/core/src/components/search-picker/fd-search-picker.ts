@@ -6,11 +6,18 @@ import { optionMatches } from '../../internal/option-search.js'
 import { type CollectedOption, collectOptions } from '../../internal/options.js'
 import { FdStringsRegistry } from '../../internal/strings.js'
 import { textRole } from '../../internal/typography.js'
+import type { FdSelectOption } from '../select/fd-select.js'
 import type { FdTextField } from '../text-field/fd-text-field.js'
 import '../option/fd-option.js'
 import '../text-field/fd-text-field.js'
 
 const OPTION_SLOT = 34
+
+interface SearchPickerOption {
+  readonly value: string
+  readonly label: string
+  readonly disabled: boolean
+}
 
 /**
  * The reusable counterpart to `FlowingSearchPicker`.
@@ -110,13 +117,15 @@ export class FdSearchPicker extends FdElement {
 
   @property() query = ''
 
-  @property({ type: Number, attribute: 'max-visible-options' }) maxVisibleOptions = 6
+  @property({ attribute: false }) options: readonly FdSelectOption[] = []
+
+  @property({ type: Number, attribute: 'maximum-visible-options' }) maximumVisibleOptions = 6
 
   @property({ type: Boolean, reflect: true }) disabled = false
 
   @property({ reflect: true }) name = ''
 
-  @state() private options: CollectedOption[] = []
+  @state() private slottedOptions: CollectedOption[] = []
 
   @query('fd-text-field') private searchField!: FdTextField
 
@@ -137,8 +146,8 @@ export class FdSearchPicker extends FdElement {
     return this.#internals.labels
   }
 
-  get filteredOptions(): CollectedOption[] {
-    return this.options.filter((option) => optionMatches(option.label, this.query))
+  get filteredOptions(): SearchPickerOption[] {
+    return this.#resolvedOptions.filter((option) => optionMatches(option.label, this.query))
   }
 
   override connectedCallback(): void {
@@ -166,7 +175,7 @@ export class FdSearchPicker extends FdElement {
   }
 
   #onSlotChange = (event: Event): void => {
-    this.options = collectOptions(event.target as HTMLSlotElement)
+    this.slottedOptions = collectOptions(event.target as HTMLSlotElement)
     void this.updateComplete.then(() => this.#revealSelection())
   }
 
@@ -220,7 +229,7 @@ export class FdSearchPicker extends FdElement {
     ]
   }
 
-  #select(option: CollectedOption): void {
+  #select(option: SearchPickerOption): void {
     if (this.disabled || option.disabled) return
     this.value = option.value
     this.#setQuery('')
@@ -233,7 +242,7 @@ export class FdSearchPicker extends FdElement {
     )
   }
 
-  #renderOption(option: CollectedOption) {
+  #renderOption(option: SearchPickerOption) {
     const selected = option.value === this.value
     return html`
       <button
@@ -255,7 +264,7 @@ export class FdSearchPicker extends FdElement {
   override render() {
     const strings = FdStringsRegistry.get()
     const filtered = this.filteredOptions
-    const visible = Math.max(Math.floor(this.maxVisibleOptions), 1)
+    const visible = Math.max(Math.floor(this.maximumVisibleOptions), 1)
     const listHeight = Math.min(filtered.length, visible) * OPTION_SLOT
 
     return html`
@@ -286,6 +295,12 @@ export class FdSearchPicker extends FdElement {
       }
       <slot hidden @slotchange=${this.#onSlotChange}></slot>
     `
+  }
+
+  get #resolvedOptions(): SearchPickerOption[] {
+    return this.options.length > 0
+      ? this.options.map((option) => ({ ...option, disabled: false }))
+      : this.slottedOptions
   }
 }
 
