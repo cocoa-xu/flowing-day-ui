@@ -1,6 +1,16 @@
 import type { FdCanvasRect } from '../geometry.js'
 import type { FdAnyGraphNode, FdGraphElementID } from '../graph/model.js'
-import type { FdGraphResizeHandle, FdGraphSnappingStrategy } from './arrangement.js'
+import type { FdGraphCanvasSnappingStrategy } from './arrangement.js'
+
+type FdGraphResizeHandle =
+  | 'top'
+  | 'topRight'
+  | 'right'
+  | 'bottomRight'
+  | 'bottom'
+  | 'bottomLeft'
+  | 'left'
+  | 'topLeft'
 
 export type FdGraphSelectionBehavior = 'none' | 'single' | 'multiple'
 export type FdGraphMarqueeBehavior = 'disabled' | 'intersects' | 'contains'
@@ -77,7 +87,7 @@ export interface FdGraphCanvasInteractionConfiguration {
   readonly frameUpdates?: FdGraphFrameUpdateBehavior
   readonly marqueeMinimumDistance?: number
   readonly snapping?: FdGraphSnappingConfiguration
-  readonly snappingStrategy?: FdGraphSnappingStrategy
+  readonly snappingStrategy?: FdGraphCanvasSnappingStrategy
   readonly admitNodeDrag?: (
     request: FdGraphNodeDragAdmissionRequest,
   ) => FdGraphNodeInteractionAdmission
@@ -124,7 +134,7 @@ export interface FdResolvedGraphCanvasInteractionConfiguration {
   readonly frameUpdates: FdGraphFrameUpdateBehavior
   readonly marqueeMinimumDistance: number
   readonly snapping: FdResolvedGraphSnappingConfiguration
-  readonly snappingStrategy?: FdGraphSnappingStrategy
+  readonly snappingStrategy?: FdGraphCanvasSnappingStrategy
   readonly admitNodeDrag: (
     request: FdGraphNodeDragAdmissionRequest,
   ) => FdGraphNodeInteractionAdmission

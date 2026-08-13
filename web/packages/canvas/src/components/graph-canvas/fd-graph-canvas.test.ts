@@ -22,7 +22,10 @@ import type {
   FdGraphCanvasHistoryConflictDetail,
   FdGraphCanvasHistoryStateDetail,
 } from '../../history/events.js'
-import { snapGraphTranslationRequest } from '../../interactions/arrangement.js'
+import {
+  FdGraphCanvasSnappingStrategy,
+  FdGraphCanvasSnapState,
+} from '../../interactions/arrangement.js'
 import { graphConnectionOriginForEdge } from '../../interactions/connection.js'
 import type {
   FdGraphCanvasRenderingBackendPreference,
@@ -624,9 +627,9 @@ describe('fd-graph-canvas pointer editing', () => {
     }
     applyFrameIntents(element)
     element.interactionPolicy = {
-      snappingStrategy: {
+      snappingStrategy: new FdGraphCanvasSnappingStrategy({
         translation: (request) => {
-          const standard = snapGraphTranslationRequest(request)
+          const standard = request.standardResult()
           return {
             ...standard,
             translation: {
@@ -635,7 +638,7 @@ describe('fd-graph-canvas pointer editing', () => {
             },
           }
         },
-      },
+      }),
     }
     await element.updateComplete
     const source = element.shadowRoot?.querySelector(
@@ -662,17 +665,15 @@ describe('fd-graph-canvas pointer editing', () => {
     }
     applyFrameIntents(element)
     element.interactionPolicy = {
-      snappingStrategy: {
+      snappingStrategy: new FdGraphCanvasSnappingStrategy({
         resize: () => {
-          const bounds = { x: 40, y: 80, width: 240, height: 128 }
           return {
-            bounds,
-            frames: new Map([['source', bounds]]),
+            frame: { x: 40, y: 80, width: 240, height: 128 },
             guides: [],
-            state: {},
+            snapState: new FdGraphCanvasSnapState(),
           }
         },
-      },
+      }),
     }
     await element.updateComplete
     const handle = element.shadowRoot?.querySelector<HTMLElement>(
@@ -690,10 +691,14 @@ describe('fd-graph-canvas pointer editing', () => {
   })
 
   it('does not invoke custom snapping while Command is held or snapping is disabled', async () => {
-    const strategy = vi.fn(snapGraphTranslationRequest)
+    const strategy = vi.fn((request: Parameters<FdGraphCanvasSnappingStrategy['snap']>[0]) =>
+      request.standardResult(),
+    )
     const first = await mount()
     const firstCanvas = preparePointerInput(first)
-    first.interactionPolicy = { snappingStrategy: { translation: strategy } }
+    first.interactionPolicy = {
+      snappingStrategy: new FdGraphCanvasSnappingStrategy({ translation: strategy }),
+    }
     await first.updateComplete
     const firstSource = first.shadowRoot?.querySelector(
       '[data-fd-graph-node="s:source"]',
@@ -707,7 +712,9 @@ describe('fd-graph-canvas pointer editing', () => {
 
     const second = await mount()
     const secondCanvas = preparePointerInput(second)
-    second.interactionPolicy = { snappingStrategy: { translation: strategy } }
+    second.interactionPolicy = {
+      snappingStrategy: new FdGraphCanvasSnappingStrategy({ translation: strategy }),
+    }
     await second.updateComplete
     const secondSource = second.shadowRoot?.querySelector(
       '[data-fd-graph-node="s:source"]',

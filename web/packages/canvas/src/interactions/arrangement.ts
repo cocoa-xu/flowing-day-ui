@@ -1,5 +1,10 @@
 import type { FdCanvasPoint, FdCanvasRect, FdCanvasSize } from '../geometry.js'
 import { unionCanvasRects } from '../geometry.js'
+import {
+  type FdGraphCanvasSnappingConfiguration,
+  resolveGraphCanvasConfiguration,
+} from '../graph/configuration.js'
+import type { FdGraphCanvasResizeEdges } from '../graph/interaction-policy.js'
 import type { FdGraphElementID } from '../graph/model.js'
 import type {
   FdGraphGridRoundingPolicy,
@@ -19,7 +24,7 @@ export type FdGraphCanvasDistribution = 'horizontal' | 'vertical'
 export type FdGraphCanvasArrangementAction =
   | { readonly kind: 'align'; readonly alignment: FdGraphCanvasAlignment }
   | { readonly kind: 'distribute'; readonly distribution: FdGraphCanvasDistribution }
-export type FdGraphResizeHandle =
+type GraphResizeHandle =
   | 'top'
   | 'topRight'
   | 'right'
@@ -41,7 +46,7 @@ export interface FdGraphCanvasGuide {
   readonly measurement?: number
 }
 
-interface FdGraphSnapAxisState {
+interface GraphSnapAxisState {
   readonly anchor: FdGraphAnchor
   readonly target: number
   readonly kind: FdGraphCanvasGuideKind
@@ -50,60 +55,209 @@ interface FdGraphSnapAxisState {
   readonly guideOffset?: number
 }
 
-export interface FdGraphSnapState {
-  readonly x?: FdGraphSnapAxisState
-  readonly y?: FdGraphSnapAxisState
+interface GraphSnapState {
+  readonly x?: GraphSnapAxisState
+  readonly y?: GraphSnapAxisState
 }
 
-export interface FdGraphSnapCandidate {
+export class FdGraphCanvasSnapState {}
+
+const snapStateValues = new WeakMap<FdGraphCanvasSnapState, GraphSnapState>()
+
+const graphSnapState = (state: FdGraphCanvasSnapState): GraphSnapState =>
+  snapStateValues.get(state) ?? {}
+
+const canvasSnapState = (value: GraphSnapState): FdGraphCanvasSnapState => {
+  const state = new FdGraphCanvasSnapState()
+  snapStateValues.set(state, value)
+  return state
+}
+
+export interface FdGraphCanvasSnapCandidate {
   readonly id: FdGraphElementID
   readonly frame: FdCanvasRect
 }
 
-export interface FdGraphTranslationSnapResult {
+export interface FdGraphCanvasSnapResult {
   readonly translation: FdCanvasSize
   readonly guides: readonly FdGraphCanvasGuide[]
-  readonly state: FdGraphSnapState
+  readonly snapState: FdGraphCanvasSnapState
 }
 
-export interface FdGraphTranslationSnapRequest {
+interface GraphTranslationSnapResult {
+  readonly translation: FdCanvasSize
+  readonly guides: readonly FdGraphCanvasGuide[]
+  readonly state: GraphSnapState
+}
+
+interface GraphTranslationSnapRequest {
   readonly movingBounds: FdCanvasRect
   readonly proposedTranslation: FdCanvasSize
-  readonly candidates: readonly FdGraphSnapCandidate[]
+  readonly candidates: readonly FdGraphCanvasSnapCandidate[]
   readonly configuration: FdResolvedGraphSnappingConfiguration
   readonly zoom: number
-  readonly previous: FdGraphSnapState
+  readonly previous: GraphSnapState
 }
 
-export interface FdGraphResizeSnapRequest {
+interface GraphResizeSnapRequest {
   readonly baseFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
   readonly baseBounds: FdCanvasRect
   readonly proposedBounds: FdCanvasRect
   readonly proposedTranslation: FdCanvasSize
-  readonly handle: FdGraphResizeHandle
-  readonly candidates: readonly FdGraphSnapCandidate[]
+  readonly handle: GraphResizeHandle
+  readonly candidates: readonly FdGraphCanvasSnapCandidate[]
   readonly configuration: FdResolvedGraphSnappingConfiguration
   readonly minimumSize: FdCanvasSize
   readonly maximumSize?: FdCanvasSize
   readonly zoom: number
-  readonly previous: FdGraphSnapState
+  readonly previous: GraphSnapState
   readonly preservesAspectRatio: boolean
   readonly resizesFromCenter: boolean
+  readonly aspectRatioDrivingAxis?: FdGraphCanvasGeometryAxis
 }
 
-export interface FdGraphResizeSnapResult extends FdGraphResizeResult {
+interface GraphResizeSnapResult extends GraphResizeResult {
   readonly guides: readonly FdGraphCanvasGuide[]
-  readonly state: FdGraphSnapState
+  readonly state: GraphSnapState
 }
 
-export interface FdGraphSnappingStrategy {
-  readonly translation?: (request: FdGraphTranslationSnapRequest) => FdGraphTranslationSnapResult
-  readonly resize?: (request: FdGraphResizeSnapRequest) => FdGraphResizeSnapResult
-}
-
-export interface FdGraphResizeResult {
+interface GraphResizeResult {
   readonly bounds: FdCanvasRect
   readonly frames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
+}
+
+export type FdGraphCanvasGeometryAxis = 'horizontal' | 'vertical'
+
+export interface FdGraphCanvasResizeBehavior {
+  readonly preservesAspectRatio?: boolean
+  readonly resizesFromCenter?: boolean
+  readonly aspectRatioDrivingAxis?: FdGraphCanvasGeometryAxis
+}
+
+export interface FdGraphCanvasResizeResult {
+  readonly frame: FdCanvasRect
+  readonly guides: readonly FdGraphCanvasGuide[]
+  readonly snapState: FdGraphCanvasSnapState
+}
+
+export interface FdGraphCanvasTranslationSnapRequestOptions {
+  readonly movingBounds: FdCanvasRect
+  readonly proposedTranslation: FdCanvasSize
+  readonly candidates: readonly FdGraphCanvasSnapCandidate[]
+  readonly configuration: FdGraphCanvasSnappingConfiguration
+  readonly zoom: number
+  readonly snapState?: FdGraphCanvasSnapState
+  readonly allowsSnapping?: boolean
+}
+
+export class FdGraphCanvasTranslationSnapRequest {
+  readonly movingBounds: FdCanvasRect
+  readonly proposedTranslation: FdCanvasSize
+  readonly candidates: readonly FdGraphCanvasSnapCandidate[]
+  readonly configuration: FdGraphCanvasSnappingConfiguration
+  readonly zoom: number
+  readonly snapState: FdGraphCanvasSnapState
+  readonly allowsSnapping: boolean
+
+  constructor(options: FdGraphCanvasTranslationSnapRequestOptions) {
+    if (!Number.isFinite(options.zoom) || options.zoom <= 0) {
+      throw new RangeError('zoom must be positive')
+    }
+    this.movingBounds = options.movingBounds
+    this.proposedTranslation = options.proposedTranslation
+    this.candidates = options.candidates
+    this.configuration = options.configuration
+    this.zoom = options.zoom
+    this.snapState = options.snapState ?? new FdGraphCanvasSnapState()
+    this.allowsSnapping = options.allowsSnapping ?? true
+  }
+
+  standardResult(): FdGraphCanvasSnapResult {
+    return FdGraphCanvasArrangement.snap(this)
+  }
+}
+
+export interface FdGraphCanvasResizeSnapRequestOptions {
+  readonly baseFrame: FdCanvasRect
+  readonly proposedFrame: FdCanvasRect
+  readonly edges: FdGraphCanvasResizeEdges
+  readonly candidates: readonly FdGraphCanvasSnapCandidate[]
+  readonly configuration: FdGraphCanvasSnappingConfiguration
+  readonly minimumSize: FdCanvasSize
+  readonly maximumSize?: FdCanvasSize
+  readonly zoom: number
+  readonly snapState?: FdGraphCanvasSnapState
+  readonly allowsSnapping?: boolean
+  readonly behavior?: FdGraphCanvasResizeBehavior
+}
+
+export class FdGraphCanvasResizeSnapRequest {
+  readonly baseFrame: FdCanvasRect
+  readonly proposedFrame: FdCanvasRect
+  readonly edges: FdGraphCanvasResizeEdges
+  readonly candidates: readonly FdGraphCanvasSnapCandidate[]
+  readonly configuration: FdGraphCanvasSnappingConfiguration
+  readonly minimumSize: FdCanvasSize
+  readonly maximumSize: FdCanvasSize | undefined
+  readonly zoom: number
+  readonly snapState: FdGraphCanvasSnapState
+  readonly allowsSnapping: boolean
+  readonly behavior: FdGraphCanvasResizeBehavior
+
+  constructor(options: FdGraphCanvasResizeSnapRequestOptions) {
+    if (!validResizeEdges(options.edges)) throw new RangeError('resize edges must be valid')
+    if (!Number.isFinite(options.zoom) || options.zoom <= 0) {
+      throw new RangeError('zoom must be positive')
+    }
+    validateSizeRange(options.minimumSize, options.maximumSize)
+    if (options.behavior?.preservesAspectRatio && !options.behavior.aspectRatioDrivingAxis) {
+      throw new RangeError('aspect ratio preservation requires a driving axis')
+    }
+    this.baseFrame = options.baseFrame
+    this.proposedFrame = options.proposedFrame
+    this.edges = options.edges
+    this.candidates = options.candidates
+    this.configuration = options.configuration
+    this.minimumSize = options.minimumSize
+    this.maximumSize = options.maximumSize
+    this.zoom = options.zoom
+    this.snapState = options.snapState ?? new FdGraphCanvasSnapState()
+    this.allowsSnapping = options.allowsSnapping ?? true
+    this.behavior = options.behavior ?? {}
+  }
+
+  standardResult(): FdGraphCanvasResizeResult {
+    return FdGraphCanvasArrangement.resize(this)
+  }
+}
+
+export interface FdGraphCanvasSnappingStrategyOptions {
+  readonly translation?: (request: FdGraphCanvasTranslationSnapRequest) => FdGraphCanvasSnapResult
+  readonly resize?: (request: FdGraphCanvasResizeSnapRequest) => FdGraphCanvasResizeResult
+}
+
+export class FdGraphCanvasSnappingStrategy {
+  private readonly translationAction: (
+    request: FdGraphCanvasTranslationSnapRequest,
+  ) => FdGraphCanvasSnapResult
+  private readonly resizeAction: (
+    request: FdGraphCanvasResizeSnapRequest,
+  ) => FdGraphCanvasResizeResult
+
+  constructor(options: FdGraphCanvasSnappingStrategyOptions = {}) {
+    this.translationAction = options.translation ?? ((request) => request.standardResult())
+    this.resizeAction = options.resize ?? ((request) => request.standardResult())
+  }
+
+  snap(request: FdGraphCanvasTranslationSnapRequest): FdGraphCanvasSnapResult {
+    return this.translationAction(request)
+  }
+
+  resize(request: FdGraphCanvasResizeSnapRequest): FdGraphCanvasResizeResult {
+    return this.resizeAction(request)
+  }
+
+  static readonly standard = new FdGraphCanvasSnappingStrategy()
 }
 
 export interface FdGraphCanvasNodeGeometry {
@@ -141,22 +295,22 @@ const roundedGridValue = (
 
 interface AxisCandidate {
   readonly correction: number
-  readonly state: FdGraphSnapAxisState
+  readonly state: GraphSnapAxisState
   readonly guides: readonly FdGraphCanvasGuide[]
 }
 
 interface AxisCandidateSeed {
   readonly correction: number
-  readonly state: FdGraphSnapAxisState
+  readonly state: GraphSnapAxisState
 }
 
 const axisCandidate = (
   axis: 'x' | 'y',
   movingBounds: FdCanvasRect,
-  candidates: readonly FdGraphSnapCandidate[],
+  candidates: readonly FdGraphCanvasSnapCandidate[],
   configuration: FdResolvedGraphSnappingConfiguration,
   zoom: number,
-  previous: FdGraphSnapAxisState | undefined,
+  previous: GraphSnapAxisState | undefined,
 ): AxisCandidate | undefined => {
   const moving =
     axis === 'x'
@@ -245,7 +399,7 @@ const axisCandidate = (
 const equalSpacingAxisCandidate = (
   axis: 'x' | 'y',
   movingFrame: FdCanvasRect,
-  candidates: readonly FdGraphSnapCandidate[],
+  candidates: readonly FdGraphCanvasSnapCandidate[],
   tolerance: number,
   guideOffset: number,
 ): AxisCandidateSeed | undefined => {
@@ -364,7 +518,7 @@ const chainGap = (
 
 const guidesForState = (
   axis: 'x' | 'y',
-  state: FdGraphSnapAxisState,
+  state: GraphSnapAxisState,
   movingFrame: FdCanvasRect,
 ): readonly FdGraphCanvasGuide[] => {
   if (state.kind === 'equalSpacing') {
@@ -424,7 +578,7 @@ const guideFor = (
   axis: 'x' | 'y',
   position: number,
   movingBounds: FdCanvasRect,
-  candidates: readonly FdGraphSnapCandidate[],
+  candidates: readonly FdGraphCanvasSnapCandidate[],
   kind: FdGraphCanvasGuideKind,
 ): FdGraphCanvasGuide => {
   let lower = axis === 'x' ? movingBounds.y : movingBounds.x
@@ -449,11 +603,11 @@ const guideFor = (
 export function snapGraphTranslation(
   movingBounds: FdCanvasRect,
   proposedTranslation: FdCanvasSize,
-  candidates: readonly FdGraphSnapCandidate[],
+  candidates: readonly FdGraphCanvasSnapCandidate[],
   configuration: FdResolvedGraphSnappingConfiguration,
   zoom: number,
-  previous: FdGraphSnapState = {},
-): FdGraphTranslationSnapResult {
+  previous: GraphSnapState = {},
+): GraphTranslationSnapResult {
   if (!configuration.enabled) return { translation: proposedTranslation, guides: [], state: {} }
   const effectiveCandidates = candidates.slice(0, configuration.maximumCandidates)
   const proposedBounds = {
@@ -474,8 +628,8 @@ export function snapGraphTranslation(
 }
 
 export function snapGraphTranslationRequest(
-  request: FdGraphTranslationSnapRequest,
-): FdGraphTranslationSnapResult {
+  request: GraphTranslationSnapRequest,
+): GraphTranslationSnapResult {
   return snapGraphTranslation(
     request.movingBounds,
     request.proposedTranslation,
@@ -496,12 +650,13 @@ export function graphSelectionBounds(
 
 export function resizeGraphBounds(
   bounds: FdCanvasRect,
-  handle: FdGraphResizeHandle,
+  handle: GraphResizeHandle,
   translation: FdCanvasSize,
   minimumSize: FdCanvasSize,
   maximumSize: FdCanvasSize | undefined,
   preservesAspectRatio: boolean,
   resizesFromCenter: boolean,
+  aspectRatioDrivingAxis?: FdGraphCanvasGeometryAxis,
 ): FdCanvasRect {
   const movesLeft = handle.includes('Left') || handle === 'left'
   const movesRight = handle.includes('Right') || handle === 'right'
@@ -524,9 +679,13 @@ export function resizeGraphBounds(
   if (preservesAspectRatio && bounds.height > 0) {
     const ratio = bounds.width / bounds.height
     const requestedScale =
-      Math.abs(width / bounds.width - 1) >= Math.abs(height / bounds.height - 1)
+      aspectRatioDrivingAxis === 'horizontal'
         ? width / bounds.width
-        : height / bounds.height
+        : aspectRatioDrivingAxis === 'vertical'
+          ? height / bounds.height
+          : Math.abs(width / bounds.width - 1) >= Math.abs(height / bounds.height - 1)
+            ? width / bounds.width
+            : height / bounds.height
     const minimumScale = Math.max(
       minimumSize.width / bounds.width,
       minimumSize.height / bounds.height,
@@ -577,7 +736,7 @@ export function scaleGraphFrames(
   )
 }
 
-export function snapGraphResize(request: FdGraphResizeSnapRequest): FdGraphResizeSnapResult {
+export function snapGraphResize(request: GraphResizeSnapRequest): GraphResizeSnapResult {
   if (!request.configuration.enabled) {
     return {
       bounds: request.proposedBounds,
@@ -609,6 +768,7 @@ export function snapGraphResize(request: FdGraphResizeSnapRequest): FdGraphResiz
     request.maximumSize,
     request.preservesAspectRatio,
     request.resizesFromCenter,
+    request.aspectRatioDrivingAxis,
   )
   const guides = request.configuration.showsGuides
     ? [
@@ -632,8 +792,8 @@ export function snapGraphResize(request: FdGraphResizeSnapRequest): FdGraphResiz
 
 const resizeAxisCandidate = (
   axis: 'x' | 'y',
-  request: FdGraphResizeSnapRequest,
-  previous: FdGraphSnapAxisState | undefined,
+  request: GraphResizeSnapRequest,
+  previous: GraphSnapAxisState | undefined,
 ): AxisCandidate | undefined => {
   const lowerEdge =
     axis === 'x'
@@ -677,7 +837,7 @@ const resizeAxisCandidate = (
     const correction = target - movingValue
     if (Math.abs(correction) * request.zoom > request.configuration.acquisitionDistance) continue
     if (equalSize && Math.abs(equalSize.correction) <= Math.abs(correction)) continue
-    const state: FdGraphSnapAxisState = {
+    const state: GraphSnapAxisState = {
       anchor: 'minimum',
       target,
       kind: 'equalSize',
@@ -718,7 +878,7 @@ const dimensionGuide = (
         measurement: frame.height,
       }
 
-const resizeActivePoint = (bounds: FdCanvasRect, handle: FdGraphResizeHandle): FdCanvasPoint => {
+const resizeActivePoint = (bounds: FdCanvasRect, handle: GraphResizeHandle): FdCanvasPoint => {
   const x =
     handle.includes('Left') || handle === 'left'
       ? bounds.x
@@ -736,11 +896,170 @@ const resizeActivePoint = (bounds: FdCanvasRect, handle: FdGraphResizeHandle): F
 export class FdGraphCanvasArrangement {
   private constructor() {}
 
+  static snap(request: FdGraphCanvasTranslationSnapRequest): FdGraphCanvasSnapResult {
+    const result = snapGraphTranslationRequest({
+      movingBounds: request.movingBounds,
+      proposedTranslation: request.proposedTranslation,
+      candidates: request.candidates,
+      configuration: internalSnappingConfiguration(request.configuration, request.allowsSnapping),
+      zoom: request.zoom,
+      previous: graphSnapState(request.snapState),
+    })
+    return {
+      translation: result.translation,
+      guides: result.guides,
+      snapState: canvasSnapState(result.state),
+    }
+  }
+
+  static resize(request: FdGraphCanvasResizeSnapRequest): FdGraphCanvasResizeResult {
+    const handle = resizeHandle(request.edges)
+    const behavior = {
+      preservesAspectRatio: request.behavior.preservesAspectRatio ?? false,
+      resizesFromCenter: request.behavior.resizesFromCenter ?? false,
+      aspectRatioDrivingAxis: request.behavior.aspectRatioDrivingAxis,
+    }
+    const proposedTranslation = resizeTranslation(
+      request.baseFrame,
+      request.proposedFrame,
+      request.edges,
+    )
+    const proposedBounds = resizeGraphBounds(
+      request.baseFrame,
+      handle,
+      proposedTranslation,
+      request.minimumSize,
+      request.maximumSize,
+      behavior.preservesAspectRatio,
+      behavior.resizesFromCenter,
+      behavior.aspectRatioDrivingAxis,
+    )
+    const constrainedTranslation = resizeTranslation(
+      request.baseFrame,
+      proposedBounds,
+      request.edges,
+    )
+    const result = snapGraphResize({
+      baseFrames: new Map([[0, request.baseFrame]]),
+      baseBounds: request.baseFrame,
+      proposedBounds,
+      proposedTranslation: constrainedTranslation,
+      handle,
+      candidates: request.candidates,
+      configuration: internalSnappingConfiguration(request.configuration, request.allowsSnapping),
+      minimumSize: request.minimumSize,
+      ...(request.maximumSize ? { maximumSize: request.maximumSize } : {}),
+      zoom: request.zoom,
+      previous: graphSnapState(request.snapState),
+      preservesAspectRatio: behavior.preservesAspectRatio,
+      resizesFromCenter: behavior.resizesFromCenter,
+      ...(behavior.aspectRatioDrivingAxis
+        ? { aspectRatioDrivingAxis: behavior.aspectRatioDrivingAxis }
+        : {}),
+    })
+    return {
+      frame: result.bounds,
+      guides: result.guides,
+      snapState: canvasSnapState(result.state),
+    }
+  }
+
   static translations(
     nodes: readonly FdGraphCanvasNodeGeometry[],
     action: FdGraphCanvasArrangementAction,
   ): ReadonlyMap<FdGraphElementID, FdCanvasSize> {
     return arrangementTranslations(nodes, action)
+  }
+}
+
+const validResizeEdges = (edges: FdGraphCanvasResizeEdges): boolean =>
+  edges.size > 0 &&
+  !(edges.has('leading') && edges.has('trailing')) &&
+  !(edges.has('top') && edges.has('bottom'))
+
+const resizeHandle = (edges: FdGraphCanvasResizeEdges): GraphResizeHandle => {
+  const horizontal = edges.has('leading') ? 'Left' : edges.has('trailing') ? 'Right' : ''
+  const vertical = edges.has('top') ? 'top' : edges.has('bottom') ? 'bottom' : ''
+  const handle = vertical ? `${vertical}${horizontal}` : horizontal.toLowerCase()
+  if (handle === 'top' || handle === 'bottom' || handle === 'left' || handle === 'right') {
+    return handle
+  }
+  if (
+    handle === 'topLeft' ||
+    handle === 'topRight' ||
+    handle === 'bottomLeft' ||
+    handle === 'bottomRight'
+  ) {
+    return handle
+  }
+  throw new RangeError('resize edges must be valid')
+}
+
+const resizeTranslation = (
+  baseFrame: FdCanvasRect,
+  proposedFrame: FdCanvasRect,
+  edges: FdGraphCanvasResizeEdges,
+): FdCanvasSize => ({
+  width: edges.has('leading')
+    ? proposedFrame.x - baseFrame.x
+    : edges.has('trailing')
+      ? proposedFrame.x + proposedFrame.width - (baseFrame.x + baseFrame.width)
+      : 0,
+  height: edges.has('top')
+    ? proposedFrame.y - baseFrame.y
+    : edges.has('bottom')
+      ? proposedFrame.y + proposedFrame.height - (baseFrame.y + baseFrame.height)
+      : 0,
+})
+
+const validateSizeRange = (minimumSize: FdCanvasSize, maximumSize?: FdCanvasSize): void => {
+  if (
+    !Number.isFinite(minimumSize.width) ||
+    minimumSize.width < 0 ||
+    !Number.isFinite(minimumSize.height) ||
+    minimumSize.height < 0
+  ) {
+    throw new RangeError('minimum size must be finite and nonnegative')
+  }
+  if (
+    maximumSize &&
+    (!Number.isFinite(maximumSize.width) ||
+      maximumSize.width < minimumSize.width ||
+      !Number.isFinite(maximumSize.height) ||
+      maximumSize.height < minimumSize.height)
+  ) {
+    throw new RangeError('maximum size must be finite and not smaller than minimum size')
+  }
+}
+
+const internalSnappingConfiguration = (
+  configuration: FdGraphCanvasSnappingConfiguration,
+  allowsSnapping: boolean,
+): FdResolvedGraphSnappingConfiguration => {
+  const resolved = resolveGraphCanvasConfiguration({ snapping: configuration }).snapping
+  const targets = resolved.targets
+  const grid = resolved.grid
+  return {
+    enabled: resolved.isEnabled && allowsSnapping,
+    alignment: targets.has('alignment'),
+    equalSpacing: targets.has('equalSpacing'),
+    equalSize: targets.has('equalSize'),
+    grid: {
+      enabled: targets.has('grid') && grid !== undefined,
+      width: grid?.minorCellSize.width ?? 24,
+      height: grid?.minorCellSize.height ?? 24,
+      originX: grid?.origin.x ?? 0,
+      originY: grid?.origin.y ?? 0,
+      snapsX: grid?.enabledAxes.has('x') ?? true,
+      snapsY: grid?.enabledAxes.has('y') ?? true,
+      rounding: grid?.roundingPolicy ?? 'nearest',
+    },
+    acquisitionDistance: resolved.tolerance,
+    releaseDistance: resolved.releaseTolerance,
+    searchRadius: resolved.searchRadius,
+    maximumCandidates: resolved.maximumCandidates,
+    showsGuides: resolved.showsGuides,
+    guideOffset: resolved.guideOffset,
   }
 }
 

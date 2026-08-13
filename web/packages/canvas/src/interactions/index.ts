@@ -1,4 +1,25 @@
-export * from './arrangement.js'
+export {
+  type FdGraphCanvasAlignment,
+  FdGraphCanvasArrangement,
+  type FdGraphCanvasArrangementAction,
+  type FdGraphCanvasDistribution,
+  type FdGraphCanvasGeometryAxis,
+  type FdGraphCanvasGuide,
+  type FdGraphCanvasGuideAxis,
+  type FdGraphCanvasGuideKind,
+  type FdGraphCanvasNodeGeometry,
+  type FdGraphCanvasResizeBehavior,
+  type FdGraphCanvasResizeResult,
+  FdGraphCanvasResizeSnapRequest,
+  type FdGraphCanvasResizeSnapRequestOptions,
+  type FdGraphCanvasSnapCandidate,
+  FdGraphCanvasSnappingStrategy,
+  type FdGraphCanvasSnappingStrategyOptions,
+  type FdGraphCanvasSnapResult,
+  FdGraphCanvasSnapState,
+  FdGraphCanvasTranslationSnapRequest,
+  type FdGraphCanvasTranslationSnapRequestOptions,
+} from './arrangement.js'
 export type { FdGraphCanvasTool } from './configuration.js'
 export type {
   FdGraphCanvasConnectionCancellationIntent,

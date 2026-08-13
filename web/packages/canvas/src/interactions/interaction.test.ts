@@ -3,12 +3,16 @@ import type { FdCanvasRect } from '../geometry.js'
 import type { FdAnyGraphNode } from '../graph/model.js'
 import {
   FdGraphCanvasArrangement,
+  FdGraphCanvasResizeSnapRequest,
+  type FdGraphCanvasResizeSnapRequestOptions,
+  FdGraphCanvasSnappingStrategy,
+  FdGraphCanvasSnapState,
+  FdGraphCanvasTranslationSnapRequest,
   graphSelectionBounds,
   resizeGraphBounds,
   scaleGraphFrames,
   snapGraphResize,
   snapGraphTranslation,
-  snapGraphTranslationRequest,
 } from './arrangement.js'
 import {
   admittedGraphNodeIDs,
@@ -207,23 +211,40 @@ describe('graph snapping', () => {
     ).toEqual({ width: 25, height: 25 })
   })
 
-  it('exposes the standard translation solver through a reusable request', () => {
-    const request = {
+  it('matches the Swift request and strategy boundary', () => {
+    const request = new FdGraphCanvasTranslationSnapRequest({
       movingBounds: { x: 0, y: 0, width: 40, height: 40 },
       proposedTranslation: { width: 23, height: 24 },
       candidates: [],
-      configuration: resolveGraphCanvasInteractionConfiguration({
-        snapping: {
-          enabled: true,
-          alignment: false,
-          grid: { enabled: true, width: 20, height: 20, originX: 5, originY: 5 },
+      configuration: {
+        isEnabled: true,
+        targets: new Set(['grid']),
+        grid: {
+          origin: { x: 5, y: 5 },
+          majorCellSize: { width: 20, height: 20 },
         },
-      }).snapping,
+      },
       zoom: 1,
-      previous: {},
-    }
+    })
+    const custom = new FdGraphCanvasSnappingStrategy({
+      translation: (value) => {
+        const standard = value.standardResult()
+        return {
+          ...standard,
+          translation: { ...standard.translation, width: standard.translation.width + 1 },
+        }
+      },
+    })
 
-    expect(snapGraphTranslationRequest(request).translation).toEqual({ width: 25, height: 25 })
+    expect(request.standardResult().translation).toEqual({ width: 25, height: 25 })
+    expect(FdGraphCanvasSnappingStrategy.standard.snap(request).translation).toEqual({
+      width: 25,
+      height: 25,
+    })
+    expect(custom.snap(request).translation).toEqual({ width: 26, height: 25 })
+    expect(() => new FdGraphCanvasTranslationSnapRequest({ ...request, zoom: 0 })).toThrow(
+      'zoom must be positive',
+    )
   })
 
   it('bounds dense alignment candidates without materializing every guide', () => {
@@ -268,6 +289,39 @@ describe('graph snapping', () => {
 })
 
 describe('graph group resizing', () => {
+  it('matches the Swift resize request boundary', () => {
+    const options = {
+      baseFrame: { x: 0, y: 0, width: 100, height: 50 },
+      proposedFrame: { x: 0, y: 0, width: 150, height: 75 },
+      edges: new Set(['trailing', 'bottom']),
+      candidates: [],
+      configuration: { isEnabled: false },
+      minimumSize: { width: 20, height: 20 },
+      zoom: 1,
+    } satisfies FdGraphCanvasResizeSnapRequestOptions
+    const request = new FdGraphCanvasResizeSnapRequest(options)
+
+    expect(request.standardResult()).toEqual({
+      frame: { x: 0, y: 0, width: 150, height: 75 },
+      guides: [],
+      snapState: expect.any(FdGraphCanvasSnapState),
+    })
+    expect(
+      () =>
+        new FdGraphCanvasResizeSnapRequest({
+          ...options,
+          edges: new Set(['leading', 'trailing']),
+        }),
+    ).toThrow('resize edges must be valid')
+    expect(
+      () =>
+        new FdGraphCanvasResizeSnapRequest({
+          ...options,
+          behavior: { preservesAspectRatio: true },
+        }),
+    ).toThrow('aspect ratio preservation requires a driving axis')
+  })
+
   const frames = new Map<string, FdCanvasRect>([
     ['one', { x: 0, y: 0, width: 100, height: 50 }],
     ['two', { x: 200, y: 100, width: 100, height: 50 }],

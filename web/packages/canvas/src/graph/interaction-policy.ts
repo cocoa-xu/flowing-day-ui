@@ -1,5 +1,5 @@
 import type { FdCanvasRect, FdCanvasSize } from '../geometry.js'
-import type { FdGraphSnappingStrategy } from '../interactions/arrangement.js'
+import type { FdGraphCanvasSnappingStrategy } from '../interactions/arrangement.js'
 import type {
   FdGraphCanvasConnectionOrigin,
   FdGraphCanvasConnectionValidation,
@@ -72,7 +72,7 @@ export interface FdGraphCanvasConnectionPolicy {
 export interface FdGraphCanvasInteractionPolicy {
   readonly nodeCapabilities?: FdGraphCanvasNodeCapabilityMap
   readonly nodeSizeConstraints?: FdGraphCanvasNodeSizeConstraintMap
-  readonly snappingStrategy?: FdGraphSnappingStrategy
+  readonly snappingStrategy?: FdGraphCanvasSnappingStrategy
   readonly connectionPolicy?: FdGraphCanvasConnectionPolicy
   readonly admitNodeDrag?: (
     request: FdGraphCanvasNodeDragAdmissionRequest,

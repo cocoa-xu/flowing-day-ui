@@ -44,7 +44,6 @@ import type {
 import {
   type FdGraphCanvasInteractionPolicy,
   type FdGraphCanvasNodeCapabilities,
-  type FdGraphCanvasResizeEdges,
   graphCanvasNodeCapabilities,
   graphCanvasNodeSizeConstraints,
 } from '../../graph/interaction-policy.js'
@@ -84,7 +83,6 @@ import {
   FdGraphCanvasArrangement,
   type FdGraphCanvasArrangementAction,
   type FdGraphCanvasGuide,
-  type FdGraphResizeHandle,
   graphSelectionBounds,
 } from '../../interactions/arrangement.js'
 import type {
@@ -159,6 +157,7 @@ import {
   FdGraphCanvasInteractionController,
   type FdGraphCanvasInteractionDelegate,
   type FdGraphInteractionPresentation,
+  graphCanvasResizeEdges,
 } from './interaction-controller.js'
 
 const emptySnapshot: FdAnyGraphSnapshot = { id: 'empty', nodes: [], edges: [] }
@@ -173,26 +172,6 @@ const edgeHitTestViewportTolerance = 8
 const edgeHitTestMinimumTolerance = 6
 const edgeHitTestPadding = 4
 
-const graphCanvasResizeEdges = (handle: FdGraphResizeHandle): FdGraphCanvasResizeEdges => {
-  switch (handle) {
-    case 'top':
-      return new Set(['top'])
-    case 'topRight':
-      return new Set(['top', 'trailing'])
-    case 'right':
-      return new Set(['trailing'])
-    case 'bottomRight':
-      return new Set(['bottom', 'trailing'])
-    case 'bottom':
-      return new Set(['bottom'])
-    case 'bottomLeft':
-      return new Set(['bottom', 'leading'])
-    case 'left':
-      return new Set(['leading'])
-    case 'topLeft':
-      return new Set(['top', 'leading'])
-  }
-}
 const minimumElementFocusFrameSize = 22
 const suppressedConnectionClickDuration = 500
 const suppressedConnectionClickTolerance = 4
