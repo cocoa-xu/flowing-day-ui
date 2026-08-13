@@ -82,9 +82,9 @@ README for why. Git tags have to distinguish them, and SPM requires bare semver 
 
 | | Version | Tag |
 | --- | --- | --- |
-| Swift | `2.2.0` | `2.2.0` |
+| Swift | `2.2.1` | `2.2.1` |
 | Web UI | `0.1.0` | `web/v0.1.0` |
-| Web Canvas | `0.2.0` | `web/canvas-v0.2.0` |
+| Web Canvas | `0.2.1` | `web/canvas-v0.2.1` |
 
 Publish a package with `pnpm --filter <package-name> publish`; `publishConfig.access` is already
 set, since scoped packages default to restricted.
