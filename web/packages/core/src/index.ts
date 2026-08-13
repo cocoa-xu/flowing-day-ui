@@ -158,11 +158,12 @@ export { FdSwitchRow } from './components/switch-row/fd-switch-row.js'
 export { FdSymbolSegmentedRow } from './components/symbol-segmented-row/fd-symbol-segmented-row.js'
 export {
   type FdTabLabelContent,
+  type FdTabOption,
   FdTabs,
   type FdTabsAlignment,
-  type FdTabsOverflow,
+  type FdTabsOverflowBehavior,
   type FdTabsSizing,
-  type FdTabsVariant,
+  type FdTabsStyle,
 } from './components/tabs/fd-tabs.js'
 export { FdTag } from './components/tag/fd-tag.js'
 export { FdTextArea } from './components/text-area/fd-text-area.js'

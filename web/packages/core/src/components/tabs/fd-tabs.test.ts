@@ -36,6 +36,23 @@ afterEach(() => {
 })
 
 describe('fd-tabs semantics', () => {
+  it('accepts Swift-style options directly', async () => {
+    const element = await mount(`
+      <fd-tabs label="Library areas" value="overview">
+        <section slot="overview">Overview</section>
+        <section slot="components">Components</section>
+      </fd-tabs>
+    `)
+    element.options = [
+      { value: 'overview', label: 'Overview', symbol: 'sparkles' },
+      { value: 'components', label: 'Components', isEnabled: false },
+    ]
+    await element.updateComplete
+
+    expect(tabs(element)).toHaveLength(2)
+    expect(tabs(element)[1]?.disabled).toBe(true)
+  })
+
   it('associates every tab with a mounted panel', async () => {
     const element = await mount(markup())
     const controls = tabs(element)
@@ -118,12 +135,12 @@ describe('fd-tabs keyboard navigation', () => {
 
 describe('fd-tabs presentation', () => {
   it('supports both SwiftUI visual variants', async () => {
-    const element = await mount(markup('variant="soft-surface"'))
-    expect(tabs(element).every((tab) => tab.dataset.variant === 'soft-surface')).toBe(true)
+    const element = await mount(markup('tabs-style="softSurface"'))
+    expect(tabs(element).every((tab) => tab.dataset.style === 'softSurface')).toBe(true)
 
-    element.variant = 'underline'
+    element.tabsStyle = 'underline'
     await element.updateComplete
-    expect(tabs(element).every((tab) => tab.dataset.variant === 'underline')).toBe(true)
+    expect(tabs(element).every((tab) => tab.dataset.style === 'underline')).toBe(true)
   })
 
   it('equalizes widths without measuring on every selection', async () => {
@@ -135,14 +152,14 @@ describe('fd-tabs presentation', () => {
   })
 
   it('lets fit-content tabs retain distinct intrinsic widths', async () => {
-    const element = await mount(markup('style="width:600px" sizing="fit-content"'))
+    const element = await mount(markup('style="width:600px" sizing="fitContent"'))
     const widths = tabs(element).map((tab) => tab.getBoundingClientRect().width)
 
     expect(widths[1]).toBeGreaterThan(widths[0] ?? 0)
   })
 
   it('renders icon and text labels without depending on icon registration', async () => {
-    const element = await mount(markup('label-content="icon-and-text"'))
+    const element = await mount(markup('label-content="iconAndText"'))
     expect(tabs(element)[0]?.querySelector('fd-icon')).not.toBeNull()
     expect(tabs(element)[0]?.textContent).toContain('Overview')
   })

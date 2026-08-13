@@ -7,10 +7,24 @@ import { textRole } from '../../internal/typography.js'
 import '../icon/fd-icon.js'
 import '../option/fd-option.js'
 
-export type FdTabsVariant = 'underline' | 'soft-surface'
-export type FdTabsSizing = 'equal' | 'fit-content'
-export type FdTabsOverflow = 'compress' | 'scroll'
-export type FdTabLabelContent = 'text' | 'icon' | 'icon-and-text'
+export interface FdTabOption {
+  readonly value: string
+  readonly label: string
+  readonly symbol?: string
+  readonly isEnabled?: boolean
+}
+
+interface ResolvedTabOption {
+  readonly value: string
+  readonly label: string
+  readonly symbol: string | null
+  readonly disabled: boolean
+}
+
+export type FdTabsStyle = 'underline' | 'softSurface'
+export type FdTabsSizing = 'equal' | 'fitContent'
+export type FdTabsOverflowBehavior = 'compress' | 'scroll'
+export type FdTabLabelContent = 'text' | 'icon' | 'iconAndText'
 export type FdTabsAlignment = 'leading' | 'center' | 'trailing'
 
 let tabsInstance = 0
@@ -83,19 +97,19 @@ export class FdTabs extends FdElement {
         grid-auto-columns: 1fr;
       }
 
-      .scroller[data-sizing='fit-content'] .tablist {
+      .scroller[data-sizing='fitContent'] .tablist {
         grid-auto-columns: minmax(0, max-content);
       }
 
-      .scroller[data-variant='underline'] {
+      .scroller[data-style='underline'] {
         padding-inline: 7px;
       }
 
-      .scroller[data-variant='soft-surface'] {
+      .scroller[data-style='softSurface'] {
         padding: 8px 8px 9px;
       }
 
-      .scroller[data-variant='soft-surface'] .tablist {
+      .scroller[data-style='softSurface'] .tablist {
         gap: 4px;
         padding: 4px;
         border: 1px solid var(--_fd-palette-edge);
@@ -161,13 +175,13 @@ export class FdTabs extends FdElement {
         font-size: 11px;
       }
 
-      .tab[data-variant='underline'] {
+      .tab[data-style='underline'] {
         flex-direction: column;
         gap: 8px;
         padding: 10px 10px 0;
       }
 
-      .tab[data-variant='underline'] .label {
+      .tab[data-style='underline'] .label {
         width: 100%;
       }
 
@@ -179,37 +193,37 @@ export class FdTabs extends FdElement {
         transition: background-color var(--_fd-motion-selection) var(--_fd-motion-easing);
       }
 
-      .tab[data-variant='underline'][aria-selected='true'] .indicator {
+      .tab[data-style='underline'][aria-selected='true'] .indicator {
         background: var(--_fd-accent-fill);
       }
 
-      .tab[data-variant='underline']:focus-visible {
+      .tab[data-style='underline']:focus-visible {
         border-radius: var(--_fd-metric-control-radius) var(--_fd-metric-control-radius) 0 0;
         background: var(--_fd-accent-veil);
       }
 
-      .tab[data-variant='soft-surface'] {
+      .tab[data-style='softSurface'] {
         align-items: center;
         height: 30px;
         padding-inline: 10px;
         border-radius: var(--_fd-metric-control-radius);
       }
 
-      .tab[data-variant='soft-surface'] .label {
+      .tab[data-style='softSurface'] .label {
         width: 100%;
       }
 
-      .tab[data-variant='soft-surface']:not([disabled]):hover {
+      .tab[data-style='softSurface']:not([disabled]):hover {
         background: color-mix(in srgb, var(--_fd-accent-veil) 56%, transparent);
       }
 
-      .tab[data-variant='soft-surface'][aria-selected='true'] {
+      .tab[data-style='softSurface'][aria-selected='true'] {
         background: var(--_fd-accent-veil);
         box-shadow: inset 0 0 0 1px
           color-mix(in srgb, var(--_fd-accent-fill) 13%, transparent);
       }
 
-      .tab[data-variant='soft-surface']:focus-visible {
+      .tab[data-style='softSurface']:focus-visible {
         box-shadow: inset 0 0 0 1px
           color-mix(in srgb, var(--_fd-accent-fill) 36%, transparent);
       }
@@ -224,14 +238,17 @@ export class FdTabs extends FdElement {
 
   @property({ reflect: true }) value: string | null = null
 
-  @property({ reflect: true }) variant: FdTabsVariant = 'underline'
+  @property({ attribute: false }) options: readonly FdTabOption[] = []
+
+  @property({ attribute: 'tabs-style', reflect: true }) tabsStyle: FdTabsStyle = 'underline'
 
   @property({ reflect: true }) sizing: FdTabsSizing = 'equal'
 
-  @property({ reflect: true }) overflow: FdTabsOverflow = 'compress'
+  @property({ attribute: 'overflow-behavior', reflect: true })
+  overflowBehavior: FdTabsOverflowBehavior = 'compress'
 
   @property({ attribute: 'label-content', reflect: true })
-  labelContent: FdTabLabelContent = 'icon-and-text'
+  labelContent: FdTabLabelContent = 'iconAndText'
 
   @property({ attribute: 'strip-alignment', reflect: true })
   stripAlignment: FdTabsAlignment = 'leading'
@@ -241,20 +258,20 @@ export class FdTabs extends FdElement {
 
   @property({ type: Boolean, reflect: true }) disabled = false
 
-  @state() private options: CollectedOption[] = []
+  @state() private slottedOptions: CollectedOption[] = []
 
   readonly #prefix = `fd-tabs-${++tabsInstance}`
 
   get selectedIndex(): number {
-    return this.options.findIndex((option) => option.value === this.value)
+    return this.#resolvedOptions.findIndex((option) => option.value === this.value)
   }
 
   #onSlotChange = (event: Event): void => {
-    this.options = collectOptions(event.target as HTMLSlotElement)
+    this.slottedOptions = collectOptions(event.target as HTMLSlotElement)
   }
 
   #select(index: number, moveFocus: boolean): void {
-    const option = this.options[index]
+    const option = this.#resolvedOptions[index]
     if (!option || this.disabled || option.disabled) return
 
     if (option.value !== this.value) {
@@ -274,7 +291,8 @@ export class FdTabs extends FdElement {
   }
 
   #onKeydown(event: KeyboardEvent): void {
-    if (this.disabled || this.options.length === 0) return
+    const options = this.#resolvedOptions
+    if (this.disabled || options.length === 0) return
 
     const isRTL = getComputedStyle(this).direction === 'rtl'
     const current = this.#focusedIndex >= 0 ? this.#focusedIndex : this.selectedIndex
@@ -288,10 +306,10 @@ export class FdTabs extends FdElement {
         destination = this.#nextEnabled(current, isRTL ? -1 : 1)
         break
       case 'Home':
-        destination = this.options.findIndex((option) => !option.disabled)
+        destination = options.findIndex((option) => !option.disabled)
         break
       case 'End':
-        destination = this.options.findLastIndex((option) => !option.disabled)
+        destination = options.findLastIndex((option) => !option.disabled)
         break
       default:
         return
@@ -303,10 +321,11 @@ export class FdTabs extends FdElement {
   }
 
   #nextEnabled(current: number, offset: number): number {
+    const options = this.#resolvedOptions
     let candidate = current >= 0 ? current : offset > 0 ? -1 : 0
-    for (let visited = 0; visited < this.options.length; visited += 1) {
-      candidate = (candidate + offset + this.options.length) % this.options.length
-      if (!this.options[candidate]?.disabled) return candidate
+    for (let visited = 0; visited < options.length; visited += 1) {
+      candidate = (candidate + offset + options.length) % options.length
+      if (!options[candidate]?.disabled) return candidate
     }
     return -1
   }
@@ -320,7 +339,7 @@ export class FdTabs extends FdElement {
     return [...this.renderRoot.querySelectorAll<HTMLButtonElement>('.tab')]
   }
 
-  #tabLabel(option: CollectedOption) {
+  #tabLabel(option: ResolvedTabOption) {
     const icon = option.symbol
       ? html`<fd-icon name=${option.symbol} aria-hidden="true"></fd-icon>`
       : nothing
@@ -331,24 +350,25 @@ export class FdTabs extends FdElement {
         return text
       case 'icon':
         return option.symbol ? icon : text
-      case 'icon-and-text':
+      case 'iconAndText':
         return html`${icon}${text}`
     }
   }
 
   override render() {
+    const options = this.#resolvedOptions
     const selectedIndex = this.selectedIndex
     const tabStopIndex =
-      selectedIndex >= 0 && !this.options[selectedIndex]?.disabled
+      selectedIndex >= 0 && !options[selectedIndex]?.disabled
         ? selectedIndex
-        : this.options.findIndex((option) => !option.disabled)
+        : options.findIndex((option) => !option.disabled)
 
     return html`
       <div
         class="scroller"
-        data-variant=${this.variant}
+        data-style=${this.tabsStyle}
         data-sizing=${this.sizing}
-        data-overflow=${this.overflow}
+        data-overflow=${this.overflowBehavior}
         data-strip-alignment=${this.stripAlignment}
       >
         <div
@@ -359,7 +379,7 @@ export class FdTabs extends FdElement {
           @keydown=${this.#onKeydown}
         >
           ${repeat(
-            this.options,
+            options,
             (option) => option.value,
             (option, index) => {
               const selected = index === selectedIndex
@@ -375,13 +395,13 @@ export class FdTabs extends FdElement {
                   tabindex=${index === tabStopIndex ? 0 : -1}
                   title=${option.label}
                   ?disabled=${this.disabled || option.disabled}
-                  data-variant=${this.variant}
+                  data-style=${this.tabsStyle}
                   @click=${() => this.#select(index, true)}
                 >
                   <span class="label" data-item-alignment=${this.itemAlignment}>
                     ${this.#tabLabel(option)}
                   </span>
-                  ${this.variant === 'underline' ? html`<span class="indicator"></span>` : nothing}
+                  ${this.tabsStyle === 'underline' ? html`<span class="indicator"></span>` : nothing}
                 </button>
               `
             },
@@ -390,7 +410,7 @@ export class FdTabs extends FdElement {
       </div>
 
       ${repeat(
-        this.options,
+        options,
         (option) => option.value,
         (option, index) => html`
           <div
@@ -409,6 +429,17 @@ export class FdTabs extends FdElement {
 
       <slot hidden @slotchange=${this.#onSlotChange}></slot>
     `
+  }
+
+  get #resolvedOptions(): ResolvedTabOption[] {
+    return this.options.length > 0
+      ? this.options.map((option) => ({
+          value: option.value,
+          label: option.label,
+          symbol: option.symbol ?? null,
+          disabled: option.isEnabled === false,
+        }))
+      : this.slottedOptions
   }
 }
 
