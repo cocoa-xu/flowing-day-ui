@@ -61,13 +61,13 @@ describe('fd-multi-select', () => {
 
   it('supports vertical fit-content layout', async () => {
     const element = await mount(
-      'axis="vertical" item-width-policy="fit-content" content-alignment="trailing"',
+      'axis="vertical" item-width-policy="fitContent" content-alignment="trailing"',
     )
     const group = element.shadowRoot?.querySelector('.group') as HTMLElement
 
     expect(getComputedStyle(group).flexDirection).toBe('column')
     expect(getComputedStyle(group).alignItems).toBe('flex-end')
-    expect(checkboxes(element)[0]?.widthPolicy).toBe('fit-content')
+    expect(checkboxes(element)[0]?.widthPolicy).toBe('fitContent')
   })
 
   it('submits every selected value', async () => {

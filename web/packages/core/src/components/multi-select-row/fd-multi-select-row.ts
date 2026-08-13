@@ -5,7 +5,7 @@ import { type CollectedOption, collectOptions } from '../../internal/options.js'
 import type {
   FdCheckboxContentAlignment,
   FdCheckboxIndicatorPlacement,
-  FdCheckboxTruncation,
+  FdCheckboxTruncationMode,
 } from '../checkbox/fd-checkbox.js'
 import type {
   FdMultiSelectAxis,
@@ -63,7 +63,8 @@ export class FdMultiSelectRow extends FdElement {
   @property({ type: Number, attribute: 'maximum-item-width' }) maximumItemWidth: number | null =
     null
 
-  @property({ reflect: true }) truncation: FdCheckboxTruncation = 'end'
+  @property({ reflect: true, attribute: 'truncation-mode' })
+  truncationMode: FdCheckboxTruncationMode = 'tail'
 
   @property({ type: Boolean, reflect: true }) disabled = false
 
@@ -139,7 +140,7 @@ export class FdMultiSelectRow extends FdElement {
           .indicatorPlacement=${this.indicatorPlacement}
           .spacing=${this.spacing}
           .maximumItemWidth=${this.maximumItemWidth}
-          .truncation=${this.truncation}
+          .truncationMode=${this.truncationMode}
           .disabled=${this.disabled}
           @fd-change=${this.#onChange}
         >

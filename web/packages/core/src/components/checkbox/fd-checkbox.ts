@@ -14,8 +14,8 @@ import '../icon/fd-icon.js'
 
 export type FdCheckboxContentAlignment = 'leading' | 'center' | 'trailing'
 export type FdCheckboxIndicatorPlacement = 'leading' | 'trailing'
-export type FdCheckboxWidthPolicy = 'fill' | 'fit-content'
-export type FdCheckboxTruncation = 'start' | 'middle' | 'end'
+export type FdCheckboxWidthPolicy = 'fill' | 'fitContent'
+export type FdCheckboxTruncationMode = 'head' | 'middle' | 'tail'
 
 /**
  * The reusable counterpart to `FlowingCheckbox`.
@@ -38,7 +38,7 @@ export class FdCheckbox extends FdElement {
         min-width: 0;
       }
 
-      :host([width-policy='fit-content']) {
+      :host([width-policy='fitContent']) {
         display: inline-flex;
         max-width: var(--_maximum-width, 100%);
       }
@@ -106,12 +106,12 @@ export class FdCheckbox extends FdElement {
         text-align: end;
       }
 
-      :host([truncation='start']) .label {
+      :host([truncation-mode='head']) .label {
         direction: rtl;
         text-align: start;
       }
 
-      :host([truncation='middle']) .label {
+      :host([truncation-mode='middle']) .label {
         display: flex;
         text-align: start;
         text-overflow: clip;
@@ -204,9 +204,8 @@ export class FdCheckbox extends FdElement {
 
   @property({ type: Number, attribute: 'maximum-width' }) maximumWidth: number | null = null
 
-  @property({ reflect: true }) truncation: FdCheckboxTruncation = 'end'
-
-  @property({ type: Number, attribute: 'tail-length' }) tailLength = DEFAULT_TAIL_LENGTH
+  @property({ reflect: true, attribute: 'truncation-mode' })
+  truncationMode: FdCheckboxTruncationMode = 'tail'
 
   @property({ reflect: true }) name = ''
 
@@ -269,12 +268,8 @@ export class FdCheckbox extends FdElement {
   }
 
   #renderLabel(label: string) {
-    if (this.truncation !== 'middle') return html`<slot>${label}</slot>`
-    const tailLength =
-      Number.isFinite(this.tailLength) && this.tailLength >= 0
-        ? Math.floor(this.tailLength)
-        : DEFAULT_TAIL_LENGTH
-    return middleTruncated(label, tailLength)
+    if (this.truncationMode !== 'middle') return html`<slot>${label}</slot>`
+    return middleTruncated(label, DEFAULT_TAIL_LENGTH)
   }
 
   override render() {
@@ -310,9 +305,11 @@ export class FdCheckbox extends FdElement {
         @click=${this.#toggle}
       >
         ${this.indicatorPlacement === 'leading' ? this.#renderIndicator() : nothing}
-        ${this.symbol
-          ? html`<fd-icon class="icon" part="icon" name=${this.symbol}></fd-icon>`
-          : nothing}
+        ${
+          this.symbol
+            ? html`<fd-icon class="icon" part="icon" name=${this.symbol}></fd-icon>`
+            : nothing
+        }
         <span class="label">${this.#renderLabel(label)}</span>
         ${this.indicatorPlacement === 'trailing' ? this.#renderIndicator() : nothing}
       </button>

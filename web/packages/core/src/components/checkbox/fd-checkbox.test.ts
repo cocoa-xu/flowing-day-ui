@@ -35,17 +35,17 @@ describe('fd-checkbox', () => {
 
   it('supports each SwiftUI truncation mode', async () => {
     const element = await mount(
-      '<fd-checkbox label="A very long checkbox label" truncation="middle" tail-length="6"></fd-checkbox>',
+      '<fd-checkbox label="A very long checkbox label" truncation-mode="middle"></fd-checkbox>',
     )
     const label = element.shadowRoot?.querySelector('.label') as HTMLElement
 
-    expect(label.querySelector('.truncate-head')?.textContent).toBe('A very long checkbox')
-    expect(label.querySelector('.truncate-tail')?.textContent).toBe(' label')
+    expect(label.querySelector('.truncate-head')?.textContent).toBe('A very long checkb')
+    expect(label.querySelector('.truncate-tail')?.textContent).toBe('ox label')
   })
 
   it('supports trailing indicators and fit-content geometry', async () => {
     const element = await mount(
-      '<fd-checkbox label="Compact" indicator-placement="trailing" width-policy="fit-content" maximum-width="120"></fd-checkbox>',
+      '<fd-checkbox label="Compact" indicator-placement="trailing" width-policy="fitContent" maximum-width="120"></fd-checkbox>',
     )
     const button = buttonOf(element)
 

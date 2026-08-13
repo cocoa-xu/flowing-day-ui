@@ -1,11 +1,10 @@
 import { type CSSResultGroup, css, html, type PropertyValues } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
-import { DEFAULT_TAIL_LENGTH } from '../../internal/middle-truncate.js'
 import type {
   FdCheckboxContentAlignment,
   FdCheckboxIndicatorPlacement,
-  FdCheckboxTruncation,
+  FdCheckboxTruncationMode,
   FdCheckboxWidthPolicy,
 } from '../checkbox/fd-checkbox.js'
 import '../checkbox/fd-checkbox.js'
@@ -33,7 +32,7 @@ export class FdCheckToggle extends FdElement {
         width: 100%;
       }
 
-      :host([width-policy='fit-content']) {
+      :host([width-policy='fitContent']) {
         display: inline-flex;
         width: auto;
         max-width: var(--_maximum-width, 100%);
@@ -59,9 +58,8 @@ export class FdCheckToggle extends FdElement {
 
   @property({ type: Number, attribute: 'maximum-width' }) maximumWidth: number | null = null
 
-  @property({ reflect: true }) truncation: FdCheckboxTruncation = 'end'
-
-  @property({ type: Number, attribute: 'tail-length' }) tailLength = DEFAULT_TAIL_LENGTH
+  @property({ reflect: true, attribute: 'truncation-mode' })
+  truncationMode: FdCheckboxTruncationMode = 'tail'
 
   @property({ reflect: true }) name = ''
 
@@ -133,8 +131,7 @@ export class FdCheckToggle extends FdElement {
         .indicatorPlacement=${this.indicatorPlacement}
         .widthPolicy=${this.widthPolicy}
         .maximumWidth=${this.maximumWidth}
-        .truncation=${this.truncation}
-        .tailLength=${this.tailLength}
+        .truncationMode=${this.truncationMode}
         @fd-change=${this.#onChange}
       ></fd-checkbox>
     `

@@ -80,7 +80,7 @@ export {
   FdCheckbox,
   type FdCheckboxContentAlignment,
   type FdCheckboxIndicatorPlacement,
-  type FdCheckboxTruncation,
+  type FdCheckboxTruncationMode,
   type FdCheckboxWidthPolicy,
 } from './components/checkbox/fd-checkbox.js'
 export { FdChip } from './components/chip/fd-chip.js'

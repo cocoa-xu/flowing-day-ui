@@ -185,7 +185,7 @@ describe('fd-check-toggle', () => {
 
   it('supports trailing indicators and compact width', async () => {
     const element = await mount<FdCheckToggle>(
-      '<fd-check-toggle indicator-placement="trailing" width-policy="fit-content" maximum-width="120">Peaks</fd-check-toggle>',
+      '<fd-check-toggle indicator-placement="trailing" width-policy="fitContent" maximum-width="120">Peaks</fd-check-toggle>',
     )
     const checkbox = element.shadowRoot?.querySelector('fd-checkbox') as FdCheckbox
     const button = checkbox.shadowRoot?.querySelector('.button') as HTMLButtonElement

@@ -5,14 +5,14 @@ import { type CollectedOption, collectOptions } from '../../internal/options.js'
 import type {
   FdCheckboxContentAlignment,
   FdCheckboxIndicatorPlacement,
-  FdCheckboxTruncation,
+  FdCheckboxTruncationMode,
 } from '../checkbox/fd-checkbox.js'
 import '../checkbox/fd-checkbox.js'
 import type { FdOption } from '../option/fd-option.js'
 import '../option/fd-option.js'
 
 export type FdMultiSelectAxis = 'horizontal' | 'vertical'
-export type FdMultiSelectItemWidthPolicy = 'equal' | 'fit-content'
+export type FdMultiSelectItemWidthPolicy = 'equal' | 'fitContent'
 
 /**
  * The reusable counterpart to `FlowingMultiSelect`.
@@ -51,7 +51,7 @@ export class FdMultiSelect extends FdElement {
         width: 100%;
       }
 
-      :host([item-width-policy='fit-content']) fd-checkbox {
+      :host([item-width-policy='fitContent']) fd-checkbox {
         flex: none;
       }
 
@@ -83,7 +83,8 @@ export class FdMultiSelect extends FdElement {
   @property({ type: Number, attribute: 'maximum-item-width' }) maximumItemWidth: number | null =
     null
 
-  @property({ reflect: true }) truncation: FdCheckboxTruncation = 'end'
+  @property({ reflect: true, attribute: 'truncation-mode' })
+  truncationMode: FdCheckboxTruncationMode = 'tail'
 
   @property({ type: Boolean, reflect: true }) disabled = false
 
@@ -201,9 +202,9 @@ export class FdMultiSelect extends FdElement {
               .disabled=${this.disabled || option.disabled}
               .contentAlignment=${this.contentAlignment}
               .indicatorPlacement=${this.indicatorPlacement}
-              .widthPolicy=${this.itemWidthPolicy === 'equal' ? 'fill' : 'fit-content'}
+              .widthPolicy=${this.itemWidthPolicy === 'equal' ? 'fill' : 'fitContent'}
               .maximumWidth=${this.maximumItemWidth}
-              .truncation=${this.truncation}
+              .truncationMode=${this.truncationMode}
               @fd-change=${(event: CustomEvent) => this.#toggle(event, index)}
             ></fd-checkbox>
           `,
