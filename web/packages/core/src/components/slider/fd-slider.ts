@@ -42,9 +42,7 @@ export class FdSlider extends FdElement {
       }
 
       :host(:focus-visible) {
-        outline: 2px solid var(--_fd-accent-fill);
-        outline-offset: 2px;
-        border-radius: 2px;
+        outline: 0;
       }
 
       .rail {
@@ -91,10 +89,19 @@ export class FdSlider extends FdElement {
           inset 0 0 0 0.5px var(--_fd-knob-border),
           var(--_fd-knob-shadow);
       }
+
+      :host(:focus-visible) .knob {
+        box-shadow:
+          inset 0 0 0 0.5px var(--_fd-knob-border),
+          var(--_fd-knob-shadow),
+          0 0 0 1px color-mix(in srgb, var(--_fd-accent-fill) 42%, transparent);
+      }
     `,
   ]
 
   @property({ type: Number }) value = 0
+
+  @property({ reflect: true }) label = ''
 
   /** `range.lowerBound`. */
   @property({ type: Number }) min = 0
@@ -108,6 +115,9 @@ export class FdSlider extends FdElement {
   @property({ type: Boolean, reflect: true }) disabled = false
 
   @property({ reflect: true }) name = ''
+
+  @property({ attribute: false }) formatValue: (value: number) => string = (value) =>
+    value.toFixed(2)
 
   readonly #internals: ElementInternals
 
@@ -150,15 +160,25 @@ export class FdSlider extends FdElement {
     if (!this.hasAttribute('tabindex')) this.tabIndex = 0
   }
 
+  override willUpdate(): void {
+    if (!Number.isFinite(this.min) || !Number.isFinite(this.max) || this.min > this.max) {
+      throw new RangeError('Slider bounds must be finite and ordered.')
+    }
+    if (this.step !== null && (!Number.isFinite(this.step) || this.step <= 0)) {
+      throw new RangeError('Slider step must be finite and greater than zero.')
+    }
+  }
+
   override updated(changed: PropertyValues<this>): void {
     super.updated(changed)
     this.setAttribute('aria-valuenow', String(this.value))
     this.setAttribute('aria-valuemin', String(this.min))
     this.setAttribute('aria-valuemax', String(this.max))
-    // accessibilityValue(Text(String(format: "%.2f", value)))
-    this.setAttribute('aria-valuetext', this.value.toFixed(2))
+    this.setAttribute('aria-valuetext', this.formatValue(this.value))
+    if (this.label) this.setAttribute('aria-label', this.label)
+    else this.removeAttribute('aria-label')
     this.setAttribute('aria-disabled', String(this.disabled))
-    this.#internals.setFormValue(String(this.value))
+    this.#internals.setFormValue(this.disabled ? null : String(this.value))
     if (changed.has('disabled')) this.tabIndex = this.disabled ? -1 : 0
   }
 

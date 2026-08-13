@@ -266,6 +266,15 @@ describe('fd-slider', () => {
     expect(element.tabIndex).toBe(0)
   })
 
+  it('uses the Swift label and value formatter for accessibility', async () => {
+    const element = await mount('<fd-slider label="Volume" value="0.25"></fd-slider>')
+    element.formatValue = (value) => `${Math.round(value * 100)} percent`
+    await element.updateComplete
+
+    expect(element.getAttribute('aria-label')).toBe('Volume')
+    expect(element.getAttribute('aria-valuetext')).toBe('25 percent')
+  })
+
   it('submits with a form and restores on reset', async () => {
     const form = document.createElement('form')
     document.body.append(form)
@@ -283,5 +292,15 @@ describe('fd-slider', () => {
     form.reset()
     await element.updateComplete
     expect(element.value).toBe(4)
+  })
+
+  it('does not submit a disabled value', async () => {
+    const form = document.createElement('form')
+    document.body.append(form)
+    form.innerHTML = '<fd-slider name="volume" value="0.5" disabled></fd-slider>'
+    const element = form.firstElementChild as FdSlider
+    await element.updateComplete
+
+    expect(new FormData(form).has('volume')).toBe(false)
   })
 })
