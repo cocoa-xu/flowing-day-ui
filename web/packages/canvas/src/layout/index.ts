@@ -1,3 +1,4 @@
+export * from './compound.js'
 export * from './driver.js'
 export * from './edge-routing.js'
 export * from './force-directed.js'
