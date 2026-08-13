@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { FdAnyGraphSnapshot } from '../graph/model.js'
-import { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
 import { resolveGraphMiniMapConfiguration, resolveGraphMiniMapStyle } from './configuration.js'
+import type { FdAnyGraphMiniMapSnapshot } from './model.js'
 import { planGraphMiniMap } from './planner.js'
 import {
   FdGraphMiniMapPlanProjection,
@@ -12,8 +11,9 @@ import {
 
 const performanceConfiguration = resolveGraphMiniMapConfiguration({}).performance
 
-const largeSnapshot = (): FdAnyGraphSnapshot => ({
+const largeSnapshot = (): FdAnyGraphMiniMapSnapshot => ({
   id: 'large',
+  contentBounds: { x: 0, y: 0, width: 4_800, height: 3_000 },
   nodes: Array.from({ length: 100_000 }, (_, index) => ({
     id: index,
     frame: {
@@ -92,19 +92,22 @@ describe('graph minimap geometry', () => {
 
 describe('graph minimap planning', () => {
   it('preserves developer styles in silhouette mode', () => {
-    const snapshot: FdAnyGraphSnapshot = {
+    const snapshot: FdAnyGraphMiniMapSnapshot = {
       id: 'styled',
+      contentBounds: { x: 0, y: 0, width: 240, height: 40 },
       nodes: [0, 1, 2].map((id) => ({
         id,
         frame: { x: id * 100, y: 0, width: 40, height: 40 },
       })),
       edges: [],
     }
-    const index = new FdGraphSnapshotIndex(snapshot)
     const plan = planGraphMiniMap({
       snapshot,
-      index,
-      transform: new FdGraphMiniMapTransform(index.contentBounds, { width: 300, height: 100 }, 0),
+      transform: new FdGraphMiniMapTransform(
+        snapshot.contentBounds,
+        { width: 300, height: 100 },
+        0,
+      ),
       representation: 'silhouette',
       performance: performanceConfiguration,
       availableNodeStyleCount: 2,
@@ -118,19 +121,22 @@ describe('graph minimap planning', () => {
   })
 
   it('includes simplified edges in structure mode', () => {
-    const snapshot: FdAnyGraphSnapshot = {
+    const snapshot: FdAnyGraphMiniMapSnapshot = {
       id: 'structure',
+      contentBounds: { x: 0, y: 0, width: 200, height: 100 },
       nodes: [
         { id: 0, frame: { x: 0, y: 0, width: 40, height: 40 } },
         { id: 1, frame: { x: 160, y: 60, width: 40, height: 40 } },
       ],
-      edges: [{ id: 0, source: { nodeID: 0 }, target: { nodeID: 1 } }],
+      edges: [{ id: 0, start: { x: 20, y: 20 }, end: { x: 180, y: 80 } }],
     }
-    const index = new FdGraphSnapshotIndex(snapshot)
     const plan = planGraphMiniMap({
       snapshot,
-      index,
-      transform: new FdGraphMiniMapTransform(index.contentBounds, { width: 200, height: 100 }, 0),
+      transform: new FdGraphMiniMapTransform(
+        snapshot.contentBounds,
+        { width: 200, height: 100 },
+        0,
+      ),
       representation: 'structure',
       performance: performanceConfiguration,
       availableNodeStyleCount: 1,
@@ -140,13 +146,45 @@ describe('graph minimap planning', () => {
     expect(plan.edgeSegments).toHaveLength(1)
   })
 
-  it('bounds a hundred-thousand-node adaptive plan by its pixel budget', () => {
-    const snapshot = largeSnapshot()
-    const index = new FdGraphSnapshotIndex(snapshot)
+  it('skips non-finite geometry and preserves integer style identities', () => {
+    const snapshot: FdAnyGraphMiniMapSnapshot = {
+      id: 'invalid-geometry',
+      contentBounds: { x: 0, y: 0, width: 100, height: 100 },
+      nodes: [
+        { id: 'valid', frame: { x: 0, y: 0, width: 40, height: 40 } },
+        { id: 'invalid', frame: { x: Number.NaN, y: 0, width: 40, height: 40 } },
+      ],
+      edges: [
+        { id: 'valid', start: { x: 0, y: 0 }, end: { x: 40, y: 40 } },
+        { id: 'invalid', start: { x: 0, y: 0 }, end: { x: Number.NaN, y: 40 } },
+      ],
+    }
     const plan = planGraphMiniMap({
       snapshot,
-      index,
-      transform: new FdGraphMiniMapTransform(index.contentBounds, { width: 220, height: 144 }, 10),
+      transform: new FdGraphMiniMapTransform(
+        snapshot.contentBounds,
+        { width: 100, height: 100 },
+        0,
+      ),
+      representation: 'structure',
+      performance: performanceConfiguration,
+      availableNodeStyleCount: 2,
+      nodeStyleIndex: () => -1,
+    })
+
+    expect(plan.nodeBatches).toMatchObject([{ styleIndex: -1, rects: [{}] }])
+    expect(plan.edgeSegments).toHaveLength(1)
+  })
+
+  it('bounds a hundred-thousand-node adaptive plan by its pixel budget', () => {
+    const snapshot = largeSnapshot()
+    const plan = planGraphMiniMap({
+      snapshot,
+      transform: new FdGraphMiniMapTransform(
+        snapshot.contentBounds,
+        { width: 220, height: 144 },
+        10,
+      ),
       representation: 'adaptive',
       performance: performanceConfiguration,
       availableNodeStyleCount: 4,
@@ -162,7 +200,6 @@ describe('graph minimap planning', () => {
 
   it('honors the explicit aggregation memory ceiling', () => {
     const snapshot = largeSnapshot()
-    const index = new FdGraphSnapshotIndex(snapshot)
     const performance = resolveGraphMiniMapConfiguration({
       performance: {
         aggregationCellSize: 1,
@@ -172,9 +209,8 @@ describe('graph minimap planning', () => {
     }).performance
     const plan = planGraphMiniMap({
       snapshot,
-      index,
       transform: new FdGraphMiniMapTransform(
-        index.contentBounds,
+        snapshot.contentBounds,
         { width: 4_000, height: 4_000 },
         0,
       ),
@@ -190,16 +226,14 @@ describe('graph minimap planning', () => {
 
   it('cooperatively cancels expensive planning', () => {
     const snapshot = largeSnapshot()
-    const index = new FdGraphSnapshotIndex(snapshot)
     const controller = new AbortController()
     controller.abort()
 
     expect(() =>
       planGraphMiniMap({
         snapshot,
-        index,
         transform: new FdGraphMiniMapTransform(
-          index.contentBounds,
+          snapshot.contentBounds,
           { width: 220, height: 144 },
           10,
         ),

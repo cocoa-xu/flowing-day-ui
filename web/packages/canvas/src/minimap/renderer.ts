@@ -1,5 +1,3 @@
-import type { FdAnyGraphSnapshot } from '../graph/model.js'
-import type { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
 import type {
   FdResolvedGraphMiniMapConfiguration,
   FdResolvedGraphMiniMapStyle,
@@ -8,8 +6,6 @@ import type { FdGraphMiniMapRenderPlan } from './planner.js'
 import type { FdGraphMiniMapPlanProjection } from './transform.js'
 
 export interface FdGraphMiniMapRenderFrame {
-  readonly snapshot: FdAnyGraphSnapshot
-  readonly index: FdGraphSnapshotIndex
   readonly plan: FdGraphMiniMapRenderPlan
   readonly projection: FdGraphMiniMapPlanProjection
   readonly configuration: FdResolvedGraphMiniMapConfiguration

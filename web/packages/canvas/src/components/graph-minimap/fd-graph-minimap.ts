@@ -3,8 +3,6 @@ import { customElement, property, query } from 'lit/decorators.js'
 import type { FdCanvasInsets, FdCanvasPoint, FdCanvasRect } from '../../geometry.js'
 import { FdCanvasTransform, FdCanvasViewport } from '../../geometry.js'
 import type { FdGraphMiniMapNavigationDetail } from '../../graph/minimap-events.js'
-import type { FdAnyGraphNode, FdAnyGraphSnapshot } from '../../graph/model.js'
-import { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
 import type {
   FdGraphMiniMapConfiguration,
   FdGraphMiniMapPlacement,
@@ -14,6 +12,10 @@ import {
   resolveGraphMiniMapConfiguration,
   resolveGraphMiniMapStyle,
 } from '../../minimap/configuration.js'
+import type {
+  FdAnyGraphMiniMapNode,
+  FdAnyGraphMiniMapSnapshot,
+} from '../../minimap/model.js'
 import type { FdGraphMiniMapRenderPlan } from '../../minimap/planner.js'
 import { planGraphMiniMap } from '../../minimap/planner.js'
 import {
@@ -27,7 +29,12 @@ import {
   graphMiniMapScopeBounds,
 } from '../../minimap/transform.js'
 
-const emptySnapshot: FdAnyGraphSnapshot = { id: 'empty', nodes: [], edges: [] }
+const emptySnapshot: FdAnyGraphMiniMapSnapshot = {
+  id: 'empty',
+  contentBounds: { x: 0, y: 0, width: 1, height: 1 },
+  nodes: [],
+  edges: [],
+}
 const emptyViewport = new FdCanvasViewport(
   FdCanvasTransform.identity,
   { width: 1, height: 1 },
@@ -138,21 +145,18 @@ export class FdGraphMiniMap extends LitElement {
     }
   `
 
-  @property({ attribute: false }) snapshot: FdAnyGraphSnapshot = emptySnapshot
-  @property({ attribute: false }) snapshotIndex: FdGraphSnapshotIndex | undefined
+  @property({ attribute: false }) snapshot: FdAnyGraphMiniMapSnapshot = emptySnapshot
   @property({ attribute: false }) viewport: FdCanvasViewport = emptyViewport
   @property({ attribute: false }) configuration: FdGraphMiniMapConfiguration = {}
   @property({ attribute: false }) miniMapStyle: FdGraphMiniMapStyle = {}
   @property({ reflect: true }) placement: FdGraphMiniMapPlacement = 'bottomTrailing'
   @property({ attribute: false }) overlayInsets: FdCanvasInsets = defaultOverlayInsets
-  @property({ attribute: false }) nodeStyleIndex: (node: FdAnyGraphNode) => number = () => 0
+  @property({ attribute: false }) nodeStyleIndex: (node: FdAnyGraphMiniMapNode) => number = () => 0
   @property({ attribute: false }) renderingBackend: FdGraphMiniMapRenderingBackend | undefined
 
   @query('canvas') private canvas!: HTMLCanvasElement
   @query('.viewport-indicator') private viewportIndicator!: HTMLElement
 
-  private index = new FdGraphSnapshotIndex(emptySnapshot)
-  private indexedSnapshot: FdAnyGraphSnapshot | undefined
   private resolvedConfiguration = resolveGraphMiniMapConfiguration({})
   private resolvedStyle = resolveGraphMiniMapStyle()
   private backend: FdGraphMiniMapRenderingBackend | undefined
@@ -183,7 +187,7 @@ export class FdGraphMiniMap extends LitElement {
     this.addEventListener('pointercancel', this.handlePointerCancel)
     this.addEventListener('wheel', this.handleWheel, { passive: false })
     this.activateBackend()
-    this.rebuildIndex()
+    this.rebuildSnapshot()
     this.syncConfiguration()
     this.syncViewport(true)
   }
@@ -198,7 +202,7 @@ export class FdGraphMiniMap extends LitElement {
   }
 
   protected override updated(changed: PropertyValues<this>): void {
-    if (changed.has('snapshot') || changed.has('snapshotIndex')) this.rebuildIndex()
+    if (changed.has('snapshot')) this.rebuildSnapshot()
     if (
       changed.has('configuration') ||
       changed.has('miniMapStyle') ||
@@ -223,11 +227,7 @@ export class FdGraphMiniMap extends LitElement {
     super.disconnectedCallback()
   }
 
-  private rebuildIndex(): void {
-    if (this.snapshotIndex?.snapshot === this.snapshot) this.index = this.snapshotIndex
-    else if (this.indexedSnapshot !== this.snapshot)
-      this.index = new FdGraphSnapshotIndex(this.snapshot)
-    this.indexedSnapshot = this.snapshot
+  private rebuildSnapshot(): void {
     this.navigatorWorldBounds = undefined
     if (this.viewportIndicator) this.syncViewport(true)
     else this.schedulePlan()
@@ -307,7 +307,6 @@ export class FdGraphMiniMap extends LitElement {
     try {
       this.plan = planGraphMiniMap({
         snapshot: this.snapshot,
-        index: this.index,
         transform,
         representation: this.resolvedConfiguration.representation,
         performance: this.resolvedConfiguration.performance,
@@ -324,7 +323,7 @@ export class FdGraphMiniMap extends LitElement {
   private planningTransform(): FdGraphMiniMapTransform {
     if (this.resolvedConfiguration.scope.kind === 'overview') {
       return new FdGraphMiniMapTransform(
-        this.index.contentBounds,
+        this.snapshot.contentBounds,
         this.resolvedConfiguration.size,
         this.resolvedConfiguration.contentPadding,
       )
@@ -345,13 +344,13 @@ export class FdGraphMiniMap extends LitElement {
     if (scope.kind !== 'localNavigator') {
       return graphMiniMapScopeBounds(
         scope,
-        this.index.contentBounds,
+        this.snapshot.contentBounds,
         this.viewport.visibleWorldRect,
       )
     }
     const requested = graphMiniMapScopeBounds(
       scope,
-      this.index.contentBounds,
+      this.snapshot.contentBounds,
       this.viewport.visibleWorldRect,
     )
     const current = this.navigatorWorldBounds
@@ -385,7 +384,7 @@ export class FdGraphMiniMap extends LitElement {
       this.pointerState !== undefined ||
       graphMiniMapIsVisible(
         this.resolvedConfiguration.visibility,
-        this.index.contentBounds,
+        this.snapshot.contentBounds,
         this.viewport.visibleWorldRect,
       )
     this.setAttribute('data-visible', String(visible))
@@ -400,8 +399,6 @@ export class FdGraphMiniMap extends LitElement {
     const transform = this.displayTransform
     if (!plan || !transform || !this.backend) return
     this.backend.render({
-      snapshot: this.snapshot,
-      index: this.index,
       plan,
       projection: new FdGraphMiniMapPlanProjection(plan.transform, transform),
       configuration: this.resolvedConfiguration,

@@ -1,11 +1,9 @@
 import type { FdCanvasPoint, FdCanvasRect } from '../geometry.js'
-import type { FdAnyGraphSnapshot } from '../graph/model.js'
-import { graphPortPoint } from '../graph/model.js'
-import type { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
 import type {
   FdGraphMiniMapRepresentation,
   FdResolvedGraphMiniMapPerformanceConfiguration,
 } from './configuration.js'
+import type { FdAnyGraphMiniMapNode, FdAnyGraphMiniMapSnapshot } from './model.js'
 import type { FdGraphMiniMapTransform } from './transform.js'
 
 export interface FdGraphMiniMapNodeBatch {
@@ -28,13 +26,12 @@ export interface FdGraphMiniMapRenderPlan {
 }
 
 export interface FdGraphMiniMapPlannerOptions {
-  readonly snapshot: FdAnyGraphSnapshot
-  readonly index: FdGraphSnapshotIndex
+  readonly snapshot: FdAnyGraphMiniMapSnapshot
   readonly transform: FdGraphMiniMapTransform
   readonly representation: FdGraphMiniMapRepresentation
   readonly performance: FdResolvedGraphMiniMapPerformanceConfiguration
   readonly availableNodeStyleCount: number
-  readonly nodeStyleIndex: (node: FdAnyGraphSnapshot['nodes'][number]) => number
+  readonly nodeStyleIndex: (node: FdAnyGraphMiniMapNode) => number
   readonly signal?: AbortSignal
 }
 
@@ -58,12 +55,18 @@ const visibleNodeRect = (rect: FdCanvasRect): FdCanvasRect => {
   }
 }
 
+const finitePoint = (point: FdCanvasPoint): boolean =>
+  Number.isFinite(point.x) && Number.isFinite(point.y)
+
+const finiteRect = (rect: FdCanvasRect): boolean =>
+  finitePoint(rect) && Number.isFinite(rect.width) && Number.isFinite(rect.height)
+
 const checkCancellation = (signal: AbortSignal | undefined, index: number): void => {
   if (index % cancellationStride === 0) signal?.throwIfAborted()
 }
 
 const normalizedStyle = (style: number): number =>
-  Number.isSafeInteger(style) && style >= 0 ? style : 0
+  Number.isSafeInteger(style) ? style : 0
 
 const resolvedStyle = (
   requested: number,
@@ -108,7 +111,7 @@ function batchNodes(
   for (let index = 0; index < options.snapshot.nodes.length; index += 1) {
     checkCancellation(options.signal, index)
     const node = options.snapshot.nodes[index]
-    if (!node) continue
+    if (!node || !finiteRect(node.frame)) continue
     const requested = normalizedStyle(options.nodeStyleIndex(node))
     const style = resolvedStyle(requested, rectsByStyle, maximumStyleCount, fallbackStyle)
     fallbackStyle ??= style
@@ -145,7 +148,7 @@ function aggregateNodes(
   for (let index = 0; index < options.snapshot.nodes.length; index += 1) {
     checkCancellation(options.signal, index)
     const node = options.snapshot.nodes[index]
-    if (!node) continue
+    if (!node || !finiteRect(node.frame)) continue
     const range = cellRange(
       visibleNodeRect(options.transform.applyRect(node.frame)),
       columns,
@@ -212,7 +215,7 @@ function aggregateSingleStyleNodes(
   for (let index = 0; index < options.snapshot.nodes.length; index += 1) {
     checkCancellation(options.signal, index)
     const node = options.snapshot.nodes[index]
-    if (!node) continue
+    if (!node || !finiteRect(node.frame)) continue
     const range = cellRange(
       visibleNodeRect(options.transform.applyRect(node.frame)),
       columns,
@@ -250,13 +253,11 @@ function edgeSegments(
   }
   return options.snapshot.edges.flatMap((edge, index) => {
     checkCancellation(options.signal, index)
-    const sourceNode = options.index.nodes.get(edge.source.nodeID)
-    const targetNode = options.index.nodes.get(edge.target.nodeID)
-    if (!sourceNode || !targetNode) return []
+    if (!finitePoint(edge.start) || !finitePoint(edge.end)) return []
     return [
       {
-        source: options.transform.applyPoint(graphPortPoint(sourceNode, edge.source.portID)),
-        target: options.transform.applyPoint(graphPortPoint(targetNode, edge.target.portID)),
+        source: options.transform.applyPoint(edge.start),
+        target: options.transform.applyPoint(edge.end),
       },
     ]
   })

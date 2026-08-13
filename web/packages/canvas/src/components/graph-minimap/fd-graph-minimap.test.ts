@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { FdCanvasTransform, FdCanvasViewport } from '../../geometry.js'
-import type { FdAnyGraphSnapshot } from '../../graph/model.js'
-import { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
+import type { FdAnyGraphMiniMapSnapshot } from '../../minimap/model.js'
 import type {
   FdGraphMiniMapRenderFrame,
   FdGraphMiniMapRenderingBackend,
@@ -9,13 +8,14 @@ import type {
 import type { FdGraphMiniMap } from './fd-graph-minimap.js'
 import './fd-graph-minimap.js'
 
-const snapshot: FdAnyGraphSnapshot = {
+const snapshot: FdAnyGraphMiniMapSnapshot = {
   id: 'graph',
+  contentBounds: { x: 0, y: 0, width: 1_000, height: 800 },
   nodes: [
     { id: 'one', frame: { x: 0, y: 0, width: 80, height: 60 } },
     { id: 'two', frame: { x: 920, y: 740, width: 80, height: 60 } },
   ],
-  edges: [{ id: 'edge', source: { nodeID: 'one' }, target: { nodeID: 'two' } }],
+  edges: [{ id: 'edge', start: { x: 40, y: 30 }, end: { x: 960, y: 770 } }],
 }
 
 const viewport = (offsetX = 0): FdCanvasViewport =>
@@ -48,7 +48,6 @@ class RecordingBackend implements FdGraphMiniMapRenderingBackend {
 async function mount(backend?: FdGraphMiniMapRenderingBackend): Promise<FdGraphMiniMap> {
   const element = document.createElement('fd-graph-minimap')
   element.snapshot = snapshot
-  element.snapshotIndex = new FdGraphSnapshotIndex(snapshot)
   element.viewport = viewport()
   element.configuration = { visibility: 'always' }
   if (backend) element.renderingBackend = backend
@@ -70,7 +69,7 @@ describe('fd-graph-minimap rendering', () => {
     const frame = backend.frames.at(-1)
 
     expect(backend.mounts).toBe(1)
-    expect(frame?.snapshot).toBe(snapshot)
+    expect(frame?.plan.snapshotID).toBe(snapshot.id)
     expect(frame?.plan.nodeBatches).toHaveLength(1)
     expect(frame?.plan.edgeSegments).toHaveLength(1)
     expect(frame?.style.nodeStyles).toHaveLength(1)
@@ -133,10 +132,10 @@ describe('fd-graph-minimap rendering', () => {
     element.configuration = { visibility: 'whenNavigationIsUseful' }
     element.snapshot = {
       id: 'small',
+      contentBounds: { x: 20, y: 20, width: 40, height: 40 },
       nodes: [{ id: 0, frame: { x: 20, y: 20, width: 40, height: 40 } }],
       edges: [],
     }
-    element.snapshotIndex = undefined
     await element.updateComplete
 
     expect(element.getAttribute('data-visible')).toBe('false')

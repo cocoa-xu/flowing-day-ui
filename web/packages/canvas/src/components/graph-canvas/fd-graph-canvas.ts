@@ -119,6 +119,10 @@ import type {
   FdGraphMiniMapStyle,
 } from '../../minimap/configuration.js'
 import type {
+  FdAnyGraphMiniMapNode,
+  FdAnyGraphMiniMapSnapshot,
+} from '../../minimap/model.js'
+import type {
   FdGraphCanvasRenderingBackendPreference,
   FdGraphRenderFrame,
   FdGraphRenderingBackend,
@@ -157,6 +161,12 @@ import {
 } from './interaction-controller.js'
 
 const emptySnapshot: FdAnyGraphSnapshot = { id: 'empty', nodes: [], edges: [] }
+const emptyMiniMapSnapshot: FdAnyGraphMiniMapSnapshot = {
+  id: 'empty',
+  contentBounds: { x: 0, y: 0, width: 1, height: 1 },
+  nodes: [],
+  edges: [],
+}
 const edgeHitTestMaximumCandidates = 512
 const edgeHitTestViewportTolerance = 8
 const edgeHitTestMinimumTolerance = 6
@@ -749,7 +759,9 @@ export class FdGraphCanvas
     bottom: 16,
     left: 16,
   }
-  @property({ attribute: false }) miniMapNodeStyleIndex: (node: FdAnyGraphNode) => number = () => 0
+  @property({ attribute: false }) miniMapNodeStyleIndex: (
+    node: FdAnyGraphMiniMapNode,
+  ) => number = () => 0
   @property({ attribute: false }) guideRenderer: FdGraphGuideRenderer =
     new FdGraphDefaultGuideRenderer()
 
@@ -827,6 +839,8 @@ export class FdGraphCanvas
   @query('fd-graph-minimap') private miniMap: FdGraphMiniMap | undefined
 
   private index = new FdGraphSnapshotIndex(emptySnapshot)
+  private miniMapSnapshot = emptyMiniMapSnapshot
+  private miniMapSnapshotSource: FdAnyGraphSnapshot | undefined
   private backend: FdGraphRenderingBackend | undefined
   private readonly renderGeometryCache = new FdGraphRenderGeometryCache()
   private visibleNodes: readonly FdAnyGraphNode[] = []
@@ -992,8 +1006,7 @@ export class FdGraphCanvas
             ? html`
               <fd-graph-minimap
                 slot="overlay"
-                .snapshot=${this.snapshot}
-                .snapshotIndex=${this.index}
+                .snapshot=${this.resolveMiniMapSnapshot()}
                 .viewport=${this.miniMapViewport}
                 .configuration=${this.miniMapConfiguration}
                 .miniMapStyle=${this.miniMapStyle}
@@ -1673,6 +1686,7 @@ export class FdGraphCanvas
       this.connectionController.cancel()
     }
     this.index = new FdGraphSnapshotIndex(this.snapshot)
+    this.miniMapSnapshotSource = undefined
     this.indexedSnapshot = this.snapshot
     this.snapshotRevision += 1
     this.rebuildKeyboardCandidates()
@@ -1696,6 +1710,7 @@ export class FdGraphCanvas
       `${this.localSnapshotBaseID}:local-${this.localSnapshotSequence}`,
       changes.map(({ nodeID, after }) => ({ nodeID, frame: after })),
     )
+    this.miniMapSnapshotSource = undefined
     this.indexedSnapshot = this.snapshot
     this.snapshotRevision += 1
     const changedNodeIDs = new Set<FdGraphElementID>()
@@ -2542,14 +2557,29 @@ export class FdGraphCanvas
 
   private syncMiniMap(): void {
     if (!this.miniMap || !this.miniMapConfiguration) return
-    this.miniMap.snapshot = this.snapshot
-    this.miniMap.snapshotIndex = this.index
+    this.miniMap.snapshot = this.resolveMiniMapSnapshot()
     this.miniMap.viewport = this.miniMapViewport
     this.miniMap.configuration = this.miniMapConfiguration
     this.miniMap.miniMapStyle = this.miniMapStyle
     this.miniMap.placement = this.miniMapPlacement
     this.miniMap.overlayInsets = this.miniMapInsets
     this.miniMap.nodeStyleIndex = this.miniMapNodeStyleIndex
+  }
+
+  private resolveMiniMapSnapshot(): FdAnyGraphMiniMapSnapshot {
+    if (this.miniMapSnapshotSource === this.snapshot) return this.miniMapSnapshot
+    this.miniMapSnapshot = {
+      id: this.snapshot.id,
+      contentBounds: this.index.contentBounds,
+      nodes: this.snapshot.nodes.map(({ id, frame }) => ({ id, frame })),
+      edges: this.snapshot.edges.map(({ id, source, target }) => ({
+        id,
+        start: graphPortPoint(this.index.nodes.get(source.nodeID)!, source.portID),
+        end: graphPortPoint(this.index.nodes.get(target.nodeID)!, target.portID),
+      })),
+    }
+    this.miniMapSnapshotSource = this.snapshot
+    return this.miniMapSnapshot
   }
 
   private refreshVisibleElements(rect: FdCanvasRect): void {

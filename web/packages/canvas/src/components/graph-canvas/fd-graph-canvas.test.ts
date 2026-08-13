@@ -1603,15 +1603,23 @@ describe('fd-graph-canvas history', () => {
 })
 
 describe('fd-graph-canvas minimap integration', () => {
-  it('shares the indexed snapshot and drives the canvas viewport', async () => {
+  it('provides a lightweight snapshot and drives the canvas viewport', async () => {
     const element = await mount()
     element.miniMapConfiguration = { visibility: 'always' }
     await element.updateComplete
     await nextFrame()
     await nextFrame()
     const miniMap = element.shadowRoot?.querySelector('fd-graph-minimap')
-    expect(miniMap?.snapshot).toBe(element.snapshot)
-    expect(miniMap?.snapshotIndex).toBe(element.graphIndex)
+    expect(miniMap?.snapshot).toMatchObject({
+      id: element.snapshot.id,
+      contentBounds: element.graphIndex.contentBounds,
+      nodes: element.snapshot.nodes.map(({ id, frame }) => ({ id, frame })),
+    })
+    expect(miniMap?.snapshot.edges[0]).toMatchObject({
+      id: element.snapshot.edges[0]?.id,
+      start: { x: 220, y: 124 },
+      end: { x: 420, y: 264 },
+    })
     const initialOffset = element.viewport.transform.offset
 
     miniMap?.dispatchEvent(
