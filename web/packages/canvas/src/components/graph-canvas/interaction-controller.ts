@@ -14,7 +14,7 @@ import { graphElementIDFromKey } from '../../graph/model.js'
 import type { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
 import {
   type FdGraphCanvasGuide,
-  type FdGraphCanvasResizeBehavior,
+  FdGraphCanvasResizeBehavior,
   FdGraphCanvasResizeSnapRequest,
   type FdGraphCanvasSnapCandidate,
   FdGraphCanvasSnappingStrategy,
@@ -683,7 +683,9 @@ export class FdGraphCanvasInteractionController {
     translation: FdCanvasSize,
     event: PointerEvent,
   ): FdGraphCanvasResizeBehavior {
-    if (!event.shiftKey) return { resizesFromCenter: event.altKey }
+    if (!event.shiftKey) {
+      return new FdGraphCanvasResizeBehavior({ resizesFromCenter: event.altKey })
+    }
     const edges = graphCanvasResizeEdges(handle)
     const horizontal = edges.has('leading') || edges.has('trailing')
     const vertical = edges.has('top') || edges.has('bottom')
@@ -696,11 +698,11 @@ export class FdGraphCanvasInteractionController {
         : horizontal
           ? 'horizontal'
           : 'vertical'
-    return {
+    return new FdGraphCanvasResizeBehavior({
       preservesAspectRatio: true,
       resizesFromCenter: event.altKey,
       aspectRatioDrivingAxis,
-    }
+    })
   }
 
   private nodeID(event: PointerEvent): FdGraphElementID | undefined {

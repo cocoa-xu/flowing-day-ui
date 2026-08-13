@@ -3,6 +3,7 @@ import type { FdCanvasRect } from '../geometry.js'
 import type { FdAnyGraphNode } from '../graph/model.js'
 import {
   FdGraphCanvasArrangement,
+  FdGraphCanvasResizeBehavior,
   FdGraphCanvasResizeSnapRequest,
   type FdGraphCanvasResizeSnapRequestOptions,
   FdGraphCanvasSnappingStrategy,
@@ -362,13 +363,9 @@ describe('graph group resizing', () => {
           edges: new Set(['leading', 'trailing']),
         }),
     ).toThrow('resize edges must be valid')
-    expect(
-      () =>
-        new FdGraphCanvasResizeSnapRequest({
-          ...options,
-          behavior: { preservesAspectRatio: true },
-        }),
-    ).toThrow('aspect ratio preservation requires a driving axis')
+    expect(() => new FdGraphCanvasResizeBehavior({ preservesAspectRatio: true })).toThrow(
+      'aspect ratio preservation requires a driving axis',
+    )
   })
 
   const frames = new Map<string, FdCanvasRect>([

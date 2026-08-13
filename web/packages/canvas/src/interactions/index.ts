@@ -8,7 +8,8 @@ export {
   type FdGraphCanvasGuideAxis,
   type FdGraphCanvasGuideKind,
   type FdGraphCanvasNodeGeometry,
-  type FdGraphCanvasResizeBehavior,
+  FdGraphCanvasResizeBehavior,
+  type FdGraphCanvasResizeBehaviorOptions,
   type FdGraphCanvasResizeResult,
   FdGraphCanvasResizeSnapRequest,
   type FdGraphCanvasResizeSnapRequestOptions,
@@ -58,3 +59,4 @@ export {
   FdGraphCanvasSessionReducer,
 } from './selection.js'
 export * from './session.js'
+export * from './transient-geometry.js'

@@ -128,10 +128,27 @@ interface GraphResizeResult {
 
 export type FdGraphCanvasGeometryAxis = 'horizontal' | 'vertical'
 
-export interface FdGraphCanvasResizeBehavior {
+export interface FdGraphCanvasResizeBehaviorOptions {
   readonly preservesAspectRatio?: boolean
   readonly resizesFromCenter?: boolean
   readonly aspectRatioDrivingAxis?: FdGraphCanvasGeometryAxis
+}
+
+export class FdGraphCanvasResizeBehavior {
+  static readonly standard = new FdGraphCanvasResizeBehavior()
+
+  readonly preservesAspectRatio: boolean
+  readonly resizesFromCenter: boolean
+  readonly aspectRatioDrivingAxis: FdGraphCanvasGeometryAxis | undefined
+
+  constructor(options: FdGraphCanvasResizeBehaviorOptions = {}) {
+    if (options.preservesAspectRatio && !options.aspectRatioDrivingAxis) {
+      throw new RangeError('aspect ratio preservation requires a driving axis')
+    }
+    this.preservesAspectRatio = options.preservesAspectRatio ?? false
+    this.resizesFromCenter = options.resizesFromCenter ?? false
+    this.aspectRatioDrivingAxis = options.aspectRatioDrivingAxis
+  }
 }
 
 export interface FdGraphCanvasResizeResult {
@@ -210,9 +227,6 @@ export class FdGraphCanvasResizeSnapRequest {
       throw new RangeError('zoom must be positive')
     }
     validateSizeRange(options.minimumSize, options.maximumSize)
-    if (options.behavior?.preservesAspectRatio && !options.behavior.aspectRatioDrivingAxis) {
-      throw new RangeError('aspect ratio preservation requires a driving axis')
-    }
     this.baseFrame = options.baseFrame
     this.proposedFrame = options.proposedFrame
     this.edges = options.edges
@@ -223,7 +237,7 @@ export class FdGraphCanvasResizeSnapRequest {
     this.zoom = options.zoom
     this.snapState = options.snapState ?? new FdGraphCanvasSnapState()
     this.allowsSnapping = options.allowsSnapping ?? true
-    this.behavior = options.behavior ?? {}
+    this.behavior = options.behavior ?? FdGraphCanvasResizeBehavior.standard
   }
 
   standardResult(): FdGraphCanvasResizeResult {
@@ -914,11 +928,7 @@ export class FdGraphCanvasArrangement {
 
   static resize(request: FdGraphCanvasResizeSnapRequest): FdGraphCanvasResizeResult {
     const handle = resizeHandle(request.edges)
-    const behavior = {
-      preservesAspectRatio: request.behavior.preservesAspectRatio ?? false,
-      resizesFromCenter: request.behavior.resizesFromCenter ?? false,
-      aspectRatioDrivingAxis: request.behavior.aspectRatioDrivingAxis,
-    }
+    const behavior = request.behavior
     const proposedTranslation = resizeTranslation(
       request.baseFrame,
       request.proposedFrame,
