@@ -9,6 +9,7 @@ import './components/color-picker-row/fd-color-picker-row.js'
 import './components/color-picker/fd-color-picker.js'
 import './components/connected-segmented-row/fd-connected-segmented-row.js'
 import './components/connected-segmented-control/fd-connected-segmented-control.js'
+import './components/date-picker/fd-date-picker.js'
 import './components/dependent-rows/fd-dependent-rows.js'
 import './components/disclosure/fd-disclosure.js'
 import './components/dialog/fd-dialog-action.js'
@@ -72,6 +73,10 @@ export { FdColorPicker } from './components/color-picker/fd-color-picker.js'
 export { FdColorPickerRow } from './components/color-picker-row/fd-color-picker-row.js'
 export { FdConnectedSegmentedControl } from './components/connected-segmented-control/fd-connected-segmented-control.js'
 export { FdConnectedSegmentedRow } from './components/connected-segmented-row/fd-connected-segmented-row.js'
+export {
+  FdDatePicker,
+  type FdDatePickerComponents,
+} from './components/date-picker/fd-date-picker.js'
 export { FdDependentRows } from './components/dependent-rows/fd-dependent-rows.js'
 export {
   type FdConfirmationKind,
