@@ -1,6 +1,11 @@
 import { type CSSResultGroup, css, html, type PropertyValues } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { FdElement } from '../../internal/base-element.js'
+import {
+  type FdFieldValidation,
+  noFieldValidation,
+  renderFieldSupportingText,
+} from '../../internal/field-validation.js'
 import { type FdTextFieldEmphasis, textInputStyles } from '../../internal/text-input.js'
 import { textRole } from '../../internal/typography.js'
 import '../icon/fd-icon.js'
@@ -66,6 +71,10 @@ export class FdTextArea extends FdElement {
   @property({ reflect: true }) name = ''
 
   @property({ reflect: true }) value = ''
+
+  @property({ attribute: 'supporting-text' }) supportingText: string | null = null
+
+  @property({ attribute: false }) validation: FdFieldValidation = noFieldValidation
 
   @property({ type: Number, attribute: 'minimum-height' })
   minimumHeight = FdTextArea.standardMinimumHeight
@@ -135,6 +144,7 @@ export class FdTextArea extends FdElement {
       <div
         class="field"
         part="field"
+        data-validation=${this.validation.kind}
         style="--_minimum-height: ${this.#resolvedMinimumHeight}px; min-height: ${
           this.#resolvedMinimumHeight
         }px"
@@ -149,6 +159,7 @@ export class FdTextArea extends FdElement {
           @input=${this.#onInput}
         ></textarea>
       </div>
+      ${renderFieldSupportingText(this.validation, this.supportingText)}
     `
   }
 }

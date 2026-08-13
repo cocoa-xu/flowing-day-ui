@@ -1,5 +1,11 @@
 import { type CSSResultGroup, css, html, type PropertyValues } from 'lit'
 import { baseStyles, FdElement } from './base-element.js'
+import {
+  type FdFieldValidation,
+  fieldValidationStyles,
+  noFieldValidation,
+  renderFieldSupportingText,
+} from './field-validation.js'
 import { textRole } from './typography.js'
 import '../components/icon/fd-icon.js'
 
@@ -7,7 +13,9 @@ export type FdTextFieldEmphasis = 'standard' | 'accented'
 
 export const textInputChromeStyles = css`
     :host {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
     }
 
     .field {
@@ -63,7 +71,11 @@ export const textInputChromeStyles = css`
     }
   `
 
-export const textInputStyles: CSSResultGroup = [baseStyles, textInputChromeStyles]
+export const textInputStyles: CSSResultGroup = [
+  baseStyles,
+  textInputChromeStyles,
+  fieldValidationStyles,
+]
 
 export abstract class FdTextInputBase extends FdElement {
   static formAssociated = true
@@ -83,6 +95,10 @@ export abstract class FdTextInputBase extends FdElement {
   abstract name: string
 
   abstract value: string
+
+  abstract supportingText: string | null
+
+  abstract validation: FdFieldValidation
 
   protected abstract readonly inputType: 'text' | 'password'
 
@@ -147,7 +163,7 @@ export abstract class FdTextInputBase extends FdElement {
 
   override render() {
     return html`
-      <div class="field" part="field">
+      <div class="field" part="field" data-validation=${this.validation.kind}>
         ${this.symbol ? html`<fd-icon name=${this.symbol} part="icon"></fd-icon>` : null}
         <input
           part="input"
@@ -160,6 +176,9 @@ export abstract class FdTextInputBase extends FdElement {
           @keydown=${this.#onKeydown}
         />
       </div>
+      ${renderFieldSupportingText(this.validation, this.supportingText)}
     `
   }
 }
+
+export { type FdFieldValidation, noFieldValidation }

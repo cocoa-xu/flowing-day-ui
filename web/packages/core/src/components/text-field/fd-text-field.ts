@@ -1,5 +1,10 @@
 import { customElement, property } from 'lit/decorators.js'
-import { type FdTextFieldEmphasis, FdTextInputBase } from '../../internal/text-input.js'
+import {
+  type FdFieldValidation,
+  type FdTextFieldEmphasis,
+  FdTextInputBase,
+  noFieldValidation,
+} from '../../internal/text-input.js'
 
 /**
  * A single-line text field matching `FlowingTextField`.
@@ -25,6 +30,10 @@ export class FdTextField extends FdTextInputBase {
   @property({ reflect: true }) name = ''
 
   @property({ reflect: true }) value = ''
+
+  @property({ attribute: 'supporting-text' }) supportingText: string | null = null
+
+  @property({ attribute: false }) validation: FdFieldValidation = noFieldValidation
 
   protected readonly inputType = 'text'
 }
