@@ -10,8 +10,8 @@ import {
   resolveCanvasConfiguration,
 } from '../../configuration.js'
 import type {
-  FdCanvasDragDetail,
-  FdCanvasSmartMagnifyDetail,
+  FdCanvasDragContext,
+  FdCanvasSmartMagnifyContext,
   FdCanvasViewportChangeDetail,
 } from '../../events.js'
 import {
@@ -273,13 +273,13 @@ export class FdCanvas extends LitElement {
     this.restoreTransform = undefined
     this.updateTransform(
       FdCanvasTransform.fitting(rect, this.contentBoundsValue, padding, [
-        this.resolvedConfiguration.minimumZoom,
+        this.resolvedConfiguration.zoomRange[0],
         Math.max(
           Math.min(
-            maximumZoom ?? this.resolvedConfiguration.maximumZoom,
-            this.resolvedConfiguration.maximumZoom,
+            maximumZoom ?? this.resolvedConfiguration.zoomRange[1],
+            this.resolvedConfiguration.zoomRange[1],
           ),
-          this.resolvedConfiguration.minimumZoom,
+          this.resolvedConfiguration.zoomRange[0],
         ),
       ]),
       { animated: true, ...options },
@@ -467,7 +467,7 @@ export class FdCanvas extends LitElement {
     translation: { readonly width: number; readonly height: number },
   ): void {
     if (!this.dragStart) return
-    const detail: FdCanvasDragDetail = {
+    const detail: FdCanvasDragContext = {
       startLocation: this.dragStart,
       location,
       translation,
@@ -522,7 +522,7 @@ export class FdCanvas extends LitElement {
     const location = this.localPoint(event)
     if (!this.pointInContentBounds(location)) return
     const initialZoom = this.clampZoom(this.resolvedConfiguration.initialZoom)
-    const detail: FdCanvasSmartMagnifyDetail = {
+    const detail: FdCanvasSmartMagnifyContext = {
       location,
       worldLocation: this.transformValue.removePoint(location),
       viewport: this.viewport,
@@ -576,8 +576,9 @@ export class FdCanvas extends LitElement {
     }
     const from = this.transformValue
     const startedAt = performance.now()
+    const durationMilliseconds = duration * 1000
     const step = (now: number): void => {
-      const progress = Math.min((now - startedAt) / duration, 1)
+      const progress = Math.min((now - startedAt) / durationMilliseconds, 1)
       const eased = progress * progress * (3 - 2 * progress)
       this.commitTransform(
         new FdCanvasTransform(from.zoom + (transform.zoom - from.zoom) * eased, {
@@ -645,8 +646,8 @@ export class FdCanvas extends LitElement {
 
   private clampZoom(zoom: number): number {
     return Math.min(
-      Math.max(zoom, this.resolvedConfiguration.minimumZoom),
-      this.resolvedConfiguration.maximumZoom,
+      Math.max(zoom, this.resolvedConfiguration.zoomRange[0]),
+      this.resolvedConfiguration.zoomRange[1],
     )
   }
 

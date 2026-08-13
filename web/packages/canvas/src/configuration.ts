@@ -6,8 +6,7 @@ export type FdCanvasViewportChangePhase = 'continuous' | 'ended'
 export interface FdCanvasConfiguration {
   readonly initialZoom: number
   readonly focusedZoom: number
-  readonly minimumZoom: number
-  readonly maximumZoom: number
+  readonly zoomRange: readonly [number, number]
   readonly pinchSensitivity: number
   readonly discreteScrollMultiplier: number
   readonly renderOverscan: number
@@ -20,14 +19,13 @@ export interface FdCanvasConfiguration {
 export const defaultCanvasConfiguration: FdCanvasConfiguration = {
   initialZoom: 1,
   focusedZoom: 1,
-  minimumZoom: 0.25,
-  maximumZoom: 4,
+  zoomRange: [0.25, 4],
   pinchSensitivity: 1,
   discreteScrollMultiplier: 12,
   renderOverscan: 320,
   renderRetentionRatio: 0.45,
   dragMinimumDistance: 2,
-  viewportAnimationDuration: 250,
+  viewportAnimationDuration: 0.25,
   smartMagnifyZoomTolerance: 0.04,
 }
 
@@ -38,15 +36,15 @@ export const resolveCanvasConfiguration = (
   const positive = [
     resolved.initialZoom,
     resolved.focusedZoom,
-    resolved.minimumZoom,
-    resolved.maximumZoom,
+    resolved.zoomRange[0],
+    resolved.zoomRange[1],
     resolved.pinchSensitivity,
     resolved.discreteScrollMultiplier,
   ]
   if (positive.some((value) => !Number.isFinite(value) || value <= 0)) {
     throw new RangeError('canvas zoom and input values must be finite and positive')
   }
-  if (resolved.minimumZoom > resolved.maximumZoom) {
+  if (resolved.zoomRange[0] > resolved.zoomRange[1]) {
     throw new RangeError('canvas zoom range is inverted')
   }
   if (!Number.isFinite(resolved.renderOverscan) || resolved.renderOverscan < 0) {

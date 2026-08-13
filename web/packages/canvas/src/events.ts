@@ -10,7 +10,7 @@ export interface FdCanvasRenderWorldRectChangeDetail {
   readonly rect: FdCanvasRect
 }
 
-export interface FdCanvasDragDetail {
+export interface FdCanvasDragContext {
   readonly startLocation: FdCanvasPoint
   readonly location: FdCanvasPoint
   readonly translation: FdCanvasSize
@@ -18,7 +18,7 @@ export interface FdCanvasDragDetail {
   readonly worldLocation: FdCanvasPoint
 }
 
-export interface FdCanvasSmartMagnifyDetail {
+export interface FdCanvasSmartMagnifyContext {
   readonly location: FdCanvasPoint
   readonly worldLocation: FdCanvasPoint
   readonly viewport: FdCanvasViewport
@@ -32,8 +32,8 @@ declare global {
   interface HTMLElementEventMap {
     'fd-viewport-change': CustomEvent<FdCanvasViewportChangeDetail>
     'fd-render-world-rect-change': CustomEvent<FdCanvasRenderWorldRectChangeDetail>
-    'fd-content-drag-change': CustomEvent<FdCanvasDragDetail>
-    'fd-content-drag-end': CustomEvent<FdCanvasDragDetail>
-    'fd-smart-magnify': CustomEvent<FdCanvasSmartMagnifyDetail>
+    'fd-content-drag-change': CustomEvent<FdCanvasDragContext>
+    'fd-content-drag-end': CustomEvent<FdCanvasDragContext>
+    'fd-smart-magnify': CustomEvent<FdCanvasSmartMagnifyContext>
   }
 }

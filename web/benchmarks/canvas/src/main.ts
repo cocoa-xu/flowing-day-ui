@@ -80,8 +80,7 @@ graph.configuration = {
   canvas: {
     initialZoom: 1,
     focusedZoom: 1,
-    minimumZoom: 0.001,
-    maximumZoom: 8,
+    zoomRange: [0.001, 8],
     renderOverscan: 240,
     renderRetentionRatio: 0.4,
   },

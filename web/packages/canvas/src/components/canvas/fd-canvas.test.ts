@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { defaultCanvasConfiguration } from '../../configuration.js'
 import type { FdCanvas } from './fd-canvas.js'
 import './fd-canvas.js'
 
@@ -18,6 +19,11 @@ afterEach(() => {
 })
 
 describe('fd-canvas viewport', () => {
+  it('uses the Swift zoom range and duration units', () => {
+    expect(defaultCanvasConfiguration.zoomRange).toEqual([0.25, 4])
+    expect(defaultCanvasConfiguration.viewportAnimationDuration).toBe(0.25)
+  })
+
   it('centers content at the configured initial zoom', async () => {
     const element = await mount()
     expect(element.viewport.transform.zoom).toBe(1)
@@ -35,6 +41,16 @@ describe('fd-canvas viewport', () => {
     expect(element.viewport.transform.zoom).toBe(2)
     expect(element.viewport.transform.applyPoint(worldCenter).x).toBeCloseTo(viewportCenter.x)
     expect(element.viewport.transform.applyPoint(worldCenter).y).toBeCloseTo(viewportCenter.y)
+  })
+
+  it('clamps zoom to the configured range', async () => {
+    const element = await mount()
+    element.configuration = { zoomRange: [0.5, 2] }
+    await element.updateComplete
+
+    element.setZoom(4)
+
+    expect(element.viewport.transform.zoom).toBe(2)
   })
 
   it('fits content within a padded viewport', async () => {
