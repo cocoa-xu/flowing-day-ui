@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FdAnyGraphSnapshot } from '../graph/model.js'
 import { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
-import { resolveGraphMiniMapConfiguration } from './configuration.js'
+import { resolveGraphMiniMapConfiguration, resolveGraphMiniMapStyle } from './configuration.js'
 import { planGraphMiniMap } from './planner.js'
 import {
   FdGraphMiniMapPlanProjection,
@@ -27,6 +27,11 @@ const largeSnapshot = (): FdAnyGraphSnapshot => ({
 })
 
 describe('graph minimap geometry', () => {
+  it('resolves style independently from core configuration', () => {
+    expect(resolveGraphMiniMapStyle({ background: '#fffaf7' }).background).toBe('#fffaf7')
+    expect(resolveGraphMiniMapStyle().nodeStyles).toHaveLength(1)
+  })
+
   it('fits and round-trips world geometry', () => {
     const transform = new FdGraphMiniMapTransform(
       { x: 100, y: 200, width: 1_000, height: 500 },

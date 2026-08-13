@@ -73,8 +73,31 @@ describe('fd-graph-minimap rendering', () => {
     expect(frame?.snapshot).toBe(snapshot)
     expect(frame?.plan.nodeBatches).toHaveLength(1)
     expect(frame?.plan.edgeSegments).toHaveLength(1)
+    expect(frame?.style.nodeStyles).toHaveLength(1)
     expect(element.getAttribute('placement')).toBe('bottomTrailing')
     expect(element.getAttribute('data-visible')).toBe('true')
+  })
+
+  it('keeps view styling and overlay placement separate from core configuration', async () => {
+    const backend = new RecordingBackend()
+    const element = await mount(backend)
+    element.miniMapStyle = {
+      background: '#fffaf7',
+      nodeStyles: [{ fill: '#f3a9b8' }, { fill: '#83b9a2' }],
+    }
+    element.placement = 'topLeading'
+    element.overlayInsets = { top: 4, right: 6, bottom: 8, left: 10 }
+    element.nodeStyleIndex = ({ id }) => (id === 'two' ? 1 : 0)
+    await element.updateComplete
+    await nextFrame()
+    await nextFrame()
+
+    const frame = backend.frames.at(-1)
+    expect(frame?.style.background).toBe('#fffaf7')
+    expect(frame?.plan.nodeBatches.map(({ styleIndex }) => styleIndex)).toEqual([0, 1])
+    expect(element.getAttribute('placement')).toBe('topLeading')
+    expect(element.style.getPropertyValue('--fd-graph-minimap-inset-top')).toBe('4px')
+    expect(element.style.getPropertyValue('--fd-graph-minimap-inset-left')).toBe('10px')
   })
 
   it('remounts its renderer after the same element is reconnected', async () => {

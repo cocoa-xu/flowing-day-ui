@@ -113,7 +113,11 @@ import {
   graphCubicEdgeDistance,
   graphSelectionMode,
 } from '../../interactions/selection.js'
-import type { FdGraphMiniMapConfiguration } from '../../minimap/configuration.js'
+import type {
+  FdGraphMiniMapConfiguration,
+  FdGraphMiniMapPlacement,
+  FdGraphMiniMapStyle,
+} from '../../minimap/configuration.js'
 import type {
   FdGraphCanvasRenderingBackendPreference,
   FdGraphRenderFrame,
@@ -737,6 +741,15 @@ export class FdGraphCanvas
   @property({ attribute: false }) platformAdapter: FdGraphCanvasPlatformAdapter = {}
   @property({ attribute: false }) historyConfiguration: FdGraphCanvasHistoryConfiguration = {}
   @property({ attribute: false }) miniMapConfiguration: FdGraphMiniMapConfiguration | undefined
+  @property({ attribute: false }) miniMapStyle: FdGraphMiniMapStyle = {}
+  @property({ attribute: false }) miniMapPlacement: FdGraphMiniMapPlacement = 'bottomTrailing'
+  @property({ attribute: false }) miniMapInsets: FdCanvasInsets = {
+    top: 16,
+    right: 16,
+    bottom: 16,
+    left: 16,
+  }
+  @property({ attribute: false }) miniMapNodeStyleIndex: (node: FdAnyGraphNode) => number = () => 0
   @property({ attribute: false }) guideRenderer: FdGraphGuideRenderer =
     new FdGraphDefaultGuideRenderer()
 
@@ -983,6 +996,10 @@ export class FdGraphCanvas
                 .snapshotIndex=${this.index}
                 .viewport=${this.miniMapViewport}
                 .configuration=${this.miniMapConfiguration}
+                .miniMapStyle=${this.miniMapStyle}
+                .placement=${this.miniMapPlacement}
+                .overlayInsets=${this.miniMapInsets}
+                .nodeStyleIndex=${this.miniMapNodeStyleIndex}
                 @fd-graph-minimap-navigation=${this.handleMiniMapNavigation}
               ></fd-graph-minimap>
             `
@@ -1091,7 +1108,15 @@ export class FdGraphCanvas
       this.guideLayer.replaceChildren()
       this.syncGuides(this.interactionPresentation.guides)
     }
-    if (changed.has('miniMapConfiguration')) this.syncMiniMap()
+    if (
+      changed.has('miniMapConfiguration') ||
+      changed.has('miniMapStyle') ||
+      changed.has('miniMapPlacement') ||
+      changed.has('miniMapInsets') ||
+      changed.has('miniMapNodeStyleIndex')
+    ) {
+      this.syncMiniMap()
+    }
   }
 
   override connectedCallback(): void {
@@ -2521,6 +2546,10 @@ export class FdGraphCanvas
     this.miniMap.snapshotIndex = this.index
     this.miniMap.viewport = this.miniMapViewport
     this.miniMap.configuration = this.miniMapConfiguration
+    this.miniMap.miniMapStyle = this.miniMapStyle
+    this.miniMap.placement = this.miniMapPlacement
+    this.miniMap.overlayInsets = this.miniMapInsets
+    this.miniMap.nodeStyleIndex = this.miniMapNodeStyleIndex
   }
 
   private refreshVisibleElements(rect: FdCanvasRect): void {

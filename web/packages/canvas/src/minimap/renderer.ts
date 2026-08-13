@@ -1,6 +1,9 @@
 import type { FdAnyGraphSnapshot } from '../graph/model.js'
 import type { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
-import type { FdResolvedGraphMiniMapConfiguration } from './configuration.js'
+import type {
+  FdResolvedGraphMiniMapConfiguration,
+  FdResolvedGraphMiniMapStyle,
+} from './configuration.js'
 import type { FdGraphMiniMapRenderPlan } from './planner.js'
 import type { FdGraphMiniMapPlanProjection } from './transform.js'
 
@@ -10,6 +13,7 @@ export interface FdGraphMiniMapRenderFrame {
   readonly plan: FdGraphMiniMapRenderPlan
   readonly projection: FdGraphMiniMapPlanProjection
   readonly configuration: FdResolvedGraphMiniMapConfiguration
+  readonly style: FdResolvedGraphMiniMapStyle
   readonly pixelRatio: number
 }
 
@@ -49,15 +53,13 @@ export class FdGraphMiniMapCanvasRenderingBackend implements FdGraphMiniMapRende
         edges.moveTo(source.x, source.y)
         edges.lineTo(target.x, target.y)
       }
-      context.strokeStyle = frame.configuration.style.edge
+      context.strokeStyle = frame.style.edge
       context.lineWidth = 1
       context.stroke(edges)
     }
 
     for (const batch of frame.plan.nodeBatches) {
-      const style =
-        frame.configuration.style.nodeStyles[batch.styleIndex] ??
-        frame.configuration.style.nodeStyles[0]
+      const style = frame.style.nodeStyles[batch.styleIndex] ?? frame.style.nodeStyles[0]
       if (!style) continue
       const nodes = new Path2D()
       for (const rect of batch.rects) {

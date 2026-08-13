@@ -1,12 +1,19 @@
 import { type CSSResultGroup, css, html, LitElement, type PropertyValues } from 'lit'
 import { customElement, property, query } from 'lit/decorators.js'
-import type { FdCanvasPoint, FdCanvasRect } from '../../geometry.js'
+import type { FdCanvasInsets, FdCanvasPoint, FdCanvasRect } from '../../geometry.js'
 import { FdCanvasTransform, FdCanvasViewport } from '../../geometry.js'
 import type { FdGraphMiniMapNavigationDetail } from '../../graph/minimap-events.js'
-import type { FdAnyGraphSnapshot } from '../../graph/model.js'
+import type { FdAnyGraphNode, FdAnyGraphSnapshot } from '../../graph/model.js'
 import { FdGraphSnapshotIndex } from '../../graph/snapshot-index.js'
-import type { FdGraphMiniMapConfiguration } from '../../minimap/configuration.js'
-import { resolveGraphMiniMapConfiguration } from '../../minimap/configuration.js'
+import type {
+  FdGraphMiniMapConfiguration,
+  FdGraphMiniMapPlacement,
+  FdGraphMiniMapStyle,
+} from '../../minimap/configuration.js'
+import {
+  resolveGraphMiniMapConfiguration,
+  resolveGraphMiniMapStyle,
+} from '../../minimap/configuration.js'
 import type { FdGraphMiniMapRenderPlan } from '../../minimap/planner.js'
 import { planGraphMiniMap } from '../../minimap/planner.js'
 import {
@@ -30,6 +37,7 @@ const wheelEndDelay = 90
 const pinchExponentialScale = 0.01
 const settledRefreshDelay = 120
 const localNavigatorMarginRatio = 0.2
+const defaultOverlayInsets: FdCanvasInsets = { top: 16, right: 16, bottom: 16, left: 16 }
 
 interface PointerState {
   readonly pointerID: number
@@ -63,23 +71,23 @@ export class FdGraphMiniMap extends LitElement {
     }
 
     :host([placement='topLeading']) {
-      top: var(--fd-graph-minimap-inset, 16px);
-      left: var(--fd-graph-minimap-inset, 16px);
+      top: var(--fd-graph-minimap-inset-top, 16px);
+      left: var(--fd-graph-minimap-inset-left, 16px);
     }
 
     :host([placement='topTrailing']) {
-      top: var(--fd-graph-minimap-inset, 16px);
-      right: var(--fd-graph-minimap-inset, 16px);
+      top: var(--fd-graph-minimap-inset-top, 16px);
+      right: var(--fd-graph-minimap-inset-right, 16px);
     }
 
     :host([placement='bottomLeading']) {
-      bottom: var(--fd-graph-minimap-inset, 16px);
-      left: var(--fd-graph-minimap-inset, 16px);
+      bottom: var(--fd-graph-minimap-inset-bottom, 16px);
+      left: var(--fd-graph-minimap-inset-left, 16px);
     }
 
     :host([placement='bottomTrailing']) {
-      right: var(--fd-graph-minimap-inset, 16px);
-      bottom: var(--fd-graph-minimap-inset, 16px);
+      right: var(--fd-graph-minimap-inset-right, 16px);
+      bottom: var(--fd-graph-minimap-inset-bottom, 16px);
     }
 
     :host(:focus-visible) {
@@ -134,6 +142,10 @@ export class FdGraphMiniMap extends LitElement {
   @property({ attribute: false }) snapshotIndex: FdGraphSnapshotIndex | undefined
   @property({ attribute: false }) viewport: FdCanvasViewport = emptyViewport
   @property({ attribute: false }) configuration: FdGraphMiniMapConfiguration = {}
+  @property({ attribute: false }) miniMapStyle: FdGraphMiniMapStyle = {}
+  @property({ reflect: true }) placement: FdGraphMiniMapPlacement = 'bottomTrailing'
+  @property({ attribute: false }) overlayInsets: FdCanvasInsets = defaultOverlayInsets
+  @property({ attribute: false }) nodeStyleIndex: (node: FdAnyGraphNode) => number = () => 0
   @property({ attribute: false }) renderingBackend: FdGraphMiniMapRenderingBackend | undefined
 
   @query('canvas') private canvas!: HTMLCanvasElement
@@ -142,6 +154,7 @@ export class FdGraphMiniMap extends LitElement {
   private index = new FdGraphSnapshotIndex(emptySnapshot)
   private indexedSnapshot: FdAnyGraphSnapshot | undefined
   private resolvedConfiguration = resolveGraphMiniMapConfiguration({})
+  private resolvedStyle = resolveGraphMiniMapStyle()
   private backend: FdGraphMiniMapRenderingBackend | undefined
   private activeBackend: FdGraphMiniMapRenderingBackend | undefined
   private plan: FdGraphMiniMapRenderPlan | undefined
@@ -186,11 +199,17 @@ export class FdGraphMiniMap extends LitElement {
 
   protected override updated(changed: PropertyValues<this>): void {
     if (changed.has('snapshot') || changed.has('snapshotIndex')) this.rebuildIndex()
-    if (changed.has('configuration')) {
+    if (
+      changed.has('configuration') ||
+      changed.has('miniMapStyle') ||
+      changed.has('placement') ||
+      changed.has('overlayInsets')
+    ) {
       this.syncConfiguration()
       this.navigatorWorldBounds = undefined
       this.syncViewport(true)
     }
+    if (changed.has('nodeStyleIndex')) this.schedulePlan()
     if (changed.has('renderingBackend')) this.activateBackend()
     if (changed.has('viewport')) this.syncViewport(false)
   }
@@ -216,11 +235,15 @@ export class FdGraphMiniMap extends LitElement {
 
   private syncConfiguration(): void {
     this.resolvedConfiguration = resolveGraphMiniMapConfiguration(this.configuration)
-    const { size, placement, overlayInsets, accessibilityLabel, interaction, style } =
-      this.resolvedConfiguration
+    this.resolvedStyle = resolveGraphMiniMapStyle(this.miniMapStyle)
+    const { size, accessibilityLabel, interaction } = this.resolvedConfiguration
+    const style = this.resolvedStyle
     this.style.width = `${size.width}px`
     this.style.height = `${size.height}px`
-    this.style.setProperty('--fd-graph-minimap-inset', `${overlayInsets}px`)
+    this.style.setProperty('--fd-graph-minimap-inset-top', `${this.overlayInsets.top}px`)
+    this.style.setProperty('--fd-graph-minimap-inset-right', `${this.overlayInsets.right}px`)
+    this.style.setProperty('--fd-graph-minimap-inset-bottom', `${this.overlayInsets.bottom}px`)
+    this.style.setProperty('--fd-graph-minimap-inset-left', `${this.overlayInsets.left}px`)
     this.style.setProperty('--fd-graph-minimap-background', style.background)
     this.style.setProperty('--fd-graph-minimap-border', style.border)
     this.style.setProperty('--fd-graph-minimap-corner-radius', `${style.cornerRadius}px`)
@@ -234,7 +257,6 @@ export class FdGraphMiniMap extends LitElement {
       '--fd-graph-minimap-viewport-stroke-width',
       `${style.viewportStrokeWidth}px`,
     )
-    this.setAttribute('placement', placement)
     this.setAttribute('role', 'group')
     this.setAttribute('aria-label', accessibilityLabel)
     this.tabIndex = interaction === 'displayOnly' ? -1 : 0
@@ -289,8 +311,8 @@ export class FdGraphMiniMap extends LitElement {
         transform,
         representation: this.resolvedConfiguration.representation,
         performance: this.resolvedConfiguration.performance,
-        availableNodeStyleCount: this.resolvedConfiguration.style.nodeStyles.length,
-        nodeStyleIndex: this.resolvedConfiguration.nodeStyleIndex,
+        availableNodeStyleCount: this.resolvedStyle.nodeStyles.length,
+        nodeStyleIndex: this.nodeStyleIndex,
         ...(signal ? { signal } : {}),
       })
       this.drawPlan()
@@ -383,6 +405,7 @@ export class FdGraphMiniMap extends LitElement {
       plan,
       projection: new FdGraphMiniMapPlanProjection(plan.transform, transform),
       configuration: this.resolvedConfiguration,
+      style: this.resolvedStyle,
       pixelRatio: window.devicePixelRatio,
     })
   }
