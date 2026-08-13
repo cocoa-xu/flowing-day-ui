@@ -48,4 +48,11 @@ export {
   type FdGraphCanvasNavigationDirection,
 } from './keyboard.js'
 export * from './navigation.js'
-export * from './selection.js'
+export {
+  FdGraphCanvasMarquee,
+  FdGraphCanvasMarqueeSelectionResolver,
+  FdGraphCanvasMarqueeSelectionState,
+  type FdGraphCanvasSelectionCommand,
+  type FdGraphCanvasSelectionMode,
+  FdGraphCanvasSessionReducer,
+} from './selection.js'

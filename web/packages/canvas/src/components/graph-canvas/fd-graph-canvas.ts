@@ -111,7 +111,7 @@ import {
 } from '../../interactions/keyboard.js'
 import type { FdGraphCanvasJumpToElementOptions } from '../../interactions/navigation.js'
 import {
-  type FdGraphSelectionMode,
+  type FdGraphCanvasSelectionMode,
   graphCubicEdgeDistance,
   graphSelectionMode,
 } from '../../interactions/selection.js'
@@ -1172,7 +1172,7 @@ export class FdGraphCanvas
     if (selection !== 'preserve' && this.resolvedInteractionConfiguration.selection !== 'none') {
       this.selectElementReference(
         element,
-        selection === 'add' ? 'extend' : 'replace',
+        selection === 'add' ? 'additive' : 'replace',
         'programmatic',
       )
     }
@@ -1261,7 +1261,7 @@ export class FdGraphCanvas
 
   setSelection(
     selection: ReadonlySet<FdGraphElementID>,
-    mode: FdGraphSelectionMode,
+    mode: FdGraphCanvasSelectionMode,
     detail: Omit<FdGraphSelectionChangeDetail, 'selectedElements' | 'selectedNodeIDs'>,
   ): void {
     const nonNodes =
@@ -1273,7 +1273,7 @@ export class FdGraphCanvas
 
   private selectElementReference(
     reference: FdGraphElementReference,
-    mode: FdGraphSelectionMode,
+    mode: FdGraphCanvasSelectionMode,
     source: FdGraphSelectionChangeDetail['source'],
   ): boolean {
     const behavior = this.resolvedInteractionConfiguration.selection

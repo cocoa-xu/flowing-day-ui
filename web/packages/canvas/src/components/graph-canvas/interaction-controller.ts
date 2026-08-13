@@ -33,7 +33,7 @@ import type {
 } from '../../interactions/configuration.js'
 import { admittedGraphNodeIDs } from '../../interactions/configuration.js'
 import {
-  type FdGraphSelectionMode,
+  type FdGraphCanvasSelectionMode,
   graphSelectionMode,
   resolveGraphMarqueeSelection,
   resolveGraphSelection,
@@ -91,7 +91,7 @@ export interface FdGraphCanvasInteractionDelegate {
   nodeIDAtViewportPoint(point: FdCanvasPoint): FdGraphElementID | undefined
   setSelection(
     selection: ReadonlySet<FdGraphElementID>,
-    mode: FdGraphSelectionMode,
+    mode: FdGraphCanvasSelectionMode,
     detail: Omit<FdGraphSelectionChangeDetail, 'selectedElements' | 'selectedNodeIDs'>,
   ): void
   setPresentation(presentation: FdGraphInteractionPresentation): void
@@ -115,7 +115,7 @@ interface FdGraphMoveSession extends FdGraphPointerSessionBase {
   readonly kind: 'move'
   readonly clickedNodeID: FdGraphElementID
   readonly clickSelection: ReadonlySet<FdGraphElementID>
-  readonly clickSelectionMode: FdGraphSelectionMode
+  readonly clickSelectionMode: FdGraphCanvasSelectionMode
   readonly baseFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
   readonly baseBounds: FdCanvasRect
   readonly canMove: boolean
@@ -138,7 +138,7 @@ interface FdGraphResizeSession extends FdGraphPointerSessionBase {
 interface FdGraphMarqueeSession extends FdGraphPointerSessionBase {
   readonly kind: 'marquee'
   readonly initialSelection: ReadonlySet<FdGraphElementID>
-  readonly mode: FdGraphSelectionMode
+  readonly mode: FdGraphCanvasSelectionMode
 }
 
 type FdGraphPointerSession = FdGraphMoveSession | FdGraphResizeSession | FdGraphMarqueeSession
@@ -227,7 +227,7 @@ export class FdGraphCanvasInteractionController {
           changes,
         )
       } else {
-        this.delegate.setSelection(this.delegate.selectedNodeIDs, 'extend', {
+        this.delegate.setSelection(this.delegate.selectedNodeIDs, 'additive', {
           phase: 'ended',
           source: 'pointer',
         })
@@ -257,7 +257,7 @@ export class FdGraphCanvasInteractionController {
     const dragSelection = initial.has(nodeID)
       ? new Set(initial)
       : resolveGraphSelection(initial, nodeID, mode, configuration.selection)
-    this.delegate.setSelection(dragSelection, initial.has(nodeID) ? 'extend' : mode, {
+    this.delegate.setSelection(dragSelection, initial.has(nodeID) ? 'additive' : mode, {
       phase: 'continuous',
       source: 'pointer',
     })

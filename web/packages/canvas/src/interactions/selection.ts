@@ -8,22 +8,126 @@ import {
 } from '../rendering/edge-geometry.js'
 import type { FdGraphMarqueeBehavior, FdGraphSelectionBehavior } from './configuration.js'
 
-export type FdGraphSelectionMode = 'replace' | 'extend' | 'toggle'
+export type FdGraphCanvasSelectionMode = 'replace' | 'additive' | 'toggle'
+
+export class FdGraphCanvasMarqueeSelectionResolver {
+  private constructor() {}
+
+  static selection(
+    baseSelection: ReadonlySet<FdGraphElementID>,
+    candidates: ReadonlySet<FdGraphElementID>,
+    mode: FdGraphCanvasSelectionMode,
+  ): Set<FdGraphElementID> {
+    if (mode === 'replace') return new Set(candidates)
+    const selection = new Set(baseSelection)
+    for (const elementID of candidates) {
+      if (mode === 'toggle' && selection.has(elementID)) selection.delete(elementID)
+      else selection.add(elementID)
+    }
+    return selection
+  }
+}
+
+export class FdGraphCanvasMarqueeSelectionState {
+  readonly initialSelection: ReadonlySet<FdGraphElementID>
+  readonly mode: FdGraphCanvasSelectionMode
+  private currentCandidates = new Set<FdGraphElementID>()
+  private active = false
+
+  constructor(initialSelection: ReadonlySet<FdGraphElementID>, mode: FdGraphCanvasSelectionMode) {
+    this.initialSelection = new Set(initialSelection)
+    this.mode = mode
+  }
+
+  get candidates(): ReadonlySet<FdGraphElementID> {
+    return this.currentCandidates
+  }
+
+  get isActive(): boolean {
+    return this.active
+  }
+
+  update(
+    candidates: ReadonlySet<FdGraphElementID>,
+    hasExceededMinimumDistance: boolean,
+  ): Set<FdGraphElementID> {
+    this.active ||= hasExceededMinimumDistance
+    if (!this.active) return new Set(this.initialSelection)
+    this.currentCandidates = new Set(candidates)
+    return this.selection
+  }
+
+  get selection(): Set<FdGraphElementID> {
+    if (!this.active) return new Set(this.initialSelection)
+    return FdGraphCanvasMarqueeSelectionResolver.selection(
+      this.initialSelection,
+      this.currentCandidates,
+      this.mode,
+    )
+  }
+}
+
+export class FdGraphCanvasMarquee {
+  readonly startLocation: FdCanvasPoint
+  readonly location: FdCanvasPoint
+
+  constructor(startLocation: FdCanvasPoint, location: FdCanvasPoint) {
+    this.startLocation = startLocation
+    this.location = location
+  }
+
+  get rect(): FdCanvasRect {
+    return {
+      x: Math.min(this.startLocation.x, this.location.x),
+      y: Math.min(this.startLocation.y, this.location.y),
+      width: Math.abs(this.location.x - this.startLocation.x),
+      height: Math.abs(this.location.y - this.startLocation.y),
+    }
+  }
+}
+
+export type FdGraphCanvasSelectionCommand =
+  | { readonly kind: 'replace'; readonly elementIDs: ReadonlySet<FdGraphElementID> }
+  | { readonly kind: 'add'; readonly elementIDs: ReadonlySet<FdGraphElementID> }
+  | { readonly kind: 'remove'; readonly elementIDs: ReadonlySet<FdGraphElementID> }
+  | { readonly kind: 'toggle'; readonly elementIDs: ReadonlySet<FdGraphElementID> }
+  | { readonly kind: 'clear' }
+
+export class FdGraphCanvasSessionReducer {
+  private constructor() {}
+
+  static apply(command: FdGraphCanvasSelectionCommand, selection: Set<FdGraphElementID>): void {
+    if (command.kind === 'clear') {
+      selection.clear()
+      return
+    }
+    if (command.kind === 'replace') {
+      selection.clear()
+      for (const elementID of command.elementIDs) selection.add(elementID)
+      return
+    }
+    for (const elementID of command.elementIDs) {
+      if (command.kind === 'remove') selection.delete(elementID)
+      else if (command.kind === 'toggle' && selection.has(elementID)) selection.delete(elementID)
+      else selection.add(elementID)
+    }
+  }
+}
 
 export function graphSelectionMode(
   shiftKey: boolean,
   metaKey: boolean,
   controlKey: boolean,
-): FdGraphSelectionMode {
+): FdGraphCanvasSelectionMode {
   if (metaKey || controlKey) return 'toggle'
-  if (shiftKey) return 'extend'
+  if (shiftKey) return 'additive'
   return 'replace'
 }
 
 export function resolveGraphSelection(
   selection: ReadonlySet<FdGraphElementID>,
   nodeID: FdGraphElementID,
-  mode: FdGraphSelectionMode,
+  mode: FdGraphCanvasSelectionMode,
   behavior: FdGraphSelectionBehavior,
 ): Set<FdGraphElementID> {
   if (behavior === 'none') return new Set()
@@ -38,7 +142,7 @@ export function resolveGraphMarqueeSelection(
   initialSelection: ReadonlySet<FdGraphElementID>,
   nodes: readonly FdAnyGraphNode[],
   marquee: FdCanvasRect,
-  mode: FdGraphSelectionMode,
+  mode: FdGraphCanvasSelectionMode,
   behavior: FdGraphSelectionBehavior,
   marqueeBehavior: FdGraphMarqueeBehavior,
 ): Set<FdGraphElementID> {
@@ -51,13 +155,7 @@ export function resolveGraphMarqueeSelection(
     )
     .map(({ id }) => id)
   if (behavior === 'single') return new Set(matches.slice(0, 1))
-  if (mode === 'replace') return new Set(matches)
-  const result = new Set(initialSelection)
-  for (const id of matches) {
-    if (mode === 'toggle' && result.has(id)) result.delete(id)
-    else result.add(id)
-  }
-  return result
+  return FdGraphCanvasMarqueeSelectionResolver.selection(initialSelection, new Set(matches), mode)
 }
 
 export function graphEdgeDistance(

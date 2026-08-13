@@ -19,6 +19,10 @@ import {
   resolveGraphCanvasInteractionConfiguration,
 } from './configuration.js'
 import {
+  FdGraphCanvasMarquee,
+  FdGraphCanvasMarqueeSelectionResolver,
+  FdGraphCanvasMarqueeSelectionState,
+  FdGraphCanvasSessionReducer,
   graphEdgeDistance,
   graphSelectionMode,
   resolveGraphMarqueeSelection,
@@ -42,15 +46,15 @@ describe('graph selection', () => {
 
   it('maps desktop modifiers to selection modes', () => {
     expect(graphSelectionMode(false, false, false)).toBe('replace')
-    expect(graphSelectionMode(true, false, false)).toBe('extend')
+    expect(graphSelectionMode(true, false, false)).toBe('additive')
     expect(graphSelectionMode(false, true, false)).toBe('toggle')
   })
 
-  it('supports replacement, extension, and toggling', () => {
+  it('supports replacement, additive selection, and toggling', () => {
     expect([...resolveGraphSelection(new Set(['one']), 'two', 'replace', 'multiple')]).toEqual([
       'two',
     ])
-    expect([...resolveGraphSelection(new Set(['one']), 'two', 'extend', 'multiple')]).toEqual([
+    expect([...resolveGraphSelection(new Set(['one']), 'two', 'additive', 'multiple')]).toEqual([
       'one',
       'two',
     ])
@@ -68,6 +72,51 @@ describe('graph selection', () => {
         'intersects',
       ),
     ]).toEqual(['one', 'two'])
+  })
+
+  it('matches Swift marquee selection resolution', () => {
+    expect([
+      ...FdGraphCanvasMarqueeSelectionResolver.selection(
+        new Set(['one', 'two']),
+        new Set(['two', 'three']),
+        'toggle',
+      ),
+    ]).toEqual(['one', 'three'])
+  })
+
+  it('activates marquee state only after the minimum distance is exceeded', () => {
+    const state = new FdGraphCanvasMarqueeSelectionState(new Set(['one']), 'additive')
+
+    expect([...state.update(new Set(['two']), false)]).toEqual(['one'])
+    expect(state.isActive).toBe(false)
+    expect([...state.update(new Set(['two']), true)]).toEqual(['one', 'two'])
+    expect(state.isActive).toBe(true)
+    expect([...state.candidates]).toEqual(['two'])
+  })
+
+  it('calculates the marquee rectangle independently of drag direction', () => {
+    expect(new FdGraphCanvasMarquee({ x: 12, y: 15 }, { x: 2, y: 5 }).rect).toEqual({
+      x: 2,
+      y: 5,
+      width: 10,
+      height: 10,
+    })
+  })
+
+  it('applies Swift selection commands in place', () => {
+    const selection = new Set(['one', 'two'])
+
+    FdGraphCanvasSessionReducer.apply(
+      { kind: 'toggle', elementIDs: new Set(['two', 'three']) },
+      selection,
+    )
+    expect([...selection]).toEqual(['one', 'three'])
+
+    FdGraphCanvasSessionReducer.apply({ kind: 'replace', elementIDs: new Set(['four']) }, selection)
+    expect([...selection]).toEqual(['four'])
+
+    FdGraphCanvasSessionReducer.apply({ kind: 'clear' }, selection)
+    expect(selection.size).toBe(0)
   })
 })
 
