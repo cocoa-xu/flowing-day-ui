@@ -54,6 +54,46 @@ enum PreferencesSectionSeparatorResolver {
   }
 }
 
+public enum PreferencesRowIcon {
+  case system(String)
+  case image(NSImage)
+  case template(NSImage)
+}
+
+private struct PreferencesRowIconView: View {
+  @Environment(\.flowingAccent) private var accent
+  let icon: PreferencesRowIcon
+
+  @ViewBuilder
+  var body: some View {
+    switch icon {
+    case .system(let symbol):
+      Image(systemName: symbol)
+        .font(.system(size: 13, weight: .medium))
+        .foregroundStyle(FlowingPalette.muted)
+        .frame(width: PreferencesRowLayout.symbolWidth)
+    case .image(let image):
+      Image(nsImage: image)
+        .resizable()
+        .scaledToFit()
+        .frame(
+          width: PreferencesRowLayout.symbolWidth,
+          height: PreferencesRowLayout.symbolWidth
+        )
+    case .template(let image):
+      Image(nsImage: image)
+        .renderingMode(.template)
+        .resizable()
+        .scaledToFit()
+        .foregroundStyle(accent.foreground)
+        .frame(
+          width: PreferencesRowLayout.symbolWidth,
+          height: PreferencesRowLayout.symbolWidth
+        )
+    }
+  }
+}
+
 public struct PreferencesSectionHeader: View {
   @Environment(\.flowingTypography) private var typography
   private let title: String
@@ -165,7 +205,7 @@ public struct PreferencesSection<Content: View>: View {
 public struct PreferencesRow<Trailing: View>: View {
   @Environment(\.flowingMetrics) private var metrics
   @Environment(\.flowingTypography) private var typography
-  private let symbol: String?
+  private let icon: PreferencesRowIcon?
   private let title: String
   private let caption: String?
   private let trailing: Trailing
@@ -176,7 +216,19 @@ public struct PreferencesRow<Trailing: View>: View {
     caption: String? = nil,
     @ViewBuilder trailing: () -> Trailing
   ) {
-    self.symbol = symbol
+    icon = symbol.map(PreferencesRowIcon.system)
+    self.title = title
+    self.caption = caption
+    self.trailing = trailing()
+  }
+
+  public init(
+    icon: PreferencesRowIcon,
+    title: String,
+    caption: String? = nil,
+    @ViewBuilder trailing: () -> Trailing
+  ) {
+    self.icon = icon
     self.title = title
     self.caption = caption
     self.trailing = trailing()
@@ -184,11 +236,8 @@ public struct PreferencesRow<Trailing: View>: View {
 
   public var body: some View {
     HStack(alignment: .center, spacing: PreferencesRowLayout.symbolSpacing) {
-      if let symbol {
-        Image(systemName: symbol)
-          .font(.system(size: 13, weight: .medium))
-          .foregroundStyle(FlowingPalette.muted)
-          .frame(width: PreferencesRowLayout.symbolWidth)
+      if let icon {
+        PreferencesRowIconView(icon: icon)
       }
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
@@ -207,13 +256,17 @@ public struct PreferencesRow<Trailing: View>: View {
     .padding(.horizontal, metrics.rowInset)
     .padding(.vertical, PreferencesRowLayout.verticalPadding(hasCaption: caption != nil))
     .frame(minHeight: PreferencesRowLayout.minimumHeight)
-    .preference(key: PreferencesRowIconPresenceKey.self, value: Set([symbol != nil]))
+    .preference(key: PreferencesRowIconPresenceKey.self, value: Set([icon != nil]))
   }
 }
 
 extension PreferencesRow where Trailing == EmptyView {
   public init(symbol: String? = nil, title: String, caption: String? = nil) {
     self.init(symbol: symbol, title: title, caption: caption) { EmptyView() }
+  }
+
+  public init(icon: PreferencesRowIcon, title: String, caption: String? = nil) {
+    self.init(icon: icon, title: title, caption: caption) { EmptyView() }
   }
 }
 
