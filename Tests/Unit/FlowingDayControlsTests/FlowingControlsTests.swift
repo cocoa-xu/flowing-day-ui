@@ -1045,6 +1045,43 @@ final class FlowingControlsTests: XCTestCase {
     XCTAssertEqual(actual.blueComponent, expected.blueComponent, accuracy: 0.001)
   }
 
+  @MainActor
+  func testSelectRemovalDismissesItsPanelAndReleasesItsAction() throws {
+    let window = NSWindow(
+      contentRect: NSRect(x: 200, y: 200, width: 400, height: 300),
+      styleMask: [.borderless],
+      backing: .buffered,
+      defer: false
+    )
+    window.isReleasedWhenClosed = false
+    let button = FlowingSelectButton(
+      frame: NSRect(x: 100, y: 100, width: 160, height: 30)
+    )
+    button.configure(
+      labels: ["Selected"],
+      selectedIndex: 0,
+      minimumWidth: 120,
+      accent: .celadon,
+      strings: FlowingStrings(),
+      controlRadius: 9,
+      textStyle: FlowingTypography.standard.value,
+      optionTextStyle: FlowingTypography.standard.selectionLabel,
+      menuBackgroundColor: FlowingPalette.control
+    )
+    button.onSelect = { _ in }
+    window.contentView?.addSubview(button)
+    window.orderFront(nil)
+    button.performClick(nil)
+
+    XCTAssertNotNil(button.presentedPanel)
+
+    button.prepareForRemoval()
+
+    XCTAssertNil(button.presentedPanel)
+    XCTAssertNil(button.onSelect)
+    window.close()
+  }
+
   private var testItems: [TestItem] {
     [TestItem("One"), TestItem("Two"), TestItem("Three")]
   }
