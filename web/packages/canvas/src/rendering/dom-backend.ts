@@ -39,6 +39,8 @@ const svgNamespace = 'http://www.w3.org/2000/svg'
 
 export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
   readonly kind = 'dom'
+  private readonly rendersCustomEdges: boolean
+  private readonly rendersCustomNodes: boolean
   private readonly nodeElements = new Map<string, HTMLElement>()
   private readonly portElementsByNode = new Map<string, readonly HTMLElement[]>()
   private readonly edgeElements = new Map<string, SVGPathElement>()
@@ -55,6 +57,8 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
   private renderedEdgeLabelVisibility: boolean | undefined
 
   constructor(private readonly configuration: FdGraphDOMRenderingBackendConfiguration = {}) {
+    this.rendersCustomEdges = configuration.createEdgeContent !== undefined
+    this.rendersCustomNodes = configuration.createNodeContent !== undefined
     if (
       configuration.minimumEdgeLabelZoom !== undefined &&
       (!Number.isFinite(configuration.minimumEdgeLabelZoom) ||
@@ -74,7 +78,7 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     this.edgeContentLayer.classList.add('graph-edge-content-layer')
     this.edgeContentLayer.setAttribute('part', 'edge-content-layer')
     this.edgeContentLayer.style.cssText =
-      'position:absolute;inset:0;pointer-events:none;overflow:hidden'
+      'position:absolute;inset:0;pointer-events:none;overflow:hidden;isolation:isolate'
     this.edgeLabelLayer.classList.add('graph-edge-label-layer')
     this.edgeLabelLayer.setAttribute('part', 'edge-label-layer')
     this.edgeLabelLayer.setAttribute('aria-hidden', 'true')
@@ -153,7 +157,19 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
         this.nodeElements.set(key, element)
         this.nodeLayer.append(element)
       }
-      element.style.transform = `translate3d(${rendered.frame.x}px, ${rendered.frame.y}px, 0)`
+      const contentState = this.nodeContentState(rendered, frame)
+      const renderState = this.nodeRenderState(rendered, frame, contentState)
+      const contentNeedsRefresh = this.rendersCustomNodes
+        ? element.dataset.fdContentState !== contentState
+        : element.dataset.fdSnapshotRevision !== String(frame.snapshotRevision) ||
+          this.configuration.createPortContent !== undefined
+      if (element.dataset.fdRenderState === renderState && !contentNeedsRefresh) continue
+      const isTransientlyPositioned =
+        rendered.frame.x !== rendered.node.frame.x || rendered.frame.y !== rendered.node.frame.y
+      element.style.transform = isTransientlyPositioned
+        ? `translate3d(${rendered.frame.x}px, ${rendered.frame.y}px, 0)`
+        : `translate(${rendered.frame.x}px, ${rendered.frame.y}px)`
+      element.style.willChange = isTransientlyPositioned ? 'transform' : ''
       element.style.width = `${rendered.frame.width}px`
       element.style.height = `${rendered.frame.height}px`
       this.setOptionalStyle(element.style, '--fd-graph-node-fill', rendered.node.style?.fill)
@@ -163,6 +179,7 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
       element.toggleAttribute('data-selected', rendered.selected)
       element.toggleAttribute('data-focused', rendered.focused)
       element.toggleAttribute('data-hovered', rendered.hovered)
+      element.toggleAttribute('data-custom-content', this.rendersCustomNodes)
       element.toggleAttribute('data-selectable', true)
       element.toggleAttribute(
         'data-draggable',
@@ -176,17 +193,15 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
         'aria-label',
         rendered.node.accessibilityLabel ?? rendered.node.label ?? String(rendered.node.id),
       )
-      if (
-        element.dataset.fdSnapshotRevision !== String(frame.snapshotRevision) ||
-        this.configuration.createNodeContent ||
-        this.configuration.createPortContent
-      ) {
+      if (contentNeedsRefresh) {
         const ports = this.portElements(rendered, frame)
         element.replaceChildren(this.nodeContent(rendered, frame), ...ports)
         this.portElementsByNode.set(key, ports)
+        element.dataset.fdContentState = contentState
         element.dataset.fdSnapshotRevision = String(frame.snapshotRevision)
       }
       this.updatePortSelection(this.portElementsByNode.get(key) ?? [], rendered.node, frame)
+      element.dataset.fdRenderState = renderState
     }
     for (const [key, element] of this.nodeElements) {
       if (visibleKeys.has(key)) continue
@@ -194,6 +209,57 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
       this.nodeElements.delete(key)
       this.portElementsByNode.delete(key)
     }
+  }
+
+  private nodeContentState(
+    rendered: FdGraphRenderFrame['nodes'][number],
+    frame: FdGraphRenderFrame,
+  ): string {
+    const capabilities = rendered.capabilities?.rawValue ?? ''
+    return [
+      frame.snapshotRevision,
+      rendered.frame.width,
+      rendered.frame.height,
+      Number(rendered.selected),
+      Number(rendered.focused),
+      Number(rendered.hovered),
+      capabilities,
+    ].join(':')
+  }
+
+  private nodeRenderState(
+    rendered: FdGraphRenderFrame['nodes'][number],
+    frame: FdGraphRenderFrame,
+    contentState: string,
+  ): string {
+    const node = rendered.node
+    const capabilities = rendered.capabilities?.rawValue ?? ''
+    const focusedPortID =
+      frame.focusedElement?.kind === 'port' && frame.focusedElement.nodeID === node.id
+        ? frame.focusedElement.portID
+        : undefined
+    const selectedPortIDs = frame.selectedPortIDsByNode.get(node.id)
+    const portState = (node.ports ?? [])
+      .map((port) => `${String(port.id)}:${Number(selectedPortIDs?.has(port.id) === true)}`)
+      .join(',')
+    return [
+      rendered.frame.x,
+      rendered.frame.y,
+      rendered.frame.width,
+      rendered.frame.height,
+      node.style?.fill ?? '',
+      node.style?.stroke ?? '',
+      node.style?.color ?? '',
+      node.style?.accent ?? '',
+      Number(rendered.selected),
+      Number(rendered.focused),
+      Number(rendered.hovered),
+      capabilities,
+      node.accessibilityLabel ?? node.label ?? String(node.id),
+      String(focusedPortID ?? ''),
+      portState,
+      contentState,
+    ].join(':')
   }
 
   private nodeContent(
@@ -278,7 +344,7 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     for (const rendered of frame.edges) {
       const key = graphElementKey(rendered.edge.id)
       visibleKeys.add(key)
-      if (this.configuration.rendersEdgePaths !== false) {
+      if (this.configuration.rendersEdgePaths ?? !this.rendersCustomEdges) {
         let path = this.edgeElements.get(key)
         if (!path) {
           path = document.createElementNS(svgNamespace, 'path')
@@ -300,11 +366,14 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
         path.toggleAttribute('data-focused', rendered.focused)
         path.toggleAttribute('data-hovered', rendered.hovered)
       }
-      if (this.configuration.rendersEdgeDecorations !== false && rendered.geometry.targetArrow) {
+      if (
+        (this.configuration.rendersEdgeDecorations ?? !this.rendersCustomEdges) &&
+        rendered.geometry.targetArrow
+      ) {
         this.updateEdgeArrow(key, rendered)
       } else this.removeEdgeArrow(key)
       if (
-        this.configuration.rendersEdgeLabels !== false &&
+        (this.configuration.rendersEdgeLabels ?? !this.rendersCustomEdges) &&
         rendered.edge.label &&
         edgeLabelsVisible
       )
@@ -376,7 +445,8 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
     }
     const padding = this.configuration.edgeContentPadding ?? 0
     const bounds = frame.viewport.transform.applyRect(rendered.geometry.route.conservativeBounds)
-    element.style.transform = `translate3d(${bounds.x - padding}px, ${bounds.y - padding}px, 0)`
+    element.style.left = `${bounds.x - padding}px`
+    element.style.top = `${bounds.y - padding}px`
     element.style.width = `${bounds.width + padding * 2}px`
     element.style.height = `${bounds.height + padding * 2}px`
     const custom = this.configuration.createEdgeContent?.(rendered, frame)

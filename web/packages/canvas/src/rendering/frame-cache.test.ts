@@ -18,11 +18,12 @@ describe('graph render geometry cache', () => {
     let endpointCalls = 0
     const input = {
       snapshotRevision: 1,
-      presentationRevision: 1,
+      geometryRevision: 1,
       nodes: snapshot.nodes,
       edges: snapshot.edges,
       selectedNodeIDs: new Set([1]),
       selectedEdgeIDs: new Set<number>(),
+      hoveredNodeID: 2,
       focusedElement: graphNodeReference(1),
       nodeFrame: (node: (typeof snapshot.nodes)[number]) => node.frame,
       edgeEndpoint: (_edge: (typeof snapshot.edges)[number], endpoint: 'source' | 'target') => {
@@ -36,14 +37,16 @@ describe('graph render geometry cache', () => {
     expect(second).toBe(first)
     expect(second.nodes).toBe(first.nodes)
     expect(second.edges).toBe(first.edges)
+    expect(second.nodes[0]?.hovered).toBe(false)
+    expect(second.nodes[1]?.hovered).toBe(true)
     expect(endpointCalls).toBe(2)
   })
 
-  it('rebuilds geometry when presentation state changes', () => {
+  it('rebuilds geometry when geometry state changes', () => {
     const cache = new FdGraphRenderGeometryCache()
     const base = {
       snapshotRevision: 1,
-      presentationRevision: 1,
+      geometryRevision: 1,
       nodes: snapshot.nodes,
       edges: snapshot.edges,
       selectedNodeIDs: new Set<number>(),
@@ -55,7 +58,7 @@ describe('graph render geometry cache', () => {
     const first = cache.resolve(base)
     const second = cache.resolve({
       ...base,
-      presentationRevision: 2,
+      geometryRevision: 2,
       focusedElement: graphEdgeReference(3),
     })
 
@@ -73,7 +76,7 @@ describe('graph render geometry cache', () => {
     let frameCalls = 0
     const input = {
       snapshotRevision: 1,
-      presentationRevision: 1,
+      geometryRevision: 1,
       nodes,
       edges: [],
       selectedNodeIDs: new Set<number>(),

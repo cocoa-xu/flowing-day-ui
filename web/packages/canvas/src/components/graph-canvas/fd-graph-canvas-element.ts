@@ -103,7 +103,6 @@ import {
 import { FdGraphCanvasRenderingGeometry } from '../../rendering/geometry.js'
 import type { FdGraphWebGL2RenderingBackendConfiguration } from '../../rendering/webgl2-backend.js'
 import type { FdCanvasProxy, FdCanvasRenderContext } from '../../rendering-context.js'
-import { FdGraphCanvasEngine } from './fd-graph-canvas.js'
 import {
   type FdGraphCanvasEngineEdgeData,
   type FdGraphCanvasEngineNodeData,
@@ -121,6 +120,7 @@ import {
   graphCanvasTransientNodeDrag,
   graphCanvasTransientNodeResize,
 } from './engine-interaction-adapter.js'
+import { FdGraphCanvasEngine } from './fd-graph-canvas.js'
 
 export type FdGraphCanvasNodeBuilder<ElementID extends FdGraphElementID = FdGraphElementID> = (
   node: FdGraphPresentationNode<ElementID>,
@@ -1227,10 +1227,28 @@ export class FdGraphCanvas<
 
   private handleSelectionChange = (event: CustomEvent<FdGraphSelectionChangeDetail>): void => {
     event.stopPropagation()
-    this.session.selection = new Set(
+    const selectedElementIDs = new Set(
       event.detail.selectedElements.flatMap((reference) => {
         const elementID = this.elementID(reference)
         return elementID === undefined ? [] : [elementID]
+      }),
+    )
+    this.session.selection = selectedElementIDs
+    const selectedElements = this.elementReferences(selectedElementIDs)
+    this.dispatchEvent(
+      new CustomEvent<FdGraphSelectionChangeDetail>('fd-graph-selection-change', {
+        detail: {
+          selectedElements,
+          selectedNodeIDs: new Set(
+            selectedElements.flatMap((reference) =>
+              reference.kind === 'node' ? [reference.nodeID] : [],
+            ),
+          ),
+          phase: event.detail.phase,
+          source: event.detail.source,
+        },
+        bubbles: true,
+        composed: true,
       }),
     )
   }

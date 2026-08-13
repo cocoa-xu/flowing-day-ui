@@ -28,6 +28,35 @@ interface FdGraphWebGL2Buffers {
   readonly node: WebGLBuffer
 }
 
+interface FdGraphWebGL2BufferCapacities {
+  edge: number
+  arrow: number
+  node: number
+}
+
+interface FdGraphWebGL2VertexArrays {
+  readonly edge: WebGLVertexArrayObject
+  readonly arrow: WebGLVertexArrayObject
+  readonly node: WebGLVertexArrayObject
+}
+
+interface FdGraphWebGL2CommonUniforms {
+  readonly worldOrigin: WebGLUniformLocation | null
+  readonly viewportOrigin: WebGLUniformLocation | null
+  readonly viewportSize: WebGLUniformLocation | null
+  readonly zoom: WebGLUniformLocation | null
+}
+
+interface FdGraphWebGL2Uniforms {
+  readonly edge: FdGraphWebGL2CommonUniforms & {
+    readonly segmentCount: WebGLUniformLocation | null
+  }
+  readonly arrow: FdGraphWebGL2CommonUniforms & {
+    readonly segmentCount: WebGLUniformLocation | null
+  }
+  readonly node: FdGraphWebGL2CommonUniforms
+}
+
 type FdRGBA = readonly [number, number, number, number]
 
 const edgeStride = 14
@@ -243,10 +272,26 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
   private readonly minimumDOMNodeZoom: number
   private readonly maximumEdgeLabelCount: number
   private readonly rendersCustomEdges: boolean
+  private readonly rendersNodes: boolean
   private surface: FdGraphRenderingSurface | undefined
   private context: WebGL2RenderingContext | undefined
   private programs: FdGraphWebGL2Programs | undefined
   private buffers: FdGraphWebGL2Buffers | undefined
+  private readonly bufferCapacities: FdGraphWebGL2BufferCapacities = {
+    edge: 0,
+    arrow: 0,
+    node: 0,
+  }
+  private readonly bufferContents: Record<
+    keyof FdGraphWebGL2Buffers,
+    Float32Array<ArrayBufferLike>
+  > = {
+    edge: new Float32Array(),
+    arrow: new Float32Array(),
+    node: new Float32Array(),
+  }
+  private vertexArrays: FdGraphWebGL2VertexArrays | undefined
+  private uniforms: FdGraphWebGL2Uniforms | undefined
   private latestFrame: FdGraphRenderFrame | undefined
   private edgeCount = 0
   private arrowCount = 0
@@ -273,6 +318,7 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
       'maximum edge label count',
     )
     this.rendersCustomEdges = configuration.createEdgeContent !== undefined
+    this.rendersNodes = configuration.rendersNodes ?? true
     this.nodeBackend = new FdGraphDOMRenderingBackend({
       ...(configuration.createNodeContent
         ? { createNodeContent: configuration.createNodeContent }
@@ -295,6 +341,7 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
       rendersEdgeDecorations: false,
       rendersEdgePaths: false,
       rendersEdgeLabels: !this.rendersCustomEdges,
+      rendersNodes: this.rendersNodes,
     })
     this.fallbackBackend = new FdGraphDOMRenderingBackend({
       ...(configuration.createNodeContent
@@ -322,6 +369,7 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
             rendersEdgeLabels: false,
           }
         : {}),
+      rendersNodes: this.rendersNodes,
     })
   }
 
@@ -349,6 +397,7 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
       return
     }
     const drawsDOMNodes =
+      this.rendersNodes &&
       frame.nodes.length <= this.maximumDOMNodeCount &&
       frame.viewport.transform.zoom >= this.minimumDOMNodeZoom
     const labelEdges =
@@ -361,7 +410,7 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
       nodes: drawsDOMNodes ? frame.nodes : [],
       edges: labelEdges,
     })
-    const geometryRevision = `${frame.snapshotRevision}:${frame.presentationRevision}`
+    const geometryRevision = `${frame.snapshotRevision}:${frame.geometryRevision}`
     if (geometryRevision !== this.geometryRevision) {
       this.geometryRevision = geometryRevision
       this.uploadGeometry(frame)
@@ -410,13 +459,29 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
     const edgeBuffer = context.createBuffer()
     const arrowBuffer = context.createBuffer()
     const nodeBuffer = context.createBuffer()
-    if (!edge || !arrow || !node || !edgeBuffer || !arrowBuffer || !nodeBuffer) {
+    const edgeVertexArray = context.createVertexArray()
+    const arrowVertexArray = context.createVertexArray()
+    const nodeVertexArray = context.createVertexArray()
+    if (
+      !edge ||
+      !arrow ||
+      !node ||
+      !edgeBuffer ||
+      !arrowBuffer ||
+      !nodeBuffer ||
+      !edgeVertexArray ||
+      !arrowVertexArray ||
+      !nodeVertexArray
+    ) {
       if (edge) context.deleteProgram(edge)
       if (arrow) context.deleteProgram(arrow)
       if (node) context.deleteProgram(node)
       if (edgeBuffer) context.deleteBuffer(edgeBuffer)
       if (arrowBuffer) context.deleteBuffer(arrowBuffer)
       if (nodeBuffer) context.deleteBuffer(nodeBuffer)
+      if (edgeVertexArray) context.deleteVertexArray(edgeVertexArray)
+      if (arrowVertexArray) context.deleteVertexArray(arrowVertexArray)
+      if (nodeVertexArray) context.deleteVertexArray(nodeVertexArray)
       return false
     }
     context.disable(context.DEPTH_TEST)
@@ -425,6 +490,44 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
     this.context = context
     this.programs = { edge, arrow, node }
     this.buffers = { edge: edgeBuffer, arrow: arrowBuffer, node: nodeBuffer }
+    this.vertexArrays = {
+      edge: edgeVertexArray,
+      arrow: arrowVertexArray,
+      node: nodeVertexArray,
+    }
+    context.bindVertexArray(edgeVertexArray)
+    context.bindBuffer(context.ARRAY_BUFFER, edgeBuffer)
+    this.configureAttribute(context, 0, 2, edgeStride, 0)
+    this.configureAttribute(context, 1, 2, edgeStride, 2)
+    this.configureAttribute(context, 2, 2, edgeStride, 4)
+    this.configureAttribute(context, 3, 2, edgeStride, 6)
+    this.configureAttribute(context, 4, 4, edgeStride, 8)
+    this.configureAttribute(context, 5, 1, edgeStride, 12)
+    this.configureAttribute(context, 6, 1, edgeStride, 13)
+    context.bindVertexArray(arrowVertexArray)
+    context.bindBuffer(context.ARRAY_BUFFER, arrowBuffer)
+    this.configureAttribute(context, 0, 2, arrowStride, 0)
+    this.configureAttribute(context, 1, 2, arrowStride, 2)
+    this.configureAttribute(context, 2, 2, arrowStride, 4)
+    this.configureAttribute(context, 3, 2, arrowStride, 6)
+    this.configureAttribute(context, 4, 4, arrowStride, 8)
+    context.bindVertexArray(nodeVertexArray)
+    context.bindBuffer(context.ARRAY_BUFFER, nodeBuffer)
+    this.configureAttribute(context, 0, 4, nodeStride, 0)
+    this.configureAttribute(context, 1, 4, nodeStride, 4)
+    this.configureAttribute(context, 2, 4, nodeStride, 8)
+    context.bindVertexArray(null)
+    this.uniforms = {
+      edge: {
+        ...this.commonUniformLocations(context, edge),
+        segmentCount: context.getUniformLocation(edge, 'segmentCount'),
+      },
+      arrow: {
+        ...this.commonUniformLocations(context, arrow),
+        segmentCount: context.getUniformLocation(arrow, 'segmentCount'),
+      },
+      node: this.commonUniformLocations(context, node),
+    }
     this.usingFallback = false
     return true
   }
@@ -485,7 +588,8 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
       ? []
       : frame.edges.filter(({ geometry }) => geometry.targetArrow !== undefined)
     const arrowData = new Float32Array(arrows.length * arrowStride)
-    const nodeData = new Float32Array(frame.nodes.length * nodeStride)
+    const renderedNodes = this.rendersNodes ? frame.nodes : []
+    const nodeData = new Float32Array(renderedNodes.length * nodeStride)
     const defaultEdge = this.cssColor('--fd-canvas-edge-color', '#aeb5af')
     const focus = this.cssColor('--fd-graph-focus-color', '#6d9ea5')
     const defaultFill = this.cssColor('--fd-canvas-node-surface-color', '#ffffff')
@@ -544,7 +648,7 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
       offset += arrowStride
     }
     offset = 0
-    for (const rendered of frame.nodes) {
+    for (const rendered of renderedNodes) {
       const fill = this.color(rendered.node.style?.fill, defaultFill)
       const stroke =
         rendered.focused || rendered.selected
@@ -563,22 +667,21 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
       )
       offset += nodeStride
     }
-    context.bindBuffer(context.ARRAY_BUFFER, buffers.edge)
-    context.bufferData(context.ARRAY_BUFFER, edgeData, context.DYNAMIC_DRAW)
-    context.bindBuffer(context.ARRAY_BUFFER, buffers.arrow)
-    context.bufferData(context.ARRAY_BUFFER, arrowData, context.DYNAMIC_DRAW)
-    context.bindBuffer(context.ARRAY_BUFFER, buffers.node)
-    context.bufferData(context.ARRAY_BUFFER, nodeData, context.DYNAMIC_DRAW)
+    this.uploadBuffer(context, buffers.edge, 'edge', edgeData)
+    this.uploadBuffer(context, buffers.arrow, 'arrow', arrowData)
+    this.uploadBuffer(context, buffers.node, 'node', nodeData)
     this.edgeCount = edgeSegments.length
     this.arrowCount = arrows.length
-    this.nodeCount = frame.nodes.length
+    this.nodeCount = renderedNodes.length
   }
 
   private draw(frame: FdGraphRenderFrame, drawsNodes: boolean): void {
     const context = this.context
     const programs = this.programs
     const buffers = this.buffers
-    if (!context || !programs || !buffers) return
+    const vertexArrays = this.vertexArrays
+    const locations = this.uniforms
+    if (!context || !programs || !buffers || !vertexArrays || !locations) return
     const width = Math.max(Math.ceil(frame.viewport.size.width * frame.pixelRatio), 1)
     const height = Math.max(Math.ceil(frame.viewport.size.height * frame.pixelRatio), 1)
     if (this.canvas.width !== width) this.canvas.width = width
@@ -596,47 +699,67 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
     }
     if (this.edgeCount > 0) {
       context.useProgram(programs.edge)
-      this.setCommonUniforms(context, programs.edge, uniforms)
+      this.setCommonUniforms(context, locations.edge, uniforms)
       const segmentCount = this.edgeSegmentCount(frame)
-      context.uniform1f(context.getUniformLocation(programs.edge, 'segmentCount'), segmentCount)
-      context.bindBuffer(context.ARRAY_BUFFER, buffers.edge)
-      this.configureAttribute(context, 0, 2, edgeStride, 0)
-      this.configureAttribute(context, 1, 2, edgeStride, 2)
-      this.configureAttribute(context, 2, 2, edgeStride, 4)
-      this.configureAttribute(context, 3, 2, edgeStride, 6)
-      this.configureAttribute(context, 4, 4, edgeStride, 8)
-      this.configureAttribute(context, 5, 1, edgeStride, 12)
-      this.configureAttribute(context, 6, 1, edgeStride, 13)
+      context.uniform1f(locations.edge.segmentCount, segmentCount)
+      context.bindVertexArray(vertexArrays.edge)
       context.drawArraysInstanced(context.TRIANGLES, 0, segmentCount * 6, this.edgeCount)
     }
     if (this.arrowCount > 0) {
       context.useProgram(programs.arrow)
-      this.setCommonUniforms(context, programs.arrow, uniforms)
+      this.setCommonUniforms(context, locations.arrow, uniforms)
       const segmentCount = this.arrowSegmentCount(frame)
-      context.uniform1f(context.getUniformLocation(programs.arrow, 'segmentCount'), segmentCount)
-      context.bindBuffer(context.ARRAY_BUFFER, buffers.arrow)
-      this.configureAttribute(context, 0, 2, arrowStride, 0)
-      this.configureAttribute(context, 1, 2, arrowStride, 2)
-      this.configureAttribute(context, 2, 2, arrowStride, 4)
-      this.configureAttribute(context, 3, 2, arrowStride, 6)
-      this.configureAttribute(context, 4, 4, arrowStride, 8)
+      context.uniform1f(locations.arrow.segmentCount, segmentCount)
+      context.bindVertexArray(vertexArrays.arrow)
       context.drawArraysInstanced(context.TRIANGLES, 0, segmentCount * 3 * 3, this.arrowCount)
     }
     if (drawsNodes && this.nodeCount > 0) {
       context.useProgram(programs.node)
-      this.setCommonUniforms(context, programs.node, uniforms)
-      context.bindBuffer(context.ARRAY_BUFFER, buffers.node)
-      this.configureAttribute(context, 0, 4, nodeStride, 0)
-      this.configureAttribute(context, 1, 4, nodeStride, 4)
-      this.configureAttribute(context, 2, 4, nodeStride, 8)
+      this.setCommonUniforms(context, locations.node, uniforms)
+      context.bindVertexArray(vertexArrays.node)
       context.drawArraysInstanced(context.TRIANGLES, 0, 6, this.nodeCount)
     }
+    context.bindVertexArray(null)
   }
 
   private edgeSegmentCount(frame: FdGraphRenderFrame): number {
     if (frame.edges.length > 50_000 || frame.viewport.transform.zoom < 0.12) return 4
     if (frame.edges.length > 10_000 || frame.viewport.transform.zoom < 0.35) return 8
     return 16
+  }
+
+  private uploadBuffer(
+    context: WebGL2RenderingContext,
+    buffer: WebGLBuffer,
+    kind: keyof FdGraphWebGL2BufferCapacities,
+    data: Float32Array,
+  ): void {
+    context.bindBuffer(context.ARRAY_BUFFER, buffer)
+    let requiresFullUpload = this.bufferContents[kind].length !== data.length
+    if (data.byteLength > this.bufferCapacities[kind]) {
+      const capacity = 2 ** Math.ceil(Math.log2(Math.max(data.byteLength, 1)))
+      context.bufferData(context.ARRAY_BUFFER, capacity, context.DYNAMIC_DRAW)
+      this.bufferCapacities[kind] = capacity
+      requiresFullUpload = true
+    }
+    if (data.length === 0) {
+      this.bufferContents[kind] = data
+      return
+    }
+    const previous = this.bufferContents[kind]
+    let start = 0
+    let end = data.length
+    if (!requiresFullUpload) {
+      while (start < end && previous[start] === data[start]) start += 1
+      if (start === end) return
+      while (end > start && previous[end - 1] === data[end - 1]) end -= 1
+    }
+    context.bufferSubData(
+      context.ARRAY_BUFFER,
+      start * Float32Array.BYTES_PER_ELEMENT,
+      data.subarray(start, end),
+    )
+    this.bufferContents[kind] = data
   }
 
   private arrowSegmentCount(frame: FdGraphRenderFrame): number {
@@ -666,7 +789,7 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
 
   private setCommonUniforms(
     context: WebGL2RenderingContext,
-    program: WebGLProgram,
+    locations: FdGraphWebGL2CommonUniforms,
     uniforms: {
       readonly worldOrigin: readonly [number, number]
       readonly viewportOrigin: readonly [number, number]
@@ -674,22 +797,26 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
       readonly zoom: number
     },
   ): void {
+    context.uniform2f(locations.worldOrigin, uniforms.worldOrigin[0], uniforms.worldOrigin[1])
     context.uniform2f(
-      context.getUniformLocation(program, 'worldOrigin'),
-      uniforms.worldOrigin[0],
-      uniforms.worldOrigin[1],
-    )
-    context.uniform2f(
-      context.getUniformLocation(program, 'viewportOrigin'),
+      locations.viewportOrigin,
       uniforms.viewportOrigin[0],
       uniforms.viewportOrigin[1],
     )
-    context.uniform2f(
-      context.getUniformLocation(program, 'viewportSize'),
-      uniforms.viewportSize[0],
-      uniforms.viewportSize[1],
-    )
-    context.uniform1f(context.getUniformLocation(program, 'zoom'), uniforms.zoom)
+    context.uniform2f(locations.viewportSize, uniforms.viewportSize[0], uniforms.viewportSize[1])
+    context.uniform1f(locations.zoom, uniforms.zoom)
+  }
+
+  private commonUniformLocations(
+    context: WebGL2RenderingContext,
+    program: WebGLProgram,
+  ): FdGraphWebGL2CommonUniforms {
+    return {
+      worldOrigin: context.getUniformLocation(program, 'worldOrigin'),
+      viewportOrigin: context.getUniformLocation(program, 'viewportOrigin'),
+      viewportSize: context.getUniformLocation(program, 'viewportSize'),
+      zoom: context.getUniformLocation(program, 'zoom'),
+    }
   }
 
   private cssColor(property: string, fallback: string): FdRGBA {
@@ -746,12 +873,25 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
       context.deleteBuffer(this.buffers.arrow)
       context.deleteBuffer(this.buffers.node)
     }
+    if (context && this.vertexArrays) {
+      context.deleteVertexArray(this.vertexArrays.edge)
+      context.deleteVertexArray(this.vertexArrays.arrow)
+      context.deleteVertexArray(this.vertexArrays.node)
+    }
     this.programs = undefined
     this.buffers = undefined
+    this.vertexArrays = undefined
+    this.uniforms = undefined
     this.context = undefined
     this.edgeCount = 0
     this.arrowCount = 0
     this.nodeCount = 0
+    this.bufferCapacities.edge = 0
+    this.bufferCapacities.arrow = 0
+    this.bufferCapacities.node = 0
+    this.bufferContents.edge = new Float32Array()
+    this.bufferContents.arrow = new Float32Array()
+    this.bufferContents.node = new Float32Array()
     this.canvas.removeEventListener('webglcontextlost', this.handleContextLost)
     this.canvas.removeEventListener('webglcontextrestored', this.handleContextRestored)
   }
@@ -761,6 +901,8 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
     this.context = undefined
     this.programs = undefined
     this.buffers = undefined
+    this.vertexArrays = undefined
+    this.uniforms = undefined
     this.activateFallback()
   }
 

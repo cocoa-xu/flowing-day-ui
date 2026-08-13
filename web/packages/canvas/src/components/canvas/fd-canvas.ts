@@ -92,6 +92,10 @@ export class FdCanvas extends LitElement {
       outline-offset: -2px;
     }
 
+    :host([interaction-mode='pan']) .viewport {
+      cursor: grab;
+    }
+
     .background {
       z-index: 0;
       pointer-events: none;
@@ -104,9 +108,8 @@ export class FdCanvas extends LitElement {
       left: 0;
       width: 1px;
       height: 1px;
-      transform: translate3d(0, 0, 0) scale(1);
+      transform: translate(0, 0) scale(1);
       transform-origin: 0 0;
-      will-change: transform;
     }
 
     .overlay {
@@ -617,7 +620,7 @@ export class FdCanvas extends LitElement {
     forceRenderRefresh: boolean,
   ): void {
     this.transformValue = this.clampedTransform(transform)
-    this.worldElement.style.transform = `translate3d(${this.transformValue.offset.x}px, ${this.transformValue.offset.y}px, 0) scale(${this.transformValue.zoom})`
+    this.worldElement.style.transform = `translate(${this.transformValue.offset.x}px, ${this.transformValue.offset.y}px) scale(${this.transformValue.zoom})`
     this.refreshRenderWorldRect(forceRenderRefresh)
     this.emitViewportChange(phase)
   }

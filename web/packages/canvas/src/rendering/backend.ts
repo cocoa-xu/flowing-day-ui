@@ -65,6 +65,7 @@ export interface FdGraphRenderPort {
 export interface FdGraphRenderFrame {
   readonly snapshotID: string | number
   readonly snapshotRevision: number
+  readonly geometryRevision: number
   readonly presentationRevision: number
   readonly viewport: FdCanvasViewport
   readonly renderWorldRect: FdCanvasRect

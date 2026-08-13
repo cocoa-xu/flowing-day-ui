@@ -11,11 +11,12 @@ import { defaultGraphEdgeGeometryResolver } from './edge-geometry.js'
 
 export interface FdGraphRenderGeometryInput {
   readonly snapshotRevision: number
-  readonly presentationRevision: number
+  readonly geometryRevision: number
   readonly nodes: readonly FdAnyGraphNode[]
   readonly edges: readonly FdAnyGraphEdge[]
   readonly selectedNodeIDs: ReadonlySet<FdGraphElementID>
   readonly selectedEdgeIDs: ReadonlySet<FdGraphElementID>
+  readonly hoveredNodeID?: FdGraphElementID
   readonly focusedElement?: FdGraphElementReference
   readonly nodeFrame: (node: FdAnyGraphNode) => FdCanvasRect
   readonly edgeEndpoint: (edge: FdAnyGraphEdge, endpoint: 'source' | 'target') => FdCanvasPoint
@@ -29,25 +30,25 @@ export interface FdGraphRenderGeometry {
 
 export class FdGraphRenderGeometryCache {
   private snapshotRevision = -1
-  private presentationRevision = -1
+  private geometryRevision = -1
   private geometry: FdGraphRenderGeometry = { nodes: [], edges: [] }
 
   resolve(input: FdGraphRenderGeometryInput): FdGraphRenderGeometry {
     if (
       input.snapshotRevision === this.snapshotRevision &&
-      input.presentationRevision === this.presentationRevision
+      input.geometryRevision === this.geometryRevision
     ) {
       return this.geometry
     }
     this.snapshotRevision = input.snapshotRevision
-    this.presentationRevision = input.presentationRevision
+    this.geometryRevision = input.geometryRevision
     this.geometry = {
       nodes: input.nodes.map((node) => ({
         node,
         frame: input.nodeFrame(node),
         selected: input.selectedNodeIDs.has(node.id),
         focused: input.focusedElement?.kind === 'node' && input.focusedElement.nodeID === node.id,
-        hovered: false,
+        hovered: input.hoveredNodeID === node.id,
       })),
       edges: input.edges.map((edge) => {
         const source = input.edgeEndpoint(edge, 'source')
@@ -72,7 +73,7 @@ export class FdGraphRenderGeometryCache {
 
   invalidate(): void {
     this.snapshotRevision = -1
-    this.presentationRevision = -1
+    this.geometryRevision = -1
     this.geometry = { nodes: [], edges: [] }
   }
 }
