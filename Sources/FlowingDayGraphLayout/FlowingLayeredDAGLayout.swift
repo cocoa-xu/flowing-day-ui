@@ -248,19 +248,26 @@ public struct FlowingLayoutInsets: Sendable, Equatable {
   }
 }
 
+public enum FlowingLayeredLayoutDirection: Sendable, Equatable {
+  case topToBottom
+  case leftToRight
+}
+
 public struct FlowingLayeredLayoutConfiguration: Sendable, Equatable {
   public let horizontalNodeSpacing: CGFloat
   public let verticalNodeSpacing: CGFloat
   public let componentSpacing: CGFloat
   public let canvasInsets: FlowingLayoutInsets
   public let minimumCanvasSize: CGSize
+  public let direction: FlowingLayeredLayoutDirection
 
   public init(
     horizontalNodeSpacing: CGFloat,
     verticalNodeSpacing: CGFloat,
     componentSpacing: CGFloat,
     canvasInsets: FlowingLayoutInsets,
-    minimumCanvasSize: CGSize
+    minimumCanvasSize: CGSize,
+    direction: FlowingLayeredLayoutDirection = .topToBottom
   ) {
     precondition(horizontalNodeSpacing.isFinite && horizontalNodeSpacing >= 0)
     precondition(verticalNodeSpacing.isFinite && verticalNodeSpacing >= 0)
@@ -274,6 +281,7 @@ public struct FlowingLayeredLayoutConfiguration: Sendable, Equatable {
     self.componentSpacing = componentSpacing
     self.canvasInsets = canvasInsets
     self.minimumCanvasSize = minimumCanvasSize
+    self.direction = direction
   }
 }
 
@@ -319,69 +327,68 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
       )
     }
 
-    var rankHeights: [Int: CGFloat] = [:]
+    var rankPrimarySizes: [Int: CGFloat] = [:]
     for nodeID in input.topology.nodeIDs {
       let rank = assignment.resolvedRank(for: nodeID)
-      rankHeights[rank] = max(
-        rankHeights[rank, default: 0],
-        input.resolvedSize(for: nodeID).height
+      rankPrimarySizes[rank] = max(
+        rankPrimarySizes[rank, default: 0],
+        primarySize(input.resolvedSize(for: nodeID))
       )
     }
-    let occupiedRanks = rankHeights.keys.sorted()
-    var rankOrigins: [Int: CGFloat] = [:]
-    var precedingHeights: CGFloat = 0
+    let occupiedRanks = rankPrimarySizes.keys.sorted()
+    var rankPrimaryOrigins: [Int: CGFloat] = [:]
+    var precedingPrimarySizes: CGFloat = 0
     for rank in occupiedRanks {
-      rankOrigins[rank] =
-        configuration.canvasInsets.top + CGFloat(rank) * configuration.verticalNodeSpacing
-        + precedingHeights
-      precedingHeights += rankHeights[rank, default: 0]
+      rankPrimaryOrigins[rank] = primaryLeadingInset + CGFloat(rank) * primarySpacing
+        + precedingPrimarySizes
+      precedingPrimarySizes += rankPrimarySizes[rank, default: 0]
     }
 
     var frameByNodeID: [Schema.NodeID: CGRect] = [:]
     frameByNodeID.reserveCapacity(input.topology.nodeIDs.count)
-    var componentX = configuration.canvasInsets.leading
+    var componentCrossOrigin = crossLeadingInset
 
     for component in ordering.components {
       try Task.checkCancellation()
-      let componentWidth =
+      let componentCrossSize =
         component.layers.map {
-          layerWidth(nodeIDs: $0.nodeIDs, input: input)
+          layerCrossSize(nodeIDs: $0.nodeIDs, input: input)
         }.max() ?? 0
 
       for layer in component.layers.reversed() {
-        let centers = layerCenters(
+        let centers = layerCrossCenters(
           nodeIDs: layer.nodeIDs,
-          componentX: componentX,
-          componentWidth: componentWidth,
+          componentCrossOrigin: componentCrossOrigin,
+          componentCrossSize: componentCrossSize,
           input: input,
           frames: frameByNodeID
         )
         for (nodeID, center) in zip(layer.nodeIDs, centers) {
           let size = input.resolvedSize(for: nodeID)
           let offset = input.resolvedPlacementOffset(for: nodeID)
-          frameByNodeID[nodeID] = CGRect(
-            x: center - size.width / 2 + offset.width,
-            y: rankOrigins[layer.rank, default: configuration.canvasInsets.top]
-              + (rankHeights[layer.rank, default: 0] - size.height) / 2 + offset.height,
-            width: size.width,
-            height: size.height
+          frameByNodeID[nodeID] = frame(
+            crossOrigin: center - crossSize(size) / 2,
+            primaryOrigin: rankPrimaryOrigins[layer.rank, default: primaryLeadingInset]
+              + (rankPrimarySizes[layer.rank, default: 0] - primarySize(size)) / 2,
+            size: size,
+            offset: offset
           )
         }
       }
-      componentX += componentWidth + configuration.componentSpacing
+      componentCrossOrigin += componentCrossSize + configuration.componentSpacing
     }
 
-    let measuredWidth =
-      componentX - configuration.componentSpacing + configuration.canvasInsets.trailing
+    let measuredCrossSize = componentCrossOrigin - configuration.componentSpacing
+      + crossTrailingInset
     let lastRank = occupiedRanks.last ?? 0
-    let measuredHeight =
-      rankOrigins[lastRank, default: configuration.canvasInsets.top]
-      + rankHeights[lastRank, default: 0] + configuration.canvasInsets.bottom
+    let measuredPrimarySize = rankPrimaryOrigins[lastRank, default: primaryLeadingInset]
+      + rankPrimarySizes[lastRank, default: 0] + primaryTrailingInset
+    let measuredSize = canvasSize(primary: measuredPrimarySize, cross: measuredCrossSize)
     let minimumBounds = CGRect(
       origin: .zero,
       size: CGSize(
-        width: max(measuredWidth, configuration.minimumCanvasSize.width),
-        height: max(measuredHeight, configuration.minimumCanvasSize.height)
+        width: max(measuredSize.width, configuration.minimumCanvasSize.width),
+        height: max(measuredSize.height, configuration.minimumCanvasSize.height)
       )
     )
     let contentBounds = frameByNodeID.values.reduce(minimumBounds) {
@@ -396,53 +403,52 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
     )
   }
 
-  private func layerWidth(
+  private func layerCrossSize(
     nodeIDs: [Schema.NodeID],
     input: FlowingGraphLayoutInput<Schema>
   ) -> CGFloat {
     guard !nodeIDs.isEmpty else { return 0 }
-    return nodeIDs.reduce(0) { $0 + input.resolvedSize(for: $1).width } + CGFloat(nodeIDs.count - 1)
-      * configuration.horizontalNodeSpacing
+    return nodeIDs.reduce(0) { $0 + crossSize(input.resolvedSize(for: $1)) }
+      + CGFloat(nodeIDs.count - 1) * crossSpacing
   }
 
-  private func layerCenters(
+  private func layerCrossCenters(
     nodeIDs: [Schema.NodeID],
-    componentX: CGFloat,
-    componentWidth: CGFloat,
+    componentCrossOrigin: CGFloat,
+    componentCrossSize: CGFloat,
     input: FlowingGraphLayoutInput<Schema>,
     frames: [Schema.NodeID: CGRect]
   ) -> [CGFloat] {
     guard !nodeIDs.isEmpty else { return [] }
-    let layerWidth = layerWidth(nodeIDs: nodeIDs, input: input)
-    var cursor = componentX + (componentWidth - layerWidth) / 2
+    let layerCrossSize = layerCrossSize(nodeIDs: nodeIDs, input: input)
+    var cursor = componentCrossOrigin + (componentCrossSize - layerCrossSize) / 2
     var defaultCenters: [CGFloat] = []
     defaultCenters.reserveCapacity(nodeIDs.count)
     for nodeID in nodeIDs {
-      let width = input.resolvedSize(for: nodeID).width
-      defaultCenters.append(cursor + width / 2)
-      cursor += width + configuration.horizontalNodeSpacing
+      let size = crossSize(input.resolvedSize(for: nodeID))
+      defaultCenters.append(cursor + size / 2)
+      cursor += size + crossSpacing
     }
     var centers = zip(nodeIDs, defaultCenters).map { nodeID, fallback in
       let childCenters = input.topology.directedSuccessorNodeIDs(of: nodeID)
-        .compactMap { frames[$0]?.midX }
+        .compactMap { frames[$0].map(crossMidpoint) }
       guard !childCenters.isEmpty else { return fallback }
       return childCenters.reduce(0, +) / CGFloat(childCenters.count)
     }
 
     if centers.count > 1 {
       for index in 1..<centers.count {
-        let previousWidth = input.resolvedSize(for: nodeIDs[index - 1]).width
-        let width = input.resolvedSize(for: nodeIDs[index]).width
-        let minimum =
-          centers[index - 1] + (previousWidth + width) / 2 + configuration.horizontalNodeSpacing
+        let previousSize = crossSize(input.resolvedSize(for: nodeIDs[index - 1]))
+        let size = crossSize(input.resolvedSize(for: nodeIDs[index]))
+        let minimum = centers[index - 1] + (previousSize + size) / 2 + crossSpacing
         centers[index] = max(centers[index], minimum)
       }
     }
 
-    let firstWidth = input.resolvedSize(for: nodeIDs[0]).width
-    let lastWidth = input.resolvedSize(for: nodeIDs[nodeIDs.count - 1]).width
-    let minimumCenter = componentX + firstWidth / 2
-    let maximumCenter = componentX + componentWidth - lastWidth / 2
+    let firstSize = crossSize(input.resolvedSize(for: nodeIDs[0]))
+    let lastSize = crossSize(input.resolvedSize(for: nodeIDs[nodeIDs.count - 1]))
+    let minimumCenter = componentCrossOrigin + firstSize / 2
+    let maximumCenter = componentCrossOrigin + componentCrossSize - lastSize / 2
     if centers[0] < minimumCenter {
       let adjustment = minimumCenter - centers[0]
       centers = centers.map { $0 + adjustment }
@@ -453,6 +459,100 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
     }
     guard centers[0] >= minimumCenter else { return defaultCenters }
     return centers
+  }
+
+  private var primarySpacing: CGFloat {
+    switch configuration.direction {
+    case .topToBottom: configuration.verticalNodeSpacing
+    case .leftToRight: configuration.horizontalNodeSpacing
+    }
+  }
+
+  private var crossSpacing: CGFloat {
+    switch configuration.direction {
+    case .topToBottom: configuration.horizontalNodeSpacing
+    case .leftToRight: configuration.verticalNodeSpacing
+    }
+  }
+
+  private var primaryLeadingInset: CGFloat {
+    switch configuration.direction {
+    case .topToBottom: configuration.canvasInsets.top
+    case .leftToRight: configuration.canvasInsets.leading
+    }
+  }
+
+  private var primaryTrailingInset: CGFloat {
+    switch configuration.direction {
+    case .topToBottom: configuration.canvasInsets.bottom
+    case .leftToRight: configuration.canvasInsets.trailing
+    }
+  }
+
+  private var crossLeadingInset: CGFloat {
+    switch configuration.direction {
+    case .topToBottom: configuration.canvasInsets.leading
+    case .leftToRight: configuration.canvasInsets.top
+    }
+  }
+
+  private var crossTrailingInset: CGFloat {
+    switch configuration.direction {
+    case .topToBottom: configuration.canvasInsets.trailing
+    case .leftToRight: configuration.canvasInsets.bottom
+    }
+  }
+
+  private func primarySize(_ size: CGSize) -> CGFloat {
+    switch configuration.direction {
+    case .topToBottom: size.height
+    case .leftToRight: size.width
+    }
+  }
+
+  private func crossSize(_ size: CGSize) -> CGFloat {
+    switch configuration.direction {
+    case .topToBottom: size.width
+    case .leftToRight: size.height
+    }
+  }
+
+  private func crossMidpoint(_ frame: CGRect) -> CGFloat {
+    switch configuration.direction {
+    case .topToBottom: frame.midX
+    case .leftToRight: frame.midY
+    }
+  }
+
+  private func frame(
+    crossOrigin: CGFloat,
+    primaryOrigin: CGFloat,
+    size: CGSize,
+    offset: CGSize
+  ) -> CGRect {
+    switch configuration.direction {
+    case .topToBottom:
+      CGRect(
+        x: crossOrigin + offset.width,
+        y: primaryOrigin + offset.height,
+        width: size.width,
+        height: size.height
+      )
+    case .leftToRight:
+      CGRect(
+        x: primaryOrigin + offset.width,
+        y: crossOrigin + offset.height,
+        width: size.width,
+        height: size.height
+      )
+    }
+  }
+
+  private func canvasSize(primary: CGFloat, cross: CGFloat) -> CGSize {
+    switch configuration.direction {
+    case .topToBottom: CGSize(width: cross, height: primary)
+    case .leftToRight: CGSize(width: primary, height: cross)
+    }
   }
 }
 

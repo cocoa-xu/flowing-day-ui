@@ -27,6 +27,68 @@ final class FlowingLayeredDAGLayoutTests: XCTestCase {
     XCTAssertEqual(narrow.size, CGSize(width: 80, height: 40))
   }
 
+  func testLayeredLayoutPlacesDescendantsToTheRightWhenConfigured() throws {
+    let horizontalConfiguration = FlowingLayeredLayoutConfiguration(
+      horizontalNodeSpacing: configuration.horizontalNodeSpacing,
+      verticalNodeSpacing: configuration.verticalNodeSpacing,
+      componentSpacing: configuration.componentSpacing,
+      canvasInsets: configuration.canvasInsets,
+      minimumCanvasSize: configuration.minimumCanvasSize,
+      direction: .leftToRight
+    )
+    let strategy = FlowingLayeredDAGLayout<LayoutSchema>(
+      configuration: horizontalConfiguration
+    )
+    let input = try makeInput(
+      nodeIDs: ["root", "tall", "short"],
+      edges: [edge("root", "tall"), edge("root", "short")],
+      strategy: strategy,
+      sizeResolver: VariableSizeResolver(
+        sizes: [
+          "root": CGSize(width: 100, height: 50),
+          "tall": CGSize(width: 180, height: 90),
+          "short": CGSize(width: 80, height: 40),
+        ]
+      )
+    )
+
+    let result = try strategy.layout(input)
+    let root = try XCTUnwrap(result.frame(for: "root"))
+    let tall = try XCTUnwrap(result.frame(for: "tall"))
+    let short = try XCTUnwrap(result.frame(for: "short"))
+
+    XCTAssertLessThan(root.maxX, tall.minX)
+    XCTAssertLessThan(root.maxX, short.minX)
+    XCTAssertEqual(tall.size, CGSize(width: 180, height: 90))
+    XCTAssertEqual(short.size, CGSize(width: 80, height: 40))
+  }
+
+  func testLayeredLayoutStacksDisconnectedHorizontalComponentsVertically() throws {
+    let horizontalConfiguration = FlowingLayeredLayoutConfiguration(
+      horizontalNodeSpacing: 30,
+      verticalNodeSpacing: 50,
+      componentSpacing: 70,
+      canvasInsets: FlowingLayoutInsets(horizontal: 20, vertical: 20),
+      minimumCanvasSize: .zero,
+      direction: .leftToRight
+    )
+    let strategy = FlowingLayeredDAGLayout<LayoutSchema>(
+      configuration: horizontalConfiguration
+    )
+    let input = try makeInput(
+      nodeIDs: ["first", "second"],
+      edges: [],
+      strategy: strategy
+    )
+
+    let result = try strategy.layout(input)
+    let first = try XCTUnwrap(result.frame(for: "first"))
+    let second = try XCTUnwrap(result.frame(for: "second"))
+
+    XCTAssertLessThan(first.maxY, second.minY)
+    XCTAssertEqual(second.minY - first.maxY, horizontalConfiguration.componentSpacing)
+  }
+
   func testLayeredLayoutIsStackSafeForTenThousandNodePath() throws {
     let nodeCount = 10_000
     let nodeIDs = (0..<nodeCount).map(String.init)
