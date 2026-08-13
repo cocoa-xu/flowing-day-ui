@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defaultGraphAccessibilityCommandResolver } from '../../accessibility/configuration.js'
-import type { FdGraphAccessibilityActionDetail } from '../../accessibility/events.js'
+import type { FdGraphCanvasAccessibilityRequestDetail } from '../../accessibility/events.js'
 import { FdGraphAccessibilitySnapshot } from '../../accessibility/snapshot.js'
 import type { FdCanvasPoint } from '../../geometry.js'
 import type {
@@ -1414,12 +1414,14 @@ describe('fd-graph-canvas accessibility', () => {
     ).toBe('Only Target')
   })
 
-  it('supports selection, activation, and keyboard movement without a pointer', async () => {
+  it('supports selection and keyboard movement without a pointer', async () => {
     const element = await mount()
     const surface = element.shadowRoot?.querySelector<HTMLElement>('.accessibility-surface')
-    const actions: FdGraphAccessibilityActionDetail[] = []
+    const requests: FdGraphCanvasAccessibilityRequestDetail[] = []
     applyFrameIntents(element)
-    element.addEventListener('fd-graph-accessibility-action', (event) => actions.push(event.detail))
+    element.addEventListener('fd-graph-canvas-accessibility-request', (event) =>
+      requests.push(event.detail),
+    )
     await element.updateComplete
 
     surface?.focus()
@@ -1429,12 +1431,7 @@ describe('fd-graph-canvas accessibility', () => {
     expect(element.snapshot.nodes[0]?.frame.x).toBe(41)
     dispatchKey(surface ?? element, 'Enter')
 
-    expect(actions.map(({ action }) => action.kind)).toEqual([
-      'focus',
-      'select',
-      'move',
-      'activate',
-    ])
+    expect(requests.map(({ kind }) => kind)).toEqual(['focus', 'select', 'move', 'select'])
   })
 
   it('navigates connected elements and dispatches consumer-defined accessibility actions', async () => {
@@ -1458,8 +1455,10 @@ describe('fd-graph-canvas accessibility', () => {
       }),
       edgeAccessibilityRepresentation: () => ({ kind: 'hidden' }),
     }
-    const actions: FdGraphAccessibilityActionDetail[] = []
-    element.addEventListener('fd-graph-accessibility-action', (event) => actions.push(event.detail))
+    const requests: FdGraphCanvasAccessibilityRequestDetail[] = []
+    element.addEventListener('fd-graph-canvas-accessibility-request', (event) =>
+      requests.push(event.detail),
+    )
     document.body.append(element)
     await element.updateComplete
     await nextFrame()
@@ -1473,9 +1472,10 @@ describe('fd-graph-canvas accessibility', () => {
 
     dispatchKey(surface ?? element, 'i')
 
-    expect(actions.at(-1)).toEqual({
+    expect(requests.at(-1)).toEqual({
+      kind: 'perform',
       element: { kind: 'node', nodeID: 'target' },
-      action: { kind: 'perform', action: 'inspect' },
+      action: 'inspect',
     })
     const targetRow = element.shadowRoot?.querySelector<HTMLElement>(
       '[data-fd-graph-accessibility-identifier="node-target"]',

@@ -59,7 +59,6 @@ export type FdGraphAccessibilityCommand =
   | { readonly kind: 'focusLast' }
   | { readonly kind: 'focusNextRelated' }
   | { readonly kind: 'select' }
-  | { readonly kind: 'activate' }
   | { readonly kind: 'perform'; readonly action: FdGraphCanvasElementAction }
   | {
       readonly kind: 'move'
@@ -143,8 +142,7 @@ export const defaultGraphAccessibilityCommandResolver: FdGraphAccessibilityComma
   if (primaryModifier) return undefined
   if (event.key === 'Home' && !event.shiftKey) return { kind: 'focusFirst' }
   if (event.key === 'End' && !event.shiftKey) return { kind: 'focusLast' }
-  if (event.key === ' ') return { kind: 'select' }
-  if (event.key === 'Enter') return { kind: 'activate' }
+  if (event.key === ' ' || event.key === 'Enter') return { kind: 'select' }
   return undefined
 }
 

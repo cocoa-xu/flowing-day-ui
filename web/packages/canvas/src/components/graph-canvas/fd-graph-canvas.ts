@@ -6,7 +6,10 @@ import {
   type FdResolvedGraphCanvasAccessibilityConfiguration,
   resolveGraphCanvasAccessibilityConfiguration,
 } from '../../accessibility/configuration.js'
-import type { FdGraphAccessibilityActionDetail } from '../../accessibility/events.js'
+import type {
+  FdGraphCanvasAccessibilityRequest,
+  FdGraphCanvasAccessibilityRequestDetail,
+} from '../../accessibility/events.js'
 import {
   createGraphAccessibilitySnapshot,
   FdGraphAccessibilitySnapshot,
@@ -1948,8 +1951,6 @@ export class FdGraphCanvas
         return this.focusNextRelatedAccessibilityElement(currentKey)
       case 'select':
         return this.selectAccessibilityElement(currentKey)
-      case 'activate':
-        return this.activateAccessibilityElement(currentKey)
       case 'perform':
         return this.performAccessibilityElementAction(currentKey, command.action)
       case 'move':
@@ -1968,7 +1969,7 @@ export class FdGraphCanvas
     if (!key || !this.resolvedAccessibilityConfiguration.capabilities.focusNavigation) return false
     const item = this.activeAccessibilitySnapshot.item(key)
     if (!item) return false
-    if (!this.dispatchAccessibilityAction(item.reference, { kind: 'focus' })) return true
+    if (!this.dispatchAccessibilityRequest({ kind: 'focus', element: item.reference })) return true
     this.accessibilityFocusedElementKey = key
     this.setFocusedElement(
       item.reference,
@@ -1984,16 +1985,8 @@ export class FdGraphCanvas
     if (!key || !this.resolvedAccessibilityConfiguration.capabilities.selection) return false
     const item = this.activeAccessibilitySnapshot.item(key)
     if (!item) return false
-    if (!this.dispatchAccessibilityAction(item.reference, { kind: 'select' })) return true
+    if (!this.dispatchAccessibilityRequest({ kind: 'select', element: item.reference })) return true
     return this.selectElementReference(item.reference, 'replace', 'accessibility')
-  }
-
-  private activateAccessibilityElement(key: string | undefined): boolean {
-    if (!key || !this.resolvedAccessibilityConfiguration.capabilities.elementActions) return false
-    const item = this.activeAccessibilitySnapshot.item(key)
-    if (!item) return false
-    if (!this.dispatchAccessibilityAction(item.reference, { kind: 'activate' })) return true
-    return item.kind !== 'node' || this.activateFocusedNode('accessibility')
   }
 
   private performAccessibilityElementAction(
@@ -2003,7 +1996,7 @@ export class FdGraphCanvas
     if (!key || !this.resolvedAccessibilityConfiguration.capabilities.elementActions) return false
     const item = this.activeAccessibilitySnapshot.item(key)
     if (!item?.description.actions?.some((candidate) => candidate.action === action)) return false
-    this.dispatchAccessibilityAction(item.reference, { kind: 'perform', action })
+    this.dispatchAccessibilityRequest({ kind: 'perform', element: item.reference, action })
     return true
   }
 
@@ -2016,7 +2009,14 @@ export class FdGraphCanvas
     const item = this.activeAccessibilitySnapshot.item(key)
     if (item?.reference.kind !== 'node') return false
     const nodeID = item.reference.nodeID
-    if (!this.dispatchAccessibilityAction(item.reference, { kind: 'move', direction, large })) {
+    if (
+      !this.dispatchAccessibilityRequest({
+        kind: 'move',
+        element: item.reference,
+        direction,
+        largeStep: large,
+      })
+    ) {
       return true
     }
     if (!this.selectedNodeIDs.has(nodeID)) {
@@ -2029,17 +2029,17 @@ export class FdGraphCanvas
     return this.nudgeKeyboardSelection(direction, large)
   }
 
-  private dispatchAccessibilityAction(
-    element: FdGraphAccessibilityActionDetail['element'],
-    action: FdGraphAccessibilityActionDetail['action'],
-  ): boolean {
+  private dispatchAccessibilityRequest(request: FdGraphCanvasAccessibilityRequest): boolean {
     return this.dispatchEvent(
-      new CustomEvent<FdGraphAccessibilityActionDetail>('fd-graph-accessibility-action', {
-        detail: { element, action },
-        bubbles: true,
-        composed: true,
-        cancelable: true,
-      }),
+      new CustomEvent<FdGraphCanvasAccessibilityRequestDetail>(
+        'fd-graph-canvas-accessibility-request',
+        {
+          detail: request,
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+        },
+      ),
     )
   }
 

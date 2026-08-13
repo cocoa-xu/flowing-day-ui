@@ -79,6 +79,14 @@ describe('graph accessibility configuration', () => {
         new KeyboardEvent('keydown', { key: 'ArrowRight', altKey: true }),
       ),
     ).toEqual({ kind: 'focusNextRelated' })
+    expect(
+      defaultGraphAccessibilityCommandResolver(new KeyboardEvent('keydown', { key: ' ' })),
+    ).toEqual({
+      kind: 'select',
+    })
+    expect(
+      defaultGraphAccessibilityCommandResolver(new KeyboardEvent('keydown', { key: 'Enter' })),
+    ).toEqual({ kind: 'select' })
     expect(() =>
       createGraphAccessibilitySnapshot(
         graph,
