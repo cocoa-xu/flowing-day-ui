@@ -20,7 +20,7 @@ export interface FdGraphCanvasConnectionEditingConfiguration {
   readonly rendersDefaultPreview?: boolean
 }
 
-export type FdGraphCanvasGridAxis = 'x' | 'y'
+export type FdGraphCanvasGridAxes = ReadonlySet<'x' | 'y'>
 export type FdGraphCanvasGridRoundingPolicy =
   | 'nearest'
   | 'down'
@@ -37,7 +37,7 @@ export interface FdGraphCanvasGridConfiguration {
   readonly origin?: FdCanvasPoint
   readonly majorCellSize: FdCanvasSize
   readonly subdivisions?: FdGraphCanvasGridSubdivisions
-  readonly enabledAxes?: ReadonlySet<FdGraphCanvasGridAxis>
+  readonly enabledAxes?: FdGraphCanvasGridAxes
   readonly roundingPolicy?: FdGraphCanvasGridRoundingPolicy
 }
 
@@ -46,15 +46,17 @@ export interface FdResolvedGraphCanvasGridConfiguration {
   readonly majorCellSize: FdCanvasSize
   readonly minorCellSize: FdCanvasSize
   readonly subdivisions: Required<FdGraphCanvasGridSubdivisions>
-  readonly enabledAxes: ReadonlySet<FdGraphCanvasGridAxis>
+  readonly enabledAxes: FdGraphCanvasGridAxes
   readonly roundingPolicy: FdGraphCanvasGridRoundingPolicy
 }
 
-export type FdGraphCanvasSnapTarget = 'alignment' | 'grid' | 'equalSpacing' | 'equalSize'
+export type FdGraphCanvasSnapTargets = ReadonlySet<
+  'alignment' | 'grid' | 'equalSpacing' | 'equalSize'
+>
 
 export interface FdGraphCanvasSnappingConfiguration {
   readonly isEnabled: boolean
-  readonly targets?: ReadonlySet<FdGraphCanvasSnapTarget>
+  readonly targets?: FdGraphCanvasSnapTargets
   readonly tolerance?: number
   readonly searchRadius?: number
   readonly maximumCandidates?: number

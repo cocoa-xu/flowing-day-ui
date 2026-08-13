@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  type FdGraphCanvasGridAxes,
+  type FdGraphCanvasSnapTargets,
   resolveGraphCanvasConfiguration,
   resolveGraphCanvasGridConfiguration,
 } from './configuration.js'
@@ -73,12 +75,18 @@ describe('graph canvas configuration', () => {
   })
 
   it('resolves and validates Swift-aligned grid values', () => {
+    const enabledAxes = new Set(['x'] as const) satisfies FdGraphCanvasGridAxes
+    const targets = new Set(['grid'] as const) satisfies FdGraphCanvasSnapTargets
+
+    expect(
+      resolveGraphCanvasConfiguration({ snapping: { isEnabled: true, targets } }).snapping.targets,
+    ).toEqual(targets)
     expect(
       resolveGraphCanvasGridConfiguration({
         origin: { x: 5, y: 10 },
         majorCellSize: { width: 80, height: 60 },
         subdivisions: { x: 4, y: 3 },
-        enabledAxes: new Set(['x']),
+        enabledAxes,
         roundingPolicy: 'down',
       }),
     ).toEqual({
