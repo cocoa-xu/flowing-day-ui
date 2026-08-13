@@ -339,7 +339,8 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
     var rankPrimaryOrigins: [Int: CGFloat] = [:]
     var precedingPrimarySizes: CGFloat = 0
     for rank in occupiedRanks {
-      rankPrimaryOrigins[rank] = primaryLeadingInset + CGFloat(rank) * primarySpacing
+      rankPrimaryOrigins[rank] =
+        primaryLeadingInset + CGFloat(rank) * primarySpacing
         + precedingPrimarySizes
       precedingPrimarySizes += rankPrimarySizes[rank, default: 0]
     }
@@ -378,10 +379,12 @@ extension FlowingCenteredLayerCoordinates: FlowingLayerCoordinateAssignmentStrat
       componentCrossOrigin += componentCrossSize + configuration.componentSpacing
     }
 
-    let measuredCrossSize = componentCrossOrigin - configuration.componentSpacing
+    let measuredCrossSize =
+      componentCrossOrigin - configuration.componentSpacing
       + crossTrailingInset
     let lastRank = occupiedRanks.last ?? 0
-    let measuredPrimarySize = rankPrimaryOrigins[lastRank, default: primaryLeadingInset]
+    let measuredPrimarySize =
+      rankPrimaryOrigins[lastRank, default: primaryLeadingInset]
       + rankPrimarySizes[lastRank, default: 0] + primaryTrailingInset
     let measuredSize = canvasSize(primary: measuredPrimarySize, cross: measuredCrossSize)
     let minimumBounds = CGRect(
