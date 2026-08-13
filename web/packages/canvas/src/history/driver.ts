@@ -77,11 +77,9 @@ export class FdGraphHistoryDriver<Change, Failure> {
     }
   }
 
-  register(transaction: FdGraphHistoryTransaction<Change>): boolean {
-    if (!this.allows(transaction.mode)) return false
+  register(transaction: FdGraphHistoryTransaction<Change>): void {
+    if (!this.allows(transaction.mode)) return
     if (!transaction.id.trim()) throw new RangeError('history transaction ID must not be empty')
-    if (!transaction.actionName.trim())
-      throw new RangeError('history action name must not be empty')
     this.registrationRevision += 1
     this.undoStack.push({
       transactionID: transaction.id,
@@ -89,10 +87,8 @@ export class FdGraphHistoryDriver<Change, Failure> {
       change: transaction.undoChange,
       reciprocal: transaction.redoChange,
     })
-    this.trim(this.undoStack)
     this.redoStack.length = 0
     this.notifyStateChange()
-    return true
   }
 
   async undo(): Promise<boolean> {
@@ -103,7 +99,7 @@ export class FdGraphHistoryDriver<Change, Failure> {
     return this.perform(this.redoStack, this.undoStack, 'redo')
   }
 
-  clear(): void {
+  removeAllActions(): void {
     this.registrationRevision += 1
     this.undoStack.length = 0
     this.redoStack.length = 0
@@ -150,7 +146,6 @@ export class FdGraphHistoryDriver<Change, Failure> {
         change: result.kind === 'appliedWithReciprocal' ? result.reciprocal : entry.reciprocal,
         reciprocal: entry.change,
       })
-      this.trim(destination)
     }
     this.notifyStateChange()
     return true
@@ -161,11 +156,6 @@ export class FdGraphHistoryDriver<Change, Failure> {
     return mode === 'local'
       ? this.configuration.capabilities.localUndoRedo
       : this.configuration.capabilities.collaborativeUndoRedo
-  }
-
-  private trim(stack: FdGraphHistoryEntry<Change>[]): void {
-    const excess = stack.length - this.configuration.maximumDepth
-    if (excess > 0) stack.splice(0, excess)
   }
 
   private notifyStateChange(): void {

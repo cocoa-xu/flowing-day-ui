@@ -58,10 +58,6 @@ export function resolveGraphCanvasHistoryConfiguration(
     ...resolveGraphHistoryConfiguration(configuration),
     mode,
     ...(configuration.apply ? { apply: configuration.apply } : {}),
-    actionName: (context) => {
-      const value = actionName(context).trim()
-      if (!value) throw new RangeError('graph history action name must not be empty')
-      return value
-    },
+    actionName,
   }
 }

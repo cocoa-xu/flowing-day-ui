@@ -33,24 +33,22 @@ describe('graph history driver', () => {
       apply: () => ({ kind: 'applied' }),
     })
 
-    expect(
-      driver.register({
-        id: 'local',
-        actionName: 'Local',
-        mode: 'local',
-        undoChange: 1,
-        redoChange: 2,
-      }),
-    ).toBe(false)
-    expect(
-      driver.register({
-        id: 'collaborative',
-        actionName: 'Collaborative',
-        mode: 'collaborative',
-        undoChange: 1,
-        redoChange: 2,
-      }),
-    ).toBe(true)
+    driver.register({
+      id: 'local',
+      actionName: 'Local',
+      mode: 'local',
+      undoChange: 1,
+      redoChange: 2,
+    })
+    expect(driver.canUndo).toBe(false)
+    driver.register({
+      id: 'collaborative',
+      actionName: 'Collaborative',
+      mode: 'collaborative',
+      undoChange: 1,
+      redoChange: 2,
+    })
+    expect(driver.canUndo).toBe(true)
   })
 
   it('reports rejected compensation without creating a redo entry', async () => {
@@ -95,9 +93,8 @@ describe('graph history driver', () => {
     expect(applied).toEqual([10, 99])
   })
 
-  it('bounds retained history and clears redo on a new edit', async () => {
+  it('retains history and clears redo on a new edit', async () => {
     const driver = new FdGraphHistoryDriver<number, string>({
-      configuration: { maximumDepth: 2 },
       apply: () => ({ kind: 'applied' }),
     })
     for (let index = 0; index < 3; index += 1) {
@@ -122,7 +119,27 @@ describe('graph history driver', () => {
     expect(driver.canRedo).toBe(false)
     await driver.undo()
     await driver.undo()
+    expect(driver.canUndo).toBe(true)
+    await driver.undo()
     expect(driver.canUndo).toBe(false)
+  })
+
+  it('removes all actions', () => {
+    const driver = new FdGraphHistoryDriver<number, string>({
+      apply: () => ({ kind: 'applied' }),
+    })
+    driver.register({
+      id: 'move',
+      actionName: 'Move Nodes',
+      mode: 'local',
+      undoChange: -1,
+      redoChange: 1,
+    })
+
+    driver.removeAllActions()
+
+    expect(driver.canUndo).toBe(false)
+    expect(driver.canRedo).toBe(false)
   })
 
   it('serializes asynchronous operations and does not restore invalidated redo', async () => {

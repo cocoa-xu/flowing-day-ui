@@ -5,14 +5,11 @@ export interface FdGraphHistoryCapabilities {
 }
 
 export interface FdGraphHistoryConfiguration {
-  readonly enabled?: boolean
-  readonly maximumDepth?: number
   readonly capabilities?: FdGraphHistoryCapabilities
 }
 
 export interface FdResolvedGraphHistoryConfiguration {
   readonly enabled: boolean
-  readonly maximumDepth: number
   readonly capabilities: Required<FdGraphHistoryCapabilities>
 }
 
@@ -51,17 +48,13 @@ export interface FdGraphHistoryState {
 export function resolveGraphHistoryConfiguration(
   configuration: FdGraphHistoryConfiguration = {},
 ): FdResolvedGraphHistoryConfiguration {
-  const maximumDepth = configuration.maximumDepth ?? 100
-  if (!Number.isInteger(maximumDepth) || maximumDepth <= 0) {
-    throw new RangeError('history maximum depth must be a positive integer')
+  const capabilities = {
+    localUndoRedo: configuration.capabilities?.localUndoRedo ?? true,
+    collaborativeUndoRedo: configuration.capabilities?.collaborativeUndoRedo ?? true,
+    conflictFeedback: configuration.capabilities?.conflictFeedback ?? true,
   }
   return {
-    enabled: configuration.enabled ?? true,
-    maximumDepth,
-    capabilities: {
-      localUndoRedo: configuration.capabilities?.localUndoRedo ?? true,
-      collaborativeUndoRedo: configuration.capabilities?.collaborativeUndoRedo ?? true,
-      conflictFeedback: configuration.capabilities?.conflictFeedback ?? true,
-    },
+    enabled: Object.values(capabilities).some(Boolean),
+    capabilities,
   }
 }

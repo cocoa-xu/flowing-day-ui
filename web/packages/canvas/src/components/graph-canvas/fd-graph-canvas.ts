@@ -956,7 +956,7 @@ export class FdGraphCanvas
   }
 
   clearHistory(): void {
-    this.historyDriver.clear()
+    this.historyDriver.removeAllActions()
   }
 
   performFocusedAccessibilityAction(action: FdGraphCanvasElementAction): boolean {
@@ -1757,8 +1757,6 @@ export class FdGraphCanvas
   > {
     return new FdGraphHistoryDriver({
       configuration: {
-        enabled: this.resolvedHistoryConfiguration.enabled,
-        maximumDepth: this.resolvedHistoryConfiguration.maximumDepth,
         capabilities: this.resolvedHistoryConfiguration.capabilities,
       },
       apply: (change, direction) => this.applyHistoryChange(change, direction),
