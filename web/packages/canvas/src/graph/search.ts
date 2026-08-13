@@ -1,6 +1,6 @@
 import { type FdGraphElementID, graphElementKey } from './model.js'
 
-export interface FdGraphSearchItem {
+export interface FdGraphCanvasSearchItem {
   readonly id: FdGraphElementID
   readonly title: string
   readonly subtitle?: string
@@ -8,29 +8,30 @@ export interface FdGraphSearchItem {
   readonly category?: string
 }
 
-export interface FdGraphSearchIndexLimits {
+export interface FdGraphCanvasSearchIndexLimits {
   readonly maximumItems?: number
   readonly maximumTextLength?: number
   readonly maximumKeywordsPerItem?: number
   readonly maximumIndexedCharacters?: number
 }
 
-export type FdGraphSearchIndexIssue =
+export type FdGraphCanvasSearchIndexIssue =
   | 'itemBudgetExceeded'
   | 'duplicateElementID'
   | 'textBudgetExceeded'
   | 'keywordBudgetExceeded'
   | 'characterBudgetExceeded'
 
-export class FdGraphSearchIndexError extends Error {
-  constructor(readonly issue: FdGraphSearchIndexIssue) {
+export class FdGraphCanvasSearchIndexError extends Error {
+  constructor(readonly issue: FdGraphCanvasSearchIndexIssue) {
     super(`Graph search index rejected its input: ${issue}`)
-    this.name = 'FdGraphSearchIndexError'
+    this.name = 'FdGraphCanvasSearchIndexError'
   }
 }
 
-export interface FdGraphSearchResult {
-  readonly item: FdGraphSearchItem
+export interface FdGraphCanvasSearchResult {
+  readonly id: FdGraphElementID
+  readonly item: FdGraphCanvasSearchItem
   readonly score: number
 }
 
@@ -42,7 +43,7 @@ interface FdResolvedGraphSearchIndexLimits {
 }
 
 interface FdIndexedGraphSearchItem {
-  readonly item: FdGraphSearchItem
+  readonly item: FdGraphCanvasSearchItem
   readonly title: string
   readonly titleTokens: readonly string[]
   readonly subtitle: string
@@ -53,7 +54,7 @@ interface FdIndexedGraphSearchItem {
 }
 
 interface FdRankedGraphSearchItem {
-  readonly result: FdGraphSearchResult
+  readonly result: FdGraphCanvasSearchResult
   readonly normalizedTitle: string
   readonly order: number
 }
@@ -98,7 +99,9 @@ const nonnegativeInteger = (value: number, name: string): number => {
   return value
 }
 
-const resolveLimits = (limits: FdGraphSearchIndexLimits): FdResolvedGraphSearchIndexLimits => ({
+const resolveLimits = (
+  limits: FdGraphCanvasSearchIndexLimits,
+): FdResolvedGraphSearchIndexLimits => ({
   maximumItems: positiveInteger(limits.maximumItems ?? defaultLimits.maximumItems, 'maximum items'),
   maximumTextLength: positiveInteger(
     limits.maximumTextLength ?? defaultLimits.maximumTextLength,
@@ -114,36 +117,41 @@ const resolveLimits = (limits: FdGraphSearchIndexLimits): FdResolvedGraphSearchI
   ),
 })
 
-export class FdGraphSearchIndex {
+export class FdGraphCanvasSearchIndex {
   private readonly items: readonly FdIndexedGraphSearchItem[]
   private readonly prefixPostings = new Map<string, number[]>()
   private readonly fragmentPostings = new Map<string, number[]>()
 
-  constructor(items: readonly FdGraphSearchItem[], limits: FdGraphSearchIndexLimits = {}) {
+  constructor(
+    items: readonly FdGraphCanvasSearchItem[],
+    limits: FdGraphCanvasSearchIndexLimits = {},
+  ) {
     const resolvedLimits = resolveLimits(limits)
     if (items.length > resolvedLimits.maximumItems) {
-      throw new FdGraphSearchIndexError('itemBudgetExceeded')
+      throw new FdGraphCanvasSearchIndexError('itemBudgetExceeded')
     }
 
     const identifiers = new Set<string>()
     let indexedCharacterCount = 0
     this.items = items.map((item, order) => {
       const identifier = graphElementKey(item.id)
-      if (identifiers.has(identifier)) throw new FdGraphSearchIndexError('duplicateElementID')
+      if (identifiers.has(identifier)) {
+        throw new FdGraphCanvasSearchIndexError('duplicateElementID')
+      }
       identifiers.add(identifier)
       const keywords = item.keywords ?? []
       if (keywords.length > resolvedLimits.maximumKeywordsPerItem) {
-        throw new FdGraphSearchIndexError('keywordBudgetExceeded')
+        throw new FdGraphCanvasSearchIndexError('keywordBudgetExceeded')
       }
       const values = [item.title, item.subtitle, item.category, ...keywords].filter(
         (value): value is string => value !== undefined,
       )
       if (values.some((value) => value.length > resolvedLimits.maximumTextLength)) {
-        throw new FdGraphSearchIndexError('textBudgetExceeded')
+        throw new FdGraphCanvasSearchIndexError('textBudgetExceeded')
       }
       indexedCharacterCount += values.reduce((total, value) => total + value.length, 0)
       if (indexedCharacterCount > resolvedLimits.maximumIndexedCharacters) {
-        throw new FdGraphSearchIndexError('characterBudgetExceeded')
+        throw new FdGraphCanvasSearchIndexError('characterBudgetExceeded')
       }
 
       const title = normalize(item.title)
@@ -179,7 +187,7 @@ export class FdGraphSearchIndex {
     })
   }
 
-  search(query: string, limit = 20): readonly FdGraphSearchResult[] {
+  search(query: string, limit = 20): readonly FdGraphCanvasSearchResult[] {
     if (!Number.isInteger(limit) || limit < 0) {
       throw new RangeError('graph search result limit must not be negative')
     }
@@ -200,7 +208,7 @@ export class FdGraphSearchIndex {
         continue
       }
       const candidate: FdRankedGraphSearchItem = {
-        result: { item: item.item, score: score(terms, item) },
+        result: { id: item.item.id, item: item.item, score: score(terms, item) },
         normalizedTitle: item.title,
         order: item.order,
       }

@@ -111,7 +111,7 @@ import {
   nextGraphKeyboardNodeID,
   resolveGraphCanvasKeyboardConfiguration,
 } from '../../interactions/keyboard.js'
-import type { FdGraphJumpToElementOptions } from '../../interactions/navigation.js'
+import type { FdGraphCanvasJumpToElementOptions } from '../../interactions/navigation.js'
 import {
   type FdGraphSelectionMode,
   graphCubicEdgeDistance,
@@ -1183,23 +1183,22 @@ export class FdGraphCanvas
     this.canvas.focusRect(node.frame, zoom, options)
   }
 
-  jumpToElement(nodeID: FdGraphElementID, options: FdGraphJumpToElementOptions = {}): boolean {
-    const node = this.index.nodes.get(nodeID)
-    if (!node) return false
+  jumpToElement(
+    element: FdGraphElementReference,
+    options: FdGraphCanvasJumpToElementOptions = {},
+  ): boolean {
+    const frame = this.elementFrame(element)
+    if (!frame) return false
     const selection = options.selection ?? 'replace'
     if (selection !== 'preserve' && this.resolvedInteractionConfiguration.selection !== 'none') {
-      const selectedNodeIDs =
-        selection === 'add' && this.resolvedInteractionConfiguration.selection === 'multiple'
-          ? new Set(this.selectedNodeIDs)
-          : new Set<FdGraphElementID>()
-      selectedNodeIDs.add(nodeID)
-      this.setSelection(selectedNodeIDs, selection === 'add' ? 'extend' : 'replace', {
-        phase: 'ended',
-        source: 'programmatic',
-      })
+      this.selectElementReference(
+        element,
+        selection === 'add' ? 'extend' : 'replace',
+        'programmatic',
+      )
     }
-    this.setFocusedNode(nodeID, 'programmatic', false, false)
-    this.canvas.focusRect(node.frame, options.zoom, { animated: options.animated ?? true })
+    this.setFocusedElement(element, 'programmatic', false)
+    this.canvas.focusRect(frame, options.zoom, { animated: options.animated ?? true })
     return true
   }
 

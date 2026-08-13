@@ -1,7 +1,7 @@
-export type FdGraphJumpSelectionBehavior = 'preserve' | 'replace' | 'add'
+export type FdGraphCanvasJumpSelectionBehavior = 'preserve' | 'replace' | 'add'
 
-export interface FdGraphJumpToElementOptions {
-  readonly selection?: FdGraphJumpSelectionBehavior
+export interface FdGraphCanvasJumpToElementOptions {
+  readonly selection?: FdGraphCanvasJumpSelectionBehavior
   readonly zoom?: number
   readonly animated?: boolean
 }

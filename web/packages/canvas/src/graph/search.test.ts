@@ -1,25 +1,29 @@
 import { describe, expect, it } from 'vitest'
-import { FdGraphSearchIndex, FdGraphSearchIndexError, type FdGraphSearchItem } from './search.js'
+import {
+  FdGraphCanvasSearchIndex,
+  FdGraphCanvasSearchIndexError,
+  type FdGraphCanvasSearchItem,
+} from './search.js'
 
 const item = (
   id: string | number,
   title: string,
-  options: Omit<FdGraphSearchItem, 'id' | 'title'> = {},
-): FdGraphSearchItem => ({ id, title, ...options })
+  options: Omit<FdGraphCanvasSearchItem, 'id' | 'title'> = {},
+): FdGraphCanvasSearchItem => ({ id, title, ...options })
 
 const rejectedIssue = (operation: () => unknown): string | undefined => {
   try {
     operation()
     return undefined
   } catch (error) {
-    if (error instanceof FdGraphSearchIndexError) return error.issue
+    if (error instanceof FdGraphCanvasSearchIndexError) return error.issue
     throw error
   }
 }
 
 describe('graph search index', () => {
   it('ranks exact titles before prefixes and metadata matches', () => {
-    const index = new FdGraphSearchIndex([
+    const index = new FdGraphCanvasSearchIndex([
       item('keyword', 'Adapter', { keywords: ['USB'] }),
       item('prefix', 'USB Hub'),
       item('exact', 'USB'),
@@ -27,17 +31,20 @@ describe('graph search index', () => {
       item('category', 'Controller', { category: 'USB' }),
     ])
 
-    expect(index.search('usb').map(({ item }) => item.id)).toEqual([
+    const results = index.search('usb')
+
+    expect(results.map(({ id }) => id)).toEqual([
       'exact',
       'prefix',
       'keyword',
       'subtitle',
       'category',
     ])
+    expect(results.map(({ item }) => item.id)).toEqual(results.map(({ id }) => id))
   })
 
   it('normalizes case and diacritics and supports multiple terms', () => {
-    const index = new FdGraphSearchIndex([
+    const index = new FdGraphCanvasSearchIndex([
       item('dock', 'Café Thunderbolt Dock'),
       item('display', 'Thunderbolt Display'),
     ])
@@ -46,7 +53,7 @@ describe('graph search index', () => {
   })
 
   it('supports short and interior substrings', () => {
-    const index = new FdGraphSearchIndex([
+    const index = new FdGraphCanvasSearchIndex([
       item('usb', 'USB Controller'),
       item('thunderbolt', 'Thunderbolt Bridge'),
     ])
@@ -56,7 +63,10 @@ describe('graph search index', () => {
   })
 
   it('uses presentation order for otherwise equivalent items and bounds results', () => {
-    const index = new FdGraphSearchIndex([item('second-id', 'Port'), item('first-id', 'Port')])
+    const index = new FdGraphCanvasSearchIndex([
+      item('second-id', 'Port'),
+      item('first-id', 'Port'),
+    ])
 
     expect(index.search('port').map(({ item }) => item.id)).toEqual(['second-id', 'first-id'])
     expect(index.search('port', 1).map(({ item }) => item.id)).toEqual(['second-id'])
@@ -64,9 +74,13 @@ describe('graph search index', () => {
   })
 
   it('keeps numeric and string identifiers distinct and rejects exact duplicates', () => {
-    expect(() => new FdGraphSearchIndex([item(1, 'Number'), item('1', 'String')])).not.toThrow()
     expect(
-      rejectedIssue(() => new FdGraphSearchIndex([item('same', 'First'), item('same', 'Second')])),
+      () => new FdGraphCanvasSearchIndex([item(1, 'Number'), item('1', 'String')]),
+    ).not.toThrow()
+    expect(
+      rejectedIssue(
+        () => new FdGraphCanvasSearchIndex([item('same', 'First'), item('same', 'Second')]),
+      ),
     ).toBe('duplicateElementID')
   })
 
@@ -84,14 +98,14 @@ describe('graph search index', () => {
       'characterBudgetExceeded',
     ],
   ] as const)('enforces independent input budgets', (limits, items, issue) => {
-    expect(rejectedIssue(() => new FdGraphSearchIndex(items, limits))).toBe(issue)
+    expect(rejectedIssue(() => new FdGraphCanvasSearchIndex(items, limits))).toBe(issue)
   })
 
   it('finds bounded results in one hundred thousand indexed items', () => {
     const items = Array.from({ length: 100_000 }, (_, index) =>
       item(index, `Element ${index}`, { keywords: index === 87_654 ? ['needle'] : [] }),
     )
-    const index = new FdGraphSearchIndex(items)
+    const index = new FdGraphCanvasSearchIndex(items)
 
     expect(index.search('needle').map(({ item }) => item.id)).toEqual([87_654])
     expect(index.search('87654').map(({ item }) => item.id)).toEqual([87_654])

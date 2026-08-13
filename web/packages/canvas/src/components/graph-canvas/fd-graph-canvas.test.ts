@@ -294,7 +294,7 @@ describe('fd-graph-canvas rendering boundary', () => {
     )
 
     expect(element.shadowRoot?.querySelector('.graph-edge-label')).toBeNull()
-    element.jumpToElement('target', { zoom: 1.4, animated: false })
+    element.jumpToElement(graphNodeReference('target'), { zoom: 1.4, animated: false })
     await nextFrame()
     await nextFrame()
 
@@ -1242,7 +1242,11 @@ describe('fd-graph-canvas navigation', () => {
     })
 
     expect(
-      element.jumpToElement('target', { selection: 'replace', zoom: 1.4, animated: false }),
+      element.jumpToElement(graphNodeReference('target'), {
+        selection: 'replace',
+        zoom: 1.4,
+        animated: false,
+      }),
     ).toBe(true)
 
     expect(element.selectedNodeIDs).toEqual(new Set(['target']))
@@ -1261,11 +1265,38 @@ describe('fd-graph-canvas navigation', () => {
     element.selectedNodeIDs = new Set(['source'])
     await element.updateComplete
 
-    expect(element.jumpToElement('target', { selection: 'preserve', animated: false })).toBe(true)
+    expect(
+      element.jumpToElement(graphNodeReference('target'), {
+        selection: 'preserve',
+        animated: false,
+      }),
+    ).toBe(true)
     expect(element.selectedNodeIDs).toEqual(new Set(['source']))
-    expect(element.jumpToElement('target', { selection: 'add', animated: false })).toBe(true)
+    expect(
+      element.jumpToElement(graphNodeReference('target'), {
+        selection: 'add',
+        animated: false,
+      }),
+    ).toBe(true)
     expect(element.selectedNodeIDs).toEqual(new Set(['source', 'target']))
-    expect(element.jumpToElement('missing')).toBe(false)
+    expect(element.jumpToElement(graphNodeReference('missing'))).toBe(false)
+  })
+
+  it('jumps to ports and edges through the same element boundary as Swift', async () => {
+    const element = await mount()
+    const output = graphPortReference('source', 'output')
+    const connection = graphEdgeReference('connection')
+
+    expect(element.jumpToElement(output, { animated: false })).toBe(true)
+    expect(element.selectedElements).toEqual([output])
+    expect(element.focusedElement).toEqual(output)
+
+    expect(element.jumpToElement(connection, { animated: false })).toBe(true)
+    expect(element.selectedElements).toEqual([connection])
+    expect(element.focusedElement).toEqual(connection)
+
+    expect(element.jumpToElement(graphPortReference('source', 'missing'))).toBe(false)
+    expect(element.jumpToElement(graphEdgeReference('missing'))).toBe(false)
   })
 })
 
