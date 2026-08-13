@@ -64,7 +64,7 @@
                 <fd-option value="open">Open</fd-option>
               </fd-connected-segmented-row>
               <fd-separator></fd-separator>
-              <fd-popup-row label="Language" value="english" min-width="168">
+              <fd-popup-row label="Language" value="english" minimum-control-width="168">
                 <fd-option value="english">English</fd-option>
                 <fd-option value="japanese">Japanese</fd-option>
                 <fd-option value="french">French</fd-option>
@@ -303,7 +303,7 @@
                   symbol="swatchpalette"
                   label="Accent"
                   value="petal"
-                  min-width="180"
+                  minimum-control-width="180"
                 ></fd-popup-row>
                 <fd-dependent-rows
                   id="all-accent-rows"
@@ -548,7 +548,11 @@
                 <fd-separator></fd-separator>
                 <fd-switch-row label="PreferencesSwitchRow" checked></fd-switch-row>
                 <fd-separator></fd-separator>
-                <fd-popup-row label="PreferencesPopupRow" value="two" min-width="180">
+                <fd-popup-row
+                  label="PreferencesPopupRow"
+                  value="two"
+                  minimum-control-width="180"
+                >
                   <fd-option value="one">One</fd-option>
                   <fd-option value="two">Two</fd-option>
                   <fd-option value="three">Three</fd-option>

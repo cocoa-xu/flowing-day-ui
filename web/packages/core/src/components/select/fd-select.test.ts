@@ -115,7 +115,9 @@ describe('fd-select metrics', () => {
   })
 
   it('never goes below the requested minimum width', async () => {
-    const element = await mount(`<fd-select min-width="240" value="hide">${OPTIONS}</fd-select>`)
+    const element = await mount(
+      `<fd-select minimum-width="240" value="hide">${OPTIONS}</fd-select>`,
+    )
     expect(button(element).getBoundingClientRect().width).toBe(240)
   })
 

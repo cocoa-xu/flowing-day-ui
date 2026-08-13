@@ -22,7 +22,7 @@ export class FdPopupRow extends FdElement {
 
   @property({ reflect: true }) value: string | null = null
 
-  @property({ type: Number, attribute: 'min-width' }) minWidth = 0
+  @property({ type: Number, attribute: 'minimum-control-width' }) minimumControlWidth = 0
 
   @property({ type: Boolean, reflect: true }) disabled = false
 
@@ -40,7 +40,7 @@ export class FdPopupRow extends FdElement {
         <fd-select
           slot="trailing"
           name=${this.name}
-          min-width=${this.minWidth}
+          .minimumWidth=${this.minimumControlWidth}
           .options=${this.options}
           .label=${this.label}
           .value=${this.value}

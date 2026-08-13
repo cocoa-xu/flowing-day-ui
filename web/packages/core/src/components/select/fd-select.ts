@@ -263,8 +263,7 @@ export class FdSelect extends FdElement {
 
   @property({ reflect: true }) value: string | null = null
 
-  /** `PreferencesPopupRow.minimumControlWidth`. */
-  @property({ type: Number, attribute: 'min-width' }) minWidth = 0
+  @property({ type: Number, attribute: 'minimum-width' }) minimumWidth = 0
 
   @property({ type: Boolean, reflect: true }) disabled = false
 
@@ -413,7 +412,7 @@ export class FdSelect extends FdElement {
 
     // Writing an unchanged value would resize the host again and leave the observer
     // looping for another frame.
-    const width = `${Math.max(this.minWidth, textWidth + 40)}px`
+    const width = `${Math.max(this.minimumWidth, textWidth + 40)}px`
     if (this.style.getPropertyValue('--_button-width') !== width) {
       this.style.setProperty('--_button-width', width)
     }
