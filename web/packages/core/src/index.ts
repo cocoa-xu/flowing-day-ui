@@ -123,6 +123,7 @@ export {
   FdMultiSelect,
   type FdMultiSelectAxis,
   type FdMultiSelectItemWidthPolicy,
+  type FdMultiSelectOption,
 } from './components/multi-select/fd-multi-select.js'
 export { FdMultiSelectRow } from './components/multi-select-row/fd-multi-select-row.js'
 export { FdOption } from './components/option/fd-option.js'

@@ -14,6 +14,25 @@ import '../option/fd-option.js'
 export type FdMultiSelectAxis = 'horizontal' | 'vertical'
 export type FdMultiSelectItemWidthPolicy = 'equal' | 'fitContent'
 
+export interface FdMultiSelectOption {
+  readonly id?: string
+  readonly label: string
+  readonly symbol?: string | null
+  readonly accent?: string | null
+  readonly isSelected?: boolean
+  readonly isEnabled?: boolean
+}
+
+interface ResolvedMultiSelectOption {
+  readonly value: string
+  readonly label: string
+  readonly symbol: string | null
+  readonly accent: string | null
+  readonly selected: boolean
+  readonly disabled: boolean
+  readonly element: FdOption | null
+}
+
 /**
  * The reusable counterpart to `FlowingMultiSelect`.
  *
@@ -90,13 +109,17 @@ export class FdMultiSelect extends FdElement {
 
   @property({ reflect: true }) name = ''
 
-  @state() private options: CollectedOption[] = []
+  @property({ attribute: false }) options: readonly FdMultiSelectOption[] = []
+
+  @state() private slottedOptions: CollectedOption[] = []
 
   readonly #internals: ElementInternals
 
   #slot: HTMLSlotElement | null = null
 
   #defaultSelections: Map<FdOption, boolean> | null = null
+
+  #defaultOptionSelections: readonly boolean[] | null = null
 
   constructor() {
     super()
@@ -112,7 +135,18 @@ export class FdMultiSelect extends FdElement {
   }
 
   get values(): string[] {
-    return this.options.filter((option) => option.selected).map((option) => option.value)
+    return this.#resolvedOptions.filter((option) => option.selected).map((option) => option.value)
+  }
+
+  override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed)
+    if (
+      changed.has('options') &&
+      this.options.length > 0 &&
+      this.#defaultOptionSelections === null
+    ) {
+      this.#defaultOptionSelections = this.options.map((option) => option.isSelected === true)
+    }
   }
 
   override updated(changed: PropertyValues<this>): void {
@@ -129,9 +163,17 @@ export class FdMultiSelect extends FdElement {
   }
 
   formResetCallback(): void {
+    if (this.options.length > 0 && this.#defaultOptionSelections) {
+      this.options = this.options.map((option, index) => ({
+        ...option,
+        isSelected: this.#defaultOptionSelections?.[index] ?? false,
+      }))
+      this.#syncFormValue()
+      return
+    }
     if (!this.#defaultSelections) return
     for (const [option, selected] of this.#defaultSelections) option.selected = selected
-    if (this.#slot) this.options = collectOptions(this.#slot)
+    if (this.#slot) this.slottedOptions = collectOptions(this.#slot)
     this.#syncFormValue()
   }
 
@@ -142,19 +184,26 @@ export class FdMultiSelect extends FdElement {
             state.getAll(this.name).filter((value): value is string => typeof value === 'string'),
           )
         : new Set(typeof state === 'string' ? [state] : [])
-    for (const option of this.options) option.element.selected = values.has(option.value)
-    if (this.#slot) this.options = collectOptions(this.#slot)
+    if (this.options.length > 0) {
+      this.options = this.options.map((option) => ({
+        ...option,
+        isSelected: values.has(option.id ?? option.label),
+      }))
+      return
+    }
+    for (const option of this.slottedOptions) option.element.selected = values.has(option.value)
+    if (this.#slot) this.slottedOptions = collectOptions(this.#slot)
   }
 
   #onSlotChange = (event: Event): void => {
     this.#slot = event.target as HTMLSlotElement
-    this.options = collectOptions(this.#slot)
-    const currentElements = new Set(this.options.map((option) => option.element))
+    this.slottedOptions = collectOptions(this.#slot)
+    const currentElements = new Set(this.slottedOptions.map((option) => option.element))
     this.#defaultSelections ??= new Map()
     for (const option of this.#defaultSelections.keys()) {
       if (!currentElements.has(option)) this.#defaultSelections.delete(option)
     }
-    for (const option of this.options) {
+    for (const option of this.slottedOptions) {
       if (!this.#defaultSelections.has(option.element)) {
         this.#defaultSelections.set(option.element, option.selected)
       }
@@ -163,16 +212,23 @@ export class FdMultiSelect extends FdElement {
 
   #toggle(event: CustomEvent, index: number): void {
     event.stopPropagation()
-    const option = this.options[index]
+    const option = this.#resolvedOptions[index]
     if (!option || this.disabled || option.disabled) return
 
-    option.element.selected = event.detail.checked === true
-    if (this.#slot) this.options = collectOptions(this.#slot)
+    const selected = event.detail.checked === true
+    if (this.options.length > 0) {
+      this.options = this.options.map((candidate, candidateIndex) =>
+        candidateIndex === index ? { ...candidate, isSelected: selected } : candidate,
+      )
+    } else if (option.element) {
+      option.element.selected = selected
+      if (this.#slot) this.slottedOptions = collectOptions(this.#slot)
+    }
     this.dispatchEvent(
       new CustomEvent('fd-change', {
         detail: {
           value: option.value,
-          selected: option.element.selected,
+          selected,
           values: this.values,
         },
         bubbles: true,
@@ -191,7 +247,7 @@ export class FdMultiSelect extends FdElement {
         aria-label=${this.label}
         style="--_spacing: ${spacing}px"
       >
-        ${this.options.map(
+        ${this.#resolvedOptions.map(
           (option, index) => html`
             <fd-checkbox
               exportparts="button: option, indicator"
@@ -212,6 +268,20 @@ export class FdMultiSelect extends FdElement {
       </div>
       <slot hidden @slotchange=${this.#onSlotChange}></slot>
     `
+  }
+
+  get #resolvedOptions(): ResolvedMultiSelectOption[] {
+    return this.options.length > 0
+      ? this.options.map((option) => ({
+          value: option.id ?? option.label,
+          label: option.label,
+          symbol: option.symbol ?? null,
+          accent: option.accent ?? null,
+          selected: option.isSelected === true,
+          disabled: option.isEnabled === false,
+          element: null,
+        }))
+      : this.slottedOptions
   }
 }
 
