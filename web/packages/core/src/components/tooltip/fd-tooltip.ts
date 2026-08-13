@@ -4,7 +4,7 @@ import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { type FdEdge, positionOverlay } from '../../internal/overlay-position.js'
 import '../tooltip-content/fd-tooltip-content.js'
 
-const DEFAULT_TOOLTIP_DELAY = 0.65
+export const FdTooltipDefaults = Object.freeze({ delay: 0.65 })
 const TOOLTIP_GAP = 7
 const TOOLTIP_MARGIN = 8
 let tooltipInstance = 0
@@ -48,8 +48,6 @@ export class FdTooltip extends FdElement {
     `,
   ]
 
-  static readonly defaultDelay = DEFAULT_TOOLTIP_DELAY
-
   @property({ reflect: true, attribute: 'accessibility-text' }) accessibilityText = ''
 
   @property({ reflect: true }) message = ''
@@ -60,7 +58,7 @@ export class FdTooltip extends FdElement {
 
   @property({ reflect: true, attribute: 'arrow-edge' }) arrowEdge: FdEdge = 'top'
 
-  @property({ type: Number }) delay = DEFAULT_TOOLTIP_DELAY
+  @property({ type: Number }) delay = FdTooltipDefaults.delay
 
   @property({ type: Boolean, reflect: true }) open = false
 
@@ -128,7 +126,7 @@ export class FdTooltip extends FdElement {
 
   #onEnter = (): void => {
     this.#cancelTimer()
-    const delay = Number.isFinite(this.delay) ? Math.max(0, this.delay) : DEFAULT_TOOLTIP_DELAY
+    const delay = Number.isFinite(this.delay) ? Math.max(0, this.delay) : FdTooltipDefaults.delay
     this.#timer = window.setTimeout(() => {
       this.#timer = null
       this.open = true

@@ -178,7 +178,7 @@ export {
 export { FdTag } from './components/tag/fd-tag.js'
 export { FdTextArea } from './components/text-area/fd-text-area.js'
 export { FdTextField } from './components/text-field/fd-text-field.js'
-export { FdTooltip } from './components/tooltip/fd-tooltip.js'
+export { FdTooltip, FdTooltipDefaults } from './components/tooltip/fd-tooltip.js'
 export { FdTooltipContent } from './components/tooltip-content/fd-tooltip-content.js'
 export { FdValueRow } from './components/value-row/fd-value-row.js'
 export { FdValueText, type FdValueTextTruncation } from './components/value-text/fd-value-text.js'

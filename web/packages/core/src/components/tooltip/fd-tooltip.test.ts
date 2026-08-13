@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { FdTooltip } from './fd-tooltip.js'
+import { type FdTooltip, FdTooltipDefaults } from './fd-tooltip.js'
 
 async function mount(markup: string): Promise<FdTooltip> {
   const host = document.createElement('div')
@@ -24,7 +24,7 @@ afterEach(() => {
 
 describe('fd-tooltip timing', () => {
   it('uses the same deliberate delay as SwiftUI', () => {
-    expect(FdTooltip.defaultDelay).toBe(0.65)
+    expect(FdTooltipDefaults.delay).toBe(0.65)
   })
 
   it('opens after hover delay and closes on pointer exit', async () => {
