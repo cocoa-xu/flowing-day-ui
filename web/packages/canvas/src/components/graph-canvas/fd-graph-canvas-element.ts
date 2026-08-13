@@ -13,13 +13,20 @@ import {
   type FdGraphCanvasConfiguration,
   resolveGraphCanvasConfiguration,
 } from '../../graph/configuration.js'
-import type { FdGraphFocusChangeDetail, FdGraphSelectionChangeDetail } from '../../graph/events.js'
+import type { FdGraphCanvasContent } from '../../graph/content.js'
+import { FdGraphCanvasSmartMagnifyContext } from '../../graph/contexts.js'
+import type {
+  FdGraphConnectionCancelDetail,
+  FdGraphConnectionCompleteDetail,
+  FdGraphConnectionPreviewChangeDetail,
+  FdGraphFocusChangeDetail,
+  FdGraphNodeFramesChangeDetail,
+  FdGraphSelectionChangeDetail,
+} from '../../graph/events.js'
 import {
   FdGraphCanvasInteractionPolicy,
   FdGraphCanvasNodeCapabilities,
 } from '../../graph/interaction-policy.js'
-import type { FdGraphCanvasContent } from '../../graph/content.js'
-import { FdGraphCanvasSmartMagnifyContext } from '../../graph/contexts.js'
 import type { FdGraphElementID, FdGraphElementReference } from '../../graph/model.js'
 import { graphEdgeReference, graphNodeReference, graphPortReference } from '../../graph/model.js'
 import {
@@ -43,6 +50,15 @@ import { sameLayoutInputID } from '../../layout/model.js'
 import type { FdGraphCanvasEngine } from './fd-graph-canvas.js'
 import './fd-graph-canvas.js'
 import { graphCanvasEngineSnapshot } from './engine-adapter.js'
+import {
+  graphCanvasConnectionCancellationIntent,
+  graphCanvasConnectionCompletionIntent,
+  graphCanvasNodeDragIntent,
+  graphCanvasNodeResizeIntent,
+  graphCanvasTransientConnection,
+  graphCanvasTransientNodeDrag,
+  graphCanvasTransientNodeResize,
+} from './engine-interaction-adapter.js'
 
 @customElement('fd-graph-canvas')
 export class FdGraphCanvas<
@@ -105,6 +121,10 @@ export class FdGraphCanvas<
         .focusedElement=${this.elementReference(this.session.focusedElementID)}
         @fd-graph-selection-change=${this.handleSelectionChange}
         @fd-graph-focus-change=${this.handleFocusChange}
+        @fd-graph-node-frames-change=${this.handleNodeFramesChange}
+        @fd-graph-connection-preview-change=${this.handleConnectionPreviewChange}
+        @fd-graph-connection-complete=${this.handleConnectionComplete}
+        @fd-graph-connection-cancel=${this.handleConnectionCancel}
         @fd-smart-magnify=${this.handleSmartMagnify}
         @fd-viewport-change=${this.handleViewportChange}
       >
@@ -176,6 +196,18 @@ export class FdGraphCanvas<
     engine.tool = this.session.tool
     engine.selectedElements = this.elementReferences(this.session.selection)
     engine.focusedElement = this.elementReference(this.session.focusedElementID)
+    const viewport = this.session.viewport
+    if (
+      viewport.size.width > 0 &&
+      viewport.size.height > 0 &&
+      (engine.viewport.transform.zoom !== viewport.transform.zoom ||
+        engine.viewport.transform.offset.x !== viewport.transform.offset.x ||
+        engine.viewport.transform.offset.y !== viewport.transform.offset.y)
+    ) {
+      engine.anchor({ x: 0, y: 0 }, viewport.transform.offset, viewport.transform.zoom, {
+        animated: false,
+      })
+    }
   }
 
   private handleCommand(command: FdGraphCanvasSessionCommand<ElementID> | undefined): void {
@@ -224,12 +256,7 @@ export class FdGraphCanvas<
         }
         break
       case 'restoreViewport':
-        engine.anchor(
-          { x: 0, y: 0 },
-          action.transform.offset,
-          action.transform.zoom,
-          options,
-        )
+        engine.anchor({ x: 0, y: 0 }, action.transform.offset, action.transform.zoom, options)
         break
       case 'select':
         FdGraphCanvasSessionReducer.apply(
@@ -335,6 +362,84 @@ export class FdGraphCanvas<
     this.session.focusedElementID = event.detail.focusedElement
       ? this.elementID(event.detail.focusedElement)
       : undefined
+  }
+
+  private handleNodeFramesChange = (event: CustomEvent<FdGraphNodeFramesChangeDetail>): void => {
+    event.stopPropagation()
+    const content = this.content
+    const interaction = this.engine?.activeNodeInteraction
+    if (!content || event.detail.snapshotID !== content.presentation.snapshotID) return
+    if (event.detail.phase === 'continuous') {
+      if (!interaction) return
+      if (interaction.kind === 'move') {
+        this.session.transientNodeDrag = graphCanvasTransientNodeDrag(content, interaction)
+        this.session.transientNodeResize = undefined
+      } else {
+        this.session.transientNodeResize = graphCanvasTransientNodeResize(content, interaction)
+        this.session.transientNodeDrag = undefined
+      }
+      return
+    }
+    if (event.detail.kind === 'drag' || event.detail.kind === 'keyboard') {
+      const intent = graphCanvasNodeDragIntent(
+        content,
+        event.detail,
+        this.session.transientNodeDrag,
+        this.engine?.focusedNodeID,
+      )
+      if (intent) this.onIntent({ kind: 'nodeDragCompleted', intent })
+      this.session.transientNodeDrag = undefined
+    } else if (event.detail.kind === 'resize' && this.session.transientNodeResize) {
+      const intent = graphCanvasNodeResizeIntent(
+        content,
+        event.detail,
+        this.session.transientNodeResize,
+      )
+      if (intent) this.onIntent({ kind: 'nodeResizeCompleted', intent })
+      this.session.transientNodeResize = undefined
+    }
+  }
+
+  private handleConnectionPreviewChange = (
+    event: CustomEvent<FdGraphConnectionPreviewChangeDetail>,
+  ): void => {
+    event.stopPropagation()
+    const content = this.content
+    const connection = event.detail.connection
+    if (!content) {
+      this.session.transientConnection = undefined
+      return
+    }
+    if (!connection) return
+    this.session.transientConnection = graphCanvasTransientConnection(content, connection)
+  }
+
+  private handleConnectionComplete = (
+    event: CustomEvent<FdGraphConnectionCompleteDetail>,
+  ): void => {
+    event.stopPropagation()
+    const content = this.content
+    if (!content) return
+    const intent = graphCanvasConnectionCompletionIntent(
+      content,
+      event.detail,
+      this.session.transientConnection,
+    )
+    if (intent) this.onIntent({ kind: 'connectionCompleted', intent })
+    this.session.transientConnection = undefined
+  }
+
+  private handleConnectionCancel = (event: CustomEvent<FdGraphConnectionCancelDetail>): void => {
+    event.stopPropagation()
+    const content = this.content
+    if (!content) return
+    const intent = graphCanvasConnectionCancellationIntent(
+      content,
+      event.detail,
+      this.session.transientConnection,
+    )
+    if (intent) this.onIntent({ kind: 'connectionCancelled', intent })
+    this.session.transientConnection = undefined
   }
 
   private handleSmartMagnify = (event: CustomEvent<FdCanvasSmartMagnifyContext>): void => {

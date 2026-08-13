@@ -7,6 +7,7 @@ import {
   FdGraphPresentation,
   FdGraphPresentationLocalElementID,
 } from '../../graph/presentation.js'
+import { FdGraphCanvasSnapState } from '../../interactions/arrangement.js'
 import {
   FdGraphCanvasSessionCommand,
   FdGraphCanvasSessionID,
@@ -27,8 +28,9 @@ import {
   FdGraphNodePlacement,
 } from '../../layout/pipeline.js'
 import { graphCanvasEngineSnapshot } from './engine-adapter.js'
-import { FdGraphCanvas } from './fd-graph-canvas-element.js'
 import type { FdGraphCanvasEngine } from './fd-graph-canvas.js'
+import type { FdGraphCanvas } from './fd-graph-canvas-element.js'
+import './fd-graph-canvas-element.js'
 import { FdGraphCanvasPresentationResolver } from './presentation-resolver.js'
 
 afterEach(() => document.body.replaceChildren())
@@ -309,11 +311,9 @@ describe('graph canvas presentation resolver', () => {
 
     expect(element.session.focusedElementID).toBe('target')
     expect(element.session.selection).toEqual(new Set(['target']))
-    expect(focusRect).toHaveBeenCalledWith(
-      { x: 240, y: 0, width: 100, height: 80 },
-      1.4,
-      { animated: false },
-    )
+    expect(focusRect).toHaveBeenCalledWith({ x: 240, y: 0, width: 100, height: 80 }, 1.4, {
+      animated: false,
+    })
 
     element.command = new FdGraphCanvasSessionCommand(
       sessionID,
@@ -331,12 +331,9 @@ describe('graph canvas presentation resolver', () => {
       'fit',
     )
     await element.updateComplete
-    expect(fitRect).toHaveBeenCalledWith(
-      { x: 0, y: 0, width: 100, height: 80 },
-      32,
-      2,
-      { animated: true },
-    )
+    expect(fitRect).toHaveBeenCalledWith({ x: 0, y: 0, width: 100, height: 80 }, 32, 2, {
+      animated: true,
+    })
 
     element.command = new FdGraphCanvasSessionCommand(
       sessionID,
@@ -388,9 +385,7 @@ describe('graph canvas presentation resolver', () => {
       kind: 'nodeArrangementRequested',
       intent: expect.objectContaining({
         action: { kind: 'align', alignment: 'leading' },
-        translations: new Map([
-          ['target', { width: -240, height: 0 }],
-        ]),
+        translations: new Map([['target', { width: -240, height: 0 }]]),
         basePresentationSnapshotID: 'presentation',
         baseLayoutInputID: content.id,
       }),
@@ -418,6 +413,260 @@ describe('graph canvas presentation resolver', () => {
     expect(element.session.focusedElementID).toBeUndefined()
     expect(element.session.hoveredElementID).toBeUndefined()
     expect(element.session.transientNodeDrag).toBeUndefined()
+  })
+
+  it('projects private drag interaction state into the session and emits a canonical intent', async () => {
+    const content = makeContent()
+    const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
+    element.content = content
+    const onIntent = vi.fn()
+    element.onIntent = onIntent
+    document.body.append(element)
+    await element.updateComplete
+    const engine = element.shadowRoot?.querySelector(
+      'fd-graph-canvas-engine',
+    ) as FdGraphCanvasEngine
+    const before = { x: 0, y: 0, width: 100, height: 80 }
+    const after = { x: 24, y: 0, width: 100, height: 80 }
+    vi.spyOn(engine, 'activeNodeInteraction', 'get').mockReturnValue({
+      kind: 'move',
+      anchorNodeID: 'source',
+      baseFrames: new Map([['source', before]]),
+      baseBounds: before,
+      latestFrames: new Map([['source', after]]),
+      guides: [],
+      snapState: new FdGraphCanvasSnapState(),
+      constrainedAxis: 'horizontal',
+    })
+    const detail = {
+      transactionID: 'drag',
+      snapshotID: 'presentation',
+      kind: 'drag' as const,
+      changes: [{ nodeID: 'source', before, after }],
+    }
+
+    engine.dispatchEvent(
+      new CustomEvent('fd-graph-node-frames-change', {
+        detail: { ...detail, phase: 'continuous' },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+    expect(element.session.transientNodeDrag).toEqual(
+      expect.objectContaining({
+        nodeID: 'source',
+        nodeIDs: new Set(['source']),
+        translation: { width: 24, height: 0 },
+        constrainedAxis: 'horizontal',
+        baseLayoutInputID: content.id,
+      }),
+    )
+
+    engine.dispatchEvent(
+      new CustomEvent('fd-graph-node-frames-change', {
+        detail: { ...detail, phase: 'ended' },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+    expect(onIntent).toHaveBeenCalledWith({
+      kind: 'nodeDragCompleted',
+      intent: expect.objectContaining({
+        nodeID: 'source',
+        nodeIDs: new Set(['source']),
+        translation: { width: 24, height: 0 },
+        basePresentationSnapshotID: 'presentation',
+        baseLayoutInputID: content.id,
+      }),
+    })
+    expect(element.session.transientNodeDrag).toBeUndefined()
+  })
+
+  it('projects private resize interaction state into the session and emits a canonical intent', async () => {
+    const content = makeContent()
+    const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
+    element.content = content
+    const onIntent = vi.fn()
+    element.onIntent = onIntent
+    document.body.append(element)
+    await element.updateComplete
+    const engine = element.shadowRoot?.querySelector(
+      'fd-graph-canvas-engine',
+    ) as FdGraphCanvasEngine
+    const before = { x: 0, y: 0, width: 100, height: 80 }
+    const after = { x: 0, y: 0, width: 140, height: 100 }
+    vi.spyOn(engine, 'activeNodeInteraction', 'get').mockReturnValue({
+      kind: 'resize',
+      anchorNodeID: 'source',
+      baseFrames: new Map([['source', before]]),
+      baseBounds: before,
+      latestFrames: new Map([['source', after]]),
+      minimumBoundsSize: { width: 44, height: 32 },
+      edges: new Set(['trailing', 'bottom']),
+      guides: [],
+      snapState: new FdGraphCanvasSnapState(),
+      aspectRatioDrivingAxis: 'horizontal',
+    })
+    const detail = {
+      transactionID: 'resize',
+      snapshotID: 'presentation',
+      kind: 'resize' as const,
+      changes: [{ nodeID: 'source', before, after }],
+    }
+
+    engine.dispatchEvent(
+      new CustomEvent('fd-graph-node-frames-change', {
+        detail: { ...detail, phase: 'continuous' },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+    expect(element.session.transientNodeResize).toEqual(
+      expect.objectContaining({
+        anchorNodeID: 'source',
+        nodeOrder: ['source'],
+        bounds: after,
+        edges: new Set(['trailing', 'bottom']),
+        aspectRatioDrivingAxis: 'horizontal',
+        baseLayoutInputID: content.id,
+      }),
+    )
+
+    engine.dispatchEvent(
+      new CustomEvent('fd-graph-node-frames-change', {
+        detail: { ...detail, phase: 'ended' },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+    expect(onIntent).toHaveBeenCalledWith({
+      kind: 'nodeResizeCompleted',
+      intent: expect.objectContaining({
+        anchorNodeID: 'source',
+        changes: [
+          expect.objectContaining({
+            nodeID: 'source',
+            originTranslation: { width: 0, height: 0 },
+            sizeDelta: { width: 40, height: 20 },
+          }),
+        ],
+        edges: new Set(['trailing', 'bottom']),
+        baseLayoutInputID: content.id,
+      }),
+    })
+    expect(element.session.transientNodeResize).toBeUndefined()
+  })
+
+  it('projects connection state and emits canonical completion and cancellation intents', async () => {
+    const content = makeContent()
+    const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
+    element.content = content
+    const onIntent = vi.fn()
+    element.onIntent = onIntent
+    document.body.append(element)
+    await element.updateComplete
+    const engine = element.shadowRoot?.querySelector('fd-graph-canvas-engine')
+    const origin = {
+      kind: 'new' as const,
+      source: { nodeID: 'source', portID: 'source-output' },
+    }
+
+    engine?.dispatchEvent(
+      new CustomEvent('fd-graph-connection-preview-change', {
+        detail: {
+          connection: {
+            origin,
+            basePresentationSnapshotID: 'presentation',
+            baseLayoutInputID: 'presentation',
+            stationaryPoint: { x: 100, y: 40 },
+            originalMovingPoint: { x: 100, y: 40 },
+            movingPoint: { x: 240, y: 40 },
+            candidate: {
+              endpoint: { nodeID: 'target', portID: 'target-input' },
+              point: { x: 240, y: 40 },
+            },
+            validation: { kind: 'valid' },
+          },
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+    expect(element.session.transientConnection).toEqual(
+      expect.objectContaining({
+        origin: { kind: 'new', sourcePortID: 'source-output' },
+        candidatePortID: 'target-input',
+        validation: { kind: 'valid' },
+        baseLayoutInputID: content.id,
+      }),
+    )
+
+    engine?.dispatchEvent(
+      new CustomEvent('fd-graph-connection-complete', {
+        detail: {
+          basePresentationSnapshotID: 'presentation',
+          baseLayoutInputID: 'presentation',
+          operation: {
+            kind: 'create',
+            source: { nodeID: 'source', portID: 'source-output' },
+            target: { nodeID: 'target', portID: 'target-input' },
+          },
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+    expect(onIntent).toHaveBeenLastCalledWith({
+      kind: 'connectionCompleted',
+      intent: expect.objectContaining({
+        operation: {
+          kind: 'create',
+          sourcePortID: 'source-output',
+          targetPortID: 'target-input',
+        },
+        baseLayoutInputID: content.id,
+      }),
+    })
+    expect(element.session.transientConnection).toBeUndefined()
+
+    engine?.dispatchEvent(
+      new CustomEvent('fd-graph-connection-preview-change', {
+        detail: {
+          connection: {
+            origin,
+            basePresentationSnapshotID: 'presentation',
+            baseLayoutInputID: 'presentation',
+            stationaryPoint: { x: 100, y: 40 },
+            originalMovingPoint: { x: 100, y: 40 },
+            movingPoint: { x: 160, y: 40 },
+          },
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+
+    engine?.dispatchEvent(
+      new CustomEvent('fd-graph-connection-cancel', {
+        detail: {
+          basePresentationSnapshotID: 'presentation',
+          baseLayoutInputID: 'presentation',
+          origin,
+          reason: { kind: 'noTarget' },
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+    expect(onIntent).toHaveBeenLastCalledWith({
+      kind: 'connectionCancelled',
+      intent: expect.objectContaining({
+        origin: { kind: 'new', sourcePortID: 'source-output' },
+        reason: { kind: 'noTarget' },
+        baseLayoutInputID: content.id,
+      }),
+    })
+    expect(element.session.transientConnection).toBeUndefined()
   })
 
   it('preserves canonical identities at the private rendering-engine boundary', () => {

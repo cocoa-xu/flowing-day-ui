@@ -94,15 +94,14 @@ import {
   resolveGraphCanvasInteractionConfiguration,
 } from '../../interactions/configuration.js'
 import {
-  FdGraphCanvasConnectionPolicy as FdGraphCanvasEngineConnectionPolicy,
   type FdGraphCanvasConnectionOrigin,
   type FdGraphCanvasConnectionResolution,
+  FdGraphCanvasConnectionPolicy as FdGraphCanvasEngineConnectionPolicy,
   type FdGraphCanvasTransientConnection,
   type FdResolvedGraphCanvasConnectionEditingConfiguration,
   resolveGraphConnectionEditingConfiguration,
 } from '../../interactions/connection.js'
 import type { FdGraphCanvasConnectionOrigin as FdGraphCanvasSourceConnectionOrigin } from '../../interactions/connection-model.js'
-import type { FdLayoutInputID } from '../../layout/model.js'
 import {
   defaultGraphCanvasKeyboardCommandResolver,
   type FdGraphCanvasKeyboardCommand,
@@ -118,6 +117,7 @@ import {
   graphCubicEdgeDistance,
   graphSelectionMode,
 } from '../../interactions/selection.js'
+import type { FdLayoutInputID } from '../../layout/model.js'
 import type {
   FdGraphMiniMapConfiguration,
   FdGraphMiniMapPlacement,
@@ -157,6 +157,7 @@ import {
   type FdGraphCanvasConnectionDelegate,
 } from './connection-controller.js'
 import {
+  type FdGraphCanvasActiveNodeInteraction,
   FdGraphCanvasInteractionController,
   type FdGraphCanvasInteractionDelegate,
   type FdGraphInteractionPresentation,
@@ -894,6 +895,10 @@ export class FdGraphCanvasEngine
 
   get viewport(): FdCanvasViewport {
     return this.canvas.viewport
+  }
+
+  get activeNodeInteraction(): FdGraphCanvasActiveNodeInteraction | undefined {
+    return this.interactionController?.activeNodeInteraction
   }
 
   get graphIndex(): FdGraphSnapshotIndex {

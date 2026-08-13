@@ -120,11 +120,14 @@ interface FdGraphMoveSession extends FdGraphPointerSessionBase {
   readonly baseBounds: FdCanvasRect
   readonly canMove: boolean
   snapState: FdGraphCanvasSnapState
+  guides: readonly FdGraphCanvasGuide[]
+  constrainedAxis: 'horizontal' | 'vertical' | undefined
   latestFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
 }
 
 interface FdGraphResizeSession extends FdGraphPointerSessionBase {
   readonly kind: 'resize'
+  readonly anchorNodeID: FdGraphElementID
   readonly handle: FdGraphCanvasResizeHandle
   readonly baseFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
   readonly baseBounds: FdCanvasRect
@@ -132,6 +135,8 @@ interface FdGraphResizeSession extends FdGraphPointerSessionBase {
   readonly maximumBoundsSize?: FdCanvasSize
   readonly nodeSizeConstraints: ReadonlyMap<FdGraphElementID, FdResolvedGraphNodeSizeConstraints>
   snapState: FdGraphCanvasSnapState
+  guides: readonly FdGraphCanvasGuide[]
+  aspectRatioDrivingAxis: 'horizontal' | 'vertical' | undefined
   latestFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
 }
 
@@ -142,6 +147,31 @@ interface FdGraphMarqueeSession extends FdGraphPointerSessionBase {
 }
 
 type FdGraphPointerSession = FdGraphMoveSession | FdGraphResizeSession | FdGraphMarqueeSession
+
+export type FdGraphCanvasActiveNodeInteraction =
+  | {
+      readonly kind: 'move'
+      readonly anchorNodeID: FdGraphElementID
+      readonly baseFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
+      readonly baseBounds: FdCanvasRect
+      readonly latestFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
+      readonly guides: readonly FdGraphCanvasGuide[]
+      readonly snapState: FdGraphCanvasSnapState
+      readonly constrainedAxis?: 'horizontal' | 'vertical'
+    }
+  | {
+      readonly kind: 'resize'
+      readonly anchorNodeID: FdGraphElementID
+      readonly baseFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
+      readonly baseBounds: FdCanvasRect
+      readonly latestFrames: ReadonlyMap<FdGraphElementID, FdCanvasRect>
+      readonly minimumBoundsSize: FdCanvasSize
+      readonly maximumBoundsSize?: FdCanvasSize
+      readonly edges: FdGraphCanvasResizeEdges
+      readonly guides: readonly FdGraphCanvasGuide[]
+      readonly snapState: FdGraphCanvasSnapState
+      readonly aspectRatioDrivingAxis?: 'horizontal' | 'vertical'
+    }
 
 const emptyPresentation: FdGraphInteractionPresentation = { frames: new Map(), guides: [] }
 
@@ -171,6 +201,38 @@ export class FdGraphCanvasInteractionController {
 
   get activePointerID(): number | undefined {
     return this.session?.pointerID
+  }
+
+  get activeNodeInteraction(): FdGraphCanvasActiveNodeInteraction | undefined {
+    const session = this.session
+    if (!session || session.kind === 'marquee') return undefined
+    if (session.kind === 'move') {
+      return {
+        kind: 'move',
+        anchorNodeID: session.clickedNodeID,
+        baseFrames: session.baseFrames,
+        baseBounds: session.baseBounds,
+        latestFrames: session.latestFrames,
+        guides: session.guides,
+        snapState: session.snapState,
+        ...(session.constrainedAxis ? { constrainedAxis: session.constrainedAxis } : {}),
+      }
+    }
+    return {
+      kind: 'resize',
+      anchorNodeID: session.anchorNodeID,
+      baseFrames: session.baseFrames,
+      baseBounds: session.baseBounds,
+      latestFrames: session.latestFrames,
+      minimumBoundsSize: session.minimumBoundsSize,
+      ...(session.maximumBoundsSize ? { maximumBoundsSize: session.maximumBoundsSize } : {}),
+      edges: graphCanvasResizeEdges(session.handle),
+      guides: session.guides,
+      snapState: session.snapState,
+      ...(session.aspectRatioDrivingAxis
+        ? { aspectRatioDrivingAxis: session.aspectRatioDrivingAxis }
+        : {}),
+    }
   }
 
   pointerDown(event: PointerEvent): boolean {
@@ -301,6 +363,8 @@ export class FdGraphCanvasInteractionController {
       baseBounds,
       canMove: baseFrames.size > 0,
       snapState: new FdGraphCanvasSnapState(),
+      guides: [],
+      constrainedAxis: undefined,
       latestFrames: baseFrames,
       moved: false,
     }
@@ -350,6 +414,7 @@ export class FdGraphCanvasInteractionController {
     const viewportPoint = this.delegate.viewportPoint(event)
     this.session = {
       kind: 'resize',
+      anchorNodeID: anchorNode.id,
       pointerID: event.pointerId,
       transactionID: this.nextTransactionID(),
       startViewportPoint: viewportPoint,
@@ -363,6 +428,8 @@ export class FdGraphCanvasInteractionController {
         : {}),
       nodeSizeConstraints,
       snapState: new FdGraphCanvasSnapState(),
+      guides: [],
+      aspectRatioDrivingAxis: undefined,
       latestFrames: baseFrames,
       moved: false,
     }
@@ -406,9 +473,14 @@ export class FdGraphCanvasInteractionController {
       height: worldPoint.y - session.startWorldPoint.y,
     }
     if (event.shiftKey) {
-      if (Math.abs(translation.width) >= Math.abs(translation.height)) translation.height = 0
-      else translation.width = 0
-    }
+      if (Math.abs(translation.width) >= Math.abs(translation.height)) {
+        translation.height = 0
+        session.constrainedAxis = 'horizontal'
+      } else {
+        translation.width = 0
+        session.constrainedAxis = 'vertical'
+      }
+    } else session.constrainedAxis = undefined
     let guides: readonly FdGraphCanvasGuide[] = []
     const configuration = this.delegate.resolvedConfiguration
     if (!event.metaKey && !event.ctrlKey && configuration.snapping.enabled) {
@@ -445,6 +517,7 @@ export class FdGraphCanvasInteractionController {
         }
       }
     } else session.snapState = new FdGraphCanvasSnapState()
+    session.guides = guides
     session.latestFrames = translatedFrames(session.baseFrames, translation)
     this.delegate.setPresentation({
       frames: session.latestFrames,
@@ -481,9 +554,10 @@ export class FdGraphCanvasInteractionController {
       event.shiftKey,
       event.altKey,
     )
+    const behavior = this.resizeBehavior(session.baseBounds, session.handle, translation, event)
+    session.aspectRatioDrivingAxis = behavior.aspectRatioDrivingAxis
     let guides: readonly FdGraphCanvasGuide[] = []
     if (!event.metaKey && !event.ctrlKey && configuration.snapping.enabled) {
-      const behavior = this.resizeBehavior(session.baseBounds, session.handle, translation, event)
       const request = new FdGraphCanvasResizeSnapRequest({
         baseFrame: session.baseBounds,
         proposedFrame: proposedBounds,
@@ -512,6 +586,7 @@ export class FdGraphCanvasInteractionController {
         proposedBounds,
       )
     }
+    session.guides = guides
     this.delegate.setPresentation({
       frames: session.latestFrames,
       guides,

@@ -510,6 +510,13 @@ describe('fd-graph-canvas pointer editing', () => {
 
     dispatchPointer(source, 'pointerdown', start)
     dispatchPointer(canvas, 'pointermove', end)
+    expect(element.activeNodeInteraction).toEqual(
+      expect.objectContaining({
+        kind: 'move',
+        anchorNodeID: 'source',
+        latestFrames: expect.any(Map),
+      }),
+    )
     dispatchPointer(canvas, 'pointerup', end)
 
     expect(events.some(({ phase }) => phase === 'continuous')).toBe(true)
@@ -519,6 +526,7 @@ describe('fd-graph-canvas pointer editing', () => {
     expect(element.snapshot.nodes[0]?.frame.y).toBe(100)
     expect(element.snapshot.nodes[1]?.frame.x).toBe(450)
     expect(element.snapshot.nodes[1]?.frame.y).toBe(240)
+    expect(element.activeNodeInteraction).toBeUndefined()
     await element.updateComplete
     await nextFrame()
     expect(element.graphIndex).not.toBe(initialIndex)
@@ -781,10 +789,19 @@ describe('fd-graph-canvas pointer editing', () => {
     if (!handle) throw new Error('missing resize handle')
     dispatchPointer(handle, 'pointerdown', start)
     dispatchPointer(canvas, 'pointermove', end)
+    expect(element.activeNodeInteraction).toEqual(
+      expect.objectContaining({
+        kind: 'resize',
+        anchorNodeID: 'source',
+        edges: new Set(['bottom', 'trailing']),
+        latestFrames: expect.any(Map),
+      }),
+    )
     dispatchPointer(canvas, 'pointerup', end)
 
     expect(element.snapshot.nodes[0]?.frame.width).toBeCloseTo(220)
     expect(element.snapshot.nodes[0]?.frame.height).toBeCloseTo(118)
+    expect(element.activeNodeInteraction).toBeUndefined()
   })
 
   it('enforces consumer-provided maximum node sizes during resize', async () => {
