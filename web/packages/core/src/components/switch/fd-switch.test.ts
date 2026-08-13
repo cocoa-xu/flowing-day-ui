@@ -47,6 +47,13 @@ describe('fd-switch', () => {
     expect(element.getAttribute('aria-disabled')).toBe('true')
   })
 
+  it('renders and exposes the Swift title', async () => {
+    const element = (await mount('<fd-switch label="Share Updates"></fd-switch>')) as FdSwitch
+
+    expect(element.shadowRoot?.querySelector('.label')?.textContent).toBe('Share Updates')
+    expect(element.getAttribute('aria-label')).toBe('Share Updates')
+  })
+
   it('is keyboard reachable by default', async () => {
     const element = (await mount('<fd-switch></fd-switch>')) as FdSwitch
     expect(element.tabIndex).toBe(0)
@@ -122,6 +129,10 @@ describe('fd-switch', () => {
     element.checked = true
     await element.updateComplete
     expect(new FormData(form).get('launchAtLogin')).toBe('yes')
+
+    element.disabled = true
+    await element.updateComplete
+    expect(new FormData(form).get('launchAtLogin')).toBeNull()
   })
 
   it('restores its initial state on form reset', async () => {
@@ -143,7 +154,8 @@ describe('fd-switch', () => {
     document.documentElement.style.setProperty('--fd-accent-fill', 'rgb(196, 69, 61)')
     try {
       const element = (await mount('<fd-switch checked></fd-switch>')) as FdSwitch
-      expect(getComputedStyle(element).backgroundColor).toBe('rgb(196, 69, 61)')
+      const track = element.shadowRoot?.querySelector('.track') as HTMLElement
+      expect(getComputedStyle(track).backgroundColor).toBe('rgb(196, 69, 61)')
     } finally {
       document.documentElement.style.removeProperty('--fd-accent-fill')
     }

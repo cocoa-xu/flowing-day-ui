@@ -1,6 +1,7 @@
 import { type CSSResultGroup, css, html, type PropertyValues } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
+import { textRole } from '../../internal/typography.js'
 
 /**
  * Mirrors `PreferencesSwitch` — `Toggle(.switch).controlSize(.small)`.
@@ -29,16 +30,28 @@ export class FdSwitch extends FdElement {
         --_knob-inset: var(--fd-switch-knob-inset, 2px);
 
         display: inline-flex;
+        align-items: center;
         flex: none;
+        gap: 8px;
+        cursor: pointer;
+      }
+
+      .label {
+        ${textRole('row-title')}
+        color: var(--_fd-palette-ink);
+      }
+
+      .track {
+        position: relative;
         width: var(--_track-width);
         height: var(--_track-height);
+        flex: none;
         border-radius: calc(var(--_track-height) / 2);
         background: var(--_fd-track-off);
-        cursor: pointer;
         transition: background-color var(--_fd-motion-selection) var(--_fd-motion-easing);
       }
 
-      :host([checked]) {
+      :host([checked]) .track {
         background: var(--_fd-accent-fill);
       }
 
@@ -50,29 +63,34 @@ export class FdSwitch extends FdElement {
       :host(:focus-visible) {
         outline: 2px solid var(--_fd-accent-fill);
         outline-offset: 2px;
+        border-radius: calc(var(--_track-height) / 2);
       }
 
       .knob {
+        position: absolute;
+        top: var(--_knob-inset);
+        inset-inline-start: var(--_knob-inset);
         width: var(--_knob-size);
         height: var(--_knob-size);
-        margin: var(--_knob-inset);
         border-radius: 50%;
         background: var(--_fd-knob-fill);
         box-shadow:
           0 0 0 0.5px var(--_fd-knob-border),
           var(--_fd-knob-shadow);
-        transition: translate var(--_fd-motion-selection) var(--_fd-motion-easing);
+        transition: inset-inline-start var(--_fd-motion-selection) var(--_fd-motion-easing);
       }
 
       :host([checked]) .knob {
-        translate: calc(
-          var(--_track-width) - 2 * var(--_knob-inset) - var(--_knob-size)
+        inset-inline-start: calc(
+          var(--_track-width) - var(--_knob-inset) - var(--_knob-size)
         );
       }
     `,
   ]
 
   @property({ type: Boolean, reflect: true }) checked = false
+
+  @property({ reflect: true }) label = ''
 
   @property({ type: Boolean, reflect: true }) disabled = false
 
@@ -115,7 +133,11 @@ export class FdSwitch extends FdElement {
     super.updated(changed)
     this.setAttribute('aria-checked', String(this.checked))
     this.setAttribute('aria-disabled', String(this.disabled))
-    this.#internals.setFormValue(this.checked ? this.value : null)
+    if (this.label) this.setAttribute('aria-label', this.label)
+    else if (changed.has('label') && this.getAttribute('aria-label') === changed.get('label')) {
+      this.removeAttribute('aria-label')
+    }
+    this.#internals.setFormValue(!this.disabled && this.checked ? this.value : null)
     if (changed.has('disabled')) this.tabIndex = this.disabled ? -1 : 0
   }
 
@@ -150,7 +172,10 @@ export class FdSwitch extends FdElement {
   }
 
   override render() {
-    return html`<div class="knob" part="knob"></div>`
+    return html`
+      ${this.label ? html`<span class="label" part="label">${this.label}</span>` : null}
+      <div class="track" part="track"><div class="knob" part="knob"></div></div>
+    `
   }
 }
 
