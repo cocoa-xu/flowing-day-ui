@@ -5,9 +5,9 @@ import type {
   FdGraphNodeFrameChangeKind,
   FdGraphSelectionChangeDetail,
 } from '../../graph/events.js'
-import type {
+import {
   FdGraphCanvasNodeCapabilities,
-  FdGraphCanvasResizeEdges,
+  type FdGraphCanvasResizeEdges,
 } from '../../graph/interaction-policy.js'
 import type { FdGraphElementID } from '../../graph/model.js'
 import { graphElementIDFromKey } from '../../graph/model.js'
@@ -86,7 +86,7 @@ export interface FdGraphCanvasInteractionDelegate {
   readonly snapshotID: string | number
   readonly resolvedConfiguration: FdResolvedGraphCanvasInteractionConfiguration
   readonly selectedNodeIDs: ReadonlySet<FdGraphElementID>
-  nodeCapabilities(nodeID: FdGraphElementID): Required<FdGraphCanvasNodeCapabilities>
+  nodeCapabilities(nodeID: FdGraphElementID): FdGraphCanvasNodeCapabilities
   viewportPoint(event: PointerEvent): FdCanvasPoint
   nodeIDAtViewportPoint(point: FdCanvasPoint): FdGraphElementID | undefined
   setSelection(
@@ -267,7 +267,8 @@ export class FdGraphCanvasInteractionController {
       return selected ? [selected] : []
     })
     const candidateNodes = (configuration.multipleNodeDragging ? selectedNodes : [node]).filter(
-      ({ id }) => this.delegate.nodeCapabilities(id).draggable,
+      ({ id }) =>
+        this.delegate.nodeCapabilities(id).contains(FdGraphCanvasNodeCapabilities.draggable),
     )
     const request: FdGraphNodeDragAdmissionRequest = {
       anchorNode: node,
@@ -315,9 +316,17 @@ export class FdGraphCanvasInteractionController {
     })
     if (selectedNodes.length === 0) return false
     const anchorNode = selectedNodes[0]
-    if (!anchorNode || !this.delegate.nodeCapabilities(anchorNode.id).resizable) return false
+    if (
+      !anchorNode ||
+      !this.delegate
+        .nodeCapabilities(anchorNode.id)
+        .contains(FdGraphCanvasNodeCapabilities.resizable)
+    ) {
+      return false
+    }
     const candidateNodes = (configuration.groupResizing ? selectedNodes : [anchorNode]).filter(
-      ({ id }) => this.delegate.nodeCapabilities(id).resizable,
+      ({ id }) =>
+        this.delegate.nodeCapabilities(id).contains(FdGraphCanvasNodeCapabilities.resizable),
     )
     const candidateFrames = new Map(candidateNodes.map(({ id, frame }) => [id, frame]))
     const request = {

@@ -1,5 +1,6 @@
 import type { FdGraphPort } from '../graph/model.js'
 import { graphElementKey } from '../graph/model.js'
+import { FdGraphCanvasNodeCapabilities } from '../graph/interaction-policy.js'
 import type {
   FdGraphRenderEdge,
   FdGraphRenderFrame,
@@ -132,8 +133,14 @@ export class FdGraphDOMRenderingBackend implements FdGraphRenderingBackend {
       element.toggleAttribute('data-focused', rendered.focused)
       element.toggleAttribute('data-hovered', rendered.hovered)
       element.toggleAttribute('data-selectable', true)
-      element.toggleAttribute('data-draggable', rendered.capabilities?.draggable ?? true)
-      element.toggleAttribute('data-resizable', rendered.capabilities?.resizable ?? true)
+      element.toggleAttribute(
+        'data-draggable',
+        rendered.capabilities?.contains(FdGraphCanvasNodeCapabilities.draggable) ?? true,
+      )
+      element.toggleAttribute(
+        'data-resizable',
+        rendered.capabilities?.contains(FdGraphCanvasNodeCapabilities.resizable) ?? true,
+      )
       element.setAttribute(
         'aria-label',
         rendered.node.accessibilityLabel ?? rendered.node.label ?? String(rendered.node.id),

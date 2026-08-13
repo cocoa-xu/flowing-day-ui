@@ -11,7 +11,14 @@ import type {
   FdGraphNodeFramesChangeDetail,
   FdGraphSelectionChangeDetail,
 } from '../../graph/events.js'
-import type { FdAnyGraphSnapshot } from '../../graph/model.js'
+import {
+  FdGraphCanvasInteractionPolicy,
+  FdGraphCanvasNodeCapabilities,
+  FdGraphCanvasNodeCapabilityMap,
+  FdGraphCanvasNodeSizeConstraintMap,
+  FdGraphCanvasNodeSizeConstraints,
+} from '../../graph/interaction-policy.js'
+import type { FdAnyGraphSnapshot, FdGraphElementID } from '../../graph/model.js'
 import {
   graphEdgeReference,
   graphElementReferenceKey,
@@ -508,7 +515,7 @@ describe('fd-graph-canvas pointer editing', () => {
     element.selectedNodeIDs = new Set(['source', 'target'])
     element.configuration = { nodeDraggingMode: 'multiple' }
     applyFrameIntents(element)
-    element.interactionPolicy = {
+    element.interactionPolicy = new FdGraphCanvasInteractionPolicy({
       admitNodeDrag: ({
         anchorNodeID,
         selectedNodeIDs,
@@ -521,7 +528,7 @@ describe('fd-graph-canvas pointer editing', () => {
         expect(basePresentationSnapshotID).toBe('graph-1')
         return { kind: 'allowOnly', nodeIDs: new Set(['source']) }
       },
-    }
+    })
     await element.updateComplete
     const source = element.shadowRoot?.querySelector(
       '[data-fd-graph-node="s:source"]',
@@ -562,11 +569,18 @@ describe('fd-graph-canvas pointer editing', () => {
 
   it('honors node capabilities and consumer drag policy', async () => {
     const element = await mount()
-    element.interactionPolicy = {
-      nodeCapabilities: {
-        overrides: new Map([['source', { draggable: false }]]),
-      },
-    }
+    element.interactionPolicy = new FdGraphCanvasInteractionPolicy<FdGraphElementID>({
+      nodeCapabilities: new FdGraphCanvasNodeCapabilityMap({
+        overrides: new Map([
+          [
+            'source',
+            FdGraphCanvasNodeCapabilities.standard.subtracting(
+              FdGraphCanvasNodeCapabilities.draggable,
+            ),
+          ],
+        ]),
+      }),
+    })
     await element.updateComplete
     const canvas = preparePointerInput(element)
     const events: FdGraphNodeFramesChangeDetail[] = []
@@ -629,7 +643,7 @@ describe('fd-graph-canvas pointer editing', () => {
       },
     }
     applyFrameIntents(element)
-    element.interactionPolicy = {
+    element.interactionPolicy = new FdGraphCanvasInteractionPolicy({
       snappingStrategy: new FdGraphCanvasSnappingStrategy({
         translation: (request) => {
           const standard = request.standardResult()
@@ -642,7 +656,7 @@ describe('fd-graph-canvas pointer editing', () => {
           }
         },
       }),
-    }
+    })
     await element.updateComplete
     const source = element.shadowRoot?.querySelector(
       '[data-fd-graph-node="s:source"]',
@@ -667,7 +681,7 @@ describe('fd-graph-canvas pointer editing', () => {
       snapping: { isEnabled: true },
     }
     applyFrameIntents(element)
-    element.interactionPolicy = {
+    element.interactionPolicy = new FdGraphCanvasInteractionPolicy({
       snappingStrategy: new FdGraphCanvasSnappingStrategy({
         resize: () => {
           return {
@@ -677,7 +691,7 @@ describe('fd-graph-canvas pointer editing', () => {
           }
         },
       }),
-    }
+    })
     await element.updateComplete
     const handle = element.shadowRoot?.querySelector<HTMLElement>(
       '[data-fd-resize-handle="bottomRight"]',
@@ -699,9 +713,9 @@ describe('fd-graph-canvas pointer editing', () => {
     )
     const first = await mount()
     const firstCanvas = preparePointerInput(first)
-    first.interactionPolicy = {
+    first.interactionPolicy = new FdGraphCanvasInteractionPolicy({
       snappingStrategy: new FdGraphCanvasSnappingStrategy({ translation: strategy }),
-    }
+    })
     await first.updateComplete
     const firstSource = first.shadowRoot?.querySelector(
       '[data-fd-graph-node="s:source"]',
@@ -715,9 +729,9 @@ describe('fd-graph-canvas pointer editing', () => {
 
     const second = await mount()
     const secondCanvas = preparePointerInput(second)
-    second.interactionPolicy = {
+    second.interactionPolicy = new FdGraphCanvasInteractionPolicy({
       snappingStrategy: new FdGraphCanvasSnappingStrategy({ translation: strategy }),
-    }
+    })
     await second.updateComplete
     const secondSource = second.shadowRoot?.querySelector(
       '[data-fd-graph-node="s:source"]',
@@ -763,11 +777,18 @@ describe('fd-graph-canvas pointer editing', () => {
     element.selectedNodeIDs = new Set(['source'])
     element.configuration = { nodeResizing: { isEnabled: true } }
     applyFrameIntents(element)
-    element.interactionPolicy = {
-      nodeSizeConstraints: {
-        overrides: new Map([['source', { maximumSize: { width: 200, height: 100 } }]]),
-      },
-    }
+    element.interactionPolicy = new FdGraphCanvasInteractionPolicy<FdGraphElementID>({
+      nodeSizeConstraints: new FdGraphCanvasNodeSizeConstraintMap({
+        overrides: new Map([
+          [
+            'source',
+            new FdGraphCanvasNodeSizeConstraints({
+              maximumSize: { width: 200, height: 100 },
+            }),
+          ],
+        ]),
+      }),
+    })
     await element.updateComplete
     const handle = element.shadowRoot?.querySelector<HTMLElement>(
       '[data-fd-resize-handle="bottomRight"]',
@@ -792,7 +813,7 @@ describe('fd-graph-canvas pointer editing', () => {
     element.selectedNodeIDs = new Set(['source', 'target'])
     element.configuration = { nodeResizing: { isEnabled: true } }
     applyFrameIntents(element)
-    element.interactionPolicy = {
+    element.interactionPolicy = new FdGraphCanvasInteractionPolicy({
       admitNodeResize: ({ anchorNodeID, candidateNodeIDs, baseFrames, edges }) => {
         expect(anchorNodeID).toBe('source')
         expect(candidateNodeIDs).toEqual(['source', 'target'])
@@ -800,7 +821,7 @@ describe('fd-graph-canvas pointer editing', () => {
         expect(edges).toEqual(new Set(['bottom', 'trailing']))
         return { kind: 'allowOnly', nodeIDs: new Set(['source']) }
       },
-    }
+    })
     await element.updateComplete
     const handle = element.shadowRoot?.querySelector<HTMLElement>(
       '[data-fd-resize-handle="bottomRight"]',
@@ -1025,14 +1046,14 @@ describe('fd-graph-canvas connection editing', () => {
     const element = await mount()
     const canvas = preparePointerInput(element)
     element.configuration = { connectionEditing: { isEnabled: true } }
-    element.interactionPolicy = {
+    element.interactionPolicy = new FdGraphCanvasInteractionPolicy({
       connectionPolicy: new FdGraphCanvasConnectionPolicy({
         validate: () => ({
           kind: 'invalid',
           feedback: { message: 'This input already has a connection.' },
         }),
       }),
-    }
+    })
     await element.updateComplete
     const cancellations: FdGraphConnectionCancelDetail[] = []
     element.addEventListener('fd-graph-connection-cancel', (event) => {
@@ -1175,9 +1196,9 @@ describe('fd-graph-canvas keyboard editing', () => {
     const element = await mount()
     const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
     applyFrameIntents(element)
-    element.interactionPolicy = {
+    element.interactionPolicy = new FdGraphCanvasInteractionPolicy<FdGraphElementID>({
       admitNodeDrag: () => ({ kind: 'allowOnly', nodeIDs: new Set(['source']) }),
-    }
+    })
     element.focusedNodeID = 'source'
     element.selectedNodeIDs = new Set(['source', 'target'])
     await element.updateComplete
@@ -1209,11 +1230,18 @@ describe('fd-graph-canvas keyboard editing', () => {
 
   it('respects keyboard navigation and dragging capabilities independently', async () => {
     const element = await mount()
-    element.interactionPolicy = {
-      nodeCapabilities: {
-        overrides: new Map([['target', { keyboardNavigable: false }]]),
-      },
-    }
+    element.interactionPolicy = new FdGraphCanvasInteractionPolicy<FdGraphElementID>({
+      nodeCapabilities: new FdGraphCanvasNodeCapabilityMap({
+        overrides: new Map([
+          [
+            'target',
+            FdGraphCanvasNodeCapabilities.standard.subtracting(
+              FdGraphCanvasNodeCapabilities.keyboardNavigable,
+            ),
+          ],
+        ]),
+      }),
+    })
     const canvas = element.shadowRoot?.querySelector('fd-canvas') as HTMLElement
     element.focusedNodeID = 'source'
     await element.updateComplete
@@ -1331,11 +1359,18 @@ describe('fd-graph-canvas arrangement', () => {
 
   it('excludes nodes that opt out of arrangement actions', async () => {
     const element = await mount()
-    element.interactionPolicy = {
-      nodeCapabilities: {
-        overrides: new Map([['target', { arrangementParticipant: false }]]),
-      },
-    }
+    element.interactionPolicy = new FdGraphCanvasInteractionPolicy<FdGraphElementID>({
+      nodeCapabilities: new FdGraphCanvasNodeCapabilityMap({
+        overrides: new Map([
+          [
+            'target',
+            FdGraphCanvasNodeCapabilities.standard.subtracting(
+              FdGraphCanvasNodeCapabilities.arrangementParticipant,
+            ),
+          ],
+        ]),
+      }),
+    })
     element.selectedNodeIDs = new Set(['source', 'target'])
     await element.updateComplete
 

@@ -21,7 +21,7 @@ export interface FdGraphRenderNode {
   readonly selected: boolean
   readonly focused: boolean
   readonly hovered: boolean
-  readonly capabilities?: Required<FdGraphCanvasNodeCapabilities>
+  readonly capabilities?: FdGraphCanvasNodeCapabilities
 }
 
 export interface FdGraphRenderEdge {

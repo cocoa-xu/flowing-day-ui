@@ -42,10 +42,10 @@ import type {
   FdGraphSelectionChangeDetail,
 } from '../../graph/events.js'
 import {
-  type FdGraphCanvasInteractionPolicy,
-  type FdGraphCanvasNodeCapabilities,
-  graphCanvasNodeCapabilities,
-  graphCanvasNodeSizeConstraints,
+  FdGraphCanvasInteractionPolicy,
+  FdGraphCanvasNodeCapabilities,
+  FdGraphCanvasNodeDragAdmissionRequest,
+  FdGraphCanvasNodeResizeAdmissionRequest,
 } from '../../graph/interaction-policy.js'
 import type { FdGraphMiniMapNavigationDetail } from '../../graph/minimap-events.js'
 import type {
@@ -95,7 +95,6 @@ import {
 } from '../../interactions/configuration.js'
 import {
   type FdGraphCanvasConnectionOrigin,
-  FdGraphCanvasConnectionPolicy,
   type FdGraphCanvasConnectionResolution,
   type FdGraphCanvasTransientConnection,
   type FdResolvedGraphCanvasConnectionEditingConfiguration,
@@ -730,7 +729,8 @@ export class FdGraphCanvas
   @property({ attribute: false }) edgeGeometryResolver: FdGraphEdgeGeometryResolver =
     defaultGraphEdgeGeometryResolver
   @property({ reflect: true }) tool: FdGraphCanvasTool = 'select'
-  @property({ attribute: false }) interactionPolicy: FdGraphCanvasInteractionPolicy = {}
+  @property({ attribute: false }) interactionPolicy: FdGraphCanvasInteractionPolicy =
+    FdGraphCanvasInteractionPolicy.standard
   @property({ attribute: false }) platformAdapter: FdGraphCanvasPlatformAdapter = {}
   @property({ attribute: false }) historyConfiguration: FdGraphCanvasHistoryConfiguration = {}
   @property({ attribute: false }) miniMapConfiguration: FdGraphMiniMapConfiguration | undefined
@@ -764,8 +764,8 @@ export class FdGraphCanvas
     }
   }
 
-  nodeCapabilities(nodeID: FdGraphElementID): Required<FdGraphCanvasNodeCapabilities> {
-    return graphCanvasNodeCapabilities(this.interactionPolicy, nodeID)
+  nodeCapabilities(nodeID: FdGraphElementID): FdGraphCanvasNodeCapabilities {
+    return this.interactionPolicy.nodeCapabilities.capabilities(nodeID)
   }
 
   @property({ attribute: false })
@@ -1187,7 +1187,12 @@ export class FdGraphCanvas
     if (!this.resolvedGraphConfiguration.allowsArrangementCommands) return false
     const nodes = [...this.selectedNodeIDs].flatMap((id) => {
       const node = this.index.nodes.get(id)
-      return node && this.nodeCapabilities(node.id).arrangementParticipant ? [node] : []
+      return node &&
+        this.nodeCapabilities(node.id).contains(
+          FdGraphCanvasNodeCapabilities.arrangementParticipant,
+        )
+        ? [node]
+        : []
     })
     const translations = FdGraphCanvasArrangement.translations(nodes, action)
     const changes = nodes.flatMap<FdGraphNodeFrameChange>((node) => {
@@ -1549,15 +1554,13 @@ export class FdGraphCanvas
       minimumNodeWidth: configuration.nodeResizing.minimumSize.width,
       minimumNodeHeight: configuration.nodeResizing.minimumSize.height,
       nodeSizeConstraints: (node) => {
-        const constraints = graphCanvasNodeSizeConstraints(policy, node.id)
-        if (!constraints) return undefined
+        const constraints = policy.nodeSizeConstraints.constraints(
+          node.id,
+          configuration.nodeResizing.minimumSize,
+        )
         return {
-          ...(constraints.minimumSize
-            ? {
-                minimumWidth: constraints.minimumSize.width,
-                minimumHeight: constraints.minimumSize.height,
-              }
-            : {}),
+          minimumWidth: constraints.minimumSize.width,
+          minimumHeight: constraints.minimumSize.height,
           ...(constraints.maximumSize
             ? {
                 maximumWidth: constraints.maximumSize.width,
@@ -1593,23 +1596,27 @@ export class FdGraphCanvas
         showsGuides: configuration.snapping.showsGuides,
         guideOffset: configuration.snapping.guideOffset,
       },
-      ...(policy.snappingStrategy ? { snappingStrategy: policy.snappingStrategy } : {}),
+      snappingStrategy: policy.snappingStrategy,
       admitNodeDrag: (request) =>
-        policy.admitNodeDrag?.({
-          anchorNodeID: request.anchorNode.id,
-          selectedNodeIDs: request.selectedNodes.map(({ id }) => id),
-          candidateNodeIDs: request.candidateNodes.map(({ id }) => id),
-          basePresentationSnapshotID: request.snapshotID,
-        }) ?? { kind: 'allowAll' },
+        policy.admission(
+          new FdGraphCanvasNodeDragAdmissionRequest({
+            anchorNodeID: request.anchorNode.id,
+            selectedNodeIDs: request.selectedNodes.map(({ id }) => id),
+            candidateNodeIDs: request.candidateNodes.map(({ id }) => id),
+            basePresentationSnapshotID: request.snapshotID,
+          }),
+        ),
       admitNodeResize: (request) =>
-        policy.admitNodeResize?.({
-          anchorNodeID: request.anchorNode.id,
-          selectedNodeIDs: request.selectedNodes.map(({ id }) => id),
-          candidateNodeIDs: request.candidateNodes.map(({ id }) => id),
-          baseFrames: request.baseFrames,
-          edges: graphCanvasResizeEdges(request.handle),
-          basePresentationSnapshotID: request.snapshotID,
-        }) ?? { kind: 'allowAll' },
+        policy.admission(
+          new FdGraphCanvasNodeResizeAdmissionRequest({
+            anchorNodeID: request.anchorNode.id,
+            selectedNodeIDs: request.selectedNodes.map(({ id }) => id),
+            candidateNodeIDs: request.candidateNodes.map(({ id }) => id),
+            baseFrames: request.baseFrames,
+            edges: graphCanvasResizeEdges(request.handle),
+            basePresentationSnapshotID: request.snapshotID,
+          }),
+        ),
     })
     this.connectionConfiguration = resolveGraphConnectionEditingConfiguration(
       {
@@ -1620,7 +1627,7 @@ export class FdGraphCanvas
         minimumDragDistance: configuration.connectionEditing.minimumDragDistance,
         rendersDefaultPreview: configuration.connectionEditing.rendersDefaultPreview,
       },
-      policy.connectionPolicy ?? FdGraphCanvasConnectionPolicy.standard,
+      policy.connectionPolicy,
     )
     this.keyboardCommandResolver =
       this.platformAdapter.resolveKeyboardCommand ?? defaultGraphCanvasKeyboardCommandResolver
@@ -1715,7 +1722,11 @@ export class FdGraphCanvas
     this.keyboardCandidates = []
     this.keyboardCandidateIndices.clear()
     for (const [presentationOrder, node] of this.snapshot.nodes.entries()) {
-      if (!this.nodeCapabilities(node.id).keyboardNavigable) continue
+      if (
+        !this.nodeCapabilities(node.id).contains(FdGraphCanvasNodeCapabilities.keyboardNavigable)
+      ) {
+        continue
+      }
       this.keyboardCandidateIndices.set(node.id, this.keyboardCandidates.length)
       this.keyboardCandidates.push({ id: node.id, frame: node.frame, presentationOrder })
     }
@@ -1849,7 +1860,10 @@ export class FdGraphCanvas
     if (!reference) return
     if (
       this.validElementReference(reference) &&
-      (reference.kind !== 'node' || this.nodeCapabilities(reference.nodeID).keyboardNavigable)
+      (reference.kind !== 'node' ||
+        this.nodeCapabilities(reference.nodeID).contains(
+          FdGraphCanvasNodeCapabilities.keyboardNavigable,
+        ))
     ) {
       return
     }
@@ -2109,7 +2123,12 @@ export class FdGraphCanvas
     keepsVisible = this.resolvedGraphConfiguration.keyboardNavigation.keepsFocusedNodeVisible,
   ): void {
     const node = this.index.nodes.get(nodeID)
-    if (!node || !this.nodeCapabilities(node.id).keyboardNavigable) return
+    if (
+      !node ||
+      !this.nodeCapabilities(node.id).contains(FdGraphCanvasNodeCapabilities.keyboardNavigable)
+    ) {
+      return
+    }
     if (
       updatesSelection &&
       this.resolvedGraphConfiguration.keyboardNavigation.selectionBehavior === 'replace'
@@ -2209,10 +2228,17 @@ export class FdGraphCanvas
     const configuration = this.resolvedInteractionConfiguration
     if (!configuration.nodeDragging || selectedNodes.length === 0) return []
     const anchorNode = selectedNodes.find(({ id }) => id === this.focusedNodeID) ?? selectedNodes[0]
-    if (!anchorNode || !this.nodeCapabilities(anchorNode.id).draggable) return []
+    if (
+      !anchorNode ||
+      !this.nodeCapabilities(anchorNode.id).contains(FdGraphCanvasNodeCapabilities.draggable)
+    ) {
+      return []
+    }
     const candidateNodes = (
       configuration.multipleNodeDragging ? selectedNodes : [anchorNode]
-    ).filter(({ id }) => this.nodeCapabilities(id).draggable)
+    ).filter(({ id }) =>
+      this.nodeCapabilities(id).contains(FdGraphCanvasNodeCapabilities.draggable),
+    )
     const request = {
       anchorNode,
       selectedNodes,
@@ -2503,7 +2529,7 @@ export class FdGraphCanvas
     this.resizeHandlesVisible =
       nodes.length === this.selectedNodeIDs.size &&
       nodes[0] !== undefined &&
-      this.nodeCapabilities(nodes[0].id).resizable
+      this.nodeCapabilities(nodes[0].id).contains(FdGraphCanvasNodeCapabilities.resizable)
   }
 
   private syncMarquee(): void {
