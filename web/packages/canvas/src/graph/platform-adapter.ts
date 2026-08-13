@@ -1,22 +1,22 @@
 import type {
-  FdGraphAccessibilityCommandResolver,
-  FdGraphAccessibilityPortContext,
-  FdGraphAccessibilityRepresentation,
+  FdGraphCanvasAccessibilityCommandResolver,
+  FdGraphCanvasAccessibilityPortContext,
+  FdGraphCanvasAccessibilityRepresentation,
 } from '../accessibility/configuration.js'
 import type { FdGraphKeyboardCommandResolver } from '../interactions/keyboard.js'
 import type { FdAnyGraphEdge, FdAnyGraphNode } from './model.js'
 
 export interface FdGraphCanvasPlatformAdapter {
   readonly resolveKeyboardCommand?: FdGraphKeyboardCommandResolver
-  readonly resolveAccessibilityCommand?: FdGraphAccessibilityCommandResolver
+  readonly resolveAccessibilityCommand?: FdGraphCanvasAccessibilityCommandResolver
   readonly accessibilityCanvasLabel?: string
   readonly nodeAccessibilityRepresentation?: (
     node: FdAnyGraphNode,
-  ) => FdGraphAccessibilityRepresentation
+  ) => FdGraphCanvasAccessibilityRepresentation
   readonly portAccessibilityRepresentation?: (
-    context: FdGraphAccessibilityPortContext,
-  ) => FdGraphAccessibilityRepresentation
+    context: FdGraphCanvasAccessibilityPortContext,
+  ) => FdGraphCanvasAccessibilityRepresentation
   readonly edgeAccessibilityRepresentation?: (
     edge: FdAnyGraphEdge,
-  ) => FdGraphAccessibilityRepresentation
+  ) => FdGraphCanvasAccessibilityRepresentation
 }

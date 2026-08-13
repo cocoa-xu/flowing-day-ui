@@ -1,11 +1,11 @@
 import type { FdResolvedGraphCanvasAccessibilityConfiguration } from '../../accessibility/configuration.js'
 import type {
-  FdGraphAccessibilityItem,
-  FdGraphAccessibilitySnapshot,
+  FdGraphCanvasAccessibilityItem,
+  FdGraphCanvasAccessibilitySnapshot,
 } from '../../accessibility/snapshot.js'
 
 export interface FdGraphCanvasAccessibilityBridgeUpdate {
-  readonly snapshot: FdGraphAccessibilitySnapshot
+  readonly snapshot: FdGraphCanvasAccessibilitySnapshot
   readonly configuration: FdResolvedGraphCanvasAccessibilityConfiguration
   readonly selectedElementKeys: ReadonlySet<string>
   readonly allowsMultipleSelection: boolean
@@ -80,8 +80,8 @@ export class FdGraphCanvasAccessibilityBridge {
 
   private updateElement(
     element: HTMLElement,
-    item: FdGraphAccessibilityItem,
-    snapshot: FdGraphAccessibilitySnapshot,
+    item: FdGraphCanvasAccessibilityItem,
+    snapshot: FdGraphCanvasAccessibilitySnapshot,
     selectedElementKeys: ReadonlySet<string>,
   ): void {
     element.dataset.fdGraphAccessibilityKey = item.key
@@ -97,7 +97,7 @@ export class FdGraphCanvasAccessibilityBridge {
     element.setAttribute('aria-selected', String(selectedElementKeys.has(item.key)))
   }
 
-  private description(item: FdGraphAccessibilityItem): string | undefined {
+  private description(item: FdGraphCanvasAccessibilityItem): string | undefined {
     const values = [
       item.description.value,
       item.description.hint,

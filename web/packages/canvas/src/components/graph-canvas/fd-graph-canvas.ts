@@ -1,7 +1,7 @@
 import { type CSSResultGroup, css, html, LitElement, nothing, type PropertyValues } from 'lit'
 import { customElement, property, query } from 'lit/decorators.js'
 import {
-  type FdGraphAccessibilityCommand,
+  type FdGraphCanvasAccessibilityCommand,
   type FdGraphCanvasElementAction,
   type FdResolvedGraphCanvasAccessibilityConfiguration,
   resolveGraphCanvasAccessibilityConfiguration,
@@ -11,8 +11,8 @@ import type {
   FdGraphCanvasAccessibilityRequestDetail,
 } from '../../accessibility/events.js'
 import {
-  createGraphAccessibilitySnapshot,
-  FdGraphAccessibilitySnapshot,
+  createGraphCanvasAccessibilitySnapshot,
+  FdGraphCanvasAccessibilitySnapshot,
 } from '../../accessibility/snapshot.js'
 import type { FdCanvasContentChangeBehavior, FdCanvasRequest } from '../../configuration.js'
 import type { FdCanvasViewportChangeDetail } from '../../events.js'
@@ -736,7 +736,8 @@ export class FdGraphCanvas
   `
 
   @property({ attribute: false }) snapshot: FdAnyGraphSnapshot = emptySnapshot
-  @property({ attribute: false }) accessibilitySnapshot: FdGraphAccessibilitySnapshot | undefined
+  @property({ attribute: false })
+  accessibilitySnapshot: FdGraphCanvasAccessibilitySnapshot | undefined
   @property({ attribute: false }) configuration: FdGraphCanvasConfiguration = {}
   @property({ attribute: false }) contentInsets: FdCanvasInsets = zeroCanvasInsets
   @property({ attribute: false }) contentChangeBehavior: FdCanvasContentChangeBehavior = {
@@ -868,7 +869,7 @@ export class FdGraphCanvas
     resolveGraphCanvasHistoryConfiguration()
   private connectionConfiguration = resolveGraphConnectionEditingConfiguration()
   private historyDriver = this.createHistoryDriver()
-  private activeAccessibilitySnapshot = new FdGraphAccessibilitySnapshot({
+  private activeAccessibilitySnapshot = new FdGraphCanvasAccessibilitySnapshot({
     canvasDescription: { label: 'Graph Canvas' },
     items: [],
   })
@@ -1891,7 +1892,7 @@ export class FdGraphCanvas
   private rebuildAccessibilitySnapshot(): void {
     this.activeAccessibilitySnapshot =
       this.accessibilitySnapshot ??
-      createGraphAccessibilitySnapshot(this.snapshot, this.resolvedAccessibilityConfiguration)
+      createGraphCanvasAccessibilitySnapshot(this.snapshot, this.resolvedAccessibilityConfiguration)
     this.accessibilityFocusedElementKey = this.activeAccessibilitySnapshot.reconciledFocus(
       (this.focusedElement && graphElementReferenceKey(this.focusedElement)) ??
         this.accessibilityFocusedElementKey,
@@ -1928,7 +1929,7 @@ export class FdGraphCanvas
     event.stopPropagation()
   }
 
-  private performAccessibilityCommand(command: FdGraphAccessibilityCommand): boolean {
+  private performAccessibilityCommand(command: FdGraphCanvasAccessibilityCommand): boolean {
     const currentKey = this.accessibilityFocusedElementKey
     switch (command.kind) {
       case 'focusPrevious':

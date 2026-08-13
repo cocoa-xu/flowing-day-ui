@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { defaultGraphAccessibilityCommandResolver } from '../../accessibility/configuration.js'
+import { defaultGraphCanvasAccessibilityCommandResolver } from '../../accessibility/configuration.js'
 import type { FdGraphCanvasAccessibilityRequestDetail } from '../../accessibility/events.js'
-import { FdGraphAccessibilitySnapshot } from '../../accessibility/snapshot.js'
+import { FdGraphCanvasAccessibilitySnapshot } from '../../accessibility/snapshot.js'
 import type { FdCanvasPoint } from '../../geometry.js'
 import type {
   FdGraphConnectionCancelDetail,
@@ -1385,7 +1385,7 @@ describe('fd-graph-canvas accessibility', () => {
     element.style.width = '800px'
     element.style.height = '600px'
     element.snapshot = graphSnapshot()
-    element.accessibilitySnapshot = new FdGraphAccessibilitySnapshot({
+    element.accessibilitySnapshot = new FdGraphCanvasAccessibilitySnapshot({
       canvasDescription: {
         label: 'Reviewed Workflow',
         hint: 'Consumer-provided canvas hint',
@@ -1444,7 +1444,7 @@ describe('fd-graph-canvas accessibility', () => {
       resolveAccessibilityCommand: (event) =>
         event.key === 'i'
           ? { kind: 'perform', action: 'inspect' }
-          : defaultGraphAccessibilityCommandResolver(event),
+          : defaultGraphCanvasAccessibilityCommandResolver(event),
       nodeAccessibilityRepresentation: (node) => ({
         kind: 'element',
         description: {

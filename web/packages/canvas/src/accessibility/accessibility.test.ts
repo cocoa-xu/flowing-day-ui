@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import type { FdAnyGraphSnapshot } from '../graph/model.js'
+import {
+  type FdAnyGraphSnapshot,
+  graphElementReferenceKey,
+  graphNodeReference,
+} from '../graph/model.js'
 import { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
 import {
-  defaultGraphAccessibilityCommandResolver,
+  defaultGraphCanvasAccessibilityCommandResolver,
   resolveGraphCanvasAccessibilityConfiguration,
 } from './configuration.js'
 import {
-  createGraphAccessibilitySnapshot,
-  FdGraphAccessibilitySnapshot,
-  graphNodeAccessibilityKey,
+  createGraphCanvasAccessibilitySnapshot,
+  FdGraphCanvasAccessibilitySnapshot,
 } from './snapshot.js'
+
+const nodeKey = (id: string): string => graphElementReferenceKey(graphNodeReference(id))
 
 const graph: FdAnyGraphSnapshot = {
   id: 'accessibility',
@@ -43,22 +48,22 @@ describe('graph accessibility configuration', () => {
         }),
       },
     )
-    const snapshot = createGraphAccessibilitySnapshot(graph, configuration)
+    const snapshot = createGraphCanvasAccessibilitySnapshot(graph, configuration)
 
     expect(configuration.capabilities.movement).toBe(false)
     expect(configuration.capabilities.selection).toBe(true)
-    expect(snapshot.item(graphNodeAccessibilityKey('source'))?.description).toEqual({
+    expect(snapshot.item(nodeKey('source'))?.description).toEqual({
       label: 'Workflow source',
       hint: 'Consumer hint',
     })
   })
 
   it('allows ports and edges to be exposed or hidden independently', () => {
-    const standard = createGraphAccessibilitySnapshot(
+    const standard = createGraphCanvasAccessibilitySnapshot(
       graph,
       resolveGraphCanvasAccessibilityConfiguration(),
     )
-    const nodesOnly = createGraphAccessibilitySnapshot(
+    const nodesOnly = createGraphCanvasAccessibilitySnapshot(
       graph,
       resolveGraphCanvasAccessibilityConfiguration(
         {},
@@ -75,20 +80,22 @@ describe('graph accessibility configuration', () => {
 
   it('provides a default connected-element command and validates custom actions', () => {
     expect(
-      defaultGraphAccessibilityCommandResolver(
+      defaultGraphCanvasAccessibilityCommandResolver(
         new KeyboardEvent('keydown', { key: 'ArrowRight', altKey: true }),
       ),
     ).toEqual({ kind: 'focusNextRelated' })
     expect(
-      defaultGraphAccessibilityCommandResolver(new KeyboardEvent('keydown', { key: ' ' })),
+      defaultGraphCanvasAccessibilityCommandResolver(new KeyboardEvent('keydown', { key: ' ' })),
     ).toEqual({
       kind: 'select',
     })
     expect(
-      defaultGraphAccessibilityCommandResolver(new KeyboardEvent('keydown', { key: 'Enter' })),
+      defaultGraphCanvasAccessibilityCommandResolver(
+        new KeyboardEvent('keydown', { key: 'Enter' }),
+      ),
     ).toEqual({ kind: 'select' })
     expect(() =>
-      createGraphAccessibilitySnapshot(
+      createGraphCanvasAccessibilitySnapshot(
         graph,
         resolveGraphCanvasAccessibilityConfiguration(
           {},
@@ -120,12 +127,12 @@ describe('graph accessibility configuration', () => {
 
 describe('graph accessibility snapshot', () => {
   it('preserves stable focus and relationships', () => {
-    const snapshot = createGraphAccessibilitySnapshot(
+    const snapshot = createGraphCanvasAccessibilitySnapshot(
       graph,
       resolveGraphCanvasAccessibilityConfiguration(),
     )
-    const source = graphNodeAccessibilityKey('source')
-    const target = graphNodeAccessibilityKey('target')
+    const source = nodeKey('source')
+    const target = nodeKey('target')
 
     expect(snapshot.reconciledFocus(target)).toBe(target)
     expect(snapshot.reconciledFocus('missing')).toBe(source)
@@ -134,7 +141,7 @@ describe('graph accessibility snapshot', () => {
   })
 
   it('traverses hidden relationship elements to the next exposed item', () => {
-    const snapshot = createGraphAccessibilitySnapshot(
+    const snapshot = createGraphCanvasAccessibilitySnapshot(
       graph,
       resolveGraphCanvasAccessibilityConfiguration(
         {},
@@ -145,13 +152,11 @@ describe('graph accessibility snapshot', () => {
       ),
     )
 
-    expect(snapshot.relatedElementKeys(graphNodeAccessibilityKey('source'))).toEqual([
-      graphNodeAccessibilityKey('target'),
-    ])
+    expect(snapshot.relatedElementKeys(nodeKey('source'))).toEqual([nodeKey('target')])
   })
 
   it('preserves snapshot identity and canvas semantics', () => {
-    const snapshot = new FdGraphAccessibilitySnapshot({
+    const snapshot = new FdGraphCanvasAccessibilitySnapshot({
       id: 'snapshot-1',
       canvasDescription: {
         label: 'Workflow Canvas',
@@ -170,7 +175,7 @@ describe('graph accessibility snapshot', () => {
   it('rejects invalid item geometry', () => {
     expect(
       () =>
-        new FdGraphAccessibilitySnapshot({
+        new FdGraphCanvasAccessibilitySnapshot({
           canvasDescription: { label: 'Graph Canvas' },
           items: [
             {
@@ -195,7 +200,7 @@ describe('graph accessibility snapshot', () => {
       description: { label: `Node ${index}` },
       relatedElementKeys: [],
     }))
-    const snapshot = new FdGraphAccessibilitySnapshot({
+    const snapshot = new FdGraphCanvasAccessibilitySnapshot({
       canvasDescription: { label: 'Graph Canvas' },
       items,
     })
@@ -207,7 +212,7 @@ describe('graph accessibility snapshot', () => {
 
   it('updates affected node, port, and edge geometry incrementally', () => {
     const index = new FdGraphSnapshotIndex(graph)
-    const snapshot = createGraphAccessibilitySnapshot(
+    const snapshot = createGraphCanvasAccessibilitySnapshot(
       graph,
       resolveGraphCanvasAccessibilityConfiguration(),
     )
@@ -217,7 +222,7 @@ describe('graph accessibility snapshot', () => {
 
     snapshot.updateGeometry(index, new Set(['source']))
 
-    expect(snapshot.item(graphNodeAccessibilityKey('source'))?.frame).toEqual({
+    expect(snapshot.item(nodeKey('source'))?.frame).toEqual({
       x: 40,
       y: 30,
       width: 100,

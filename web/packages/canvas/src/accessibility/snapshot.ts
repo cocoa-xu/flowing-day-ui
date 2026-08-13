@@ -14,24 +14,24 @@ import {
 } from '../graph/model.js'
 import type { FdGraphSnapshotIndex } from '../graph/snapshot-index.js'
 import type {
-  FdGraphAccessibilityDescription,
+  FdGraphCanvasAccessibilityDescription,
   FdResolvedGraphCanvasAccessibilityConfiguration,
 } from './configuration.js'
 
-export type FdGraphAccessibilityElementKind = FdGraphElementReference['kind']
+export type FdGraphCanvasAccessibilityElementKind = FdGraphElementReference['kind']
 
-export type FdGraphAccessibilityElementReference = FdGraphElementReference
+export type FdGraphCanvasAccessibilityElementReference = FdGraphElementReference
 
-export interface FdGraphAccessibilityItem {
+export interface FdGraphCanvasAccessibilityItem {
   readonly key: string
-  readonly kind: FdGraphAccessibilityElementKind
-  readonly reference: FdGraphAccessibilityElementReference
+  readonly kind: FdGraphCanvasAccessibilityElementKind
+  readonly reference: FdGraphCanvasAccessibilityElementReference
   readonly frame: FdCanvasRect
-  readonly description: FdGraphAccessibilityDescription
+  readonly description: FdGraphCanvasAccessibilityDescription
   readonly relatedElementKeys: readonly string[]
 }
 
-export type FdGraphAccessibilitySnapshotID = string | number
+export type FdGraphCanvasAccessibilitySnapshotID = string | number
 
 const nodeKey = (nodeID: FdGraphElementID): string =>
   graphElementReferenceKey(graphNodeReference(nodeID))
@@ -56,8 +56,8 @@ const edgeFrame = (
 })
 
 const validatedDescription = (
-  description: FdGraphAccessibilityDescription,
-): FdGraphAccessibilityDescription => {
+  description: FdGraphCanvasAccessibilityDescription,
+): FdGraphCanvasAccessibilityDescription => {
   if (!description.label.trim()) throw new RangeError('accessibility label must not be empty')
   const actions = new Set<string>()
   for (const action of description.actions ?? []) {
@@ -78,17 +78,17 @@ const isFiniteRect = (frame: FdCanvasRect): boolean =>
 
 let snapshotSequence = 0
 
-export class FdGraphAccessibilitySnapshot {
-  readonly id: FdGraphAccessibilitySnapshotID
-  readonly canvasDescription: FdGraphAccessibilityDescription
-  private readonly itemValues: FdGraphAccessibilityItem[]
+export class FdGraphCanvasAccessibilitySnapshot {
+  readonly id: FdGraphCanvasAccessibilitySnapshotID
+  readonly canvasDescription: FdGraphCanvasAccessibilityDescription
+  private readonly itemValues: FdGraphCanvasAccessibilityItem[]
   private readonly indexByKey = new Map<string, number>()
   private readonly relationshipGraph: ReadonlyMap<string, readonly string[]>
 
   constructor(configuration: {
-    readonly id?: FdGraphAccessibilitySnapshotID
-    readonly canvasDescription: FdGraphAccessibilityDescription
-    readonly items: readonly FdGraphAccessibilityItem[]
+    readonly id?: FdGraphCanvasAccessibilitySnapshotID
+    readonly canvasDescription: FdGraphCanvasAccessibilityDescription
+    readonly items: readonly FdGraphCanvasAccessibilityItem[]
     readonly relationships?: ReadonlyMap<string, readonly string[]>
   }) {
     const { items } = configuration
@@ -118,7 +118,7 @@ export class FdGraphAccessibilitySnapshot {
     this.relationshipGraph = relationships
   }
 
-  get items(): readonly FdGraphAccessibilityItem[] {
+  get items(): readonly FdGraphCanvasAccessibilityItem[] {
     return this.itemValues
   }
 
@@ -134,7 +134,7 @@ export class FdGraphAccessibilitySnapshot {
     return this.indexByKey.has(key)
   }
 
-  item(key: string): FdGraphAccessibilityItem | undefined {
+  item(key: string): FdGraphCanvasAccessibilityItem | undefined {
     const index = this.indexByKey.get(key)
     return index === undefined ? undefined : this.itemValues[index]
   }
@@ -175,7 +175,7 @@ export class FdGraphAccessibilitySnapshot {
   exposedItems(
     focusedKey: string | undefined,
     maximumCount: number,
-  ): readonly FdGraphAccessibilityItem[] {
+  ): readonly FdGraphCanvasAccessibilityItem[] {
     if (!Number.isInteger(maximumCount) || maximumCount <= 0) {
       throw new RangeError('maximum exposed accessibility item count must be a positive integer')
     }
@@ -216,15 +216,15 @@ export class FdGraphAccessibilitySnapshot {
   }
 }
 
-export function createGraphAccessibilitySnapshot(
+export function createGraphCanvasAccessibilitySnapshot(
   graph: FdAnyGraphSnapshot,
   configuration: FdResolvedGraphCanvasAccessibilityConfiguration,
-): FdGraphAccessibilitySnapshot {
+): FdGraphCanvasAccessibilitySnapshot {
   const canvasDescription = { label: configuration.canvasLabel }
   if (!configuration.enabled) {
-    return new FdGraphAccessibilitySnapshot({ canvasDescription, items: [] })
+    return new FdGraphCanvasAccessibilitySnapshot({ canvasDescription, items: [] })
   }
-  const items: FdGraphAccessibilityItem[] = []
+  const items: FdGraphCanvasAccessibilityItem[] = []
   const nodes = new Map(graph.nodes.map((node) => [node.id, node]))
   const relationships = new Map<string, string[]>()
   const appendRelationship = (source: string, target: string): void => {
@@ -297,7 +297,5 @@ export function createGraphAccessibilitySnapshot(
       relatedElementKeys: relationships.get(edgeKey(edge.id)) ?? [],
     })
   }
-  return new FdGraphAccessibilitySnapshot({ canvasDescription, items, relationships })
+  return new FdGraphCanvasAccessibilitySnapshot({ canvasDescription, items, relationships })
 }
-
-export const graphNodeAccessibilityKey = nodeKey
