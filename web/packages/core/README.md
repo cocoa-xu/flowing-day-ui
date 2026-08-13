@@ -114,19 +114,21 @@ Icons already on the page pick up a later registration.
 `fd-button-row`, `fd-link-row`, `fd-expandable-row`, `fd-color-picker-row`,
 `fd-search-picker-row`, `fd-empty-row`.
 
-**Selection** — `fd-checkbox`, `fd-multi-select`, `fd-segmented-control`,
+**Selection** — `fd-checkbox`, `fd-radio`, `fd-radio-group`, `fd-multi-select`, `fd-segmented-control`,
 `fd-connected-segmented-control`, `fd-segmented-row`, `fd-connected-segmented-row`,
 `fd-symbol-segmented-row`, `fd-multi-select-row`, `fd-switch-group`, `fd-check-toggle`,
 `fd-icon-selection-button`, `fd-tabs`, `fd-option`.
 
 **Controls** — `fd-button`, `fd-switch`, `fd-slider`, `fd-select`, `fd-text-field`, `fd-secure-field`,
-`fd-text-area`, `fd-search-picker`, `fd-color-picker`, `fd-icon-button`, `fd-progress`.
+`fd-text-area`, `fd-search-picker`, `fd-color-picker`, `fd-date-picker`, `fd-stepper`, `fd-menu`,
+`fd-icon-button`, `fd-progress`.
 
-**Display** — `fd-empty-state`, `fd-value-text`.
+**Display** — `fd-badge`, `fd-callout`, `fd-empty-state`, `fd-value-text`.
 
-**Overlays** — `fd-dialog`, `fd-dialog-action`, `fd-popover`, `fd-tooltip`.
+**Overlays** — `fd-dialog`, `fd-dialog-action`, `fd-popover`, `fd-tooltip`, `fd-tooltip-content`.
 
-**Pills and layout** — `fd-chip`, `fd-tag`, `fd-selectable-tag`, `fd-wrapping-grid`, `fd-adaptive-grid`, `fd-flow-grid`, `fd-grid`.
+**Pills and layout** — `fd-chip`, `fd-tag`, `fd-selectable-tag`, `fd-section-header`,
+`fd-disclosure-content`, `fd-wrapping-grid`, `fd-adaptive-grid`, `fd-flow-grid`, `fd-grid`.
 
 **Icons** — `fd-icon`.
 

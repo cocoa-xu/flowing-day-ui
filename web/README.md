@@ -3,8 +3,9 @@
 Workspace for `@flowing-day/ui`, a framework-agnostic port of the `FlowingDayControls`
 SwiftUI module and its Preferences compositions, built as standard Custom Elements.
 
-**Using the library?** The package README is
-[`packages/core/README.md`](./packages/core/README.md) — install, theming, components.
+**Using the library?** Start with the package README for
+[`@flowing-day/ui`](./packages/core/README.md) or
+[`@flowing-day/canvas`](./packages/canvas/README.md).
 This file covers working on it.
 
 ## Layout
@@ -83,8 +84,8 @@ README for why. Git tags have to distinguish them, and SPM requires bare semver 
 | | Version | Tag |
 | --- | --- | --- |
 | Swift | `2.3.0` | `2.3.0` |
-| Web UI | `0.2.0` | `web/v0.2.0` |
-| Web Canvas | `0.3.0` | `web/canvas-v0.3.0` |
+| Web UI | `0.3.0` | `web/v0.3.0` |
+| Web Canvas | `0.4.0` | `web/canvas-v0.4.0` |
 
 Publish a package with `pnpm --filter <package-name> publish`; `publishConfig.access` is already
 set, since scoped packages default to restricted.
@@ -110,6 +111,10 @@ connection completion are semantic events; applications can apply them locally, 
 undo policy, or through a collaborative reducer. Connection editing is opt-in through
 `connectionEditingConfiguration` and supports default or consumer-rendered previews,
 validation feedback, new links, and endpoint reconnection.
+
+The Swift graph, presentation, session, interaction, rendering, accessibility, and layout
+boundaries are the source of truth for the Web package. The 0.4.0 release removes the
+remaining Web-only configuration model rather than preserving two competing APIs.
 
 Large graphs can use `FdGraphSearchIndex` without rendering or scanning DOM nodes. The
 bounded index supports ranked metadata search over 100,000 elements, while
