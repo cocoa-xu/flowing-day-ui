@@ -185,6 +185,25 @@ const makeContent = () => {
 }
 
 describe('graph canvas presentation resolver', () => {
+  it('renders content assigned after the empty canvas is connected', async () => {
+    const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
+    element.style.cssText = 'width:800px;height:600px'
+    document.body.append(element)
+    await element.updateComplete
+
+    element.node = (node) => `Node ${node.id}`
+    element.content = makeContent()
+    await element.updateComplete
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+    const engine = element.shadowRoot?.querySelector('fd-graph-canvas-engine')
+    expect(engine?.getBoundingClientRect()).toEqual(
+      expect.objectContaining({ width: 800, height: 600 }),
+    )
+    expect(engine?.shadowRoot?.querySelectorAll('.graph-node')).toHaveLength(2)
+  })
+
   it('feeds source-aligned content and session state into the private engine', async () => {
     const content = makeContent()
     const element = document.createElement('fd-graph-canvas') as FdGraphCanvas<string>
