@@ -5,6 +5,8 @@ import { type CollectedOption, collectOptions } from './options.js'
 import { selectionStyles } from './selection.js'
 import '../components/icon/fd-icon.js'
 
+export type FdSegmentLabelStyle = 'automatic' | 'text-only' | 'icon-only' | 'icon-and-text'
+
 export abstract class FdSegmentedControlBase extends FdElement {
   static formAssociated = true
 
@@ -30,6 +32,9 @@ export abstract class FdSegmentedControlBase extends FdElement {
   @property({ type: Boolean, reflect: true }) disabled = false
 
   @property({ reflect: true }) name = ''
+
+  @property({ reflect: true, attribute: 'label-style' })
+  labelStyle: FdSegmentLabelStyle = 'automatic'
 
   @state() protected options: CollectedOption[] = []
 
@@ -131,6 +136,24 @@ export abstract class FdSegmentedControlBase extends FdElement {
     return -1
   }
 
+  #optionContent(option: CollectedOption) {
+    const icon = option.symbol
+      ? html`<fd-icon class="segment-icon" name=${option.symbol}></fd-icon>`
+      : undefined
+    const label = html`<span class="segment-label">${option.label}</span>`
+
+    switch (this.labelStyle) {
+      case 'text-only':
+        return label
+      case 'icon-only':
+        return icon ?? label
+      case 'icon-and-text':
+        return html`${icon}${label}`
+      case 'automatic':
+        return icon ?? label
+    }
+  }
+
   override render() {
     const selectedIndex = this.selectedIndex
     const tabStopIndex =
@@ -164,11 +187,7 @@ export abstract class FdSegmentedControlBase extends FdElement {
               tabindex=${index === tabStopIndex ? 0 : -1}
               @click=${() => this.#select(index)}
             >
-              ${
-                option.symbol
-                  ? html`<fd-icon class="segment-icon" name=${option.symbol}></fd-icon>`
-                  : html`<span class="segment-label">${option.label}</span>`
-              }
+              ${this.#optionContent(option)}
             </button>
           `
         })}

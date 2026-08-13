@@ -53,6 +53,16 @@ it('keeps adaptive grid levels within visual spacing bounds', () => {
   expect(levels.coarse).toEqual({ spacing: 36, opacity: 0.5 })
 })
 
+it('keeps adaptive grid transitions continuous across scale boundaries', () => {
+  const before = new FdCanvasGridLevels(24, 0.999, 12, 2)
+  const after = new FdCanvasGridLevels(24, 1.001, 12, 2)
+
+  expect(before.fine.spacing).toBeCloseTo(23.976)
+  expect(before.fine.opacity).toBeCloseTo(0.998)
+  expect(after.coarse.spacing).toBeCloseTo(24.024)
+  expect(after.coarse.opacity).toBeCloseTo(0.998)
+})
+
 describe('canvas rectangle utilities', () => {
   it('detects intersecting and disjoint rectangles', () => {
     expect(

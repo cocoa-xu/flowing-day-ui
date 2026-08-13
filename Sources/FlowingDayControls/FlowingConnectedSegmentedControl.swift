@@ -20,17 +20,20 @@ public struct FlowingConnectedSegmentedControl<Value: Hashable>: View {
   private let label: String
   @Binding private var selection: Value
   private let options: [FlowingSegmentOption<Value>]
+  private let labelStyle: FlowingSegmentLabelStyle
 
   public init(
     label: String,
     selection: Binding<Value>,
-    options: [FlowingSegmentOption<Value>]
+    options: [FlowingSegmentOption<Value>],
+    labelStyle: FlowingSegmentLabelStyle = .automatic
   ) {
     precondition(!options.isEmpty)
     precondition(Set(options.map(\.id)).count == options.count)
     self.label = label
     _selection = selection
     self.options = options
+    self.labelStyle = labelStyle
   }
 
   public var body: some View {
@@ -40,7 +43,8 @@ public struct FlowingConnectedSegmentedControl<Value: Hashable>: View {
           option: option,
           isSelected: selection == option.value,
           showsKeyboardFocus: hasKeyboardFocus,
-          selectionNamespace: selectionNamespace
+          selectionNamespace: selectionNamespace,
+          labelStyle: labelStyle
         ) {
           selection = option.value
           hasKeyboardFocus = true
@@ -128,12 +132,12 @@ private struct FlowingConnectedSegmentButton<Value: Hashable>: View {
   @Environment(\.flowingAccent) private var accent
   @Environment(\.flowingMetrics) private var metrics
   @Environment(\.flowingStrings) private var strings
-  @Environment(\.flowingTypography) private var typography
   @State private var isHovering = false
   let option: FlowingSegmentOption<Value>
   let isSelected: Bool
   let showsKeyboardFocus: Bool
   let selectionNamespace: Namespace.ID
+  let labelStyle: FlowingSegmentLabelStyle
   let action: () -> Void
 
   var body: some View {
@@ -152,7 +156,7 @@ private struct FlowingConnectedSegmentButton<Value: Hashable>: View {
         } else if isHovering && isEnabled {
           selectionShape.fill(accent.veil)
         }
-        segmentLabel
+        FlowingSegmentLabel(option: option, style: labelStyle)
           .foregroundStyle(isSelected ? accent.foreground : FlowingPalette.muted)
           .padding(.horizontal, FlowingConnectedSegmentedControlMetrics.horizontalInset)
           .padding(.vertical, FlowingConnectedSegmentedControlMetrics.verticalInset)
@@ -170,19 +174,6 @@ private struct FlowingConnectedSegmentButton<Value: Hashable>: View {
       reduceMotion ? nil : .easeOut(duration: FlowingMotion.hover),
       value: isHovering
     )
-  }
-
-  @ViewBuilder
-  private var segmentLabel: some View {
-    if let systemImage = option.systemImage {
-      Image(systemName: systemImage)
-        .font(.system(size: 12, weight: .semibold))
-    } else {
-      Text(option.label)
-        .font(typography.selectionLabel.font)
-        .lineLimit(1)
-        .minimumScaleFactor(0.72)
-    }
   }
 
   private var selectionShape: RoundedRectangle {

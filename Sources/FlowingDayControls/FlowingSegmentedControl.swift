@@ -1,5 +1,12 @@
 import SwiftUI
 
+public enum FlowingSegmentLabelStyle: Sendable {
+  case automatic
+  case textOnly
+  case iconOnly
+  case iconAndText
+}
+
 public struct FlowingSegmentOption<Value: Hashable>: Identifiable {
   public let value: Value
   public let label: String
@@ -49,17 +56,20 @@ public struct FlowingSegmentedControl<Value: Hashable>: View {
   private let label: String
   @Binding private var selection: Value
   private let options: [FlowingSegmentOption<Value>]
+  private let labelStyle: FlowingSegmentLabelStyle
 
   public init(
     label: String,
     selection: Binding<Value>,
-    options: [FlowingSegmentOption<Value>]
+    options: [FlowingSegmentOption<Value>],
+    labelStyle: FlowingSegmentLabelStyle = .automatic
   ) {
     precondition(!options.isEmpty)
     precondition(Set(options.map(\.id)).count == options.count)
     self.label = label
     _selection = selection
     self.options = options
+    self.labelStyle = labelStyle
   }
 
   public var body: some View {
@@ -68,7 +78,8 @@ public struct FlowingSegmentedControl<Value: Hashable>: View {
         FlowingSegmentButton(
           option: option,
           isSelected: selection == option.value,
-          showsKeyboardFocus: hasKeyboardFocus
+          showsKeyboardFocus: hasKeyboardFocus,
+          labelStyle: labelStyle
         ) {
           selection = option.value
           hasKeyboardFocus = true
@@ -136,16 +147,16 @@ private struct FlowingSegmentButton<Value: Hashable>: View {
   @Environment(\.flowingMetrics) private var metrics
   @Environment(\.flowingStrings) private var strings
   @Environment(\.flowingSurfaces) private var surfaces
-  @Environment(\.flowingTypography) private var typography
   @State private var isHovering = false
   let option: FlowingSegmentOption<Value>
   let isSelected: Bool
   let showsKeyboardFocus: Bool
+  let labelStyle: FlowingSegmentLabelStyle
   let action: () -> Void
 
   var body: some View {
     Button(action: action) {
-      segmentLabel
+      FlowingSegmentLabel(option: option, style: labelStyle)
         .foregroundStyle(isSelected ? accent.foreground : FlowingPalette.muted)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, FlowingSegmentedControlMetrics.horizontalInset)
@@ -171,19 +182,6 @@ private struct FlowingSegmentButton<Value: Hashable>: View {
     )
   }
 
-  @ViewBuilder
-  private var segmentLabel: some View {
-    if let systemImage = option.systemImage {
-      Image(systemName: systemImage)
-        .font(.system(size: 12, weight: .semibold))
-    } else {
-      Text(option.label)
-        .font(typography.selectionLabel.font)
-        .lineLimit(1)
-        .minimumScaleFactor(0.72)
-    }
-  }
-
   private var background: Color {
     if isSelected {
       return accent.wash
@@ -201,6 +199,51 @@ private struct FlowingSegmentButton<Value: Hashable>: View {
 
   private var shape: RoundedRectangle {
     RoundedRectangle(cornerRadius: metrics.controlRadius, style: .continuous)
+  }
+}
+
+struct FlowingSegmentLabel<Value: Hashable>: View {
+  @Environment(\.flowingTypography) private var typography
+  let option: FlowingSegmentOption<Value>
+  let style: FlowingSegmentLabelStyle
+
+  @ViewBuilder
+  var body: some View {
+    switch style {
+    case .automatic:
+      if let systemImage = option.systemImage {
+        icon(systemImage)
+      } else {
+        text
+      }
+    case .textOnly:
+      text
+    case .iconOnly:
+      if let systemImage = option.systemImage {
+        icon(systemImage)
+      } else {
+        text
+      }
+    case .iconAndText:
+      HStack(spacing: 6) {
+        if let systemImage = option.systemImage {
+          icon(systemImage)
+        }
+        text
+      }
+    }
+  }
+
+  private func icon(_ systemImage: String) -> some View {
+    Image(systemName: systemImage)
+      .font(.system(size: 12, weight: .semibold))
+  }
+
+  private var text: some View {
+    Text(option.label)
+      .font(typography.selectionLabel.font)
+      .lineLimit(1)
+      .minimumScaleFactor(0.72)
   }
 }
 
