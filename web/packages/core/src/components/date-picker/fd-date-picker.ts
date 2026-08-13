@@ -2,6 +2,7 @@ import { type CSSResultGroup, css, html, type PropertyValues } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { textInputChromeStyles } from '../../internal/text-input.js'
+import { textRole } from '../../internal/typography.js'
 
 export type FdDatePickerComponents = 'date' | 'time' | 'dateAndTime'
 
@@ -13,6 +14,18 @@ export class FdDatePicker extends FdElement {
     baseStyles,
     textInputChromeStyles,
     css`
+      :host {
+        display: inline-flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .label {
+        ${textRole('row-title')}
+        color: var(--_fd-palette-ink);
+      }
+
       input {
         color-scheme: light dark;
       }
@@ -89,6 +102,7 @@ export class FdDatePicker extends FdElement {
 
   override render() {
     return html`
+      ${this.label ? html`<span class="label" part="label">${this.label}</span>` : null}
       <div class="field" part="field">
         <input
           part="input"

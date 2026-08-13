@@ -13,6 +13,13 @@ async function mount(): Promise<FdDatePicker> {
 afterEach(() => document.body.replaceChildren())
 
 describe('fd-date-picker', () => {
+  it('renders the Swift label beside the field', async () => {
+    const picker = await mount()
+
+    expect(picker.shadowRoot?.querySelector('.label')?.textContent).toBe('Departure')
+    expect(picker.shadowRoot?.querySelector('input')?.ariaLabel).toBe('Departure')
+  })
+
   it.each([
     ['date', 'date'],
     ['time', 'time'],
