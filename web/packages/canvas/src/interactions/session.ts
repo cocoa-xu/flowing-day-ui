@@ -14,7 +14,7 @@ import type {
   FdGraphCanvasConnectionCancellationIntent,
   FdGraphCanvasConnectionCompletionIntent,
   FdGraphCanvasTransientConnection,
-} from './connection.js'
+} from './connection-model.js'
 import type { FdGraphCanvasMarquee, FdGraphCanvasSelectionCommand } from './selection.js'
 
 export class FdGraphCanvasSessionID {
@@ -155,7 +155,7 @@ export interface FdGraphCanvasSessionStateOptions<
   readonly marquee?: FdGraphCanvasMarquee
   readonly transientNodeDrag?: FdGraphCanvasTransientNodeDrag<ElementID>
   readonly transientNodeResize?: FdGraphCanvasTransientNodeResize<ElementID>
-  readonly transientConnection?: FdGraphCanvasTransientConnection
+  readonly transientConnection?: FdGraphCanvasTransientConnection<ElementID>
 }
 
 export class FdGraphCanvasSessionState<ElementID extends FdGraphElementID = FdGraphElementID> {
@@ -167,7 +167,7 @@ export class FdGraphCanvasSessionState<ElementID extends FdGraphElementID = FdGr
   marquee: FdGraphCanvasMarquee | undefined
   transientNodeDrag: FdGraphCanvasTransientNodeDrag<ElementID> | undefined
   transientNodeResize: FdGraphCanvasTransientNodeResize<ElementID> | undefined
-  transientConnection: FdGraphCanvasTransientConnection | undefined
+  transientConnection: FdGraphCanvasTransientConnection<ElementID> | undefined
 
   constructor(options: FdGraphCanvasSessionStateOptions<ElementID> = {}) {
     this.viewport = options.viewport ?? new FdCanvasViewport()
@@ -386,11 +386,11 @@ export type FdGraphCanvasInteractionIntent<ElementID extends FdGraphElementID = 
     }
   | {
       readonly kind: 'connectionCompleted'
-      readonly intent: FdGraphCanvasConnectionCompletionIntent
+      readonly intent: FdGraphCanvasConnectionCompletionIntent<ElementID>
     }
   | {
       readonly kind: 'connectionCancelled'
-      readonly intent: FdGraphCanvasConnectionCancellationIntent
+      readonly intent: FdGraphCanvasConnectionCancellationIntent<ElementID>
     }
   | { readonly kind: 'elementAction'; readonly intent: FdGraphCanvasElementActionIntent<ElementID> }
 

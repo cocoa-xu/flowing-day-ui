@@ -1,12 +1,34 @@
 import type { FdCanvasViewportAction } from '../configuration.js'
 import type { FdCanvasSmartMagnifyContext } from '../events.js'
-import type { FdCanvasRect, FdCanvasSize } from '../geometry.js'
+import type {
+  FdCanvasPoint,
+  FdCanvasRect,
+  FdCanvasRenderSurface,
+  FdCanvasSize,
+} from '../geometry.js'
+import type { FdGraphCanvasGuide } from '../interactions/arrangement.js'
+import {
+  type FdGraphCanvasConnectionPreview,
+  FdGraphCanvasEdgeReconnectionActions,
+  type FdGraphCanvasPortConnectionState,
+} from '../interactions/connection-model.js'
+import type {
+  FdGraphCanvasElementAction,
+  FdGraphCanvasSessionID,
+  FdGraphCanvasSessionState,
+} from '../interactions/session.js'
+import type { FdGraphCanvasSelectionMode } from '../interactions/selection.js'
+import type { FdGraphEdgeRoute } from '../layout/pipeline.js'
+import type { FdCanvasProxy, FdCanvasRenderContext } from '../rendering-context.js'
+import type {
+  FdGraphCanvasAnchor,
+  FdGraphCanvasContent,
+  FdGraphCanvasEdgeAnchors,
+} from './content.js'
 import type { FdGraphCanvasResizeEdges } from './interaction-policy.js'
 import { FdGraphCanvasNodeCapabilities } from './interaction-policy.js'
 import type { FdGraphElementID } from './model.js'
 import type { FdGraphPresentationLocalElementID } from './presentation.js'
-import type { FdGraphCanvasElementAction } from '../interactions/session.js'
-import type { FdGraphCanvasSelectionMode } from '../interactions/selection.js'
 
 export class FdGraphCanvasNodeResizeActions {
   readonly isEnabled: boolean
@@ -155,6 +177,137 @@ export class FdGraphCanvasNodeContext<ElementID extends FdGraphElementID = FdGra
     this.capabilities = options.capabilities ?? FdGraphCanvasNodeCapabilities.standard
     this.actions = options.actions
     this.resizeActions = options.resizeActions ?? FdGraphCanvasNodeResizeActions.disabled
+  }
+}
+
+export class FdGraphCanvasPortContext<ElementID extends FdGraphElementID = FdGraphElementID> {
+  readonly elementID: ElementID
+  readonly localID: FdGraphPresentationLocalElementID
+  readonly nodeLocalID: FdGraphPresentationLocalElementID
+  readonly anchor: FdGraphCanvasAnchor
+  readonly renderedPosition: FdCanvasPoint
+  readonly renderScale: number
+  readonly isSelected: boolean
+  readonly isHovered: boolean
+  readonly connectionState: FdGraphCanvasPortConnectionState
+  readonly actions: FdGraphCanvasElementActions
+
+  constructor(options: {
+    readonly elementID: ElementID
+    readonly localID: FdGraphPresentationLocalElementID
+    readonly nodeLocalID: FdGraphPresentationLocalElementID
+    readonly anchor: FdGraphCanvasAnchor
+    readonly renderedPosition: FdCanvasPoint
+    readonly renderScale: number
+    readonly isSelected: boolean
+    readonly isHovered: boolean
+    readonly connectionState?: FdGraphCanvasPortConnectionState
+    readonly actions: FdGraphCanvasElementActions
+  }) {
+    this.elementID = options.elementID
+    this.localID = options.localID
+    this.nodeLocalID = options.nodeLocalID
+    this.anchor = options.anchor
+    this.renderedPosition = options.renderedPosition
+    this.renderScale = options.renderScale
+    this.isSelected = options.isSelected
+    this.isHovered = options.isHovered
+    this.connectionState = options.connectionState ?? { kind: 'idle' }
+    this.actions = options.actions
+  }
+}
+
+export class FdGraphCanvasEdgeContext<ElementID extends FdGraphElementID = FdGraphElementID> {
+  readonly elementID: ElementID
+  readonly localID: FdGraphPresentationLocalElementID
+  readonly worldRoute: FdGraphEdgeRoute
+  readonly renderedRoute: FdGraphEdgeRoute
+  readonly anchors: FdGraphCanvasEdgeAnchors
+  readonly worldFrame: FdCanvasRect
+  readonly renderedFrame: FdCanvasRect
+  readonly renderScale: number
+  readonly isSelected: boolean
+  readonly isHovered: boolean
+  readonly isTransient: boolean
+  readonly actions: FdGraphCanvasElementActions
+  readonly reconnectionActions: FdGraphCanvasEdgeReconnectionActions
+
+  constructor(options: {
+    readonly elementID: ElementID
+    readonly localID: FdGraphPresentationLocalElementID
+    readonly worldRoute: FdGraphEdgeRoute
+    readonly renderedRoute: FdGraphEdgeRoute
+    readonly anchors: FdGraphCanvasEdgeAnchors
+    readonly worldFrame: FdCanvasRect
+    readonly renderedFrame: FdCanvasRect
+    readonly renderScale: number
+    readonly isSelected: boolean
+    readonly isHovered: boolean
+    readonly isTransient: boolean
+    readonly actions: FdGraphCanvasElementActions
+    readonly reconnectionActions?: FdGraphCanvasEdgeReconnectionActions
+  }) {
+    this.elementID = options.elementID
+    this.localID = options.localID
+    this.worldRoute = options.worldRoute
+    this.renderedRoute = options.renderedRoute
+    this.anchors = options.anchors
+    this.worldFrame = options.worldFrame
+    this.renderedFrame = options.renderedFrame
+    this.renderScale = options.renderScale
+    this.isSelected = options.isSelected
+    this.isHovered = options.isHovered
+    this.isTransient = options.isTransient
+    this.actions = options.actions
+    this.reconnectionActions =
+      options.reconnectionActions ?? FdGraphCanvasEdgeReconnectionActions.disabled
+  }
+}
+
+export class FdGraphCanvasWorldContext<ElementID extends FdGraphElementID = FdGraphElementID> {
+  readonly content: FdGraphCanvasContent<ElementID>
+  readonly session: FdGraphCanvasSessionState<ElementID>
+  readonly renderContext: FdCanvasRenderContext
+  readonly surface: FdCanvasRenderSurface
+  readonly guides: readonly FdGraphCanvasGuide[]
+  readonly selectionResize: FdGraphCanvasSelectionResizeContext<ElementID> | undefined
+  readonly connectionPreview: FdGraphCanvasConnectionPreview<ElementID> | undefined
+
+  constructor(options: {
+    readonly content: FdGraphCanvasContent<ElementID>
+    readonly session: FdGraphCanvasSessionState<ElementID>
+    readonly renderContext: FdCanvasRenderContext
+    readonly surface: FdCanvasRenderSurface
+    readonly guides: readonly FdGraphCanvasGuide[]
+    readonly selectionResize?: FdGraphCanvasSelectionResizeContext<ElementID>
+    readonly connectionPreview?: FdGraphCanvasConnectionPreview<ElementID>
+  }) {
+    this.content = options.content
+    this.session = options.session
+    this.renderContext = options.renderContext
+    this.surface = options.surface
+    this.guides = options.guides
+    this.selectionResize = options.selectionResize
+    this.connectionPreview = options.connectionPreview
+  }
+}
+
+export class FdGraphCanvasOverlayContext<ElementID extends FdGraphElementID = FdGraphElementID> {
+  readonly sessionID: FdGraphCanvasSessionID
+  readonly content: FdGraphCanvasContent<ElementID>
+  readonly session: FdGraphCanvasSessionState<ElementID>
+  readonly proxy: FdCanvasProxy
+
+  constructor(options: {
+    readonly sessionID: FdGraphCanvasSessionID
+    readonly content: FdGraphCanvasContent<ElementID>
+    readonly session: FdGraphCanvasSessionState<ElementID>
+    readonly proxy: FdCanvasProxy
+  }) {
+    this.sessionID = options.sessionID
+    this.content = options.content
+    this.session = options.session
+    this.proxy = options.proxy
   }
 }
 
