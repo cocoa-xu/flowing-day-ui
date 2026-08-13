@@ -5,6 +5,7 @@ import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { chevronDown } from '../../internal/glyphs.js'
 import type { FdEdgeInsets } from '../../internal/overlay-position.js'
 import { textRole } from '../../internal/typography.js'
+import '../disclosure-content/fd-disclosure-content.js'
 
 /**
  * The reusable counterpart to `FlowingDisclosure`.
@@ -72,41 +73,10 @@ export class FdDisclosure extends FdElement {
         opacity: 0.4;
       }
 
-      .reveal {
-        display: grid;
-        grid-template-rows: 0fr;
-        opacity: 0;
-        translate: 0 var(--_fd-motion-disclosure-offset);
-        transition:
-          grid-template-rows var(--_fd-motion-disclosure) var(--_fd-motion-easing),
-          opacity var(--_fd-motion-disclosure) var(--_fd-motion-easing),
-          translate var(--_fd-motion-disclosure) var(--_fd-motion-easing);
-      }
-
-      :host([expanded]) .reveal {
-        grid-template-rows: 1fr;
-        opacity: 1;
-        translate: 0 0;
-      }
-
-      .content {
-        min-height: 0;
-        overflow: hidden;
-      }
-
       @media (prefers-reduced-motion: reduce) {
-        .chevron,
-        .reveal {
+        .chevron {
           transition-duration: var(--_fd-motion-disclosure);
           transition-timing-function: linear;
-        }
-
-        .reveal {
-          translate: 0 var(--_fd-motion-disclosure-offset);
-        }
-
-        :host([expanded]) .reveal {
-          translate: 0 0;
         }
       }
     `,
@@ -171,9 +141,9 @@ export class FdDisclosure extends FdElement {
         <span class="spacer"></span>
         <span class="chevron">${chevronDown}</span>
       </button>
-      <div class="reveal">
-        <div class="content" part="content"><slot></slot></div>
-      </div>
+      <fd-disclosure-content exportparts="content" .isExpanded=${this.expanded}>
+        <slot></slot>
+      </fd-disclosure-content>
     `
   }
 }

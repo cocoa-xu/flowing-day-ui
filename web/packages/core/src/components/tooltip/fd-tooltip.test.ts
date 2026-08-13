@@ -90,7 +90,8 @@ describe('fd-tooltip semantics', () => {
       </fd-tooltip>
     `)
 
-    expect(surface(element).querySelector('.message')?.textContent?.trim()).toBe(
+    const content = surface(element).querySelector('fd-tooltip-content')
+    expect(content?.shadowRoot?.querySelector('.message')?.textContent?.trim()).toBe(
       'Shows more information',
     )
   })
@@ -160,10 +161,9 @@ describe('fd-tooltip semantics', () => {
       </fd-tooltip>
     `)
 
-    expect(surface(element).textContent).toContain('Confirmation')
-    expect(surface(element).querySelector('slot')?.assignedElements()[0]?.textContent).toBe(
-      'Custom explanation',
-    )
+    const content = surface(element).querySelector('fd-tooltip-content')
+    expect(content?.shadowRoot?.querySelector('.title')?.textContent).toBe('Confirmation')
+    expect(element.textContent).toContain('Custom explanation')
     expect(getComputedStyle(surface(element)).pointerEvents).toBe('none')
   })
 })

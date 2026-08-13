@@ -1,10 +1,8 @@
-import { type CSSResultGroup, css, html, nothing, type PropertyValues } from 'lit'
-import { customElement, property, query, state } from 'lit/decorators.js'
+import { type CSSResultGroup, css, html, type PropertyValues } from 'lit'
+import { customElement, property, query } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { type FdEdge, positionOverlay } from '../../internal/overlay-position.js'
-import { hasMeaningfulSlotContent } from '../../internal/slot-content.js'
-import { textRole } from '../../internal/typography.js'
-import '../icon/fd-icon.js'
+import '../tooltip-content/fd-tooltip-content.js'
 
 const DEFAULT_TOOLTIP_DELAY = 0.65
 const TOOLTIP_GAP = 7
@@ -34,7 +32,7 @@ export class FdTooltip extends FdElement {
         inset: auto;
         max-width: 260px;
         margin: 0;
-        padding: 8px 10px;
+        padding: 0;
         border: 1px solid var(--_fd-palette-edge);
         border-radius: calc(var(--_fd-metric-control-radius) + 2px);
         background: var(--_fd-surface-control);
@@ -47,37 +45,6 @@ export class FdTooltip extends FdElement {
         display: none;
       }
 
-      .content {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-      }
-
-      fd-icon {
-        width: 15px;
-        height: 15px;
-        color: var(--_fd-palette-muted);
-        font-size: 11px;
-      }
-
-      .copy {
-        min-width: 0;
-      }
-
-      .title {
-        ${textRole('row-title')}
-        margin: 0;
-        color: var(--_fd-palette-ink);
-      }
-
-      .message {
-        ${textRole('row-caption')}
-        margin: 0;
-      }
-
-      .title + .message {
-        margin-top: 2px;
-      }
     `,
   ]
 
@@ -98,8 +65,6 @@ export class FdTooltip extends FdElement {
   @property({ type: Boolean, reflect: true }) open = false
 
   @query('.surface') private surface!: HTMLElement
-
-  @state() private hasCustomContent = false
 
   #trigger: HTMLElement | null = null
 
@@ -142,12 +107,6 @@ export class FdTooltip extends FdElement {
         .find((element): element is HTMLElement => element instanceof HTMLElement) ?? null
     this.#triggerDescribedBy = this.#trigger?.getAttribute('aria-describedby') ?? null
     this.#updateTriggerDescription()
-  }
-
-  #onContentSlotChange = (event: Event): void => {
-    this.hasCustomContent = hasMeaningfulSlotContent(
-      (event.target as HTMLSlotElement).assignedNodes({ flatten: true }),
-    )
   }
 
   #restoreTriggerDescription(): void {
@@ -269,16 +228,13 @@ export class FdTooltip extends FdElement {
         aria-label=${this.accessibilityText || this.message}
         @toggle=${this.#onToggle}
       >
-        <div class="content">
-          ${this.symbol ? html`<fd-icon name=${this.symbol}></fd-icon>` : nothing}
-          <div class="copy">
-            ${this.title ? html`<p class="title">${this.title}</p>` : nothing}
-            <p class="message">
-              <slot @slotchange=${this.#onContentSlotChange}></slot>
-              ${this.hasCustomContent ? nothing : this.message}
-            </p>
-          </div>
-        </div>
+        <fd-tooltip-content
+          .title=${this.title}
+          .symbol=${this.symbol}
+          .message=${this.message}
+        >
+          <slot></slot>
+        </fd-tooltip-content>
       </div>
     `
   }

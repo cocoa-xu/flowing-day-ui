@@ -34,8 +34,8 @@ describe('fd-disclosure', () => {
 
   it('animates an intrinsic-height reveal without exposing overflow', async () => {
     const element = await mount('expanded')
-    const reveal = element.shadowRoot?.querySelector('.reveal') as HTMLElement
-    const content = element.shadowRoot?.querySelector('.content') as HTMLElement
+    const reveal = element.shadowRoot?.querySelector('fd-disclosure-content') as HTMLElement
+    const content = reveal.shadowRoot?.querySelector('.content') as HTMLElement
 
     expect(getComputedStyle(content).overflow).toBe('hidden')
     expect(reveal.getBoundingClientRect().height).toBeGreaterThan(0)
