@@ -36,6 +36,7 @@ public struct PreferencesPage<ID: Hashable>: Identifiable {
   public let subtitle: String?
   public let icon: PreferencesPageIcon
   public let headerIcon: PreferencesPageIcon
+  public let navigationAccent: FlowingAccent?
   public let accent: FlowingAccent?
   public let isAvailable: Bool
   let content: AnyView
@@ -46,6 +47,7 @@ public struct PreferencesPage<ID: Hashable>: Identifiable {
     subtitle: String? = nil,
     icon: PreferencesPageIcon,
     headerIcon: PreferencesPageIcon? = nil,
+    navigationAccent: FlowingAccent? = nil,
     accent: FlowingAccent? = nil,
     isAvailable: Bool = true,
     @ViewBuilder content: () -> Content
@@ -55,6 +57,7 @@ public struct PreferencesPage<ID: Hashable>: Identifiable {
     self.subtitle = subtitle
     self.icon = icon
     self.headerIcon = headerIcon ?? icon
+    self.navigationAccent = navigationAccent
     self.accent = accent
     self.isAvailable = isAvailable
     self.content = AnyView(content())
@@ -275,13 +278,27 @@ private struct PreferencesSidebarGroup<ID: Hashable>: View {
         PreferencesSidebarRow(
           page: page,
           isSelected: page.id == selection,
-          accent: page.accent ?? defaultAccent,
+          accent: PreferencesSidebarAccentResolver.resolve(
+            navigationAccent: page.navigationAccent,
+            pageAccent: page.accent,
+            defaultAccent: defaultAccent
+          ),
           isIndented: group.isIndented
         ) {
           selection = page.id
         }
       }
     }
+  }
+}
+
+enum PreferencesSidebarAccentResolver {
+  static func resolve(
+    navigationAccent: FlowingAccent?,
+    pageAccent: FlowingAccent?,
+    defaultAccent: FlowingAccent
+  ) -> FlowingAccent {
+    navigationAccent ?? pageAccent ?? defaultAccent
   }
 }
 

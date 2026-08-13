@@ -121,6 +121,48 @@ final class PreferencesNavigationTests: XCTestCase {
     XCTAssertEqual(sidebarSymbol, "info.circle")
   }
 
+  func testNavigationAccentOverridesThePageAndDefaultAccents() {
+    XCTAssertEqual(
+      PreferencesSidebarAccentResolver.resolve(
+        navigationAccent: .rose,
+        pageAccent: .rain,
+        defaultAccent: .celadon
+      ),
+      .rose
+    )
+    XCTAssertEqual(
+      PreferencesSidebarAccentResolver.resolve(
+        navigationAccent: nil,
+        pageAccent: .rain,
+        defaultAccent: .celadon
+      ),
+      .rain
+    )
+    XCTAssertEqual(
+      PreferencesSidebarAccentResolver.resolve(
+        navigationAccent: nil,
+        pageAccent: nil,
+        defaultAccent: .celadon
+      ),
+      .celadon
+    )
+  }
+
+  func testPagePreservesASeparateNavigationAccent() {
+    let page = PreferencesPage(
+      id: "companion",
+      title: "Companion",
+      icon: .system("leaf"),
+      navigationAccent: .rose,
+      accent: .rain
+    ) {
+      Color.clear
+    }
+
+    XCTAssertEqual(page.navigationAccent, .rose)
+    XCTAssertEqual(page.accent, .rain)
+  }
+
   func testPageUsesItsNavigationIconForTheHeaderByDefault() {
     let page = PreferencesPage(
       id: "general",
