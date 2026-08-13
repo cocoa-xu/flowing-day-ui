@@ -36,6 +36,17 @@ afterEach(() => {
 })
 
 describe('segmented control primitives', () => {
+  it('accepts Swift-style options directly', async () => {
+    const element = await mount<FdSegmentedControl>('fd-segmented-control')
+    element.options = [
+      { value: 'small', label: 'Small' },
+      { value: 'medium', label: 'Medium' },
+    ]
+    await element.updateComplete
+
+    expect(segments(element)).toHaveLength(2)
+  })
+
   it('uses radio-group semantics and one selected segment', async () => {
     const element = await mount<FdSegmentedControl>('fd-segmented-control')
     const control = element.shadowRoot?.querySelector('.strip') as HTMLElement
@@ -93,7 +104,7 @@ describe('segmented control primitives', () => {
 
   it('can show an icon and label together', async () => {
     const host = document.createElement('div')
-    host.innerHTML = `<fd-connected-segmented-control label="Layout" value="horizontal" label-style="icon-and-text">${SYMBOL_OPTIONS}</fd-connected-segmented-control>`
+    host.innerHTML = `<fd-connected-segmented-control label="Layout" value="horizontal" label-style="iconAndText">${SYMBOL_OPTIONS}</fd-connected-segmented-control>`
     document.body.append(host)
     const element = host.firstElementChild as FdConnectedSegmentedControl
     await element.updateComplete
@@ -105,7 +116,7 @@ describe('segmented control primitives', () => {
 
   it('supports explicit text-only and icon-only labels', async () => {
     const host = document.createElement('div')
-    host.innerHTML = `<fd-segmented-control label="Layout" value="horizontal" label-style="text-only">${SYMBOL_OPTIONS}</fd-segmented-control>`
+    host.innerHTML = `<fd-segmented-control label="Layout" value="horizontal" label-style="textOnly">${SYMBOL_OPTIONS}</fd-segmented-control>`
     document.body.append(host)
     const element = host.firstElementChild as FdSegmentedControl
     await element.updateComplete
@@ -114,7 +125,7 @@ describe('segmented control primitives', () => {
     expect(element.shadowRoot?.querySelectorAll('.segment-icon')).toHaveLength(0)
     expect(element.shadowRoot?.querySelectorAll('.segment-label')).toHaveLength(2)
 
-    element.labelStyle = 'icon-only'
+    element.labelStyle = 'iconOnly'
     await element.updateComplete
 
     expect(element.shadowRoot?.querySelectorAll('.segment-icon')).toHaveLength(2)

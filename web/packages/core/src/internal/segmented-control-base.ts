@@ -5,7 +5,20 @@ import { type CollectedOption, collectOptions } from './options.js'
 import { selectionStyles } from './selection.js'
 import '../components/icon/fd-icon.js'
 
-export type FdSegmentLabelStyle = 'automatic' | 'text-only' | 'icon-only' | 'icon-and-text'
+export interface FdSegmentOption {
+  readonly value: string
+  readonly label: string
+  readonly symbol?: string
+}
+
+interface ResolvedSegmentOption {
+  readonly value: string
+  readonly label: string
+  readonly symbol: string | null
+  readonly disabled: boolean
+}
+
+export type FdSegmentLabelStyle = 'automatic' | 'textOnly' | 'iconOnly' | 'iconAndText'
 
 export abstract class FdSegmentedControlBase extends FdElement {
   static formAssociated = true
@@ -33,10 +46,12 @@ export abstract class FdSegmentedControlBase extends FdElement {
 
   @property({ reflect: true }) name = ''
 
+  @property({ attribute: false }) options: readonly FdSegmentOption[] = []
+
   @property({ reflect: true, attribute: 'label-style' })
   labelStyle: FdSegmentLabelStyle = 'automatic'
 
-  @state() protected options: CollectedOption[] = []
+  @state() private slottedOptions: CollectedOption[] = []
 
   readonly #internals: ElementInternals
 
@@ -60,7 +75,7 @@ export abstract class FdSegmentedControlBase extends FdElement {
   }
 
   get selectedIndex(): number {
-    return this.options.findIndex((option) => option.value === this.value)
+    return this.#resolvedOptions.findIndex((option) => option.value === this.value)
   }
 
   override connectedCallback(): void {
@@ -82,11 +97,11 @@ export abstract class FdSegmentedControlBase extends FdElement {
   }
 
   #onSlotChange = (event: Event): void => {
-    this.options = collectOptions(event.target as HTMLSlotElement)
+    this.slottedOptions = collectOptions(event.target as HTMLSlotElement)
   }
 
   #select(index: number): void {
-    const option = this.options[index]
+    const option = this.#resolvedOptions[index]
     if (!option || this.disabled || option.disabled || option.value === this.value) return
     this.value = option.value
     this.dispatchEvent(
@@ -99,7 +114,8 @@ export abstract class FdSegmentedControlBase extends FdElement {
   }
 
   #onKeydown = (event: KeyboardEvent): void => {
-    if (this.options.length === 0 || this.disabled) return
+    const options = this.#resolvedOptions
+    if (options.length === 0 || this.disabled) return
 
     const isRTL = getComputedStyle(this).direction === 'rtl'
     const offset =
@@ -128,26 +144,27 @@ export abstract class FdSegmentedControlBase extends FdElement {
   }
 
   #nextEnabledIndex(current: number, offset: number): number {
+    const options = this.#resolvedOptions
     let candidate = current
-    for (let visited = 0; visited < this.options.length; visited += 1) {
-      candidate = (candidate + offset + this.options.length) % this.options.length
-      if (!this.options[candidate]?.disabled) return candidate
+    for (let visited = 0; visited < options.length; visited += 1) {
+      candidate = (candidate + offset + options.length) % options.length
+      if (!options[candidate]?.disabled) return candidate
     }
     return -1
   }
 
-  #optionContent(option: CollectedOption) {
+  #optionContent(option: ResolvedSegmentOption) {
     const icon = option.symbol
       ? html`<fd-icon class="segment-icon" name=${option.symbol}></fd-icon>`
       : undefined
     const label = html`<span class="segment-label">${option.label}</span>`
 
     switch (this.labelStyle) {
-      case 'text-only':
+      case 'textOnly':
         return label
-      case 'icon-only':
+      case 'iconOnly':
         return icon ?? label
-      case 'icon-and-text':
+      case 'iconAndText':
         return html`${icon}${label}`
       case 'automatic':
         return icon ?? label
@@ -155,11 +172,12 @@ export abstract class FdSegmentedControlBase extends FdElement {
   }
 
   override render() {
+    const options = this.#resolvedOptions
     const selectedIndex = this.selectedIndex
     const tabStopIndex =
-      selectedIndex >= 0 && !this.options[selectedIndex]?.disabled
+      selectedIndex >= 0 && !options[selectedIndex]?.disabled
         ? selectedIndex
-        : this.options.findIndex((option) => !option.disabled)
+        : options.findIndex((option) => !option.disabled)
 
     return html`
       <div
@@ -170,7 +188,7 @@ export abstract class FdSegmentedControlBase extends FdElement {
         ?data-connected=${this.connected}
         @keydown=${this.#onKeydown}
       >
-        ${this.options.map((option, index) => {
+        ${options.map((option, index) => {
           const selected = index === selectedIndex
           return html`
             <button
@@ -194,5 +212,16 @@ export abstract class FdSegmentedControlBase extends FdElement {
       </div>
       <slot hidden @slotchange=${this.#onSlotChange}></slot>
     `
+  }
+
+  get #resolvedOptions(): ResolvedSegmentOption[] {
+    return this.options.length > 0
+      ? this.options.map((option) => ({
+          value: option.value,
+          label: option.label,
+          symbol: option.symbol ?? null,
+          disabled: false,
+        }))
+      : this.slottedOptions
   }
 }

@@ -176,7 +176,10 @@ export type { FdFieldValidation } from './internal/field-validation.js'
 export { FdIcons } from './internal/icon-registry.js'
 export type { CollectedOption } from './internal/options.js'
 export type { FdOverlayPlacement } from './internal/overlay-position.js'
-export type { FdSegmentLabelStyle } from './internal/segmented-control-base.js'
+export type {
+  FdSegmentLabelStyle,
+  FdSegmentOption,
+} from './internal/segmented-control-base.js'
 export { type FdStrings, FdStringsRegistry } from './internal/strings.js'
 export type { FdTextFieldEmphasis } from './internal/text-input.js'
 export * from './tokens/index.js'
