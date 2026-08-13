@@ -59,7 +59,7 @@ describe('fd-checkbox', () => {
       '<fd-checkbox label="Display" symbol="display" checked></fd-checkbox>',
     )
 
-    expect(element.shadowRoot?.querySelector('fd-icon')).not.toBeNull()
+    expect(element.shadowRoot?.querySelector('fd-icon')?.getAttribute('part')).toBe('icon')
     expect(element.shadowRoot?.querySelector('.icon-indicator')).not.toBeNull()
     expect(buttonOf(element).getBoundingClientRect().height).toBeCloseTo(31, 1)
   })

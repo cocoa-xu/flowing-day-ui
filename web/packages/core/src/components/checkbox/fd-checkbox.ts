@@ -22,6 +22,7 @@ export type FdCheckboxTruncation = 'start' | 'middle' | 'end'
  *
  * @fires fd-change - `{ checked: boolean }` after a user interaction.
  * @csspart button - The complete checkbox surface.
+ * @csspart icon - The optional leading icon.
  * @csspart indicator - The selection indicator.
  */
 @customElement('fd-checkbox')
@@ -309,7 +310,9 @@ export class FdCheckbox extends FdElement {
         @click=${this.#toggle}
       >
         ${this.indicatorPlacement === 'leading' ? this.#renderIndicator() : nothing}
-        ${this.symbol ? html`<fd-icon class="icon" name=${this.symbol}></fd-icon>` : nothing}
+        ${this.symbol
+          ? html`<fd-icon class="icon" part="icon" name=${this.symbol}></fd-icon>`
+          : nothing}
         <span class="label">${this.#renderLabel(label)}</span>
         ${this.indicatorPlacement === 'trailing' ? this.#renderIndicator() : nothing}
       </button>
