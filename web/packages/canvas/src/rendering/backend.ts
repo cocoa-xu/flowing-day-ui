@@ -5,6 +5,7 @@ import type {
   FdGraphElementID,
   FdGraphElementReference,
 } from '../graph/model.js'
+import type { FdGraphCubicEdgeGeometry } from './edge-geometry.js'
 
 export type FdGraphRenderingBackendPreference = 'automatic' | 'webgl2' | 'dom'
 export type FdGraphRenderingBackendKind = 'webgl2' | 'dom' | (string & {})
@@ -25,6 +26,7 @@ export interface FdGraphRenderEdge {
   readonly edge: FdAnyGraphEdge
   readonly source: FdCanvasPoint
   readonly target: FdCanvasPoint
+  readonly geometry: FdGraphCubicEdgeGeometry
   readonly selected: boolean
   readonly focused: boolean
   readonly hovered: boolean
@@ -61,18 +63,7 @@ export interface FdGraphRenderingBackend {
 }
 
 export function detectGraphRenderingCapabilities(): FdGraphRenderingCapabilities {
-  const canvas = document.createElement('canvas')
-  const context = canvas.getContext('webgl2', {
-    alpha: true,
-    antialias: true,
-    depth: false,
-    powerPreference: 'high-performance',
-    preserveDrawingBuffer: false,
-    stencil: false,
-  })
-  if (!context) return { webgl2: false }
-  context.getExtension('WEBGL_lose_context')?.loseContext()
-  return { webgl2: true }
+  return { webgl2: typeof WebGL2RenderingContext !== 'undefined' }
 }
 
 let cachedGraphRenderingCapabilities: FdGraphRenderingCapabilities | undefined

@@ -24,6 +24,10 @@ to DOM/SVG otherwise. WebGL batches graph geometry while visible rich node conte
 so custom content and accessibility do not depend on the graphics backend. Set `renderingBackend`
 to `dom`, `webgl2`, or a custom backend when a product needs an explicit policy.
 
+Layered graph layout supports top-to-bottom and left-to-right directions. Both DOM and WebGL2
+rendering consume the same cubic edge geometry, endpoint decorations, and custom edge-label
+content, so changing backends does not change the graph's visual structure.
+
 Products with domain-specific alignment can set `interactionConfiguration.snappingStrategy`.
 Translation and resize solvers are replaceable independently, and custom solvers can delegate to
 `snapGraphTranslationRequest()` or `snapGraphResize()` before refining the standard result. These

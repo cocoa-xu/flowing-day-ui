@@ -71,6 +71,12 @@ export interface FdGraphEdgeStyle {
   readonly color?: string
   readonly width?: number
   readonly dashed?: boolean
+  readonly targetDecoration?: {
+    readonly kind: 'arrow'
+    readonly length?: number
+    readonly width?: number
+    readonly gap?: number
+  }
 }
 
 export interface FdGraphEdge<

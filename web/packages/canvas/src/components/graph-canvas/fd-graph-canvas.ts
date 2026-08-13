@@ -104,7 +104,7 @@ import {
 import type { FdGraphJumpToElementOptions } from '../../interactions/navigation.js'
 import {
   type FdGraphSelectionMode,
-  graphEdgeDistance,
+  graphCubicEdgeDistance,
   graphSelectionMode,
 } from '../../interactions/selection.js'
 import type { FdGraphMiniMapConfiguration } from '../../minimap/configuration.js'
@@ -118,12 +118,19 @@ import {
   resolveGraphRenderingBackendKind,
 } from '../../rendering/backend.js'
 import { FdGraphDOMRenderingBackend } from '../../rendering/dom-backend.js'
+import {
+  defaultGraphEdgeGeometryResolver,
+  type FdGraphEdgeGeometryResolver,
+} from '../../rendering/edge-geometry.js'
 import { FdGraphRenderGeometryCache } from '../../rendering/frame-cache.js'
 import {
   FdGraphDefaultGuideRenderer,
   type FdGraphGuideRenderer,
 } from '../../rendering/guide-renderer.js'
-import { FdGraphWebGL2RenderingBackend } from '../../rendering/webgl2-backend.js'
+import {
+  FdGraphWebGL2RenderingBackend,
+  type FdGraphWebGL2RenderingBackendConfiguration,
+} from '../../rendering/webgl2-backend.js'
 import type { FdCanvas, FdCanvasTransformOptions } from '../canvas/fd-canvas.js'
 import '../canvas/fd-canvas.js'
 import type { FdGraphMiniMap } from '../graph-minimap/fd-graph-minimap.js'
@@ -179,6 +186,7 @@ export class FdGraphCanvas
     .render-world,
     .interaction-world,
     .graph-node-layer,
+    .graph-edge-label-layer,
     .graph-edge-layer {
       position: absolute;
       top: 0;
@@ -202,6 +210,7 @@ export class FdGraphCanvas
     .render-world,
     .interaction-world,
     .graph-node-layer,
+    .graph-edge-label-layer,
     .graph-edge-layer {
       width: 1px;
       height: 1px;
@@ -234,13 +243,32 @@ export class FdGraphCanvas
       stroke: var(--fd-graph-focus-color, var(--fd-canvas-focus-color, Highlight));
     }
 
+    .graph-edge-arrow {
+      fill: var(--fd-graph-edge-color, var(--fd-canvas-edge-color, #aeb5af));
+      pointer-events: auto;
+    }
+
+    .graph-edge-arrow[data-selected] {
+      fill: var(--fd-canvas-accent-color, #6d9ea5);
+    }
+
+    .graph-edge-arrow[data-focused] {
+      fill: var(--fd-graph-focus-color, var(--fd-canvas-focus-color, Highlight));
+    }
+
     .graph-edge-label {
-      fill: var(--fd-canvas-secondary-color, #737872);
+      position: absolute;
+      display: block;
+      color: var(--fd-graph-edge-color, var(--fd-canvas-secondary-color, #737872));
       font: 500 11px system-ui, sans-serif;
-      paint-order: stroke;
-      stroke: var(--fd-canvas-surface-color, #fff);
-      stroke-width: 4px;
-      text-anchor: middle;
+      pointer-events: auto;
+      text-shadow:
+        -2px -2px 0 var(--fd-canvas-surface-color, #fff),
+        2px -2px 0 var(--fd-canvas-surface-color, #fff),
+        -2px 2px 0 var(--fd-canvas-surface-color, #fff),
+        2px 2px 0 var(--fd-canvas-surface-color, #fff);
+      transform-origin: center;
+      white-space: nowrap;
     }
 
     .graph-node {
@@ -677,6 +705,10 @@ export class FdGraphCanvas
   @property({ attribute: false }) renderingBackend:
     | FdGraphRenderingBackendPreference
     | FdGraphRenderingBackend = 'automatic'
+  @property({ attribute: false })
+  renderingConfiguration: FdGraphWebGL2RenderingBackendConfiguration = {}
+  @property({ attribute: false }) edgeGeometryResolver: FdGraphEdgeGeometryResolver =
+    defaultGraphEdgeGeometryResolver
   @property({ reflect: true }) tool: FdGraphCanvasTool = 'select'
   @property({ attribute: false }) interactionConfiguration: FdGraphCanvasInteractionConfiguration =
     {}
@@ -986,6 +1018,14 @@ export class FdGraphCanvas
   protected override updated(changed: PropertyValues<this>): void {
     if (changed.has('renderingBackend') && this.activeBackendSource !== this.renderingBackend) {
       this.activateBackend()
+    }
+    if (changed.has('renderingConfiguration') && typeof this.renderingBackend === 'string') {
+      this.activateBackend()
+    }
+    if (changed.has('edgeGeometryResolver')) {
+      this.renderGeometryCache.invalidate()
+      this.presentationRevision += 1
+      this.scheduleRenderFrame()
     }
     if (changed.has('snapshot') && this.indexedSnapshot !== this.snapshot) {
       this.localSnapshotBaseID = undefined
@@ -1441,10 +1481,11 @@ export class FdGraphCanvas
     )
     let nearest: { readonly edgeID: FdGraphElementID; readonly distance: number } | undefined
     for (const edge of candidates) {
-      const distance = graphEdgeDistance(
+      const source = this.endpointPoint(edge, 'source')
+      const target = this.endpointPoint(edge, 'target')
+      const distance = graphCubicEdgeDistance(
         worldPoint,
-        this.endpointPoint(edge, 'source'),
-        this.endpointPoint(edge, 'target'),
+        this.edgeGeometryResolver({ edge, source, target }),
       )
       const hitTolerance =
         Math.max(edgeHitTestMinimumTolerance, (edge.style?.width ?? 2) / 2 + edgeHitTestPadding) /
@@ -1464,7 +1505,9 @@ export class FdGraphCanvas
         graphRenderingCapabilities(),
       )
       this.backend =
-        kind === 'webgl2' ? new FdGraphWebGL2RenderingBackend() : new FdGraphDOMRenderingBackend()
+        kind === 'webgl2'
+          ? new FdGraphWebGL2RenderingBackend(this.renderingConfiguration)
+          : new FdGraphDOMRenderingBackend(this.renderingConfiguration)
     } else this.backend = this.renderingBackend
     this.activeBackendSource = this.renderingBackend
     this.backend.mount({ viewport: this.renderViewport, world: this.renderWorld })
@@ -2403,6 +2446,7 @@ export class FdGraphCanvas
       ...(this.focusedElement ? { focusedElement: this.focusedElement } : {}),
       nodeFrame: (node) => this.interactionPresentation.frames.get(node.id) ?? node.frame,
       edgeEndpoint: (edge, endpoint) => this.endpointPoint(edge, endpoint),
+      edgeGeometry: this.edgeGeometryResolver,
     })
     const frame: FdGraphRenderFrame = {
       snapshotID: this.snapshot.id,

@@ -237,6 +237,44 @@ describe('fd-graph-canvas rendering boundary', () => {
     expect(element.shadowRoot?.querySelector('.graph-node')?.textContent).toContain('Custom Source')
   })
 
+  it('supports custom edge labels and endpoint decorations across the DOM boundary', async () => {
+    const current = graphSnapshot()
+    const snapshot: FdAnyGraphSnapshot = {
+      ...current,
+      edges: current.edges.map((edge) => ({
+        ...edge,
+        style: { targetDecoration: { kind: 'arrow', length: 7, width: 6, gap: 3 } },
+      })),
+    }
+    const backend = new FdGraphDOMRenderingBackend({
+      createEdgeLabelContent: ({ edge }) => {
+        const content = document.createElement('span')
+        content.textContent = `Custom ${edge.label}`
+        return content
+      },
+    })
+    const element = await mount(snapshot, backend)
+    const label = element.shadowRoot?.querySelector<HTMLElement>('.graph-edge-label')
+
+    expect(label?.textContent).toBe('Custom Data')
+    expect(label?.style.transform).toContain('translate3d')
+    expect(element.shadowRoot?.querySelector('.graph-edge-arrow')).not.toBeNull()
+  })
+
+  it('updates edge label visibility when zoom crosses the configured threshold', async () => {
+    const element = await mount(
+      graphSnapshot(),
+      new FdGraphDOMRenderingBackend({ minimumEdgeLabelZoom: 1.1 }),
+    )
+
+    expect(element.shadowRoot?.querySelector('.graph-edge-label')).toBeNull()
+    element.jumpToElement('target', { zoom: 1.4, animated: false })
+    await nextFrame()
+    await nextFrame()
+
+    expect(element.shadowRoot?.querySelector('.graph-edge-label')?.textContent).toBe('Data')
+  })
+
   it('keeps model hit testing available when dense nodes use GPU level of detail', async () => {
     const element = await mount(
       graphSnapshot(),
@@ -252,6 +290,67 @@ describe('fd-graph-canvas rendering boundary', () => {
     dispatchPointer(canvas, 'pointerup', point)
 
     expect(element.selectedNodeIDs.has('source')).toBe(true)
+  })
+
+  it('passes rendering configuration to the automatic GPU backend', async () => {
+    const element = document.createElement('fd-graph-canvas')
+    element.style.width = '800px'
+    element.style.height = '600px'
+    element.snapshot = graphSnapshot()
+    element.renderingConfiguration = { maximumDOMNodeCount: 0 }
+    document.body.append(element)
+    await element.updateComplete
+    await nextFrame()
+    await nextFrame()
+
+    const usesWebGL2 = element.resolvedRenderingBackend?.kind === 'webgl2'
+    expect(element.shadowRoot?.querySelectorAll('.graph-node')).toHaveLength(usesWebGL2 ? 0 : 2)
+  })
+
+  it('converts wide-gamut CSS colors before uploading them to WebGL', async () => {
+    const snapshot: FdAnyGraphSnapshot = {
+      id: 'wide-gamut-color',
+      nodes: [
+        {
+          id: 'node',
+          frame: { x: 40, y: 80, width: 180, height: 88 },
+          style: { fill: 'color(display-p3 0 1 0)', stroke: 'transparent' },
+        },
+      ],
+      edges: [],
+    }
+    const element = await mount(
+      snapshot,
+      new FdGraphWebGL2RenderingBackend({ maximumDOMNodeCount: 0 }),
+    )
+    const canvas = element.shadowRoot?.querySelector<HTMLCanvasElement>('.graph-gpu-layer')
+    const context = canvas?.getContext('webgl2')
+    if (!canvas || !context) return
+
+    const nodeData = new Float32Array(12)
+    context.getBufferSubData(context.ARRAY_BUFFER, 0, nodeData)
+
+    expect(nodeData[4]).toBeLessThan(0.125)
+    expect(nodeData[5]).toBeGreaterThan(0.875)
+    expect(nodeData[6]).toBeLessThan(0.125)
+    expect(nodeData[7]).toBe(1)
+  })
+
+  it('creates a fresh WebGL surface when the canvas is reattached', async () => {
+    const element = await mount()
+    const originalCanvas = element.shadowRoot?.querySelector('.graph-gpu-layer')
+    if (!originalCanvas) return
+
+    element.remove()
+    document.body.append(element)
+    await element.updateComplete
+    await nextFrame()
+    await nextFrame()
+
+    const replacement = element.shadowRoot?.querySelector<HTMLCanvasElement>('.graph-gpu-layer')
+    expect(replacement).not.toBe(originalCanvas)
+    expect(replacement?.getContext('webgl2')).not.toBeNull()
+    expect(element.shadowRoot?.querySelectorAll('.graph-node')).toHaveLength(2)
   })
 
   it('falls back to complete DOM rendering after WebGL context loss', async () => {
