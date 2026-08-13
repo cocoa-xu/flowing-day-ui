@@ -27,6 +27,10 @@ struct FlowingSelectRepresentable<Value: Hashable>: NSViewRepresentable {
     update(button, coordinator: context.coordinator)
   }
 
+  static func dismantleNSView(_ button: FlowingSelectButton, coordinator: Coordinator) {
+    button.prepareForRemoval()
+  }
+
   private func update(_ button: FlowingSelectButton, coordinator: Coordinator) {
     button.configure(
       labels: options.map(\.label),
@@ -185,6 +189,11 @@ final class FlowingSelectButton: NSButton {
     if window == nil {
       dismiss(restoreKeyWindow: false)
     }
+  }
+
+  func prepareForRemoval() {
+    dismiss(restoreKeyWindow: false)
+    onSelect = nil
   }
 
   override func viewDidChangeEffectiveAppearance() {
