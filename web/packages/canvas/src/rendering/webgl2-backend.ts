@@ -297,6 +297,10 @@ export class FdGraphWebGL2RenderingBackend implements FdGraphRenderingBackend {
     })
   }
 
+  get activeKind(): 'webgl2' | 'dom' {
+    return this.usingFallback ? 'dom' : 'webgl2'
+  }
+
   mount(surface: FdGraphRenderingSurface): void {
     if (this.surface === surface) return
     this.unmount()

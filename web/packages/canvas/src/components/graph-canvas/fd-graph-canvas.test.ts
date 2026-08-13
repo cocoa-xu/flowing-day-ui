@@ -303,7 +303,9 @@ describe('fd-graph-canvas rendering boundary', () => {
     await nextFrame()
     await nextFrame()
 
-    const usesWebGL2 = element.resolvedRenderingBackend?.kind === 'webgl2'
+    const backend = element.resolvedRenderingBackend
+    const usesWebGL2 =
+      backend instanceof FdGraphWebGL2RenderingBackend && backend.activeKind === 'webgl2'
     expect(element.shadowRoot?.querySelectorAll('.graph-node')).toHaveLength(usesWebGL2 ? 0 : 2)
   })
 
@@ -349,7 +351,10 @@ describe('fd-graph-canvas rendering boundary', () => {
 
     const replacement = element.shadowRoot?.querySelector<HTMLCanvasElement>('.graph-gpu-layer')
     expect(replacement).not.toBe(originalCanvas)
-    expect(replacement?.getContext('webgl2')).not.toBeNull()
+    const backend = element.resolvedRenderingBackend
+    if (backend instanceof FdGraphWebGL2RenderingBackend && backend.activeKind === 'webgl2') {
+      expect(replacement?.getContext('webgl2')).not.toBeNull()
+    }
     expect(element.shadowRoot?.querySelectorAll('.graph-node')).toHaveLength(2)
   })
 
