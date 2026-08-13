@@ -9,7 +9,7 @@ export type FdRowSeparatorLeadingEdge = 'content' | 'iconText'
  * content edge or the text following its leading symbol gutter.
  */
 @customElement('fd-separator')
-export class FdSeparator extends FdElement {
+export class FdRowSeparator extends FdElement {
   static override styles: CSSResultGroup = [
     baseStyles,
     css`
@@ -44,6 +44,6 @@ export class FdSeparator extends FdElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'fd-separator': FdSeparator
+    'fd-separator': FdRowSeparator
   }
 }

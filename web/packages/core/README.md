@@ -107,7 +107,8 @@ Icons already on the page pick up a later registration.
 ## Components
 
 **Structure** — `fd-preferences-window`, `fd-page`, `fd-page-group`, `fd-pane-stack`,
-`fd-section`, `fd-card`, `fd-separator`, `fd-dependent-rows`, `fd-disclosure`.
+`fd-section`, `fd-section-header`, `fd-card`, `fd-separator`, `fd-dependent-rows`,
+`fd-disclosure`.
 
 **Rows** — `fd-row`, `fd-switch-row`, `fd-popup-row`, `fd-slider-row`, `fd-value-row`,
 `fd-button-row`, `fd-link-row`, `fd-expandable-row`, `fd-color-picker-row`,

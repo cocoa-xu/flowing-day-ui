@@ -4,6 +4,7 @@ import { baseStyles, FdElement } from '../../internal/base-element.js'
 import { textRole } from '../../internal/typography.js'
 import '../card/fd-card.js'
 import type { FdRowSeparatorLeadingEdge } from '../separator/fd-separator.js'
+import '../section-header/fd-section-header.js'
 
 type RowIconPresence = 'empty' | 'icons' | 'text' | 'mixed'
 
@@ -39,15 +40,6 @@ export class FdSection extends FdElement {
         flex-direction: column;
         align-self: stretch;
         width: 100%;
-      }
-
-      .header {
-        ${textRole('section-header')}
-        text-transform: uppercase;
-        letter-spacing: 0.7px;
-        color: var(--_fd-palette-faint);
-        padding-inline-start: 4px;
-        padding-bottom: 7px;
       }
 
       .footer {
@@ -113,7 +105,15 @@ export class FdSection extends FdElement {
 
   override render() {
     return html`
-      ${this.label ? html`<div class="header" part="header">${this.label}</div>` : nothing}
+      ${
+        this.label
+          ? html`<fd-section-header
+              class="header"
+              part="header"
+              .label=${this.label}
+            ></fd-section-header>`
+          : nothing
+      }
       <fd-card
         part="card"
         style="--_fd-section-separator-leading-inset: ${this.separatorLeadingInset}"
