@@ -103,8 +103,7 @@ import {
 import { FdGraphCanvasRenderingGeometry } from '../../rendering/geometry.js'
 import type { FdGraphWebGL2RenderingBackendConfiguration } from '../../rendering/webgl2-backend.js'
 import type { FdCanvasProxy, FdCanvasRenderContext } from '../../rendering-context.js'
-import type { FdGraphCanvasEngine } from './fd-graph-canvas.js'
-import './fd-graph-canvas.js'
+import { FdGraphCanvasEngine } from './fd-graph-canvas.js'
 import {
   type FdGraphCanvasEngineEdgeData,
   type FdGraphCanvasEngineNodeData,
@@ -1011,6 +1010,9 @@ export class FdGraphCanvas<
   }
 
   protected override updated(changed: PropertyValues<this>): void {
+    if (this.content && !(this.engine instanceof FdGraphCanvasEngine)) {
+      throw new TypeError('graph canvas engine failed to register')
+    }
     if (!this.engine) return
     if (changed.has('content')) this.reconcileSession()
     if (changed.has('session') || changed.has('content')) this.syncEngineSession()
