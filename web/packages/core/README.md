@@ -118,7 +118,7 @@ Icons already on the page pick up a later registration.
 `fd-symbol-segmented-row`, `fd-multi-select-row`, `fd-switch-group`, `fd-check-toggle`,
 `fd-icon-selection-button`, `fd-tabs`, `fd-option`.
 
-**Controls** — `fd-button`, `fd-switch`, `fd-slider`, `fd-popup`, `fd-text-field`, `fd-secure-field`,
+**Controls** — `fd-button`, `fd-switch`, `fd-slider`, `fd-select`, `fd-text-field`, `fd-secure-field`,
 `fd-text-area`, `fd-search-picker`, `fd-color-picker`, `fd-icon-button`, `fd-progress`.
 
 **Display** — `fd-empty-state`, `fd-value-text`.

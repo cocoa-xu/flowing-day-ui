@@ -29,7 +29,7 @@ import './components/page/fd-page-group.js'
 import './components/page/fd-page.js'
 import './components/pane-stack/fd-pane-stack.js'
 import './components/popup-row/fd-popup-row.js'
-import './components/popup/fd-popup.js'
+import './components/select/fd-select.js'
 import './components/popover/fd-popover.js'
 import './components/progress/fd-progress.js'
 import './components/row/fd-row.js'
@@ -100,7 +100,6 @@ export { FdPage } from './components/page/fd-page.js'
 export { FdPageGroup } from './components/page/fd-page-group.js'
 export { FdPaneStack } from './components/pane-stack/fd-pane-stack.js'
 export { FdPopover } from './components/popover/fd-popover.js'
-export { FdPopup, type FdPopupOption } from './components/popup/fd-popup.js'
 export { FdPopupRow } from './components/popup-row/fd-popup-row.js'
 export {
   type FdPreferencesContentLayout,
@@ -117,6 +116,7 @@ export {
 export { FdSecureField } from './components/secure-field/fd-secure-field.js'
 export { FdSegmentedControl } from './components/segmented-control/fd-segmented-control.js'
 export { FdSegmentedRow } from './components/segmented-row/fd-segmented-row.js'
+export { FdSelect, type FdSelectOption } from './components/select/fd-select.js'
 export { FdSelectableTag } from './components/selectable-tag/fd-selectable-tag.js'
 export {
   FdSeparator,

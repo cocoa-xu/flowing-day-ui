@@ -22,7 +22,7 @@ const INTERACTIVE = [
   'textarea',
   'a[href]',
   'fd-switch',
-  'fd-popup',
+  'fd-select',
   'fd-check-toggle',
   'fd-slider',
 ].join(',')

@@ -8,7 +8,7 @@ import { textRole } from '../../internal/typography.js'
 import type { FdOption } from '../option/fd-option.js'
 import '../option/fd-option.js'
 
-export interface FdPopupOption {
+export interface FdSelectOption {
   value: string
   label: string
   accent?: string
@@ -38,8 +38,8 @@ const GAP = 6
  * @csspart menu - The popover surface.
  * @csspart option - An option row.
  */
-@customElement('fd-popup')
-export class FdPopup extends FdElement {
+@customElement('fd-select')
+export class FdSelect extends FdElement {
   static formAssociated = true
 
   static override styles: CSSResultGroup = [
@@ -257,7 +257,7 @@ export class FdPopup extends FdElement {
   ]
 
   /** Menu contents. Falls back to `fd-option` children when left empty. */
-  @property({ attribute: false }) options: FdPopupOption[] = []
+  @property({ attribute: false }) options: FdSelectOption[] = []
 
   @property({ reflect: true }) label = ''
 
@@ -274,7 +274,7 @@ export class FdPopup extends FdElement {
 
   @state() private highlighted: number | null = null
 
-  @state() private slotted: FdPopupOption[] = []
+  @state() private slotted: FdSelectOption[] = []
 
   @query('.menu') private menu!: HTMLElement
 
@@ -307,7 +307,7 @@ export class FdPopup extends FdElement {
   }
 
   /** Resolved menu contents, whichever way they were supplied. */
-  get resolvedOptions(): FdPopupOption[] {
+  get resolvedOptions(): FdSelectOption[] {
     return this.options.length > 0 ? this.options : this.slotted
   }
 
@@ -583,6 +583,6 @@ export class FdPopup extends FdElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'fd-popup': FdPopup
+    'fd-select': FdSelect
   }
 }

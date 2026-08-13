@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { FdPopup } from './fd-popup.js'
-import './fd-popup.js'
+import type { FdSelect } from './fd-select.js'
+import './fd-select.js'
 
-async function mount(markup: string): Promise<FdPopup> {
+async function mount(markup: string): Promise<FdSelect> {
   const host = document.createElement('div')
   host.innerHTML = markup
   document.body.append(host)
-  const element = host.querySelector('fd-popup') as FdPopup
+  const element = host.querySelector('fd-select') as FdSelect
   await element.updateComplete
   // One more frame for the slotchange that resolves fd-option children.
   await element.updateComplete
@@ -19,20 +19,20 @@ const OPTIONS = `
   <fd-option value="ask">Ask every time</fd-option>
 `
 
-const button = (element: FdPopup) =>
+const button = (element: FdSelect) =>
   element.shadowRoot?.querySelector('.button') as HTMLButtonElement
-const menu = (element: FdPopup) => element.shadowRoot?.querySelector('.menu') as HTMLElement
-const optionRows = (element: FdPopup) =>
+const menu = (element: FdSelect) => element.shadowRoot?.querySelector('.menu') as HTMLElement
+const optionRows = (element: FdSelect) =>
   [...(element.shadowRoot?.querySelectorAll('.option') ?? [])] as HTMLElement[]
 
 afterEach(() => {
   document.body.replaceChildren()
 })
 
-describe('fd-popup chrome', () => {
+describe('fd-select chrome', () => {
   /** An inline SVG rides its line box's baseline and sits low in a 9px chevron slot. */
   it('centres the chevron glyph in the control', async () => {
-    const element = await mount(`<fd-popup value="quit">${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select value="quit">${OPTIONS}</fd-select>`)
     const glyph = element.shadowRoot?.querySelector('.chevron svg') as SVGElement
 
     const middle = (rect: DOMRect) => rect.y + rect.height / 2
@@ -44,9 +44,9 @@ describe('fd-popup chrome', () => {
   })
 })
 
-describe('fd-popup options', () => {
+describe('fd-select options', () => {
   it('resolves options from fd-option children', async () => {
-    const element = await mount(`<fd-popup value="quit">${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select value="quit">${OPTIONS}</fd-select>`)
 
     expect(element.resolvedOptions).toEqual([
       { value: 'hide', label: 'Hide Afloat' },
@@ -57,7 +57,7 @@ describe('fd-popup options', () => {
   })
 
   it('prefers the options property over slotted children', async () => {
-    const element = await mount(`<fd-popup>${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select>${OPTIONS}</fd-select>`)
     element.options = [{ value: 'a', label: 'Alpha' }]
     await element.updateComplete
 
@@ -66,10 +66,10 @@ describe('fd-popup options', () => {
 
   it('uses an option accent without changing undecorated options', async () => {
     const element = await mount(`
-      <fd-popup value="petal">
+      <fd-select value="petal">
         <fd-option value="petal" accent="#D67084">Petal</fd-option>
         <fd-option value="all">All Colors…</fd-option>
-      </fd-popup>
+      </fd-select>
     `)
 
     expect(element.resolvedOptions).toEqual([
@@ -88,25 +88,25 @@ describe('fd-popup options', () => {
   })
 
   it('shows the label of the selected option', async () => {
-    const element = await mount(`<fd-popup value="ask">${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select value="ask">${OPTIONS}</fd-select>`)
     expect(element.shadowRoot?.querySelector('.value')?.textContent).toBe('Ask every time')
   })
 
   it('falls back to an em dash when nothing matches, as PreferencesPopupButton.draw does', async () => {
-    const element = await mount(`<fd-popup value="nope">${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select value="nope">${OPTIONS}</fd-select>`)
     expect(element.shadowRoot?.querySelector('.value')?.textContent).toBe('—')
   })
 })
 
-describe('fd-popup metrics', () => {
+describe('fd-select metrics', () => {
   it('uses the 30px control height', async () => {
-    const element = await mount(`<fd-popup value="hide">${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select value="hide">${OPTIONS}</fd-select>`)
     expect(button(element).getBoundingClientRect().height).toBe(30)
   })
 
   /** intrinsicContentSize measures every label so the control does not resize on selection. */
   it('sizes to the widest label plus 40, not the selected one', async () => {
-    const element = await mount(`<fd-popup value="hide">${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select value="hide">${OPTIONS}</fd-select>`)
     const wide = button(element).getBoundingClientRect().width
 
     element.value = 'ask'
@@ -115,7 +115,7 @@ describe('fd-popup metrics', () => {
   })
 
   it('never goes below the requested minimum width', async () => {
-    const element = await mount(`<fd-popup min-width="240" value="hide">${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select min-width="240" value="hide">${OPTIONS}</fd-select>`)
     expect(button(element).getBoundingClientRect().width).toBe(240)
   })
 
@@ -127,10 +127,10 @@ describe('fd-popup metrics', () => {
   it('sizes itself once an unrendered subtree is laid out', async () => {
     const host = document.createElement('div')
     host.style.display = 'none'
-    host.innerHTML = `<fd-popup value="hide">${OPTIONS}</fd-popup>`
+    host.innerHTML = `<fd-select value="hide">${OPTIONS}</fd-select>`
     document.body.append(host)
 
-    const element = host.querySelector('fd-popup') as FdPopup
+    const element = host.querySelector('fd-select') as FdSelect
     await element.updateComplete
     await element.updateComplete
     expect(element.style.getPropertyValue('--_button-width')).toBe('')
@@ -144,9 +144,9 @@ describe('fd-popup metrics', () => {
   })
 })
 
-describe('fd-popup menu', () => {
+describe('fd-select menu', () => {
   it('opens on click and closes again', async () => {
-    const element = await mount(`<fd-popup value="hide">${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select value="hide">${OPTIONS}</fd-select>`)
 
     button(element).click()
     await element.updateComplete
@@ -159,7 +159,7 @@ describe('fd-popup menu', () => {
   })
 
   it('opens on ArrowDown, mirroring keyCode 125 on the closed control', async () => {
-    const element = await mount(`<fd-popup value="hide">${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select value="hide">${OPTIONS}</fd-select>`)
 
     element.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
     await element.updateComplete
@@ -168,7 +168,7 @@ describe('fd-popup menu', () => {
   })
 
   it('renders one row per option and badges the selected one', async () => {
-    const element = await mount(`<fd-popup value="quit">${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select value="quit">${OPTIONS}</fd-select>`)
     button(element).click()
     await element.updateComplete
 
@@ -180,7 +180,7 @@ describe('fd-popup menu', () => {
   })
 
   it('uses the 36px row pitch from PreferencesPopupMenuView', async () => {
-    const element = await mount(`<fd-popup value="hide">${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select value="hide">${OPTIONS}</fd-select>`)
     button(element).click()
     await element.updateComplete
 
@@ -190,7 +190,7 @@ describe('fd-popup menu', () => {
   })
 
   it('sizes the menu to the option count plus the 8px inset on each edge', async () => {
-    const element = await mount(`<fd-popup value="hide">${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select value="hide">${OPTIONS}</fd-select>`)
     button(element).click()
     await element.updateComplete
 
@@ -199,7 +199,7 @@ describe('fd-popup menu', () => {
 
   it('places the menu trailing-aligned below the anchor with a 6px gap', async () => {
     const element = await mount(
-      `<fd-popup style="position:fixed;top:100px;left:200px" value="hide">${OPTIONS}</fd-popup>`,
+      `<fd-select style="position:fixed;top:100px;left:200px" value="hide">${OPTIONS}</fd-select>`,
     )
     button(element).click()
     await element.updateComplete
@@ -213,7 +213,7 @@ describe('fd-popup menu', () => {
 
   it('flips above the anchor when there is no room below', async () => {
     const element = await mount(
-      `<fd-popup style="position:fixed;left:200px;bottom:4px" value="hide">${OPTIONS}</fd-popup>`,
+      `<fd-select style="position:fixed;left:200px;bottom:4px" value="hide">${OPTIONS}</fd-select>`,
     )
     button(element).click()
     await element.updateComplete
@@ -223,24 +223,24 @@ describe('fd-popup menu', () => {
   })
 })
 
-describe('fd-popup keyboard', () => {
-  async function opened(): Promise<FdPopup> {
-    const element = await mount(`<fd-popup value="hide">${OPTIONS}</fd-popup>`)
+describe('fd-select keyboard', () => {
+  async function opened(): Promise<FdSelect> {
+    const element = await mount(`<fd-select value="hide">${OPTIONS}</fd-select>`)
     button(element).click()
     await element.updateComplete
     return element
   }
 
-  const press = async (element: FdPopup, key: string) => {
+  const press = async (element: FdSelect, key: string) => {
     element.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }))
     await element.updateComplete
   }
 
-  const highlighted = (element: FdPopup) =>
+  const highlighted = (element: FdSelect) =>
     optionRows(element).findIndex((row) => row.hasAttribute('data-highlighted'))
 
   it('starts the highlight on the selected option', async () => {
-    const element = await mount(`<fd-popup value="ask">${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select value="ask">${OPTIONS}</fd-select>`)
     button(element).click()
     await element.updateComplete
 
@@ -272,9 +272,9 @@ describe('fd-popup keyboard', () => {
   })
 })
 
-describe('fd-popup selection', () => {
+describe('fd-select selection', () => {
   it('reports a click on an option and closes the menu', async () => {
-    const element = await mount(`<fd-popup value="hide">${OPTIONS}</fd-popup>`)
+    const element = await mount(`<fd-select value="hide">${OPTIONS}</fd-select>`)
     const onChange = vi.fn()
     element.addEventListener('fd-change', onChange)
 
@@ -290,9 +290,9 @@ describe('fd-popup selection', () => {
 
   it('participates in a form', async () => {
     const form = document.createElement('form')
-    form.innerHTML = `<fd-popup name="closing" value="quit">${OPTIONS}</fd-popup>`
+    form.innerHTML = `<fd-select name="closing" value="quit">${OPTIONS}</fd-select>`
     document.body.append(form)
-    const element = form.querySelector('fd-popup') as FdPopup
+    const element = form.querySelector('fd-select') as FdSelect
     await element.updateComplete
 
     expect(new FormData(form).get('closing')).toBe('quit')
@@ -304,7 +304,7 @@ describe('fd-popup selection', () => {
 
   it('exposes combobox semantics', async () => {
     const element = await mount(
-      `<fd-popup label="Closing behavior" value="hide">${OPTIONS}</fd-popup>`,
+      `<fd-select label="Closing behavior" value="hide">${OPTIONS}</fd-select>`,
     )
     const control = button(element)
 
@@ -321,9 +321,9 @@ describe('fd-popup selection', () => {
 
   it('does not submit while disabled', async () => {
     const form = document.createElement('form')
-    form.innerHTML = `<fd-popup name="closing" value="quit" disabled>${OPTIONS}</fd-popup>`
+    form.innerHTML = `<fd-select name="closing" value="quit" disabled>${OPTIONS}</fd-select>`
     document.body.append(form)
-    const element = form.querySelector('fd-popup') as FdPopup
+    const element = form.querySelector('fd-select') as FdSelect
     await element.updateComplete
 
     expect(new FormData(form).has('closing')).toBe(false)

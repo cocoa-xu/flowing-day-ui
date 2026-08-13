@@ -9,7 +9,7 @@ import { FdElement } from '../../internal/base-element.js'
  * Declared as a child so a plain HTML page can define a control without JavaScript:
  *
  * ```html
- * <fd-popup><fd-option value="auto">Automatic</fd-option></fd-popup>
+ * <fd-select><fd-option value="auto">Automatic</fd-option></fd-select>
  * ```
  *
  * The label is the element's text content unless `label` overrides it.

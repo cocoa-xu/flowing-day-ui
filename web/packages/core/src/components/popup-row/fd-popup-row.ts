@@ -1,12 +1,12 @@
 import { type CSSResultGroup, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { baseStyles, FdElement } from '../../internal/base-element.js'
-import type { FdPopupOption } from '../popup/fd-popup.js'
-import '../popup/fd-popup.js'
+import type { FdSelectOption } from '../select/fd-select.js'
+import '../select/fd-select.js'
 import '../row/fd-row.js'
 
 /**
- * Mirrors `PreferencesPopupRow`: an `fd-row` whose trailing control is an `fd-popup`.
+ * Mirrors `PreferencesPopupRow`: an `fd-row` whose trailing control is an `fd-select`.
  *
  * @fires fd-change - `{ value: string }`, re-dispatched from the popup.
  */
@@ -28,7 +28,7 @@ export class FdPopupRow extends FdElement {
 
   @property({ reflect: true }) name = ''
 
-  @property({ attribute: false }) options: FdPopupOption[] = []
+  @property({ attribute: false }) options: FdSelectOption[] = []
 
   #onPopupChange = (event: CustomEvent<{ value: string }>): void => {
     this.value = event.detail.value
@@ -37,7 +37,7 @@ export class FdPopupRow extends FdElement {
   override render() {
     return html`
       <fd-row symbol=${this.symbol ?? ''} label=${this.label} caption=${this.caption ?? ''}>
-        <fd-popup
+        <fd-select
           slot="trailing"
           name=${this.name}
           min-width=${this.minWidth}
@@ -48,7 +48,7 @@ export class FdPopupRow extends FdElement {
           @fd-change=${this.#onPopupChange}
         >
           <slot></slot>
-        </fd-popup>
+        </fd-select>
       </fd-row>
     `
   }

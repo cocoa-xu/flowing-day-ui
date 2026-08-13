@@ -14,10 +14,10 @@ import type { FdDisclosure } from '../packages/core/src/components/disclosure/fd
 import type { FdIconButton } from '../packages/core/src/components/icon-button/fd-icon-button.js'
 import type { FdMultiSelect } from '../packages/core/src/components/multi-select/fd-multi-select.js'
 import type { FdPopover } from '../packages/core/src/components/popover/fd-popover.js'
-import type { FdPopup } from '../packages/core/src/components/popup/fd-popup.js'
 import type { FdProgress } from '../packages/core/src/components/progress/fd-progress.js'
 import type { FdSearchPicker } from '../packages/core/src/components/search-picker/fd-search-picker.js'
 import type { FdSecureField } from '../packages/core/src/components/secure-field/fd-secure-field.js'
+import type { FdSelect } from '../packages/core/src/components/select/fd-select.js'
 import type { FdSlider } from '../packages/core/src/components/slider/fd-slider.js'
 import type { FdTabs } from '../packages/core/src/components/tabs/fd-tabs.js'
 import type { FdTextArea } from '../packages/core/src/components/text-area/fd-text-area.js'
@@ -57,10 +57,10 @@ test('slider follows a trusted pointer drag and popup uses top-layer interaction
 
   const popup = page.locator('#popup')
   await popup.locator('.button').click()
-  await expect.poll(() => popup.evaluate((element) => (element as FdPopup).open)).toBe(true)
+  await expect.poll(() => popup.evaluate((element) => (element as FdSelect).open)).toBe(true)
   await popup.locator('.option', { hasText: 'Compact' }).click()
-  await expect.poll(() => popup.evaluate((element) => (element as FdPopup).value)).toBe('compact')
-  await expect.poll(() => popup.evaluate((element) => (element as FdPopup).open)).toBe(false)
+  await expect.poll(() => popup.evaluate((element) => (element as FdSelect).value)).toBe('compact')
+  await expect.poll(() => popup.evaluate((element) => (element as FdSelect).open)).toBe(false)
 })
 
 test('field, icon button, and progress primitives retain native interaction', async ({ page }) => {
