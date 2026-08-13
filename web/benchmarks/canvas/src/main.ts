@@ -35,9 +35,11 @@ interface FdFrameMetrics {
   readonly p50: number
   readonly p95: number
   readonly p99: number
+  readonly maximum: number
   readonly longFrameCount: number
   readonly droppedFrameCount: number
   readonly inputP95: number
+  readonly inputP99: number
   readonly inputMaximum: number
 }
 
@@ -209,6 +211,10 @@ const animationFrame = () => new Promise<number>((resolve) => requestAnimationFr
 
 async function settle(): Promise<void> {
   await graph.updateComplete
+  const engine = graph.shadowRoot?.querySelector<
+    HTMLElement & { updateComplete: Promise<boolean> }
+  >('fd-graph-canvas-engine')
+  if (engine) await engine.updateComplete
   await animationFrame()
   await animationFrame()
 }
@@ -271,12 +277,14 @@ function metrics(
     p50: percentile(sorted, 0.5),
     p95: percentile(sorted, 0.95),
     p99: percentile(sorted, 0.99),
+    maximum: sorted.at(-1) ?? 0,
     longFrameCount: intervals.filter((interval) => interval > refreshInterval * 1.5).length,
     droppedFrameCount: intervals.reduce(
       (total, interval) => total + Math.max(Math.round(interval / refreshInterval) - 1, 0),
       0,
     ),
     inputP95: percentile(sortedUpdateDurations, 0.95),
+    inputP99: percentile(sortedUpdateDurations, 0.99),
     inputMaximum: sortedUpdateDurations.at(-1) ?? 0,
   }
 }
@@ -302,6 +310,8 @@ function dispatchWheel(deltaX: number, deltaY: number, control = false): void {
 }
 
 async function prepareScenario(scenario: FdBenchmarkScenario): Promise<void> {
+  graph.contentChangeBehavior = { kind: 'preserveViewport' }
+  await settle()
   graph.command = new FdGraphCanvasSessionCommand(
     graph.sessionID,
     scenario === 'drag' || scenario === 'click'

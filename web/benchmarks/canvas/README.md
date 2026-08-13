@@ -27,5 +27,16 @@ dropped frames, DOM size, and JavaScript heap use after forced garbage collectio
 the default rendering backend; use `--backend=dom` or
 `--backend=webgl2` only for controlled comparisons.
 
+Use macOS Safari itself, rather than Playwright's WebKit build, for Safari measurements:
+
+```sh
+pnpm benchmark:canvas -- --browser=safari --counts=1000,2000,5000,10000
+```
+
+Safari must have Develop > Allow Remote Automation enabled. Safari exposes the same in-page frame
+and input measurements, but not Chromium's CDP heap metric. This headed benchmark remains opt-in and
+is not part of CI. On a multi-display Mac, use `--window=left,top,width,height` to place the browser
+on the display being measured.
+
 The default frame update mode is `intent`. Use `--frame-updates=local` to include the package-owned
 local snapshot commit in drag measurements.
