@@ -1,3 +1,13 @@
+export {
+  FdDAGUndirectedEdgePolicy,
+  FdDAGValidationConfiguration,
+  FdDAGValidationIssue,
+  FdDAGValidationResult,
+  type FdDAGView,
+  FdGraphPath,
+  FdGraphTraversalDirection,
+  FdGraphTraversalPolicy,
+} from './algorithms.js'
 export * from './configuration.js'
 export * from './content.js'
 export * from './contexts.js'

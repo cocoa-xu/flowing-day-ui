@@ -1,4 +1,20 @@
 import {
+  FdDAGValidationConfiguration,
+  FdDAGValidationResult,
+  type FdDAGValidationResult as FdDAGValidationResultType,
+  type FdDAGView,
+  type FdGraphPath,
+  FdGraphTraversalDirection,
+  type FdGraphTraversalPolicy,
+  FdGraphTraversalPolicy as FdGraphTraversalPolicyValue,
+  fdFirstCycleEdgeIDs,
+  fdReachableNodeIDs,
+  fdShortestPath,
+  fdStronglyConnectedComponents,
+  fdValidateDAG,
+  fdWeaklyConnectedComponents,
+} from './algorithms.js'
+import {
   type FdGraphEdge,
   type FdGraphEdgeEndpoints,
   type FdGraphEndpoint,
@@ -192,6 +208,7 @@ interface GraphState<Schema extends FdGraphSchema> {
   nodeOrder: Schema['NodeID'][]
   portOrderByNodeID: Map<Schema['NodeID'], Schema['PortID'][]>
   edgeOrder: Schema['EdgeID'][]
+  edgeOrderIndex: Map<Schema['EdgeID'], number>
   directedOutgoingEdgeIDsByNodeID: Map<Schema['NodeID'], Schema['EdgeID'][]>
   directedIncomingEdgeIDsByNodeID: Map<Schema['NodeID'], Schema['EdgeID'][]>
   undirectedEdgeIDsByNodeID: Map<Schema['NodeID'], Schema['EdgeID'][]>
@@ -212,6 +229,7 @@ export class FdGraph<Schema extends FdGraphSchema> {
       nodeOrder: [],
       portOrderByNodeID: new Map(),
       edgeOrder: [],
+      edgeOrderIndex: new Map(),
       directedOutgoingEdgeIDsByNodeID: new Map(),
       directedIncomingEdgeIDsByNodeID: new Map(),
       undirectedEdgeIDsByNodeID: new Map(),
@@ -319,6 +337,69 @@ export class FdGraph<Schema extends FdGraphSchema> {
     )
   }
 
+  reachableNodeIDs(
+    start: Schema['NodeID'],
+    policy: FdGraphTraversalPolicy = FdGraphTraversalPolicyValue.outgoing,
+    includesStart = true,
+  ): readonly Schema['NodeID'][] {
+    return fdReachableNodeIDs(this, start, policy, includesStart)
+  }
+
+  descendantNodeIDs(nodeID: Schema['NodeID'], includesStart = false): readonly Schema['NodeID'][] {
+    return fdReachableNodeIDs(
+      this,
+      nodeID,
+      new FdGraphTraversalPolicyValue(FdGraphTraversalDirection.outgoing, false),
+      includesStart,
+    )
+  }
+
+  ancestorNodeIDs(nodeID: Schema['NodeID'], includesStart = false): readonly Schema['NodeID'][] {
+    return fdReachableNodeIDs(
+      this,
+      nodeID,
+      new FdGraphTraversalPolicyValue(FdGraphTraversalDirection.incoming, false),
+      includesStart,
+    )
+  }
+
+  shortestPath(
+    start: Schema['NodeID'],
+    destination: Schema['NodeID'],
+    policy: FdGraphTraversalPolicy = FdGraphTraversalPolicyValue.outgoing,
+  ): FdGraphPath<Schema> | undefined {
+    return fdShortestPath(this, start, destination, policy)
+  }
+
+  weaklyConnectedComponents(): readonly (readonly Schema['NodeID'][])[] {
+    return fdWeaklyConnectedComponents(this)
+  }
+
+  stronglyConnectedComponents(): readonly (readonly Schema['NodeID'][])[] {
+    return fdStronglyConnectedComponents(this)
+  }
+
+  firstCycleEdgeIDs(): readonly Schema['EdgeID'][] | undefined {
+    return fdFirstCycleEdgeIDs(this)
+  }
+
+  validateDAG(
+    configuration = new FdDAGValidationConfiguration(),
+  ): FdDAGValidationResultType<Schema> {
+    const computation = fdValidateDAG(this, configuration)
+    if (computation.kind === 'invalid') {
+      return FdDAGValidationResult.invalid(computation.issue)
+    }
+    const graph = this.snapshotCopy()
+    const view: FdDAGView<Schema> = {
+      graph,
+      configuration,
+      topologicalNodeIDs: computation.topologicalNodeIDs,
+      snapshotID: graph.snapshotID,
+    }
+    return FdDAGValidationResult.valid(view)
+  }
+
   update(body: (transaction: FdGraphTransaction<Schema>) => void): FdGraphUpdateResult<Schema> {
     const original = this.state
     const transaction = new GraphTransaction<Schema>(cloneState(original))
@@ -342,6 +423,12 @@ export class FdGraph<Schema extends FdGraphSchema> {
     transaction.state.localRevision = original.localRevision + 1
     this.state = transaction.state
     return FdGraphUpdateResult.committed(changeSet)
+  }
+
+  private snapshotCopy(): FdGraph<Schema> {
+    const graph = new FdGraph<Schema>()
+    graph.state = cloneState(this.state)
+    return graph
   }
 }
 
@@ -507,6 +594,7 @@ class GraphTransaction<Schema extends FdGraphSchema> implements FdGraphTransacti
       return
     }
     this.state.edgeOrder = moving(id, this.state.edgeOrder, position)
+    rebuildEdgeOrderIndex(this.state)
     sortEdgeIndices(this.state)
     this.touchEdgeOrder(id)
   }
@@ -619,6 +707,7 @@ class GraphTransaction<Schema extends FdGraphSchema> implements FdGraphTransacti
     if (!this.validateEndpoints(edge.endpoints)) return
     this.state.edgesByID.set(edge.id, edge)
     this.state.edgeOrder.push(edge.id)
+    this.state.edgeOrderIndex.set(edge.id, this.state.edgeOrder.length - 1)
     addEdgeToIndices(this.state, edge)
     this.touchEdge(edge.id)
     this.touchEdgeOrder(edge.id)
@@ -665,6 +754,7 @@ class GraphTransaction<Schema extends FdGraphSchema> implements FdGraphTransacti
     removeEdgeFromIndices(this.state, edge)
     this.state.edgesByID.delete(id)
     removeValue(this.state.edgeOrder, id)
+    rebuildEdgeOrderIndex(this.state)
     this.touchEdge(id)
     this.touchEdgeOrder(id)
   }
@@ -711,6 +801,7 @@ const cloneState = <Schema extends FdGraphSchema>(
     [...state.portOrderByNodeID].map(([nodeID, order]) => [nodeID, [...order]]),
   ),
   edgeOrder: [...state.edgeOrder],
+  edgeOrderIndex: new Map(state.edgeOrderIndex),
   directedOutgoingEdgeIDsByNodeID: cloneOrderMap(state.directedOutgoingEdgeIDsByNodeID),
   directedIncomingEdgeIDsByNodeID: cloneOrderMap(state.directedIncomingEdgeIDsByNodeID),
   undirectedEdgeIDsByNodeID: cloneOrderMap(state.undirectedEdgeIDsByNodeID),
@@ -757,7 +848,6 @@ const mergedEdgeIDs = <Schema extends FdGraphSchema>(
   first: readonly Schema['EdgeID'][],
   second: readonly Schema['EdgeID'][],
 ): Schema['EdgeID'][] => {
-  const rank = new Map(state.edgeOrder.map((edgeID, index) => [edgeID, index]))
   const result: Schema['EdgeID'][] = []
   let firstIndex = 0
   let secondIndex = 0
@@ -766,8 +856,8 @@ const mergedEdgeIDs = <Schema extends FdGraphSchema>(
     const secondID = second[secondIndex]
     if (firstID === undefined || secondID === undefined) break
     if (
-      (rank.get(firstID) ?? Number.MAX_SAFE_INTEGER) <
-      (rank.get(secondID) ?? Number.MAX_SAFE_INTEGER)
+      (state.edgeOrderIndex.get(firstID) ?? Number.MAX_SAFE_INTEGER) <
+      (state.edgeOrderIndex.get(secondID) ?? Number.MAX_SAFE_INTEGER)
     ) {
       result.push(firstID)
       firstIndex += 1
@@ -847,9 +937,9 @@ const removeFromOrderMap = <Key, ID>(map: Map<Key, ID[]>, key: Key, id: ID): voi
 }
 
 const sortEdgeIndices = <Schema extends FdGraphSchema>(state: GraphState<Schema>): void => {
-  const rank = new Map(state.edgeOrder.map((edgeID, index) => [edgeID, index]))
   const compare = (first: Schema['EdgeID'], second: Schema['EdgeID']) =>
-    (rank.get(first) ?? Number.MAX_SAFE_INTEGER) - (rank.get(second) ?? Number.MAX_SAFE_INTEGER)
+    (state.edgeOrderIndex.get(first) ?? Number.MAX_SAFE_INTEGER) -
+    (state.edgeOrderIndex.get(second) ?? Number.MAX_SAFE_INTEGER)
   for (const map of [
     state.directedOutgoingEdgeIDsByNodeID,
     state.directedIncomingEdgeIDsByNodeID,
@@ -859,6 +949,10 @@ const sortEdgeIndices = <Schema extends FdGraphSchema>(state: GraphState<Schema>
     for (const values of map.values()) values.sort(compare)
   }
   for (const values of state.incidentEdgeIDsByEndpoint.values()) values.sort(compare)
+}
+
+const rebuildEdgeOrderIndex = <Schema extends FdGraphSchema>(state: GraphState<Schema>): void => {
+  state.edgeOrderIndex = new Map(state.edgeOrder.map((edgeID, index) => [edgeID, index]))
 }
 
 const cloneOrderMap = <Key, ID>(map: Map<Key, ID[]>): Map<Key, ID[]> =>
