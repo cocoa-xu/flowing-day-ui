@@ -1,6 +1,6 @@
 {
   "name": "@flowing-day/ui",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Framework-agnostic web components mirroring the FlowingDayUI SwiftUI design toolkit.",
   "license": "Apache-2.0",
   "author": "Cocoa <i@uwucocoa.moe>",
