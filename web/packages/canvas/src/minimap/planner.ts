@@ -65,8 +65,7 @@ const checkCancellation = (signal: AbortSignal | undefined, index: number): void
   if (index % cancellationStride === 0) signal?.throwIfAborted()
 }
 
-const normalizedStyle = (style: number): number =>
-  Number.isSafeInteger(style) ? style : 0
+const normalizedStyle = (style: number): number => (Number.isSafeInteger(style) ? style : 0)
 
 const resolvedStyle = (
   requested: number,

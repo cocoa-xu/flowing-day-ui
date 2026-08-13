@@ -3,16 +3,12 @@ import type { FdGraphElementID } from '../graph/model.js'
 
 export type FdGraphMiniMapSnapshotID = string | number
 
-export interface FdGraphMiniMapNode<
-  NodeID extends FdGraphElementID = FdGraphElementID,
-> {
+export interface FdGraphMiniMapNode<NodeID extends FdGraphElementID = FdGraphElementID> {
   readonly id: NodeID
   readonly frame: FdCanvasRect
 }
 
-export interface FdGraphMiniMapEdge<
-  EdgeID extends FdGraphElementID = FdGraphElementID,
-> {
+export interface FdGraphMiniMapEdge<EdgeID extends FdGraphElementID = FdGraphElementID> {
   readonly id: EdgeID
   readonly start: FdCanvasPoint
   readonly end: FdCanvasPoint
@@ -45,7 +41,4 @@ export interface FdGraphMiniMapSnapshot<
 }
 
 export type FdAnyGraphMiniMapNode = FdGraphMiniMapNode<FdGraphElementID>
-export type FdAnyGraphMiniMapSnapshot = FdGraphMiniMapSnapshot<
-  FdGraphElementID,
-  FdGraphElementID
->
+export type FdAnyGraphMiniMapSnapshot = FdGraphMiniMapSnapshot<FdGraphElementID, FdGraphElementID>

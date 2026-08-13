@@ -1,11 +1,11 @@
 import type { FdCanvasPoint, FdCanvasRect } from '../geometry.js'
 import { unionCanvasRects } from '../geometry.js'
 import {
-  FdGraphLayoutPort,
   type FdGraphLayoutEdge,
   type FdGraphLayoutEdgeEndpoints,
   type FdGraphLayoutEndpoint,
   type FdGraphLayoutInput,
+  FdGraphLayoutPort,
   type FdGraphLayoutPortKey,
   FdGraphLayoutTopology,
   type FdLayoutInputID,
@@ -13,16 +13,16 @@ import {
 } from '../layout/model.js'
 import type { FdGraphEdgeRoute, FdGraphLayoutResult } from '../layout/pipeline.js'
 import {
+  type FdGraphRenderElementIDs,
   FdGraphRenderIndex,
   FdGraphRenderIndexConfiguration,
-  type FdGraphRenderElementIDs,
   type FdGraphRenderSlice,
 } from '../layout/render-index.js'
 import type { FdGraphElementID } from './model.js'
 import { graphElementKey } from './model.js'
 import {
   type FdDecodedGraphPresentationLocalElementID,
-  FdGraphPresentation,
+  type FdGraphPresentation,
   type FdGraphPresentationEdge,
   type FdGraphPresentationEdgeEndpoints,
   type FdGraphPresentationEndpoint,

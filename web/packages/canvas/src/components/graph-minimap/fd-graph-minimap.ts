@@ -12,17 +12,14 @@ import {
   resolveGraphMiniMapConfiguration,
   resolveGraphMiniMapStyle,
 } from '../../minimap/configuration.js'
-import type {
-  FdAnyGraphMiniMapNode,
-  FdAnyGraphMiniMapSnapshot,
-} from '../../minimap/model.js'
+import type { FdAnyGraphMiniMapNode, FdAnyGraphMiniMapSnapshot } from '../../minimap/model.js'
 import type { FdGraphMiniMapRenderPlan } from '../../minimap/planner.js'
 import { planGraphMiniMap } from '../../minimap/planner.js'
-import type { FdGraphMiniMapRenderingContext } from '../../minimap/rendering-context.js'
 import {
   FdGraphMiniMapCanvasRenderingBackend,
   type FdGraphMiniMapRenderingBackend,
 } from '../../minimap/renderer.js'
+import type { FdGraphMiniMapRenderingContext } from '../../minimap/rendering-context.js'
 import {
   FdGraphMiniMapPlanProjection,
   FdGraphMiniMapTransform,
@@ -540,9 +537,7 @@ export class FdGraphMiniMap extends LitElement {
     )
   }
 
-  private makeRenderingContext(
-    transform: FdGraphMiniMapTransform,
-  ): FdGraphMiniMapRenderingContext {
+  private makeRenderingContext(transform: FdGraphMiniMapTransform): FdGraphMiniMapRenderingContext {
     return {
       snapshot: this.snapshot,
       transform,

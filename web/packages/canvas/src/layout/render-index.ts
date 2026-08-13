@@ -6,8 +6,8 @@ import {
   FdSpatialIndex,
   FdSpatialIndexConfiguration,
   type FdSpatialIndexConfigurationOptions,
-  FdSpatialIndexIssue,
   type FdSpatialIndexEntry,
+  FdSpatialIndexIssue,
 } from './spatial-index.js'
 
 export interface FdGraphRenderIndexConfigurationOptions {

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import type { FdAnyGraphSnapshot } from './model.js'
 import {
   FdGraphCanvasInteractionPolicy,
   FdGraphCanvasNodeCapabilities,
@@ -11,6 +10,7 @@ import {
   FdGraphCanvasNodeSizeConstraintMap,
   FdGraphCanvasNodeSizeConstraints,
 } from './interaction-policy.js'
+import type { FdAnyGraphSnapshot } from './model.js'
 
 const presentation: FdAnyGraphSnapshot = {
   id: 'presentation-1',

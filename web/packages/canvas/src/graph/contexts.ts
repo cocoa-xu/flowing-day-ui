@@ -12,12 +12,12 @@ import {
   FdGraphCanvasEdgeReconnectionActions,
   type FdGraphCanvasPortConnectionState,
 } from '../interactions/connection-model.js'
+import type { FdGraphCanvasSelectionMode } from '../interactions/selection.js'
 import type {
   FdGraphCanvasElementAction,
   FdGraphCanvasSessionID,
   FdGraphCanvasSessionState,
 } from '../interactions/session.js'
-import type { FdGraphCanvasSelectionMode } from '../interactions/selection.js'
 import type { FdGraphEdgeRoute } from '../layout/pipeline.js'
 import type { FdCanvasProxy, FdCanvasRenderContext } from '../rendering-context.js'
 import type {

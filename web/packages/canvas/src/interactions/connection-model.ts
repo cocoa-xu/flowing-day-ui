@@ -1,5 +1,5 @@
 import type { FdCanvasPoint, FdCanvasSize } from '../geometry.js'
-import { FdGraphCanvasAnchor } from '../graph/content.js'
+import type { FdGraphCanvasAnchor } from '../graph/content.js'
 import type { FdGraphElementID } from '../graph/model.js'
 import type { FdLayoutInputID } from '../layout/model.js'
 

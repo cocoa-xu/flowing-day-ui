@@ -80,7 +80,8 @@ describe('spatial index', () => {
   })
 
   it('rejects invalid identities, frames, and item cell budgets', () => {
-    expect(() => new FdSpatialIndex([entries[0]!, entries[0]!])).toThrow(FdSpatialIndexIssue)
+    const first = required(entries[0])
+    expect(() => new FdSpatialIndex([first, first])).toThrow(FdSpatialIndexIssue)
     expect(
       () =>
         new FdSpatialIndex([
@@ -96,6 +97,11 @@ describe('spatial index', () => {
     ).toThrow(FdSpatialIndexIssue)
   })
 })
+
+const required = <Value>(value: Value | undefined): Value => {
+  if (value === undefined) throw new Error('test invariant failed')
+  return value
+}
 
 describe('graph render index', () => {
   const makeFixture = (edgeEnd = { x: 1_000, y: 30 }) => {

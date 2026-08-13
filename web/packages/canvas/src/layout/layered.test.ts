@@ -7,9 +7,9 @@ import {
   FdLayeredComponent,
   FdLayeredDAGPlacement,
   FdLayeredLayoutConfiguration,
-  FdLayoutInsets,
   FdLayerOrdering,
   FdLayerOrderingIssue,
+  FdLayoutInsets,
   FdLongestPathLayerAssignment,
   FdStableLayerOrdering,
 } from './layered.js'
@@ -232,9 +232,9 @@ describe('layered DAG strategies', () => {
     )
 
     const result = placement().place(input)
-    const root = result.frame('root')!
-    const wide = result.frame('wide')!
-    const narrow = result.frame('narrow')!
+    const root = required(result.frame('root'))
+    const wide = required(result.frame('wide'))
+    const narrow = required(result.frame('narrow'))
 
     expect(root.y + root.height).toBeLessThan(wide.y)
     expect(root.y + root.height).toBeLessThan(narrow.y)
@@ -259,12 +259,13 @@ describe('layered DAG strategies', () => {
 
     const result = placement('leftToRight').place(input)
     const baseline = placement('leftToRight').place(baselineInput)
+    const root = required(result.frame('root'))
+    const child = required(result.frame('child'))
+    const baselineChild = required(baseline.frame('child'))
 
-    expect(result.frame('root')!.x + result.frame('root')!.width).toBeLessThan(
-      result.frame('child')!.x,
-    )
-    expect(result.frame('child')!.x - baseline.frame('child')!.x).toBe(7)
-    expect(result.frame('child')!.y - baseline.frame('child')!.y).toBe(-3)
+    expect(root.x + root.width).toBeLessThan(child.x)
+    expect(child.x - baselineChild.x).toBe(7)
+    expect(child.y - baselineChild.y).toBe(-3)
   })
 
   it('uses the configured minimum canvas for empty input', () => {
@@ -327,6 +328,13 @@ describe('layered DAG strategies', () => {
     const result = placement('leftToRight').place(makeInput(nodeIDs, edges))
 
     expect(result.nodeFrames).toHaveLength(nodeCount)
-    expect(result.frame(String(nodeCount - 1))!.x).toBeGreaterThan(result.frame('0')!.x)
+    expect(required(result.frame(String(nodeCount - 1))).x).toBeGreaterThan(
+      required(result.frame('0')).x,
+    )
   })
 })
+
+const required = <Value>(value: Value | undefined): Value => {
+  if (value === undefined) throw new Error('test invariant failed')
+  return value
+}

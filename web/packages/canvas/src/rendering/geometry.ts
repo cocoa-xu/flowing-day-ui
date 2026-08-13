@@ -1,7 +1,6 @@
-import type { FdCanvasPoint, FdCanvasSize } from '../geometry.js'
-import type { FdCanvasTransform } from '../geometry.js'
+import type { FdCanvasPoint, FdCanvasSize, FdCanvasTransform } from '../geometry.js'
 import { FdGraphCanvasAnchor } from '../graph/content.js'
-import { FdGraphEdgeRoute, type FdGraphEdgePathSegment } from '../layout/pipeline.js'
+import { type FdGraphEdgePathSegment, FdGraphEdgeRoute } from '../layout/pipeline.js'
 
 export class FdGraphCanvasRenderingGeometry {
   private constructor() {}

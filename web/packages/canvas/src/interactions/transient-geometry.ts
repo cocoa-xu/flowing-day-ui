@@ -4,7 +4,7 @@ import type {
   FdGraphCanvasInteractionModifier,
   FdGraphCanvasResizeEdges,
 } from '../graph/interaction-policy.js'
-import { FdGraphEdgeRoute, type FdGraphEdgePathSegment } from '../layout/pipeline.js'
+import { type FdGraphEdgePathSegment, FdGraphEdgeRoute } from '../layout/pipeline.js'
 import { type FdGraphCanvasGeometryAxis, FdGraphCanvasResizeBehavior } from './arrangement.js'
 
 export class FdGraphCanvasTransientGeometry {
@@ -52,7 +52,7 @@ export class FdGraphCanvasTransientGeometry {
       const hasVerticalEdge = edges.has('top') || edges.has('bottom')
       const aspectRatioDrivingAxis = preservesAspectRatio
         ? hasHorizontalEdge && hasVerticalEdge
-          ? this.dominantAxis(translation, first as FdCanvasRect)
+          ? FdGraphCanvasTransientGeometry.dominantAxis(translation, first as FdCanvasRect)
           : hasHorizontalEdge
             ? 'horizontal'
             : 'vertical'
@@ -72,7 +72,10 @@ export class FdGraphCanvasTransientGeometry {
   }
 
   static constrainingToDominantAxis(translation: FdCanvasSize): FdCanvasSize {
-    return this.constraining(translation, this.dominantAxis(translation))
+    return FdGraphCanvasTransientGeometry.constraining(
+      translation,
+      FdGraphCanvasTransientGeometry.dominantAxis(translation),
+    )
   }
 
   static dominantAxis(
