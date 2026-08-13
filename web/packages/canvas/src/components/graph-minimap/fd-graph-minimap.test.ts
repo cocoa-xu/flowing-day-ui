@@ -69,6 +69,11 @@ describe('fd-graph-minimap rendering', () => {
     const frame = backend.frames.at(-1)
 
     expect(backend.mounts).toBe(1)
+    expect(frame?.snapshot).toBe(snapshot)
+    expect(frame?.viewport).toBe(element.viewport)
+    expect(frame?.viewportFrame).toEqual(
+      frame?.transform.applyRect(element.viewport.visibleWorldRect),
+    )
     expect(frame?.plan.snapshotID).toBe(snapshot.id)
     expect(frame?.plan.nodeBatches).toHaveLength(1)
     expect(frame?.plan.edgeSegments).toHaveLength(1)
@@ -99,6 +104,18 @@ describe('fd-graph-minimap rendering', () => {
     expect(element.style.getPropertyValue('--fd-graph-minimap-inset-left')).toBe('10px')
   })
 
+  it('exposes the Swift-aligned rendering context for slotted decorations', async () => {
+    const element = await mount()
+    element.viewport = viewport(-120)
+    await element.updateComplete
+
+    expect(element.renderingContext).toMatchObject({
+      snapshot,
+      viewport: element.viewport,
+      configuration: { interaction: 'panAndZoom' },
+    })
+  })
+
   it('remounts its renderer after the same element is reconnected', async () => {
     const backend = new RecordingBackend()
     const element = await mount(backend)
@@ -125,6 +142,56 @@ describe('fd-graph-minimap rendering', () => {
 
     expect(indicator?.style.transform).not.toBe(originalTransform)
     expect(backend.frames).toHaveLength(originalRenderCount)
+  })
+
+  it('pins local navigator geometry for the duration of direct manipulation', async () => {
+    const backend = new RecordingBackend()
+    const element = await mount(backend)
+    element.configuration = {
+      visibility: 'always',
+      scope: { kind: 'localNavigator', surroundingScale: 3 },
+    }
+    await element.updateComplete
+    await nextFrame()
+    await nextFrame()
+    const originalBounds = backend.frames.at(-1)?.plan.transform.worldBounds
+    const bounds = element.getBoundingClientRect()
+    element.setPointerCapture = () => undefined
+
+    element.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        pointerId: 1,
+        button: 0,
+        clientX: bounds.left + 100,
+        clientY: bounds.top + 70,
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+    element.viewport = new FdCanvasViewport(
+      FdCanvasTransform.identity,
+      { width: 400, height: 300 },
+      { x: 4_000, y: 3_000, width: 400, height: 300 },
+    )
+    await element.updateComplete
+    await nextFrame()
+
+    expect(backend.frames.at(-1)?.plan.transform.worldBounds).toEqual(originalBounds)
+
+    element.dispatchEvent(
+      new PointerEvent('pointerup', {
+        pointerId: 1,
+        button: 0,
+        clientX: bounds.left + 100,
+        clientY: bounds.top + 70,
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+    await nextFrame()
+    await nextFrame()
+
+    expect(backend.frames.at(-1)?.plan.transform.worldBounds).not.toEqual(originalBounds)
   })
 
   it('supports automatic visibility when navigation is not useful', async () => {

@@ -65,6 +65,13 @@ export class FdGraphMiniMapTransform {
       height: rect.height * this.scale,
     }
   }
+
+  removeSize(size: FdCanvasSize): FdCanvasSize {
+    return {
+      width: size.width / this.scale,
+      height: size.height / this.scale,
+    }
+  }
 }
 
 export function graphMiniMapScopeBounds(

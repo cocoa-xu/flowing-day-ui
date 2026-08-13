@@ -1,14 +1,11 @@
-import type {
-  FdResolvedGraphMiniMapConfiguration,
-  FdResolvedGraphMiniMapStyle,
-} from './configuration.js'
+import type { FdResolvedGraphMiniMapStyle } from './configuration.js'
 import type { FdGraphMiniMapRenderPlan } from './planner.js'
+import type { FdGraphMiniMapRenderingContext } from './rendering-context.js'
 import type { FdGraphMiniMapPlanProjection } from './transform.js'
 
-export interface FdGraphMiniMapRenderFrame {
+export interface FdGraphMiniMapRenderFrame extends FdGraphMiniMapRenderingContext {
   readonly plan: FdGraphMiniMapRenderPlan
   readonly projection: FdGraphMiniMapPlanProjection
-  readonly configuration: FdResolvedGraphMiniMapConfiguration
   readonly style: FdResolvedGraphMiniMapStyle
   readonly pixelRatio: number
 }

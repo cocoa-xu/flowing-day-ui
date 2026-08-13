@@ -18,6 +18,7 @@ import type {
 } from '../../minimap/model.js'
 import type { FdGraphMiniMapRenderPlan } from '../../minimap/planner.js'
 import { planGraphMiniMap } from '../../minimap/planner.js'
+import type { FdGraphMiniMapRenderingContext } from '../../minimap/rendering-context.js'
 import {
   FdGraphMiniMapCanvasRenderingBackend,
   type FdGraphMiniMapRenderingBackend,
@@ -157,12 +158,17 @@ export class FdGraphMiniMap extends LitElement {
   @query('canvas') private canvas!: HTMLCanvasElement
   @query('.viewport-indicator') private viewportIndicator!: HTMLElement
 
+  get renderingContext(): FdGraphMiniMapRenderingContext {
+    return this.makeRenderingContext(this.displayTransform ?? this.currentDisplayTransform())
+  }
+
   private resolvedConfiguration = resolveGraphMiniMapConfiguration({})
   private resolvedStyle = resolveGraphMiniMapStyle()
   private backend: FdGraphMiniMapRenderingBackend | undefined
   private activeBackend: FdGraphMiniMapRenderingBackend | undefined
   private plan: FdGraphMiniMapRenderPlan | undefined
   private displayTransform: FdGraphMiniMapTransform | undefined
+  private pinnedWorldBounds: FdCanvasRect | undefined
   private navigatorWorldBounds: FdCanvasRect | undefined
   private pointerState: PointerState | undefined
   private planningFrame: number | undefined
@@ -340,6 +346,7 @@ export class FdGraphMiniMap extends LitElement {
   }
 
   private resolvedWorldBounds(): FdCanvasRect {
+    if (this.pinnedWorldBounds) return this.pinnedWorldBounds
     const scope = this.resolvedConfiguration.scope
     if (scope.kind !== 'localNavigator') {
       return graphMiniMapScopeBounds(
@@ -382,6 +389,7 @@ export class FdGraphMiniMap extends LitElement {
     this.viewportIndicator.style.height = `${Math.max(frame.height, 1)}px`
     const visible =
       this.pointerState !== undefined ||
+      this.pinnedWorldBounds !== undefined ||
       graphMiniMapIsVisible(
         this.resolvedConfiguration.visibility,
         this.snapshot.contentBounds,
@@ -399,9 +407,9 @@ export class FdGraphMiniMap extends LitElement {
     const transform = this.displayTransform
     if (!plan || !transform || !this.backend) return
     this.backend.render({
+      ...this.makeRenderingContext(transform),
       plan,
       projection: new FdGraphMiniMapPlanProjection(plan.transform, transform),
-      configuration: this.resolvedConfiguration,
       style: this.resolvedStyle,
       pixelRatio: window.devicePixelRatio,
     })
@@ -419,6 +427,7 @@ export class FdGraphMiniMap extends LitElement {
     this.focus({ preventScroll: true })
     const location = this.localPoint(event)
     const transform = this.displayTransform ?? this.currentDisplayTransform()
+    this.pinnedWorldBounds = transform.worldBounds
     const viewportFrame = transform.applyRect(this.viewport.visibleWorldRect)
     const world = transform.removePoint(location)
     const center = this.viewportCenter()
@@ -443,12 +452,14 @@ export class FdGraphMiniMap extends LitElement {
     if (this.pointerState?.pointerID !== event.pointerId) return
     this.movePointer(this.localPoint(event), 'ended')
     this.pointerState = undefined
+    this.endPinnedInteraction()
     if (this.hasPointerCapture(event.pointerId)) this.releasePointerCapture(event.pointerId)
   }
 
   private handlePointerCancel = (event: PointerEvent): void => {
     if (this.pointerState?.pointerID !== event.pointerId) return
     this.pointerState = undefined
+    this.endPinnedInteraction()
     if (this.hasPointerCapture(event.pointerId)) this.releasePointerCapture(event.pointerId)
   }
 
@@ -471,6 +482,8 @@ export class FdGraphMiniMap extends LitElement {
     if (event.ctrlKey && this.resolvedConfiguration.interaction !== 'panAndZoom') return
     event.preventDefault()
     const multiplier = this.wheelMultiplier(event.deltaMode)
+    const transform = this.displayTransform ?? this.currentDisplayTransform()
+    this.pinnedWorldBounds ??= transform.worldBounds
     if (event.ctrlKey && this.resolvedConfiguration.interaction === 'panAndZoom') {
       const zoom =
         (this.wheelZoom ?? this.viewport.transform.zoom) *
@@ -483,11 +496,14 @@ export class FdGraphMiniMap extends LitElement {
       this.wheelZoom = zoom
       this.emitNavigation({ kind: 'zoom', zoom, phase: 'continuous' })
     } else {
-      const transform = this.displayTransform ?? this.currentDisplayTransform()
       const current = this.wheelCenter ?? this.viewportCenter()
+      const worldDelta = transform.removeSize({
+        width: event.deltaX * multiplier,
+        height: event.deltaY * multiplier,
+      })
       const center = {
-        x: current.x - (event.deltaX * multiplier) / transform.scale,
-        y: current.y - (event.deltaY * multiplier) / transform.scale,
+        x: current.x - worldDelta.width,
+        y: current.y - worldDelta.height,
       }
       this.wheelCenter = center
       this.emitNavigation({ kind: 'center', worldPoint: center, phase: 'continuous' })
@@ -505,6 +521,13 @@ export class FdGraphMiniMap extends LitElement {
     }
     this.wheelZoom = undefined
     this.wheelCenter = undefined
+    this.endPinnedInteraction()
+  }
+
+  private endPinnedInteraction(): void {
+    this.pinnedWorldBounds = undefined
+    this.navigatorWorldBounds = undefined
+    this.syncViewport(true)
   }
 
   private emitNavigation(detail: FdGraphMiniMapNavigationDetail): void {
@@ -515,6 +538,18 @@ export class FdGraphMiniMap extends LitElement {
         composed: true,
       }),
     )
+  }
+
+  private makeRenderingContext(
+    transform: FdGraphMiniMapTransform,
+  ): FdGraphMiniMapRenderingContext {
+    return {
+      snapshot: this.snapshot,
+      transform,
+      viewport: this.viewport,
+      viewportFrame: transform.applyRect(this.viewport.visibleWorldRect),
+      configuration: this.resolvedConfiguration,
+    }
   }
 
   private syncAccessibilityValue(): void {

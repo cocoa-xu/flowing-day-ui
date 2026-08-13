@@ -44,6 +44,10 @@ describe('graph minimap geometry', () => {
     expect(transform.scale).toBeCloseTo(0.2)
     expect(roundTripped.x).toBeCloseTo(world.x)
     expect(roundTripped.y).toBeCloseTo(world.y)
+    expect(transform.removeSize({ width: 20, height: 10 })).toEqual({
+      width: 100,
+      height: 50,
+    })
   })
 
   it('supports overview, local navigator, and automatic visibility', () => {
