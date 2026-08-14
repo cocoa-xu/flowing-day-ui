@@ -2,6 +2,11 @@
 
 ## 2026-08-14
 
+### @flowing-day/canvas 0.5.1
+
+- Adds one-finger touch panning and anchored two-finger pan and zoom.
+- Hands graph interactions to viewport navigation when a second touch begins.
+
 ### @flowing-day/canvas 0.5.0
 
 - Adds focused graph, interaction, layout, minimap, rendering, and geometry package entries.
