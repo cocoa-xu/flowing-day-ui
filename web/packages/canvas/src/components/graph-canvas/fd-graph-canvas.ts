@@ -879,6 +879,7 @@ export class FdGraphCanvasEngine
   private renderFrameRequest: number | undefined
   private interactionController: FdGraphCanvasInteractionController | undefined
   private connectionController: FdGraphCanvasConnectionController | undefined
+  private readonly activeTouchPointerIDs = new Set<number>()
   private interactionPresentation: FdGraphInteractionPresentation = {
     frames: new Map(),
     guides: [],
@@ -1199,6 +1200,7 @@ export class FdGraphCanvasEngine
   override disconnectedCallback(): void {
     this.interactionController?.cancel()
     this.connectionController?.reset()
+    this.activeTouchPointerIDs.clear()
     if (this.renderFrameRequest !== undefined) cancelAnimationFrame(this.renderFrameRequest)
     this.renderFrameRequest = undefined
     this.backend?.unmount()
@@ -1462,6 +1464,13 @@ export class FdGraphCanvasEngine
 
   private handleGraphPointerDown = (event: PointerEvent): void => {
     if (this.isConsumerOverlayEvent(event)) return
+    if (event.pointerType === 'touch') {
+      this.activeTouchPointerIDs.add(event.pointerId)
+      if (this.activeTouchPointerIDs.size >= 2) {
+        this.cancelActivePointerInteractions()
+        return
+      }
+    }
     if (this.connectionController?.pointerDown(event)) {
       if (this.resolvedAccessibilityConfiguration.enabled) {
         this.accessibilitySurface.focus({ preventScroll: true })
@@ -1519,6 +1528,7 @@ export class FdGraphCanvasEngine
   }
 
   private handleGraphPointerEnd = (event: PointerEvent): void => {
+    this.activeTouchPointerIDs.delete(event.pointerId)
     if (this.connectionController?.activePointerID === event.pointerId) {
       event.preventDefault()
       const clickedEndpoint = this.connectionController.pointerEnd(event)
@@ -1547,6 +1557,7 @@ export class FdGraphCanvasEngine
   }
 
   private handleGraphPointerCancel = (event: PointerEvent): void => {
+    this.activeTouchPointerIDs.delete(event.pointerId)
     if (this.connectionController?.activePointerID === event.pointerId) {
       this.connectionController.cancel()
       if (this.canvas.hasPointerCapture(event.pointerId)) {
@@ -1558,6 +1569,22 @@ export class FdGraphCanvasEngine
     this.interactionController.cancel()
     if (this.canvas.hasPointerCapture(event.pointerId))
       this.canvas.releasePointerCapture(event.pointerId)
+  }
+
+  private cancelActivePointerInteractions(): void {
+    const connectionPointerID = this.connectionController?.activePointerID
+    this.connectionController?.cancel()
+    if (connectionPointerID !== undefined && this.canvas.hasPointerCapture(connectionPointerID)) {
+      this.canvas.releasePointerCapture(connectionPointerID)
+    }
+    const interactionPointerID = this.interactionController?.activePointerID
+    this.interactionController?.cancel()
+    if (
+      interactionPointerID !== undefined &&
+      this.canvas.hasPointerCapture(interactionPointerID)
+    ) {
+      this.canvas.releasePointerCapture(interactionPointerID)
+    }
   }
 
   private handleGraphClick = (event: MouseEvent): void => {

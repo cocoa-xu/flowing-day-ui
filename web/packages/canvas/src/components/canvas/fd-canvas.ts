@@ -35,6 +35,13 @@ export interface FdCanvasTransformOptions {
   readonly phase?: FdCanvasViewportChangePhase
 }
 
+interface FdCanvasPinchInteraction {
+  readonly pointerIDs: readonly [number, number]
+  readonly startDistance: number
+  readonly startZoom: number
+  readonly worldAnchor: FdCanvasPoint
+}
+
 /**
  * A platform-neutral infinite viewport matching the Swift `FlowingCanvas` contract.
  *
@@ -157,6 +164,8 @@ export class FdCanvas extends LitElement {
   private dragStart: FdCanvasPoint | undefined
   private dragOrigin: FdCanvasPoint | undefined
   private didDrag = false
+  private readonly touchLocations = new Map<number, FdCanvasPoint>()
+  private pinchInteraction: FdCanvasPinchInteraction | undefined
   private animationFrame: number | undefined
   private wheelEndTimer: number | undefined
 
@@ -402,19 +411,81 @@ export class FdCanvas extends LitElement {
   }
 
   private handlePointerDown = (event: PointerEvent): void => {
-    if (event.defaultPrevented || event.button !== 0 || this.isClaimedByOverlayOrControl(event))
-      return
+    if (event.button !== 0 || this.isClaimedByOverlayOrControl(event)) return
     this.cancelAnimation()
     this.viewportElement.focus({ preventScroll: true })
     const location = this.localPoint(event)
-    this.activePointer = event.pointerId
-    this.dragStart = location
-    this.dragOrigin = this.transformValue.offset
-    this.didDrag = false
+    if (event.pointerType === 'touch') {
+      this.touchLocations.set(event.pointerId, location)
+      this.viewportElement.setPointerCapture(event.pointerId)
+      if (this.touchLocations.size === 1 && !event.defaultPrevented) {
+        this.beginDrag(event.pointerId, location)
+      } else if (this.touchLocations.size === 2) {
+        this.resetDragState()
+        this.beginPinch()
+      }
+      return
+    }
+    if (event.defaultPrevented) return
+    this.beginDrag(event.pointerId, location)
     this.viewportElement.setPointerCapture(event.pointerId)
   }
 
+  private beginDrag(pointerID: number, location: FdCanvasPoint): void {
+    this.activePointer = pointerID
+    this.dragStart = location
+    this.dragOrigin = this.transformValue.offset
+    this.didDrag = false
+  }
+
+  private beginPinch(): void {
+    const pointers = [...this.touchLocations.entries()].slice(0, 2)
+    const first = pointers[0]
+    const second = pointers[1]
+    if (!first || !second) return
+    const center = this.midpoint(first[1], second[1])
+    const distance = this.distance(first[1], second[1])
+    if (distance <= 0) return
+    this.pinchInteraction = {
+      pointerIDs: [first[0], second[0]],
+      startDistance: distance,
+      startZoom: this.transformValue.zoom,
+      worldAnchor: this.transformValue.removePoint(center),
+    }
+  }
+
+  private updatePinch(): void {
+    const interaction = this.pinchInteraction
+    if (!interaction) return
+    const first = this.touchLocations.get(interaction.pointerIDs[0])
+    const second = this.touchLocations.get(interaction.pointerIDs[1])
+    if (!first || !second) return
+    const center = this.midpoint(first, second)
+    const scale = this.distance(first, second) / interaction.startDistance
+    const adjustedScale = Math.max(
+      0.01,
+      1 + (scale - 1) * this.resolvedConfiguration.pinchSensitivity,
+    )
+    this.restoreTransform = undefined
+    this.commitTransform(
+      FdCanvasTransform.anchoring(
+        interaction.worldAnchor,
+        center,
+        this.clampZoom(interaction.startZoom * adjustedScale),
+      ),
+      'continuous',
+      false,
+    )
+  }
+
   private handlePointerMove = (event: PointerEvent): void => {
+    if (this.touchLocations.has(event.pointerId)) {
+      this.touchLocations.set(event.pointerId, this.localPoint(event))
+      if (this.pinchInteraction) {
+        this.updatePinch()
+        return
+      }
+    }
     if (event.pointerId !== this.activePointer || !this.dragStart || !this.dragOrigin) return
     const location = this.localPoint(event)
     const translation = {
@@ -445,7 +516,34 @@ export class FdCanvas extends LitElement {
   }
 
   private handlePointerEnd = (event: PointerEvent): void => {
+    if (this.touchLocations.has(event.pointerId)) {
+      const wasPinching = this.pinchInteraction !== undefined
+      if (!wasPinching) this.finishDrag(event)
+      this.touchLocations.delete(event.pointerId)
+      this.releaseCapturedPointer(event.pointerId)
+      if (wasPinching) {
+        this.pinchInteraction = undefined
+        this.emitViewportChange('ended')
+        this.refreshRenderWorldRect(true)
+        if (this.touchLocations.size >= 2) {
+          this.beginPinch()
+        } else {
+          const remaining = this.touchLocations.entries().next().value as
+            | [number, FdCanvasPoint]
+            | undefined
+          if (remaining) this.beginDrag(remaining[0], remaining[1])
+        }
+      } else {
+        this.resetDragState()
+      }
+      return
+    }
     if (event.pointerId !== this.activePointer) return
+    this.finishDrag(event)
+    this.cancelPointerInteraction()
+  }
+
+  private finishDrag(event: PointerEvent): void {
     const location = this.localPoint(event)
     if (this.didDrag && this.dragStart) {
       const translation = {
@@ -459,20 +557,35 @@ export class FdCanvas extends LitElement {
         this.dispatchDrag('fd-content-drag-end', location, translation)
       }
     }
-    this.cancelPointerInteraction()
   }
 
   private cancelPointerInteraction(): void {
-    if (
-      this.activePointer !== undefined &&
-      this.viewportElement?.hasPointerCapture(this.activePointer)
-    ) {
-      this.viewportElement.releasePointerCapture(this.activePointer)
-    }
+    for (const pointerID of this.touchLocations.keys()) this.releaseCapturedPointer(pointerID)
+    if (this.activePointer !== undefined) this.releaseCapturedPointer(this.activePointer)
+    this.touchLocations.clear()
+    this.pinchInteraction = undefined
+    this.resetDragState()
+  }
+
+  private resetDragState(): void {
     this.activePointer = undefined
     this.dragStart = undefined
     this.dragOrigin = undefined
     this.didDrag = false
+  }
+
+  private releaseCapturedPointer(pointerID: number): void {
+    if (this.viewportElement?.hasPointerCapture(pointerID)) {
+      this.viewportElement.releasePointerCapture(pointerID)
+    }
+  }
+
+  private midpoint(first: FdCanvasPoint, second: FdCanvasPoint): FdCanvasPoint {
+    return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 }
+  }
+
+  private distance(first: FdCanvasPoint, second: FdCanvasPoint): number {
+    return Math.hypot(second.x - first.x, second.y - first.y)
   }
 
   private dispatchDrag(
