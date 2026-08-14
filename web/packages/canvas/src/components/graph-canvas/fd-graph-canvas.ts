@@ -1579,10 +1579,7 @@ export class FdGraphCanvasEngine
     }
     const interactionPointerID = this.interactionController?.activePointerID
     this.interactionController?.cancel()
-    if (
-      interactionPointerID !== undefined &&
-      this.canvas.hasPointerCapture(interactionPointerID)
-    ) {
+    if (interactionPointerID !== undefined && this.canvas.hasPointerCapture(interactionPointerID)) {
       this.canvas.releasePointerCapture(interactionPointerID)
     }
   }
