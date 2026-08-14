@@ -161,6 +161,28 @@ function dispatchPointer(
   )
 }
 
+function dispatchTouchPointer(
+  target: EventTarget,
+  type: 'pointerdown' | 'pointermove' | 'pointerup',
+  pointerID: number,
+  point: FdCanvasPoint,
+): void {
+  target.dispatchEvent(
+    new PointerEvent(type, {
+      pointerId: pointerID,
+      pointerType: 'touch',
+      isPrimary: pointerID === 10,
+      button: 0,
+      buttons: type === 'pointerup' ? 0 : 1,
+      clientX: point.x,
+      clientY: point.y,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    }),
+  )
+}
+
 function dispatchKey(target: EventTarget, value: string, init: KeyboardEventInit = {}): void {
   target.dispatchEvent(
     new KeyboardEvent('keydown', {
@@ -1126,6 +1148,30 @@ describe('fd-graph-canvas pointer editing', () => {
       }),
     )
     expect(element.viewport.transform.zoom).toBeGreaterThan(initial.zoom)
+  })
+
+  it('hands a claimed node touch to canvas navigation when a second touch begins', async () => {
+    const element = await mount()
+    const canvas = preparePointerInput(element)
+    const viewport = canvas.shadowRoot?.querySelector('.viewport') as HTMLElement
+    viewport.setPointerCapture = () => undefined
+    viewport.hasPointerCapture = () => false
+    const first = clientPoint(element, { x: 100, y: 124 })
+    const second = clientPoint(element, { x: 300, y: 124 })
+    const initialZoom = element.viewport.transform.zoom
+    const frameChange = vi.fn()
+    element.addEventListener('fd-graph-node-frames-change', frameChange)
+
+    dispatchTouchPointer(viewport, 'pointerdown', 10, first)
+    dispatchTouchPointer(viewport, 'pointerdown', 11, second)
+    dispatchTouchPointer(viewport, 'pointermove', 10, { x: first.x - 50, y: first.y })
+    dispatchTouchPointer(viewport, 'pointermove', 11, { x: second.x + 50, y: second.y })
+
+    expect(element.viewport.transform.zoom).toBeGreaterThan(initialZoom * 1.4)
+    expect(frameChange).not.toHaveBeenCalled()
+
+    dispatchTouchPointer(viewport, 'pointerup', 11, { x: second.x + 50, y: second.y })
+    dispatchTouchPointer(viewport, 'pointerup', 10, { x: first.x - 50, y: first.y })
   })
 
   it('does not upload unchanged WebGL geometry during viewport and hover updates', async () => {

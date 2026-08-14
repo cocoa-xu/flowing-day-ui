@@ -142,6 +142,82 @@ describe('fd-canvas input and events', () => {
     expect(element.viewport.transform.offset.y).toBeCloseTo(initialOffset.y - 20)
   })
 
+  it('supports one-finger touch panning', async () => {
+    const element = await mount()
+    const viewport = element.shadowRoot?.querySelector('.viewport') as HTMLElement
+    vi.spyOn(viewport, 'setPointerCapture').mockImplementation(() => {})
+    const bounds = viewport.getBoundingClientRect()
+    const initialOffset = element.viewport.transform.offset
+
+    viewport.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        pointerId: 1,
+        pointerType: 'touch',
+        button: 0,
+        clientX: bounds.left + 300,
+        clientY: bounds.top + 200,
+        bubbles: true,
+      }),
+    )
+    viewport.dispatchEvent(
+      new PointerEvent('pointermove', {
+        pointerId: 1,
+        pointerType: 'touch',
+        clientX: bounds.left + 330,
+        clientY: bounds.top + 220,
+        bubbles: true,
+      }),
+    )
+    viewport.dispatchEvent(
+      new PointerEvent('pointerup', {
+        pointerId: 1,
+        pointerType: 'touch',
+        clientX: bounds.left + 330,
+        clientY: bounds.top + 220,
+        bubbles: true,
+      }),
+    )
+
+    expect(element.viewport.transform.offset.x).toBeCloseTo(initialOffset.x + 30)
+    expect(element.viewport.transform.offset.y).toBeCloseTo(initialOffset.y + 20)
+  })
+
+  it('supports anchored two-finger touch panning and magnification', async () => {
+    const element = await mount()
+    const viewport = element.shadowRoot?.querySelector('.viewport') as HTMLElement
+    vi.spyOn(viewport, 'setPointerCapture').mockImplementation(() => {})
+    const bounds = viewport.getBoundingClientRect()
+    const anchor = { x: 300, y: 200 }
+    const worldAnchor = element.viewport.transform.removePoint(anchor)
+    const onChange = vi.fn()
+    element.addEventListener('fd-viewport-change', onChange)
+    const dispatchTouch = (type: string, pointerId: number, x: number, y: number) => {
+      viewport.dispatchEvent(
+        new PointerEvent(type, {
+          pointerId,
+          pointerType: 'touch',
+          button: 0,
+          clientX: bounds.left + x,
+          clientY: bounds.top + y,
+          bubbles: true,
+        }),
+      )
+    }
+
+    dispatchTouch('pointerdown', 1, 200, 200)
+    dispatchTouch('pointerdown', 2, 400, 200)
+    dispatchTouch('pointermove', 1, 190, 220)
+    dispatchTouch('pointermove', 2, 430, 220)
+
+    expect(element.viewport.transform.zoom).toBeCloseTo(1.2)
+    expect(element.viewport.transform.applyPoint(worldAnchor)).toEqual({ x: 310, y: 220 })
+    expect(onChange.mock.calls.at(-1)?.[0].detail.phase).toBe('continuous')
+
+    dispatchTouch('pointerup', 2, 430, 220)
+
+    expect(onChange.mock.calls.at(-1)?.[0].detail.phase).toBe('ended')
+  })
+
   it('can leave ordinary wheel events to a page scroller', async () => {
     const element = await mount()
     element.allowsPageScroll = true
