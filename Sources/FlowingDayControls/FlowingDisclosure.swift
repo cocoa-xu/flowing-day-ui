@@ -51,12 +51,14 @@ public struct FlowingDisclosureContent<Content: View>: View {
   }
 
   public var body: some View {
-    VStack(spacing: 0) {
+    ZStack(alignment: .topLeading) {
       if isExpanded {
         content
+          .frame(maxWidth: .infinity, alignment: .topLeading)
           .transition(FlowingDisclosureMotion.transition(reduceMotion: reduceMotion))
       }
     }
+    .frame(maxWidth: .infinity, alignment: .topLeading)
     .clipped()
     .animation(
       FlowingDisclosureMotion.animation(reduceMotion: reduceMotion),
@@ -108,6 +110,10 @@ public struct FlowingDisclosure<Label: View, Content: View>: View {
             .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(accent.foreground)
             .rotationEffect(.degrees(isExpanded ? 180 : 0))
+            .animation(
+              reduceMotion ? nil : .easeOut(duration: FlowingMotion.expand),
+              value: isExpanded
+            )
         }
         .padding(contentInsets ?? FlowingDisclosureMetrics.defaultContentInsets)
         .frame(minHeight: minimumHeaderHeight)
@@ -128,10 +134,6 @@ public struct FlowingDisclosure<Label: View, Content: View>: View {
         content
       }
     }
-    .animation(
-      reduceMotion ? nil : .easeOut(duration: FlowingMotion.expand),
-      value: isExpanded
-    )
   }
 }
 
