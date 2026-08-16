@@ -24,6 +24,15 @@ final class FlowingControlsPublicAPITests: XCTestCase {
         labelStyle: .iconAndText
       )
       FlowingSlider("Intensity", value: .constant(0.5), in: 0...1)
+      FlowingContextMenu(
+        anchor: CGPoint(x: 10, y: 10),
+        items: [
+          FlowingContextMenuItem("Duplicate") {},
+          .separator(),
+          FlowingContextMenuItem("Remove", accent: .crimson) {},
+        ],
+        onDismiss: {}
+      )
     }
     .flowingAccent(.petal)
     .flowingMetrics(.standard)

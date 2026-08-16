@@ -42,6 +42,9 @@ Start with <doc:GettingStarted>, then customize the shared environment values de
 
 - ``FlowingIconButton``
 - ``FlowingMenu``
+- ``FlowingContextMenu``
+- ``FlowingContextMenuItem``
+- ``FlowingContextMenuIndicator``
 - ``FlowingDialog``
 - ``FlowingPopover``
 - ``FlowingTooltipContent``
