@@ -243,7 +243,6 @@ struct FlowingSegmentLabel<Value: Hashable>: View {
     Text(option.label)
       .font(typography.selectionLabel.font)
       .lineLimit(1)
-      .minimumScaleFactor(0.72)
   }
 }
 
