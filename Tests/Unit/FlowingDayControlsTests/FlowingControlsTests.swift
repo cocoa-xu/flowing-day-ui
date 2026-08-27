@@ -1070,6 +1070,61 @@ final class FlowingControlsTests: XCTestCase {
   }
 
   @MainActor
+  func testMultiSelectMenuUpdatesEnabledOptionsWithoutClosing() throws {
+    let window = NSWindow(
+      contentRect: NSRect(x: 200, y: 200, width: 400, height: 300),
+      styleMask: [.borderless],
+      backing: .buffered,
+      defer: false
+    )
+    window.isReleasedWhenClosed = false
+    defer { window.close() }
+
+    let button = FlowingSelectButton(
+      frame: NSRect(x: 100, y: 100, width: 180, height: 30)
+    )
+    button.configure(
+      labels: ["This Mac", "Remote Mac"],
+      selectedIndex: nil,
+      selectedIndices: [0],
+      optionEnabledStates: [false, true],
+      displayTitle: "This Mac",
+      allowsMultipleSelection: true,
+      minimumWidth: 180,
+      accent: .petal,
+      strings: FlowingStrings(),
+      controlRadius: 9,
+      textStyle: FlowingTypography.standard.value,
+      optionTextStyle: FlowingTypography.standard.selectionLabel,
+      menuBackgroundColor: FlowingPalette.control
+    )
+    window.contentView?.addSubview(button)
+    window.orderFront(nil)
+    button.performClick(nil)
+
+    button.configure(
+      labels: ["This Mac", "Remote Mac"],
+      selectedIndex: nil,
+      selectedIndices: [0, 1],
+      optionEnabledStates: [true, true],
+      displayTitle: "All Computers",
+      allowsMultipleSelection: true,
+      minimumWidth: 180,
+      accent: .petal,
+      strings: FlowingStrings(),
+      controlRadius: 9,
+      textStyle: FlowingTypography.standard.value,
+      optionTextStyle: FlowingTypography.standard.selectionLabel,
+      menuBackgroundColor: FlowingPalette.control
+    )
+
+    let panel = try XCTUnwrap(button.presentedPanel)
+    let optionButtons = try XCTUnwrap(panel.contentView?.subviews as? [NSButton])
+    XCTAssertTrue(optionButtons.allSatisfy(\.isEnabled))
+    button.prepareForRemoval()
+  }
+
+  @MainActor
   func testMultiSelectMenuSizesItsControlFromTheTitle() {
     let menu = FlowingMultiSelectMenu(
       "All interfaces",

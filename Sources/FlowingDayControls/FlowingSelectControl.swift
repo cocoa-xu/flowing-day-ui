@@ -149,7 +149,6 @@ final class FlowingSelectButton: NSButton {
     let structureChanged =
       self.labels != labels
       || self.optionAccents != optionAccents
-      || self.optionEnabledStates != optionEnabledStates
       || self.allowsMultipleSelection != allowsMultipleSelection
       || self.accent != accent
     self.labels = labels
@@ -171,6 +170,7 @@ final class FlowingSelectButton: NSButton {
     }
     if let menu = menuPanel?.contentView as? FlowingSelectMenuView {
       menu.selectedIndices = self.selectedIndices
+      menu.optionEnabledStates = optionEnabledStates
     }
     setAccessibilityValue(
       displayTitle ?? selectedIndex.flatMap { labels[safe: $0] } ?? ""
@@ -525,6 +525,10 @@ private final class FlowingSelectMenuView: NSView {
     didSet { updateButtons() }
   }
 
+  var optionEnabledStates: [Bool] {
+    didSet { updateButtons() }
+  }
+
   var keyboardHighlightedIndex: Int? {
     didSet { updateButtons() }
   }
@@ -549,6 +553,7 @@ private final class FlowingSelectMenuView: NSView {
     onSelect: @escaping (Int) -> Void
   ) {
     self.selectedIndices = selectedIndices
+    self.optionEnabledStates = optionEnabledStates
     self.accent = accent
     self.backgroundColor = backgroundColor
     self.controlRadius = controlRadius
@@ -617,6 +622,7 @@ private final class FlowingSelectMenuView: NSView {
 
   private func updateButtons() {
     for (index, button) in buttons.enumerated() {
+      button.isEnabled = optionEnabledStates[safe: index] ?? true
       button.isSelected = selectedIndices.contains(index)
       button.isKeyboardHighlighted = index == keyboardHighlightedIndex
     }
