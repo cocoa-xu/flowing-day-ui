@@ -68,6 +68,7 @@ final class FlowingSelectButton: NSButton {
 
   var onSelect: ((Int) -> Void)?
   var onToggle: ((Int) -> Set<Int>)?
+  var onActivate: ((Int) -> Void)?
   private var labels: [String] = []
   private var optionAccents: [FlowingAccent?] = []
   private var optionEnabledStates: [Bool] = []
@@ -75,6 +76,7 @@ final class FlowingSelectButton: NSButton {
   private var selectedIndices: Set<Int> = []
   private var displayTitle: String?
   private var allowsMultipleSelection = false
+  private var allowsIndependentActivation = false
   private var minimumWidth: CGFloat = 0
   private var accent = FlowingAccent.celadon
   private var strings = FlowingStrings()
@@ -138,6 +140,7 @@ final class FlowingSelectButton: NSButton {
     optionEnabledStates: [Bool] = [],
     displayTitle: String? = nil,
     allowsMultipleSelection: Bool = false,
+    allowsIndependentActivation: Bool = false,
     minimumWidth: CGFloat,
     accent: FlowingAccent,
     strings: FlowingStrings,
@@ -150,6 +153,7 @@ final class FlowingSelectButton: NSButton {
       self.labels != labels
       || self.optionAccents != optionAccents
       || self.allowsMultipleSelection != allowsMultipleSelection
+      || self.allowsIndependentActivation != allowsIndependentActivation
       || self.accent != accent
     self.labels = labels
     self.optionAccents = optionAccents
@@ -158,6 +162,7 @@ final class FlowingSelectButton: NSButton {
     self.selectedIndices = selectedIndices ?? selectedIndex.map { [$0] } ?? []
     self.displayTitle = displayTitle
     self.allowsMultipleSelection = allowsMultipleSelection
+    self.allowsIndependentActivation = allowsIndependentActivation
     self.minimumWidth = minimumWidth
     self.accent = accent
     self.strings = strings
@@ -215,6 +220,7 @@ final class FlowingSelectButton: NSButton {
     dismiss(restoreKeyWindow: false)
     onSelect = nil
     onToggle = nil
+    onActivate = nil
   }
 
   override func viewDidChangeEffectiveAppearance() {
@@ -324,13 +330,19 @@ final class FlowingSelectButton: NSButton {
       optionEnabledStates: optionEnabledStates,
       selectedIndices: selectedIndices,
       allowsMultipleSelection: allowsMultipleSelection,
+      allowsIndependentActivation: allowsIndependentActivation,
       accent: accent,
       strings: strings,
       font: optionFont,
       backgroundColor: menuBackgroundColor,
       controlRadius: controlRadius
-    ) { [weak self] index in
-      self?.select(index: index)
+    ) { [weak self] index, interaction in
+      switch interaction {
+      case .activate:
+        self?.select(index: index)
+      case .toggle:
+        self?.toggleSelection(index: index)
+      }
     }
     position(panel, anchorFrame: anchorFrame, visibleFrame: visibleFrame)
     menuPanel = panel
@@ -365,16 +377,27 @@ final class FlowingSelectButton: NSButton {
   }
 
   private func select(index: Int) {
-    guard labels.indices.contains(index), optionEnabledStates[safe: index] ?? true else {
+    guard labels.indices.contains(index) else { return }
+    if allowsMultipleSelection, allowsIndependentActivation {
+      dismiss()
+      onActivate?(index)
       return
     }
+    guard optionEnabledStates[safe: index] ?? true else { return }
     if allowsMultipleSelection {
-      selectedIndices = onToggle?(index) ?? selectedIndices
-      (menuPanel?.contentView as? FlowingSelectMenuView)?.selectedIndices = selectedIndices
+      toggleSelection(index: index)
       return
     }
     dismiss()
     onSelect?(index)
+  }
+
+  func toggleSelection(index: Int) {
+    guard labels.indices.contains(index), optionEnabledStates[safe: index] ?? true else {
+      return
+    }
+    selectedIndices = onToggle?(index) ?? selectedIndices
+    (menuPanel?.contentView as? FlowingSelectMenuView)?.selectedIndices = selectedIndices
   }
 
   private func moveHighlight(by offset: Int) {
@@ -426,7 +449,16 @@ final class FlowingSelectButton: NSButton {
         case 126:
           self.moveHighlight(by: -1)
           return nil
-        case 36, 49, 76:
+        case 49:
+          if let index = self.highlightedIndex {
+            if self.allowsIndependentActivation {
+              self.toggleSelection(index: index)
+            } else {
+              self.select(index: index)
+            }
+          }
+          return nil
+        case 36, 76:
           if let index = self.highlightedIndex {
             self.select(index: index)
           }
@@ -516,6 +548,11 @@ private final class FlowingSelectPanel: NSPanel {
   override var canBecomeMain: Bool { false }
 }
 
+enum FlowingSelectOptionInteraction {
+  case activate
+  case toggle
+}
+
 @MainActor
 private final class FlowingSelectMenuView: NSView {
   static let rowHeight: CGFloat = 36
@@ -545,12 +582,13 @@ private final class FlowingSelectMenuView: NSView {
     optionEnabledStates: [Bool],
     selectedIndices: Set<Int>,
     allowsMultipleSelection: Bool,
+    allowsIndependentActivation: Bool,
     accent: FlowingAccent,
     strings: FlowingStrings,
     font: NSFont,
     backgroundColor: NSColor,
     controlRadius: CGFloat,
-    onSelect: @escaping (Int) -> Void
+    onInteract: @escaping (Int, FlowingSelectOptionInteraction) -> Void
   ) {
     self.selectedIndices = selectedIndices
     self.optionEnabledStates = optionEnabledStates
@@ -570,11 +608,12 @@ private final class FlowingSelectMenuView: NSView {
         strings: strings,
         font: font,
         controlRadius: controlRadius,
-        allowsMultipleSelection: allowsMultipleSelection
-      ) {
-        onSelect(index)
+        allowsMultipleSelection: allowsMultipleSelection,
+        allowsIndependentActivation: allowsIndependentActivation
+      ) { interaction in
+        onInteract(index, interaction)
       }
-      button.isEnabled = optionEnabledStates[safe: index] ?? true
+      button.isToggleEnabled = optionEnabledStates[safe: index] ?? true
       addSubview(button)
       buttons.append(button)
     }
@@ -622,23 +661,36 @@ private final class FlowingSelectMenuView: NSView {
 
   private func updateButtons() {
     for (index, button) in buttons.enumerated() {
-      button.isEnabled = optionEnabledStates[safe: index] ?? true
+      button.isToggleEnabled = optionEnabledStates[safe: index] ?? true
       button.isSelected = selectedIndices.contains(index)
       button.isKeyboardHighlighted = index == keyboardHighlightedIndex
     }
   }
 }
 
-private final class FlowingSelectOptionButton: NSButton {
+final class FlowingSelectOptionButton: NSButton {
   private let optionTitle: String
   private let accent: FlowingAccent
   private let strings: FlowingStrings
   private let optionFont: NSFont
   private let controlRadius: CGFloat
   private let showsSwatch: Bool
-  private let perform: () -> Void
+  private let allowsMultipleSelection: Bool
+  private let allowsIndependentActivation: Bool
+  private let perform: (FlowingSelectOptionInteraction) -> Void
   private var hoverArea: NSTrackingArea?
   private var isHovered = false
+
+  var isToggleEnabled = true {
+    didSet {
+      isEnabled = allowsIndependentActivation || isToggleEnabled
+      needsDisplay = true
+    }
+  }
+
+  var showsAddIndicator: Bool {
+    allowsIndependentActivation && isHovered && !isSelected && isToggleEnabled
+  }
 
   var isSelected = false {
     didSet {
@@ -660,7 +712,8 @@ private final class FlowingSelectOptionButton: NSButton {
     font: NSFont,
     controlRadius: CGFloat,
     allowsMultipleSelection: Bool,
-    perform: @escaping () -> Void
+    allowsIndependentActivation: Bool,
+    perform: @escaping (FlowingSelectOptionInteraction) -> Void
   ) {
     optionTitle = title
     self.accent = accent
@@ -668,6 +721,8 @@ private final class FlowingSelectOptionButton: NSButton {
     optionFont = font
     self.controlRadius = controlRadius
     self.showsSwatch = showsSwatch
+    self.allowsMultipleSelection = allowsMultipleSelection
+    self.allowsIndependentActivation = allowsIndependentActivation
     self.perform = perform
     super.init(frame: frame)
     isBordered = false
@@ -676,7 +731,7 @@ private final class FlowingSelectOptionButton: NSButton {
     target = self
     action = #selector(invoke)
     setAccessibilityLabel(title)
-    if allowsMultipleSelection {
+    if allowsMultipleSelection && !allowsIndependentActivation {
       setAccessibilityRole(.checkBox)
     }
   }
@@ -715,6 +770,18 @@ private final class FlowingSelectOptionButton: NSButton {
     needsDisplay = true
   }
 
+  override func mouseDown(with event: NSEvent) {
+    let location = convert(event.locationInWindow, from: nil)
+    if allowsIndependentActivation,
+      isToggleEnabled,
+      selectionIndicatorRect.contains(location)
+    {
+      perform(.toggle)
+      return
+    }
+    super.mouseDown(with: event)
+  }
+
   override func draw(_ dirtyRect: NSRect) {
     let shape = NSBezierPath(
       roundedRect: bounds,
@@ -726,13 +793,13 @@ private final class FlowingSelectOptionButton: NSButton {
       (isSelected ? NSColor(accent.wash) : NSColor(accent.veil)).setFill()
       shape.fill()
     }
-    if isSelected {
+    if isSelected || showsAddIndicator {
       NSColor(accent.veil).setFill()
-      NSBezierPath(ovalIn: NSRect(x: 8, y: 5, width: 22, height: 22)).fill()
+      NSBezierPath(ovalIn: selectionIndicatorRect).fill()
       let configuration = NSImage.SymbolConfiguration(pointSize: 10, weight: .bold)
         .applying(.init(paletteColors: [NSColor(accent.foreground)]))
       let symbol = NSImage(
-        systemSymbolName: "checkmark",
+        systemSymbolName: isSelected ? "checkmark" : "plus",
         accessibilityDescription: nil
       )?.withSymbolConfiguration(configuration)
       symbol?.draw(
@@ -772,7 +839,11 @@ private final class FlowingSelectOptionButton: NSButton {
   }
 
   @objc private func invoke() {
-    perform()
+    perform(allowsIndependentActivation || !allowsMultipleSelection ? .activate : .toggle)
+  }
+
+  private var selectionIndicatorRect: NSRect {
+    NSRect(x: 8, y: 5, width: 22, height: 22)
   }
 }
 

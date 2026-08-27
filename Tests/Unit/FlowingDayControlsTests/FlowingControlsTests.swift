@@ -145,6 +145,7 @@ final class FlowingControlsTests: XCTestCase {
   func testSwitchAndSliderComposeOutsidePreferencesRows() {
     let content = VStack {
       FlowingSwitch("Updates", isOn: .constant(true))
+      FlowingSwitch("Exact accent", isOn: .constant(true), trackStyle: .exactAccent)
       FlowingSlider("Intensity", value: .constant(0.5), in: 0...1)
     }
     .frame(width: 240)
@@ -1122,6 +1123,137 @@ final class FlowingControlsTests: XCTestCase {
     let optionButtons = try XCTUnwrap(panel.contentView?.subviews as? [NSButton])
     XCTAssertTrue(optionButtons.allSatisfy(\.isEnabled))
     button.prepareForRemoval()
+  }
+
+  @MainActor
+  func testMultiSelectMenuPrimaryActivationClosesWithoutToggling() throws {
+    let window = NSWindow(
+      contentRect: NSRect(x: 200, y: 200, width: 400, height: 300),
+      styleMask: [.borderless],
+      backing: .buffered,
+      defer: false
+    )
+    window.isReleasedWhenClosed = false
+    defer { window.close() }
+
+    let button = FlowingSelectButton(
+      frame: NSRect(x: 100, y: 100, width: 180, height: 30)
+    )
+    var selectedIndices: Set<Int> = [0]
+    var activatedIndex: Int?
+    button.configure(
+      labels: ["This Mac", "Remote Mac"],
+      selectedIndex: nil,
+      selectedIndices: selectedIndices,
+      optionEnabledStates: [false, true],
+      displayTitle: "This Mac",
+      allowsMultipleSelection: true,
+      allowsIndependentActivation: true,
+      minimumWidth: 180,
+      accent: .petal,
+      strings: FlowingStrings(),
+      controlRadius: 9,
+      textStyle: FlowingTypography.standard.value,
+      optionTextStyle: FlowingTypography.standard.selectionLabel,
+      menuBackgroundColor: FlowingPalette.control
+    )
+    button.onToggle = { index in
+      selectedIndices.formSymmetricDifference([index])
+      return selectedIndices
+    }
+    button.onActivate = { activatedIndex = $0 }
+    window.contentView?.addSubview(button)
+    window.orderFront(nil)
+    button.performClick(nil)
+
+    let panel = try XCTUnwrap(button.presentedPanel)
+    let optionButtons = try XCTUnwrap(panel.contentView?.subviews as? [NSButton])
+    XCTAssertTrue(optionButtons[0].isEnabled)
+    optionButtons[1].performClick(nil)
+
+    XCTAssertEqual(activatedIndex, 1)
+    XCTAssertEqual(selectedIndices, [0])
+    XCTAssertNil(button.presentedPanel)
+  }
+
+  @MainActor
+  func testMultiSelectMenuIndependentToggleStaysOpen() throws {
+    let window = NSWindow(
+      contentRect: NSRect(x: 200, y: 200, width: 400, height: 300),
+      styleMask: [.borderless],
+      backing: .buffered,
+      defer: false
+    )
+    window.isReleasedWhenClosed = false
+    defer { window.close() }
+
+    let button = FlowingSelectButton(
+      frame: NSRect(x: 100, y: 100, width: 180, height: 30)
+    )
+    var selectedIndices: Set<Int> = [0]
+    button.configure(
+      labels: ["This Mac", "Remote Mac"],
+      selectedIndex: nil,
+      selectedIndices: selectedIndices,
+      optionEnabledStates: [false, true],
+      displayTitle: "This Mac",
+      allowsMultipleSelection: true,
+      allowsIndependentActivation: true,
+      minimumWidth: 180,
+      accent: .petal,
+      strings: FlowingStrings(),
+      controlRadius: 9,
+      textStyle: FlowingTypography.standard.value,
+      optionTextStyle: FlowingTypography.standard.selectionLabel,
+      menuBackgroundColor: FlowingPalette.control
+    )
+    button.onToggle = { index in
+      selectedIndices.formSymmetricDifference([index])
+      return selectedIndices
+    }
+    window.contentView?.addSubview(button)
+    window.orderFront(nil)
+    button.performClick(nil)
+
+    button.toggleSelection(index: 1)
+
+    XCTAssertEqual(selectedIndices, [0, 1])
+    XCTAssertNotNil(button.presentedPanel)
+    button.prepareForRemoval()
+  }
+
+  @MainActor
+  func testIndependentMultiSelectOptionRevealsAddIndicatorOnHover() throws {
+    let button = FlowingSelectOptionButton(
+      frame: NSRect(x: 0, y: 0, width: 180, height: 32),
+      title: "Remote Mac",
+      accent: .petal,
+      showsSwatch: false,
+      strings: FlowingStrings(),
+      font: FlowingTypography.standard.selectionLabel.appKitFont,
+      controlRadius: 9,
+      allowsMultipleSelection: true,
+      allowsIndependentActivation: true
+    ) { _ in }
+    let event = try XCTUnwrap(
+      NSEvent.mouseEvent(
+        with: .mouseMoved,
+        location: .zero,
+        modifierFlags: [],
+        timestamp: 0,
+        windowNumber: 0,
+        context: nil,
+        eventNumber: 0,
+        clickCount: 0,
+        pressure: 0
+      )
+    )
+
+    button.mouseEntered(with: event)
+    XCTAssertTrue(button.showsAddIndicator)
+
+    button.isSelected = true
+    XCTAssertFalse(button.showsAddIndicator)
   }
 
   @MainActor

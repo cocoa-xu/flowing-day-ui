@@ -29,7 +29,8 @@ final class FlowingControlsPublicAPITests: XCTestCase {
         label: "Listen on",
         options: [
           FlowingMultiSelectOption("Wi-Fi", isOn: enabled)
-        ]
+        ],
+        onActivate: { _ in }
       )
       FlowingContextMenu(
         anchor: CGPoint(x: 10, y: 10),

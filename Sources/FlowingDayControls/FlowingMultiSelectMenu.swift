@@ -10,12 +10,14 @@ public struct FlowingMultiSelectMenu: View {
   private let label: String
   private let minimumWidth: CGFloat
   private let options: [FlowingMultiSelectOption]
+  private let onActivate: ((String) -> Void)?
 
   public init(
     _ title: String,
     label: String,
     minimumWidth: CGFloat = 0,
-    options: [FlowingMultiSelectOption]
+    options: [FlowingMultiSelectOption],
+    onActivate: ((String) -> Void)? = nil
   ) {
     precondition(minimumWidth.isFinite && minimumWidth >= 0)
     precondition(Set(options.map(\.id)).count == options.count)
@@ -23,12 +25,14 @@ public struct FlowingMultiSelectMenu: View {
     self.label = label
     self.minimumWidth = minimumWidth
     self.options = options
+    self.onActivate = onActivate
   }
 
   public var body: some View {
     FlowingMultiSelectMenuRepresentable(
       title: title,
       options: options,
+      onActivate: onActivate,
       minimumWidth: minimumWidth,
       accent: accent,
       strings: strings,
@@ -44,6 +48,7 @@ public struct FlowingMultiSelectMenu: View {
 private struct FlowingMultiSelectMenuRepresentable: NSViewRepresentable {
   let title: String
   let options: [FlowingMultiSelectOption]
+  let onActivate: ((String) -> Void)?
   let minimumWidth: CGFloat
   let accent: FlowingAccent
   let strings: FlowingStrings
@@ -80,6 +85,7 @@ private struct FlowingMultiSelectMenuRepresentable: NSViewRepresentable {
       optionEnabledStates: options.map(\.isEnabled),
       displayTitle: title,
       allowsMultipleSelection: true,
+      allowsIndependentActivation: onActivate != nil,
       minimumWidth: minimumWidth,
       accent: accent,
       strings: strings,
@@ -89,6 +95,7 @@ private struct FlowingMultiSelectMenuRepresentable: NSViewRepresentable {
       menuBackgroundColor: menuBackgroundColor
     )
     button.onToggle = { coordinator.toggle(index: $0) }
+    button.onActivate = { coordinator.activate(index: $0) }
   }
 
   private var selectedIndices: Set<Int> {
@@ -107,6 +114,12 @@ private struct FlowingMultiSelectMenuRepresentable: NSViewRepresentable {
       guard parent.options.indices.contains(index) else { return [] }
       parent.options[index].toggle()
       return Set(parent.options.indices.filter { parent.options[$0].isSelected })
+    }
+
+    @MainActor
+    func activate(index: Int) {
+      guard parent.options.indices.contains(index) else { return }
+      parent.onActivate?(parent.options[index].id)
     }
   }
 }
