@@ -65,8 +65,10 @@ enum PreferencesSectionSeparatorResolver {
 
 public enum PreferencesRowIcon {
   case system(String)
+  case accentSystem(String)
   case image(NSImage)
   case template(NSImage)
+  case mutedTemplate(NSImage)
 }
 
 private struct PreferencesRowIconView: View {
@@ -80,6 +82,11 @@ private struct PreferencesRowIconView: View {
       Image(systemName: symbol)
         .font(.system(size: 13, weight: .medium))
         .foregroundStyle(FlowingPalette.muted)
+        .frame(width: PreferencesRowLayout.symbolWidth)
+    case .accentSystem(let symbol):
+      Image(systemName: symbol)
+        .font(.system(size: 13, weight: .medium))
+        .foregroundStyle(accent.foreground)
         .frame(width: PreferencesRowLayout.symbolWidth)
     case .image(let image):
       Image(nsImage: image)
@@ -95,6 +102,16 @@ private struct PreferencesRowIconView: View {
         .resizable()
         .scaledToFit()
         .foregroundStyle(accent.foreground)
+        .frame(
+          width: PreferencesRowLayout.symbolWidth,
+          height: PreferencesRowLayout.symbolWidth
+        )
+    case .mutedTemplate(let image):
+      Image(nsImage: image)
+        .renderingMode(.template)
+        .resizable()
+        .scaledToFit()
+        .foregroundStyle(FlowingPalette.muted)
         .frame(
           width: PreferencesRowLayout.symbolWidth,
           height: PreferencesRowLayout.symbolWidth

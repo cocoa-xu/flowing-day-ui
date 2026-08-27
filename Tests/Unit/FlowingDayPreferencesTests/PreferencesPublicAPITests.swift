@@ -44,9 +44,19 @@ final class PreferencesPublicAPITests: XCTestCase {
       icon: .template(NSImage(size: NSSize(width: 20, height: 20))),
       title: "Template"
     )
+    let accentSystemRow = PreferencesRow(
+      icon: .accentSystem("desktopcomputer"),
+      title: "Accent system"
+    )
+    let mutedTemplateRow = PreferencesRow(
+      icon: .mutedTemplate(NSImage(size: NSSize(width: 20, height: 20))),
+      title: "Muted template"
+    )
 
     XCTAssertNotNil(AnyView(view))
     XCTAssertNotNil(AnyView(imageRow))
     XCTAssertNotNil(AnyView(templateRow))
+    XCTAssertNotNil(AnyView(accentSystemRow))
+    XCTAssertNotNil(AnyView(mutedTemplateRow))
   }
 }
