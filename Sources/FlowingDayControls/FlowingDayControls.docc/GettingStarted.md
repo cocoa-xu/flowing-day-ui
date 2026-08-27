@@ -9,7 +9,7 @@ Add the package dependency, then include `FlowingDayControls` in the dependencie
 ```swift
 .package(
     url: "https://github.com/cocoa-xu/flowing-day-ui",
-    from: "2.6.3"
+    from: "2.6.4"
 )
 ```
 
