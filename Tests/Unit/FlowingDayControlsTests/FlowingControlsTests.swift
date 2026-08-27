@@ -145,7 +145,6 @@ final class FlowingControlsTests: XCTestCase {
   func testSwitchAndSliderComposeOutsidePreferencesRows() {
     let content = VStack {
       FlowingSwitch("Updates", isOn: .constant(true))
-      FlowingSwitch("Exact accent", isOn: .constant(true), trackStyle: .exactAccent)
       FlowingSlider("Intensity", value: .constant(0.5), in: 0...1)
     }
     .frame(width: 240)
