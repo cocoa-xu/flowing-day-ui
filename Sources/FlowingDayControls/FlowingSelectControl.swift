@@ -67,9 +67,14 @@ final class FlowingSelectButton: NSButton {
   private static let controlHeight: CGFloat = 30
 
   var onSelect: ((Int) -> Void)?
+  var onToggle: ((Int) -> Set<Int>)?
   private var labels: [String] = []
   private var optionAccents: [FlowingAccent?] = []
+  private var optionEnabledStates: [Bool] = []
   private var selectedIndex: Int?
+  private var selectedIndices: Set<Int> = []
+  private var displayTitle: String?
+  private var allowsMultipleSelection = false
   private var minimumWidth: CGFloat = 0
   private var accent = FlowingAccent.celadon
   private var strings = FlowingStrings()
@@ -114,8 +119,9 @@ final class FlowingSelectButton: NSButton {
   }
 
   override var intrinsicContentSize: NSSize {
+    let sizingLabels = displayTitle.map { [$0] } ?? labels
     let textWidth =
-      labels.map {
+      sizingLabels.map {
         ($0 as NSString).size(withAttributes: [.font: textFont]).width
       }.max() ?? 0
     return NSSize(
@@ -128,6 +134,10 @@ final class FlowingSelectButton: NSButton {
     labels: [String],
     optionAccents: [FlowingAccent?] = [],
     selectedIndex: Int?,
+    selectedIndices: Set<Int>? = nil,
+    optionEnabledStates: [Bool] = [],
+    displayTitle: String? = nil,
+    allowsMultipleSelection: Bool = false,
     minimumWidth: CGFloat,
     accent: FlowingAccent,
     strings: FlowingStrings,
@@ -137,10 +147,18 @@ final class FlowingSelectButton: NSButton {
     menuBackgroundColor: Color
   ) {
     let structureChanged =
-      self.labels != labels || self.optionAccents != optionAccents || self.accent != accent
+      self.labels != labels
+      || self.optionAccents != optionAccents
+      || self.optionEnabledStates != optionEnabledStates
+      || self.allowsMultipleSelection != allowsMultipleSelection
+      || self.accent != accent
     self.labels = labels
     self.optionAccents = optionAccents
+    self.optionEnabledStates = optionEnabledStates
     self.selectedIndex = selectedIndex
+    self.selectedIndices = selectedIndices ?? selectedIndex.map { [$0] } ?? []
+    self.displayTitle = displayTitle
+    self.allowsMultipleSelection = allowsMultipleSelection
     self.minimumWidth = minimumWidth
     self.accent = accent
     self.strings = strings
@@ -152,9 +170,11 @@ final class FlowingSelectButton: NSButton {
       dismiss()
     }
     if let menu = menuPanel?.contentView as? FlowingSelectMenuView {
-      menu.selectedIndex = selectedIndex
+      menu.selectedIndices = self.selectedIndices
     }
-    setAccessibilityValue(selectedIndex.flatMap { labels[safe: $0] } ?? "")
+    setAccessibilityValue(
+      displayTitle ?? selectedIndex.flatMap { labels[safe: $0] } ?? ""
+    )
     invalidateIntrinsicContentSize()
     needsDisplay = true
   }
@@ -194,6 +214,7 @@ final class FlowingSelectButton: NSButton {
   func prepareForRemoval() {
     dismiss(restoreKeyWindow: false)
     onSelect = nil
+    onToggle = nil
   }
 
   override func viewDidChangeEffectiveAppearance() {
@@ -242,7 +263,7 @@ final class FlowingSelectButton: NSButton {
       hints: nil
     )
 
-    let value = selectedIndex.flatMap { labels[safe: $0] } ?? "—"
+    let value = displayTitle ?? selectedIndex.flatMap { labels[safe: $0] } ?? "—"
     let paragraph = NSMutableParagraphStyle()
     paragraph.alignment = .right
     paragraph.lineBreakMode = .byTruncatingTail
@@ -300,7 +321,9 @@ final class FlowingSelectButton: NSButton {
       frame: NSRect(origin: .zero, size: menuSize),
       labels: labels,
       optionAccents: optionAccents,
-      selectedIndex: selectedIndex,
+      optionEnabledStates: optionEnabledStates,
+      selectedIndices: selectedIndices,
+      allowsMultipleSelection: allowsMultipleSelection,
       accent: accent,
       strings: strings,
       font: optionFont,
@@ -342,7 +365,14 @@ final class FlowingSelectButton: NSButton {
   }
 
   private func select(index: Int) {
-    guard labels.indices.contains(index) else { return }
+    guard labels.indices.contains(index), optionEnabledStates[safe: index] ?? true else {
+      return
+    }
+    if allowsMultipleSelection {
+      selectedIndices = onToggle?(index) ?? selectedIndices
+      (menuPanel?.contentView as? FlowingSelectMenuView)?.selectedIndices = selectedIndices
+      return
+    }
     dismiss()
     onSelect?(index)
   }
@@ -491,7 +521,7 @@ private final class FlowingSelectMenuView: NSView {
   static let rowHeight: CGFloat = 36
   static let verticalInset: CGFloat = 8
 
-  var selectedIndex: Int? {
+  var selectedIndices: Set<Int> {
     didSet { updateButtons() }
   }
 
@@ -508,7 +538,9 @@ private final class FlowingSelectMenuView: NSView {
     frame: NSRect,
     labels: [String],
     optionAccents: [FlowingAccent?],
-    selectedIndex: Int?,
+    optionEnabledStates: [Bool],
+    selectedIndices: Set<Int>,
+    allowsMultipleSelection: Bool,
     accent: FlowingAccent,
     strings: FlowingStrings,
     font: NSFont,
@@ -516,7 +548,7 @@ private final class FlowingSelectMenuView: NSView {
     controlRadius: CGFloat,
     onSelect: @escaping (Int) -> Void
   ) {
-    self.selectedIndex = selectedIndex
+    self.selectedIndices = selectedIndices
     self.accent = accent
     self.backgroundColor = backgroundColor
     self.controlRadius = controlRadius
@@ -532,10 +564,12 @@ private final class FlowingSelectMenuView: NSView {
         showsSwatch: itemAccent != nil,
         strings: strings,
         font: font,
-        controlRadius: controlRadius
+        controlRadius: controlRadius,
+        allowsMultipleSelection: allowsMultipleSelection
       ) {
         onSelect(index)
       }
+      button.isEnabled = optionEnabledStates[safe: index] ?? true
       addSubview(button)
       buttons.append(button)
     }
@@ -583,7 +617,7 @@ private final class FlowingSelectMenuView: NSView {
 
   private func updateButtons() {
     for (index, button) in buttons.enumerated() {
-      button.isSelected = index == selectedIndex
+      button.isSelected = selectedIndices.contains(index)
       button.isKeyboardHighlighted = index == keyboardHighlightedIndex
     }
   }
@@ -619,6 +653,7 @@ private final class FlowingSelectOptionButton: NSButton {
     strings: FlowingStrings,
     font: NSFont,
     controlRadius: CGFloat,
+    allowsMultipleSelection: Bool,
     perform: @escaping () -> Void
   ) {
     optionTitle = title
@@ -635,6 +670,9 @@ private final class FlowingSelectOptionButton: NSButton {
     target = self
     action = #selector(invoke)
     setAccessibilityLabel(title)
+    if allowsMultipleSelection {
+      setAccessibilityRole(.checkBox)
+    }
   }
 
   @available(*, unavailable)
@@ -718,9 +756,11 @@ private final class FlowingSelectOptionButton: NSButton {
       ),
       withAttributes: [
         .font: optionFont,
-        .foregroundColor: isSelected || isHighlighted
-          ? NSColor(accent.foreground)
-          : NSColor(FlowingPalette.ink),
+        .foregroundColor: isEnabled
+          ? (isSelected || isHighlighted
+            ? NSColor(accent.foreground)
+            : NSColor(FlowingPalette.ink))
+          : NSColor(FlowingPalette.faint),
       ]
     )
   }

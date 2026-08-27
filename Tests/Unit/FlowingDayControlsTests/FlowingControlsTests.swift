@@ -1023,6 +1023,73 @@ final class FlowingControlsTests: XCTestCase {
   }
 
   @MainActor
+  func testMultiSelectMenuUsesTheSelectPanelAndStaysOpen() throws {
+    let window = NSWindow(
+      contentRect: NSRect(x: 200, y: 200, width: 400, height: 300),
+      styleMask: [.borderless],
+      backing: .buffered,
+      defer: false
+    )
+    window.isReleasedWhenClosed = false
+    defer { window.close() }
+
+    let button = FlowingSelectButton(
+      frame: NSRect(x: 100, y: 100, width: 180, height: 30)
+    )
+    var selectedIndices: Set<Int> = [0]
+    button.configure(
+      labels: ["All interfaces", "Wi-Fi", "Tailscale"],
+      selectedIndex: nil,
+      selectedIndices: selectedIndices,
+      displayTitle: "All interfaces",
+      allowsMultipleSelection: true,
+      minimumWidth: 180,
+      accent: .petal,
+      strings: FlowingStrings(),
+      controlRadius: 9,
+      textStyle: FlowingTypography.standard.value,
+      optionTextStyle: FlowingTypography.standard.selectionLabel,
+      menuBackgroundColor: FlowingPalette.control
+    )
+    button.onToggle = { index in
+      selectedIndices.formSymmetricDifference([index])
+      return selectedIndices
+    }
+    window.contentView?.addSubview(button)
+    window.orderFront(nil)
+
+    button.performClick(nil)
+
+    let panel = try XCTUnwrap(button.presentedPanel)
+    let optionButtons = try XCTUnwrap(panel.contentView?.subviews as? [NSButton])
+    optionButtons[1].performClick(nil)
+
+    XCTAssertEqual(selectedIndices, [0, 1])
+    XCTAssertNotNil(button.presentedPanel)
+    button.prepareForRemoval()
+  }
+
+  @MainActor
+  func testMultiSelectMenuSizesItsControlFromTheTitle() {
+    let menu = FlowingMultiSelectMenu(
+      "All interfaces",
+      label: "Listen on",
+      minimumWidth: 180,
+      options: [
+        FlowingMultiSelectOption(
+          "A deliberately very long network interface name",
+          isOn: .constant(false)
+        )
+      ]
+    )
+
+    let width = fittingWidth(menu)
+
+    XCTAssertGreaterThanOrEqual(width, 180)
+    XCTAssertLessThan(width, 220)
+  }
+
+  @MainActor
   func testSelectValueUsesConfiguredAccent() throws {
     let foreground = NSColor(calibratedRed: 0.22, green: 0.47, blue: 0.68, alpha: 1)
     let button = FlowingSelectButton()

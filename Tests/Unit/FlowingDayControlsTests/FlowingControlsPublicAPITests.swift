@@ -24,6 +24,13 @@ final class FlowingControlsPublicAPITests: XCTestCase {
         labelStyle: .iconAndText
       )
       FlowingSlider("Intensity", value: .constant(0.5), in: 0...1)
+      FlowingMultiSelectMenu(
+        "All interfaces",
+        label: "Listen on",
+        options: [
+          FlowingMultiSelectOption("Wi-Fi", isOn: enabled)
+        ]
+      )
       FlowingContextMenu(
         anchor: CGPoint(x: 10, y: 10),
         items: [
