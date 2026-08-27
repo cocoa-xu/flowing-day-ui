@@ -14,7 +14,7 @@ Add FlowingDayUI to your package dependencies:
 ```swift
 .package(
     url: "https://github.com/cocoa-xu/flowing-day-ui",
-    from: "2.6.1"
+    from: "2.6.2"
 )
 ```
 
