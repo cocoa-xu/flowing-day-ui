@@ -16,6 +16,7 @@ final class FlowingControlsPublicAPITests: XCTestCase {
     let view = VStack {
       FlowingCheckbox("Enabled", isOn: enabled)
       FlowingSwitch("Enabled", isOn: enabled)
+      FlowingSwitch("Exact accent", isOn: enabled, trackStyle: .exactAccent)
       FlowingTextField("Name", text: text)
       FlowingSegmentedControl(
         label: "Section",
