@@ -381,6 +381,48 @@ final class PreferencesControlsTests: XCTestCase {
   }
 
   @MainActor
+  func testInlineSliderUsesCompactRowHeightWhileStackedStyleRemainsAvailable() {
+    let inlineHeight = fittingHeight(
+      PreferencesSliderRow(
+        title: "Volume",
+        value: .constant(0.8),
+        in: 0...1,
+        style: .inline(sliderWidth: 180)
+      ) { "\(Int($0 * 100))%" }
+    )
+    let stackedHeight = fittingHeight(
+      PreferencesSliderRow(
+        title: "Volume",
+        value: .constant(0.8),
+        in: 0...1
+      ) { "\(Int($0 * 100))%" }
+    )
+
+    XCTAssertEqual(inlineHeight, PreferencesRowLayout.minimumHeight)
+    XCTAssertGreaterThan(stackedHeight, inlineHeight)
+
+    let sliderOnlyHeight = fittingHeight(
+      PreferencesSliderRow(
+        title: "Volume",
+        value: .constant(0.8),
+        in: 0...1,
+        style: .inline(sliderWidth: 180)
+      ) { "\(Int($0 * 100))%" }
+    )
+    XCTAssertEqual(sliderOnlyHeight, PreferencesRowLayout.minimumHeight)
+
+    let inlineWithValueHeight = fittingHeight(
+      PreferencesSliderRow(
+        title: "Volume",
+        value: .constant(0.8),
+        in: 0...1,
+        style: .inline(sliderWidth: 180, showsValue: true)
+      ) { "\(Int($0 * 100))%" }
+    )
+    XCTAssertEqual(inlineWithValueHeight, PreferencesRowLayout.minimumHeight)
+  }
+
+  @MainActor
   func testDependentRowsOnlyOccupySpaceWhenVisible() {
     let hiddenHeight = fittingHeight(
       PreferencesDependentRows(isVisible: false) {

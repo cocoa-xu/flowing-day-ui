@@ -52,11 +52,18 @@ final class PreferencesPublicAPITests: XCTestCase {
       icon: .mutedTemplate(NSImage(size: NSSize(width: 20, height: 20))),
       title: "Muted template"
     )
+    let inlineSlider = PreferencesSliderRow(
+      title: "Volume",
+      value: .constant(0.8),
+      in: 0...1,
+      style: .inline(sliderWidth: 180)
+    ) { "\(Int($0 * 100))%" }
 
     XCTAssertNotNil(AnyView(view))
     XCTAssertNotNil(AnyView(imageRow))
     XCTAssertNotNil(AnyView(templateRow))
     XCTAssertNotNil(AnyView(accentSystemRow))
     XCTAssertNotNil(AnyView(mutedTemplateRow))
+    XCTAssertNotNil(AnyView(inlineSlider))
   }
 }

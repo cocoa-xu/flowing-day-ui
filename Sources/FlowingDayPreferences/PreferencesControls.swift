@@ -394,6 +394,11 @@ public struct PreferencesSwitchGroup<Content: View>: View {
   }
 }
 
+public enum PreferencesSliderRowStyle: Equatable, Sendable {
+  case stacked
+  case inline(sliderWidth: CGFloat, showsValue: Bool = false)
+}
+
 public struct PreferencesSliderRow: View {
   @Environment(\.flowingMetrics) private var metrics
   @Environment(\.preferencesTypography) private var preferencesTypography
@@ -405,6 +410,7 @@ public struct PreferencesSliderRow: View {
   private let range: ClosedRange<Double>
   private let step: Double?
   private let format: (Double) -> String
+  private let style: PreferencesSliderRowStyle
 
   public init(
     symbol: String? = nil,
@@ -413,18 +419,40 @@ public struct PreferencesSliderRow: View {
     value: Binding<Double>,
     in range: ClosedRange<Double>,
     step: Double? = nil,
+    style: PreferencesSliderRowStyle = .stacked,
     format: @escaping (Double) -> String
   ) {
+    if case .inline(let sliderWidth, _) = style {
+      precondition(sliderWidth > 0 && sliderWidth.isFinite)
+    }
     self.symbol = symbol
     self.title = title
     self.caption = caption
     _value = value
     self.range = range
     self.step = step
+    self.style = style
     self.format = format
   }
 
+  @ViewBuilder
   public var body: some View {
+    switch style {
+    case .stacked:
+      stacked
+    case .inline(let sliderWidth, let showsValue):
+      PreferencesRow(symbol: symbol, title: title, caption: caption) {
+        HStack(spacing: 12) {
+          slider.frame(width: sliderWidth)
+          if showsValue {
+            valueLabel
+          }
+        }
+      }
+    }
+  }
+
+  private var stacked: some View {
     VStack(alignment: .leading, spacing: 7) {
       HStack(spacing: 10) {
         if let symbol {
@@ -437,11 +465,9 @@ public struct PreferencesSliderRow: View {
           .font(typography.rowTitle.font)
           .foregroundStyle(FlowingPalette.ink)
         Spacer(minLength: 10)
-        Text(format(value))
-          .font(preferencesTypography.sliderValue.font)
-          .foregroundStyle(FlowingPalette.muted)
+        valueLabel
       }
-      FlowingSlider(title, value: $value, in: range, step: step, formatValue: format)
+      slider
       if let caption {
         Text(caption)
           .font(typography.rowCaption.font)
@@ -451,6 +477,18 @@ public struct PreferencesSliderRow: View {
     }
     .padding(.horizontal, metrics.rowInset)
     .padding(.vertical, 11)
+  }
+
+  private var slider: some View {
+    FlowingSlider(title, value: $value, in: range, step: step, formatValue: format)
+  }
+
+  private var valueLabel: some View {
+    Text(format(value))
+      .font(preferencesTypography.sliderValue.font)
+      .foregroundStyle(FlowingPalette.muted)
+      .monospacedDigit()
+      .fixedSize()
   }
 }
 
